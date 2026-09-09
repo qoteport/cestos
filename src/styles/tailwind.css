@@ -18,7 +18,7 @@
   --border: #DDE2EA;
   --input: #DDE2EA;
   --ring: #1B4F8A;
-  --radius: 6px;
+  --radius: 0px;
   --font-sans: var(--font-dm-sans), sans-serif;
 
   --status-available: #15803D;
@@ -161,7 +161,7 @@
     font-size: 12px;
     font-weight: 500;
     padding: 4px 8px;
-    border-radius: 4px;
+    border-radius: 0px;
     white-space: nowrap;
     pointer-events: none;
     opacity: 0;
@@ -184,7 +184,7 @@
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background: var(--border);
-    border-radius: 2px;
+    border-radius: 0px;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
@@ -334,7 +334,7 @@
     font-weight: 600;
     letter-spacing: 0.03em;
     padding: 3px 8px;
-    border-radius: 4px;
+    border-radius: 0px;
     text-transform: uppercase;
     white-space: nowrap;
   }
