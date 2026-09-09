@@ -2,10 +2,14 @@ import { imageHosts } from './image-hosts.config.mjs';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  productionBrowserSourceMaps: true,
+  productionBrowserSourceMaps: false,
+  async rewrites() {
+    const backend = (process.env.CESTOS_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
+    return [{ source: '/api/:path*', destination: `${backend}/api/:path*` }];
+  },
   distDir: process.env.DIST_DIR || '.next',
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   eslint: {
     ignoreDuringBuilds: true,
