@@ -1,6 +1,10 @@
  'use client';
-import {useEffect,useState,FormEvent} from 'react';import {Eye,EyeOff,LogIn,Loader2} from 'lucide-react';import {useRouter} from 'next/navigation';
-import {login,setTokens,apiFetch} from '@/lib/api';import {useAuth} from '@/components/AuthProvider';import AppLogo from '@/components/ui/AppLogo';
+import {useEffect,useState,FormEvent} from 'react'
+;import {Eye,EyeOff,LogIn,Loader2} from 'lucide-react'
+;import {useRouter} from 'next/navigation';
+import {login,setTokens,apiFetch} from '@/lib/api'
+;import {useAuth} from '@/components/AuthProvider'
+;import AppLogo from '@/components/ui/AppLogo';
 export default function LoginForm(){
  const router=useRouter();const auth=useAuth();const [org,setOrg]=useState(process.env.NEXT_PUBLIC_ORGANIZATION_ID||'');const [email,setEmail]=useState('');const [password,setPassword]=useState('');const [confirm,setConfirm]=useState('');const [remember,setRemember]=useState(true);const [show,setShow]=useState(false);const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [message,setMessage]=useState('');const [token,setToken]=useState('');
  useEffect(()=>{const reset=new URLSearchParams(window.location.hash.slice(1)).get('reset');if(reset){setToken(reset);window.history.replaceState(null,'',window.location.pathname);} const saved=localStorage.getItem('cestos_organization');if(saved)setOrg(saved);},[]);

@@ -1,5 +1,8 @@
  'use client';
-import {useState,useEffect,useId,FormEvent} from 'react';import contract from '@/lib/contract.json';import {apiFetch} from '@/lib/api';import {Modal,Row,title,rows,display} from './DataUI';
+import {useState,useEffect,useId,FormEvent} from 'react'
+;import contract from '@/lib/contract.json'
+;import {apiFetch} from '@/lib/api'
+;import {Modal,Row,title,rows,display} from './DataUI';
 const schemas:Row=contract.schemas;
 export function resolve(s:Row):Row {if(s.$ref)return resolve(schemas[s.$ref.split('/').pop()!]||{});if(s.anyOf){const chosen=s.anyOf.find((x:Row)=>x.type!=='null');return {...resolve(chosen||{}),...Object.fromEntries(Object.entries(s).filter(([k])=>k!=='anyOf'))};}return s;}
 const lookup:Row={client_id:'clients',project_id:'projects',project_manager_id:'employees',employee_id:'employees',manager_employee_id:'employees',primary_operator_id:'employees',department_id:'departments',position_id:'positions',location_id:'locations',asset_id:'assets',asset_category_id:'asset-categories',base_unit_id:'inventory/units',unit_id:'inventory/units',from_unit_id:'inventory/units',to_unit_id:'inventory/units',store_id:'inventory/stores',from_store_id:'inventory/stores',to_store_id:'inventory/stores',bin_id:'inventory/bins',from_bin_id:'inventory/bins',to_bin_id:'inventory/bins',item_id:'inventory/items',supplier_id:'inventory/suppliers',preferred_supplier_id:'inventory/suppliers',lot_id:'inventory/lots',serial_id:'inventory/serials',original_issue_id:'inventory/issues',request_id:'inventory/requests',reservation_id:'inventory/reservations',rotation_pattern_id:'rotation-patterns'};

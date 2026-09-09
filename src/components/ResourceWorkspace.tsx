@@ -1,5 +1,13 @@
  'use client';
-import {useState,useEffect} from 'react';import Link from 'next/link';import {useSearchParams} from 'next/navigation';import {Plus,RefreshCw,Search,ArrowLeft} from 'lucide-react';import contract from '@/lib/contract.json';import {apiFetch} from '@/lib/api';import {useAuth} from './AuthProvider';import {Row,title,rows,display,useData,State,Table,Facts,Modal} from './DataUI';import RecordForm from './RecordForm';
+import {useState,useEffect} from 'react'
+;import Link from 'next/link'
+;import {useSearchParams} from 'next/navigation'
+;import {Plus,RefreshCw,Search,ArrowLeft} from 'lucide-react'
+;import contract from '@/lib/contract.json'
+;import {apiFetch} from '@/lib/api'
+;import {useAuth} from './AuthProvider'
+;import {Row,title,rows,display,useData,State,Table,Facts,Modal} from './DataUI'
+;import RecordForm from './RecordForm';
 const routes:Row=contract.routes;
 export function operation(path:string,method:string):Row|null{const key=Object.keys(routes).find(k=>k===path)||Object.keys(routes).find(k=>k.includes('{')&&new RegExp('^'+k.replace(/\{[^}]+\}/g,'[^/]+')+'$').test(path));return key?routes[key][method]||null:null;}
 export default function ResourceWorkspace({resource}:{resource:string}){
