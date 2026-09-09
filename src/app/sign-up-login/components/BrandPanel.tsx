@@ -1,13 +1,6 @@
 import React from 'react';
 import AppLogo from '@/components/ui/AppLogo';
 
-const STATS = [
-  { id: 'bp-stat-projects', label: 'Active Projects', value: '6' },
-  { id: 'bp-stat-employees', label: 'Deployed Employees', value: '147' },
-  { id: 'bp-stat-assets', label: 'Operating Assets', value: '18' },
-  { id: 'bp-stat-stores', label: 'Inventory Stores', value: '9' },
-];
-
 const FEATURES = [
   { id: 'bp-feat-workforce', text: 'Workforce & rotation management' },
   { id: 'bp-feat-fleet', text: 'Equipment fleet command center' },
@@ -58,19 +51,7 @@ export default function BrandPanel() {
           ))}
         </div>
 
-        {/* Stats grid */}
-        <div className="grid grid-cols-2 gap-3 mt-auto">
-          {STATS?.map(s => (
-            <div key={s?.id} className="bg-white/10 rounded border border-white/20 px-4 py-3">
-              <p className="text-2xl font-700 tabular-nums">{s?.value}</p>
-              <p className="text-xs text-blue-200 font-400 mt-0.5">{s?.label}</p>
-            </div>
-          ))}
-        </div>
-
-        <p className="text-2xs text-blue-300 mt-6">
-          Live operational data • Sep 9, 2026
-        </p>
+        <div className="mt-auto border-t border-white/20 pt-6"><p className="text-sm text-blue-100">Built for your people, your equipment, and every site you operate.</p></div>
       </div>
     </div>
   );

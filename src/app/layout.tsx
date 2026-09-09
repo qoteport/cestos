@@ -1,15 +1,9 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
-import { DM_Sans } from 'next/font/google';
+import { AuthProvider } from '@/components/AuthProvider';
 import '../styles/tailwind.css';
+import '../styles/integration.css';
 import { Toaster } from 'sonner';
-
-const dmSans = DM_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-dm-sans',
-  display: 'swap',
-});
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -32,8 +26,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={dmSans.variable}>
-      <body className={dmSans.className}>
+    <html lang="en" >
+      <body>
+        <AuthProvider>
         {children}
         <Toaster
           position="bottom-right"
@@ -46,8 +41,8 @@ export default function RootLayout({
           }}
         />
 
-        <script type="module" async src="https://static.rocket.new/rocket-web.js?_cfg=https%3A%2F%2Fcestos3689back.builtwithrocket.new&_be=https%3A%2F%2Fappanalytics.rocket.new&_v=0.1.20" />
-        <script type="module" defer src="https://static.rocket.new/rocket-shot.js?v=0.0.3" /></body>
+        </AuthProvider>
+      </body>
     </html>
   );
 }

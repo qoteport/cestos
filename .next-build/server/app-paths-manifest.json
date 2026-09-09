@@ -1,0 +1,10 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/page": "app/page.js",
+  "/sign-up-login/page": "app/sign-up-login/page.js",
+  "/project-command-center/page": "app/project-command-center/page.js",
+  "/inventory-overview/page": "app/inventory-overview/page.js",
+  "/workspace/[...resource]/page": "app/workspace/[...resource]/page.js",
+  "/fleet-dashboard/page": "app/fleet-dashboard/page.js",
+  "/workforce-overview/page": "app/workforce-overview/page.js"
+}

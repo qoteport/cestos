@@ -1,93 +1,42 @@
-// Centralized API client for Cestos Operations
-const BASE_URL = 'https://cestos-oversight.fly.dev';
-
-// ─── Token Management ────────────────────────────────────────────────────────
-
-export function getAccessToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('cestos_access_token');
+// Browser calls stay on this origin; Next.js proxies to the local backend.
+import {getAccessToken, getRefreshToken, clearTokens, refreshSession} from './session';
+export {getAccessToken, getRefreshToken, clearTokens, setTokens} from './session';
+export const BASE_URL = '';
+export class ApiError extends Error {
+  constructor(public status: number, message: string) { super(message); this.name = 'ApiError'; }
 }
-
-export function setTokens(access: string, refresh: string) {
-  localStorage.setItem('cestos_access_token', access);
-  localStorage.setItem('cestos_refresh_token', refresh);
+async function readResponse<T>(response: Response): Promise<T> {
+  if (response.status === 204) return undefined as T;
+  const text = await response.text();
+  let body;
+  try { body = text ? JSON.parse(text) : undefined; } catch { body = undefined; }
+  if (!response.ok) throw new ApiError(response.status, body?.error?.message || (typeof body?.detail === 'string' ? body.detail : `Request failed (${response.status}). Please retry.`));
+  return body as T;
 }
-
-export function clearTokens() {
-  localStorage.removeItem('cestos_access_token');
-  localStorage.removeItem('cestos_refresh_token');
-}
-
-export function getRefreshToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('cestos_refresh_token');
-}
-
-// ─── Core Fetch ──────────────────────────────────────────────────────────────
-
-async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = getAccessToken();
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string>),
-  };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
-
-  if (res.status === 401) {
-    // Attempt token refresh
-    const refreshed = await tryRefresh();
-    if (refreshed) {
-      headers['Authorization'] = `Bearer ${getAccessToken()}`;
-      const retryRes = await fetch(`${BASE_URL}${path}`, { ...options, headers });
-      if (!retryRes.ok) throw new ApiError(retryRes.status, await retryRes.text());
-      return retryRes.json() as Promise<T>;
-    } else {
+export async function apiFetch<T>(path: string, options: RequestInit = {}, authenticated = true): Promise<T> {
+  const token = authenticated ? getAccessToken() : null;
+  const headers = new Headers(options.headers);
+  if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json');
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  let response: Response;
+  try { response = await fetch(`${BASE_URL}${path}`, {...options, headers, cache:'no-store'}); }
+  catch { throw new ApiError(0, 'Cannot reach the local backend. Check that Cestos is running on port 8000, then retry.'); }
+  if (response.status === 401 && authenticated) {
+    if (await refreshSession(BASE_URL, token)) {
+      headers.set('Authorization', `Bearer ${getAccessToken()}`);
+      response = await fetch(`${BASE_URL}${path}`, {...options, headers, cache:'no-store'});
+    }
+    if (response.status === 401) {
       clearTokens();
-      if (typeof window !== 'undefined') window.location.href = '/sign-up-login';
-      throw new ApiError(401, 'Session expired');
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('cestos:session-expired'));
     }
   }
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new ApiError(res.status, body);
-  }
-
-  // 204 No Content
-  if (res.status === 204) return undefined as unknown as T;
-  return res.json() as Promise<T>;
+  return readResponse<T>(response);
 }
-
-async function tryRefresh(): Promise<boolean> {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return false;
-  try {
-    const res = await fetch(`${BASE_URL}/api/v1/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    });
-    if (!res.ok) return false;
-    const data = await res.json();
-    setTokens(data.access_token, data.refresh_token ?? refreshToken);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export class ApiError extends Error {
-  constructor(public status: number, message: string) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
-
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
 export interface LoginRequest {
+  organization_id: string;
   email: string;
   password: string;
 }
@@ -112,7 +61,7 @@ export async function login(data: LoginRequest): Promise<TokenResponse> {
   return apiFetch<TokenResponse>('/api/v1/auth/login', {
     method: 'POST',
     body: JSON.stringify(data),
-  });
+  }, false);
 }
 
 export async function getMe(): Promise<UserRead> {
@@ -120,11 +69,9 @@ export async function getMe(): Promise<UserRead> {
 }
 
 export async function logout(): Promise<void> {
-  try {
-    await apiFetch('/api/v1/auth/logout', { method: 'POST' });
-  } finally {
-    clearTokens();
-  }
+  const refresh_token = getRefreshToken();
+  clearTokens();
+  if (refresh_token) await apiFetch('/api/v1/auth/logout', {method:'POST', body:JSON.stringify({refresh_token})}, false);
 }
 
 // ─── Operations / Dashboard ──────────────────────────────────────────────────
