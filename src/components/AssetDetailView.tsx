@@ -78,6 +78,7 @@ export default function AssetDetailView({ assetId }: { assetId: string }) {
     name: string;
     operation?: Row;
     initial?: Row;
+    method?: 'POST' | 'PATCH';
   } | null>(null);
   const [transfer, setTransfer] = useState(false);
   const [upload, setUpload] = useState<'photo' | 'document' | null>(null);
@@ -113,7 +114,91 @@ export default function AssetDetailView({ assetId }: { assetId: string }) {
   }
   function openForm(p: string, name: string, initial?: Row, op?: Row) {
     setSelected(null);
-    setForm({ path: p, name, initial, operation: op });
+    const isEdit = !!initial;
+    const defaults: Row = {};
+    if (d?.current_project?.id) defaults.project_id = d.current_project.id;
+    if (d?.current_location?.id) defaults.location_id = d.current_location.id;
+    const mergedInitial = initial ? { ...defaults, ...initial } : defaults;
+    setForm({
+      path: p,
+      name,
+      initial: Object.keys(mergedInitial).length ? mergedInitial : undefined,
+      operation: op,
+      method: isEdit ? 'PATCH' : 'POST',
+    });
+  }
+
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>('');
+  const [assignmentSummaryData, setAssignmentSummaryData] = useState<Row | null>(null);
+  const [logFiles, setLogFiles] = useState<Row[]>([]);
+  const [logFileUpload, setLogFileUpload] = useState<boolean>(false);
+  const [logFileTitle, setLogFileTitle] = useState('');
+  const [logFile, setLogFile] = useState<File | null>(null);
+  const [logFileBusy, setLogFileBusy] = useState(false);
+
+  useEffect(() => {
+    if (selected && ['maintenance', 'fuel-logs', 'inspections', 'meter-readings'].includes(tab)) {
+      const typeMap: Record<string, string> = {
+        maintenance: 'MAINTENANCE',
+        'fuel-logs': 'FUEL',
+        inspections: 'INSPECTION',
+        'meter-readings': 'METER',
+      };
+      apiFetch<Row[]>('/api/v1/assets/' + assetId + '/logs/' + typeMap[tab] + '/' + selected.id + '/files')
+        .then((f) => setLogFiles(f || []))
+        .catch(() => setLogFiles([]));
+    } else {
+      setLogFiles([]);
+    }
+  }, [selected, tab, assetId]);
+
+  useEffect(() => {
+    if (tab === 'assignments' && selectedAssignmentId) {
+      apiFetch<Row>('/api/v1/assets/' + assetId + '/assignments/' + selectedAssignmentId + '/summary')
+        .then((s) => setAssignmentSummaryData(s))
+        .catch(() => setAssignmentSummaryData(null));
+    } else {
+      setAssignmentSummaryData(null);
+    }
+  }, [tab, selectedAssignmentId, assetId]);
+
+  async function handleLogFileUpload(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selected || !logFile) return;
+    setLogFileBusy(true);
+    const typeMap: Record<string, string> = {
+      maintenance: 'MAINTENANCE',
+      'fuel-logs': 'FUEL',
+      inspections: 'INSPECTION',
+      'meter-readings': 'METER',
+    };
+    try {
+      const fd = new FormData();
+      fd.append('title', (logFileTitle.trim() || logFile.name));
+      fd.append('file', logFile);
+      await apiFetch('/api/v1/assets/' + assetId + '/logs/' + typeMap[tab] + '/' + selected.id + '/files', {
+        method: 'POST',
+        body: fd,
+      });
+      setLogFileUpload(false);
+      setLogFileTitle('');
+      setLogFile(null);
+      const f = await apiFetch<Row[]>('/api/v1/assets/' + assetId + '/logs/' + typeMap[tab] + '/' + selected.id + '/files');
+      setLogFiles(f || []);
+    } catch (err: any) {
+      setError(err.message || 'File upload failed');
+    } finally {
+      setLogFileBusy(false);
+    }
+  }
+
+  async function handleLogFileDownload(fileId: string, filename: string) {
+    try {
+      const blob = await apiFetchBlob('/api/v1/assets/' + assetId + '/log-files/' + fileId + '/download');
+      downloadBlob(blob, filename);
+    } catch (err: any) {
+      setError(err.message || 'Download failed');
+    }
   }
   async function download(row: Row) {
     setError('');
@@ -413,50 +498,113 @@ export default function AssetDetailView({ assetId }: { assetId: string }) {
               </>
             ) : (
               <section className="card overflow-hidden">
-                <header className="flex justify-between p-4 border-b gap-2">
+                <header className="flex justify-between p-4 border-b gap-2 flex-wrap items-center">
                   <h2 className="section-header">{title(tab)}</h2>
-                  {tab === 'documents'
-                    ? allowed(root + '/documents/upload', 'POST') && (
-                        <button
-                          className="btn-primary text-xs"
-                          onClick={() => setUpload('document')}
-                        >
-                          <Upload size={13} />
-                          Upload document
-                        </button>
-                      )
-                    : tab === 'assignments'
-                      ? d.current_assignment &&
-                        allowed(
-                          '/api/v1/asset-assignments/' + d.current_assignment.id + '/complete',
-                          'POST'
-                        ) && (
-                          <button
-                            className="btn-secondary text-xs"
-                            onClick={() =>
-                              openForm(
-                                '/api/v1/asset-assignments/' +
-                                  d.current_assignment.id +
-                                  '/complete',
-                                'Complete assignment'
-                              )
-                            }
-                          >
-                            Complete assignment
-                          </button>
-                        )
-                      : asset.is_active &&
-                        allowed(path, 'POST') && (
+                  <div className="flex gap-2 flex-wrap items-center">
+                    {tab === 'fuel-logs' && allowed(root + '/fuel-reductions', 'POST') && (
+                      <button
+                        className="btn-secondary text-xs"
+                        onClick={() => openForm(root + '/fuel-reductions', 'Record fuel reduction / daily consumption')}
+                      >
+                        <Fuel size={13} />
+                        Record fuel reduction
+                      </button>
+                    )}
+                    {tab === 'documents'
+                      ? allowed(root + '/documents/upload', 'POST') && (
                           <button
                             className="btn-primary text-xs"
-                            onClick={() => openForm(path, 'Add ' + title(tab).toLowerCase())}
+                            onClick={() => setUpload('document')}
                           >
-                            <Plus size={13} />
-                            Add record
+                            <Upload size={13} />
+                            Upload document
                           </button>
-                        )}
+                        )
+                      : tab === 'assignments'
+                        ? d.current_assignment &&
+                          allowed(
+                            '/api/v1/asset-assignments/' + d.current_assignment.id + '/complete',
+                            'POST'
+                          ) && (
+                            <button
+                              className="btn-secondary text-xs"
+                              onClick={() =>
+                                openForm(
+                                  '/api/v1/asset-assignments/' +
+                                    d.current_assignment.id +
+                                    '/complete',
+                                  'Complete assignment'
+                                )
+                              }
+                            >
+                              Complete assignment
+                            </button>
+                          )
+                        : asset.is_active &&
+                          allowed(path, 'POST') && (
+                            <button
+                              className="btn-primary text-xs"
+                              onClick={() => openForm(path, 'Add ' + title(tab).toLowerCase())}
+                            >
+                              <Plus size={13} />
+                              Add record
+                            </button>
+                          )}
+                  </div>
                 </header>
                 <State loading={records.loading} error={records.error} retry={records.reload}>
+                  {tab === 'assignments' && rows(records.data).length > 0 && (
+                    <div className="p-4 border-b bg-muted/30 space-y-4">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <label className="text-xs font-semibold text-muted-foreground">Filter operational costs by assignment:</label>
+                        <select
+                          className="input-field text-xs max-w-md"
+                          value={selectedAssignmentId}
+                          onChange={(e) => setSelectedAssignmentId(e.target.value)}
+                        >
+                          <option value="">All assignments (Select to view site costs)</option>
+                          {rows(records.data).map((a: Row) => (
+                            <option key={a.id} value={a.id}>
+                              {a.project_id || 'Project'} ({a.assigned_at ? new Date(a.assigned_at).toLocaleDateString() : ''} - {a.returned_at ? new Date(a.returned_at).toLocaleDateString() : 'Present'})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      {assignmentSummaryData && (
+                        <div className="card p-4 bg-white border border-primary/20 space-y-3">
+                          <div className="flex justify-between items-center border-b pb-2">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-primary">Assignment Site Cost Summary</h3>
+                            <span className="badge badge-active text-xs">Selected Assignment Period</span>
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                            <div className="bg-muted/40 p-2.5 rounded">
+                              <span className="text-muted-foreground block">Fuel Consumed</span>
+                              <strong className="text-sm font-semibold">{assignmentSummaryData.fuel_litres || 0} Litres</strong>
+                              {assignmentSummaryData.fuel_cost != null && (
+                                <span className="block text-muted-foreground mt-0.5">${Number(assignmentSummaryData.fuel_cost).toFixed(2)}</span>
+                              )}
+                            </div>
+                            <div className="bg-muted/40 p-2.5 rounded">
+                              <span className="text-muted-foreground block">Maintenance Cost</span>
+                              <strong className="text-sm font-semibold">{assignmentSummaryData.maintenance_count || 0} Jobs</strong>
+                              {assignmentSummaryData.maintenance_cost != null && (
+                                <span className="block text-muted-foreground mt-0.5">${Number(assignmentSummaryData.maintenance_cost).toFixed(2)}</span>
+                              )}
+                            </div>
+                            <div className="bg-muted/40 p-2.5 rounded">
+                              <span className="text-muted-foreground block">Meter Usage</span>
+                              <strong className="text-sm font-semibold">Start: {assignmentSummaryData.start_meter ?? '—'}</strong>
+                              <span className="block text-muted-foreground mt-0.5">End: {assignmentSummaryData.end_meter ?? 'Current'}</span>
+                            </div>
+                            <div className="bg-muted/40 p-2.5 rounded">
+                              <span className="text-muted-foreground block">Inspections Done</span>
+                              <strong className="text-sm font-semibold">{assignmentSummaryData.inspections_count || 0} Inspections</strong>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <Table
                     data={rows(records.data)}
                     columns={
@@ -512,15 +660,156 @@ export default function AssetDetailView({ assetId }: { assetId: string }) {
       )}
       {selected && (
         <Modal
-          name={selected.title || selected.name || title(tab) + ' record'}
-          onClose={() => setSelected(null)}
+          name={tab === 'activity' ? 'Activity Detail · ' + (selected.action || 'Action') : selected.title || selected.name || title(tab) + ' record'}
+          onClose={() => {
+            setSelected(null);
+            setLogFileUpload(false);
+          }}
         >
-          <Facts data={selected} />
-          <div className="flex gap-2 mt-5 border-t pt-4">
+          {tab === 'activity' ? (
+            <div className="space-y-4">
+              <div className="bg-muted/30 p-3 rounded space-y-1 text-xs border">
+                <div><strong>Action:</strong> <span className="badge badge-active ml-2">{selected.action}</span></div>
+                <div><strong>Occurred At:</strong> {selected.occurred_at ? new Date(selected.occurred_at).toLocaleString() : '—'}</div>
+                <div><strong>Entity Type:</strong> {selected.entity_type || 'Asset'}</div>
+              </div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Recorded Changes</h4>
+              <div className="border rounded overflow-hidden">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-muted border-b">
+                    <tr>
+                      <th className="p-2 font-semibold">Field</th>
+                      <th className="p-2 font-semibold">Previous Value</th>
+                      <th className="p-2 font-semibold">New Value</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {Array.from(new Set([...Object.keys(selected.old_values || {}), ...Object.keys(selected.new_values || {})])).map((key) => {
+                      const oldVal = selected.old_values?.[key];
+                      const newVal = selected.new_values?.[key];
+                      return (
+                        <tr key={key}>
+                          <td className="p-2 font-mono text-[11px] text-muted-foreground">{key}</td>
+                          <td className="p-2 text-red-700 bg-red-50/50">{oldVal != null ? String(oldVal) : '—'}</td>
+                          <td className="p-2 text-green-700 bg-green-50/50 font-semibold">{newVal != null ? String(newVal) : '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <Facts data={selected} />
+          )}
+          {['maintenance', 'fuel-logs', 'inspections', 'meter-readings'].includes(tab) && (
+            <div className="mt-5 border-t pt-4 space-y-3">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Attached Receipts & Files</h3>
+                {!logFileUpload && (
+                  <button className="btn-secondary text-xs" onClick={() => setLogFileUpload(true)}>
+                    <Upload size={12} />
+                    Attach file
+                  </button>
+                )}
+              </div>
+              {logFileUpload && (
+                <form onSubmit={handleLogFileUpload} className="p-3 bg-muted/40 rounded space-y-3 border">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">Select File *</label>
+                    <input
+                      className="input-field text-xs p-1"
+                      type="file"
+                      required
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        setLogFile(file);
+                        if (file && !logFileTitle) {
+                          setLogFileTitle(file.name);
+                        }
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">File Title / Description (Optional)</label>
+                    <input
+                      className="input-field text-xs"
+                      placeholder="e.g. Service Receipt, Evidence Photo"
+                      value={logFileTitle}
+                      onChange={(e) => setLogFileTitle(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button type="button" className="btn-secondary text-xs" onClick={() => setLogFileUpload(false)}>
+                      Cancel
+                    </button>
+                    <button disabled={logFileBusy} className="btn-primary text-xs">
+                      {logFileBusy ? 'Uploading…' : 'Upload'}
+                    </button>
+                  </div>
+                </form>
+              )}
+              {logFiles.length > 0 ? (
+                <ul className="divide-y border rounded bg-white text-xs">
+                  {logFiles.map((f: Row) => (
+                    <li key={f.id} className="p-2.5 flex justify-between items-center">
+                      <div>
+                        <strong className="block font-medium">{f.title || f.file_name}</strong>
+                        <span className="text-muted-foreground text-[11px]">{f.file_name} · {f.size_bytes ? Math.round(f.size_bytes / 1024) + ' KB' : ''}</span>
+                      </div>
+                      <button className="btn-secondary text-xs" onClick={() => handleLogFileDownload(f.id, f.file_name || 'file')}>
+                        <Download size={12} />
+                        Download
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">No attached files or receipts yet.</p>
+              )}
+            </div>
+          )}
+          <div className="flex gap-2 mt-5 border-t pt-4 flex-wrap">
             {tab === 'documents' && (
               <button className="btn-primary text-xs" onClick={() => void download(selected)}>
                 <Download size={13} />
                 Download
+              </button>
+            )}
+            {tab === 'maintenance' && (
+              <button
+                className="btn-secondary text-xs"
+                onClick={() => openForm(root + '/maintenance/' + selected.id, 'Edit maintenance job', selected)}
+              >
+                <Edit size={13} />
+                Edit job
+              </button>
+            )}
+            {tab === 'fuel-logs' && (
+              <button
+                className="btn-secondary text-xs"
+                onClick={() => openForm(root + '/fuel-logs/' + selected.id, 'Edit fuel log', selected)}
+              >
+                <Edit size={13} />
+                Edit fuel log
+              </button>
+            )}
+            {tab === 'inspections' && (
+              <button
+                className="btn-secondary text-xs"
+                onClick={() => openForm('/api/v1/assets/' + assetId + '/inspections/' + selected.id, 'Edit inspection', selected)}
+              >
+                <Edit size={13} />
+                Edit inspection
+              </button>
+            )}
+            {tab === 'assignments' && (
+              <button
+                className="btn-secondary text-xs"
+                onClick={() => openForm('/api/v1/asset-assignments/' + selected.id, 'Edit assignment', selected)}
+              >
+                <Edit size={13} />
+                Edit assignment
               </button>
             )}
             {tab === 'maintenance' &&
@@ -531,7 +820,7 @@ export default function AssetDetailView({ assetId }: { assetId: string }) {
                   onClick={() => {
                     const next =
                       selected.status === 'OPEN'
-                        ? ['IN_PROGRESS', 'CANCELLED']
+                        ? ['IN_PROGRESS', 'COMPLETED', 'CANCELLED']
                         : ['COMPLETED', 'CANCELLED'];
                     openForm(
                       root + '/maintenance/' + selected.id + '/status',
@@ -572,9 +861,10 @@ export default function AssetDetailView({ assetId }: { assetId: string }) {
         <RecordForm
           resource={form.path.slice(8)}
           path={form.path}
-          operation={form.operation || operation(form.path, form.initial ? 'PATCH' : 'POST') || {}}
+          operation={form.operation || operation(form.path, form.method || 'POST') || {}}
           initial={form.initial}
           title={form.name}
+          method={form.method}
           onClose={() => setForm(null)}
           onSaved={() => {
             setForm(null);
