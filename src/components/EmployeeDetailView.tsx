@@ -3,18 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  ArrowLeft, Edit, Upload, Archive, RefreshCw, UserCheck, Phone,
-  FileText, GraduationCap, Award, Shield, Briefcase, Clock, Calendar,
-  Activity, Plus, CheckCircle, XCircle, Download, ExternalLink, Trash2, User,
-  Key, Lock, Mail, Stethoscope, ShieldAlert, FileCheck, Tag, Filter, Check
-} from 'lucide-react';
+import { ArrowLeft, Edit, Upload, Archive, UserCheck, Phone, FileText, GraduationCap, Award, Shield, Briefcase, Clock, Calendar, Activity, Plus, Download, ExternalLink, Trash2, User, Key, Mail, FileCheck, Filter, Check } from 'lucide-react';
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import { Row, display, title, Modal } from './DataUI';
 import RecordForm from './RecordForm';
 import EmployeeWizardForm from './EmployeeWizardForm';
 import EmployeeCalendarModal from './EmployeeCalendarModal';
 import contract from '@/lib/contract.json';
+import Icon from '@/components/ui/AppIcon';
+
 
 const routes: Row = contract.routes;
 

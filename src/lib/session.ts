@@ -28,8 +28,7 @@ export function refreshSession(base: string, failedAccess: string | null): Promi
     setTokens(data.access_token, data.refresh_token);
     return true;
   };
-  const pending = Promise.resolve(typeof navigator !== 'undefined' && navigator.locks
-    ? navigator.locks.request('cestos-session-refresh', rotate) : rotate()).then(value => value).finally(() => { refreshing = null; });
+  const pending = Promise.resolve(typeof navigator !== 'undefined' && navigator.locks ? navigator.locks.request('cestos-session-refresh', rotate) : rotate()).then(value => value).finally(() => { refreshing = null; });
   refreshing = pending;
   return pending;
 }

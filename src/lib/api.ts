@@ -1,6 +1,6 @@
 // Browser calls stay on this origin; Next.js proxies to the local backend.
 import {getAccessToken, getRefreshToken, clearTokens, refreshSession} from './session';
-export {getAccessToken, getRefreshToken, clearTokens, setTokens} from './session';
+export {getAccessToken, getRefreshToken, clearTokens} from './session';
 export const BASE_URL = '';
 export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); this.name = 'ApiError'; }

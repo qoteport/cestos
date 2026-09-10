@@ -1,11 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  Calendar, ChevronLeft, ChevronRight, X, Clock,
-  FileText, Activity, CheckCircle, AlertCircle, RefreshCw, User, Briefcase
-} from 'lucide-react';
-import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
+import { Calendar, ChevronLeft, ChevronRight, Clock, FileText, Activity } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 import { Row, display, title, Modal } from './DataUI';
 
 interface EmployeeCalendarModalProps {
@@ -165,8 +162,7 @@ export default function EmployeeCalendarModal({
             isSelected
               ? 'ring-2 ring-primary bg-secondary/40 border-primary font-bold shadow-sm'
               : isToday
-              ? 'bg-blue-50/70 border-blue-300 font-semibold'
-              : 'bg-card hover:bg-muted/40 border-border/60'
+              ? 'bg-blue-50/70 border-blue-300 font-semibold' :'bg-card hover:bg-muted/40 border-border/60'
           }`}
         >
           <div className="flex justify-between items-center text-xs">
@@ -199,9 +195,7 @@ export default function EmployeeCalendarModal({
               <span
                 key={idx}
                 className={`block truncate px-1 py-0.5 rounded font-medium flex items-center gap-1 ${
-                  l.status === 'APPROVED'
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-amber-100 text-amber-800'
+                  l.status === 'APPROVED' ?'bg-emerald-100 text-emerald-800' :'bg-amber-100 text-amber-800'
                 }`}
               >
                 <Calendar size={10} className="shrink-0" />

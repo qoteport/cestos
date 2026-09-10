@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
-import { X, ArrowLeft, ArrowRight, Check, Upload, Plus, Trash2, User, Briefcase, FileText, Phone, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Upload, Plus, Trash2, User, Briefcase, FileText, Phone, ShieldCheck } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
-import { Modal, Row, display } from './DataUI';
+import { Modal, Row } from './DataUI';
 
 interface LookupOption {
   id: string;
@@ -308,8 +308,7 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                     isActive
                       ? 'bg-primary text-white border-primary shadow-sm'
                       : isDone
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                      : 'bg-muted/50 text-muted-foreground border-transparent hover:bg-muted'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300' :'bg-muted/50 text-muted-foreground border-transparent hover:bg-muted'
                   }`}
                 >
                   <span className={`w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold ${

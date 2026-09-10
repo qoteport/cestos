@@ -31,13 +31,15 @@ import {
   Tooltip,
   CartesianGrid,
 } from 'recharts';
-import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
+import { apiFetchBlob, downloadBlob } from '@/lib/api';
 import { useAuth } from './AuthProvider';
-import { useData, State, Row, rows, Table, Facts, Modal, display, title } from './DataUI';
+import { useData, State, Row, rows, Table, Facts, Modal, title } from './DataUI';
 import { operation } from './ResourceWorkspace';
 import RecordForm from './RecordForm';
 import AssetAssignmentModal from './AssetAssignmentModal';
 import OperationalUpload from './OperationalUpload';
+import Icon from '@/components/ui/AppIcon';
+
 const tabs = [
   ['overview', 'Overview', Activity],
   ['maintenance', 'Maintenance', Wrench],
@@ -554,8 +556,7 @@ export default function AssetDetailView({ assetId }: { assetId: string }) {
                 </button>
               )}
             {tab === 'defects' &&
-              selected.status !== 'RESOLVED' &&
-              allowed('/api/v1/asset-defects/' + selected.id + '/resolve', 'POST') && (
+              selected.status !== 'RESOLVED'&& allowed('/api/v1/asset-defects/' + selected.id + '/resolve', 'POST') && (
                 <button
                   className="btn-primary text-xs"
                   onClick={() =>

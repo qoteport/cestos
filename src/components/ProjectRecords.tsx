@@ -57,8 +57,7 @@ export default function ProjectRecords({ projectId }: { projectId: string }) {
             className={
               'text-xs px-3 py-1.5 rounded border ' +
               (f === filter
-                ? 'bg-secondary text-primary border-primary/30'
-                : 'text-muted-foreground')
+                ? 'bg-secondary text-primary border-primary/30' :'text-muted-foreground')
             }
             onClick={() => setFilter(f)}
           >
