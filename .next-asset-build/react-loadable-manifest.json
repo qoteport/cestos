@@ -1,0 +1,33 @@
+{
+  "..\\node_modules\\next\\dist\\client\\index.js -> ../pages/_app": {
+    "id": 45139,
+    "files": [
+      "static/chunks/139.8d54880d25bc452f.js"
+    ]
+  },
+  "..\\node_modules\\next\\dist\\client\\index.js -> ../pages/_error": {
+    "id": 31646,
+    "files": [
+      "static/chunks/646.c2c67a3e35c59670.js"
+    ]
+  },
+  "app\\fleet-dashboard\\components\\FleetByProjectChart.tsx -> ./FleetBarChart": {
+    "id": 92788,
+    "files": [
+      "static/chunks/788.b6335e7b90525f41.js"
+    ]
+  },
+  "app\\inventory-overview\\components\\InventoryCharts.tsx -> ./ConsumptionByProjectChart": {
+    "id": 67803,
+    "files": [
+      "static/chunks/803.cc8280799dfc3a7e.js"
+    ]
+  },
+  "app\\inventory-overview\\components\\InventoryCharts.tsx -> ./ValueByCategoryChart": {
+    "id": 98856,
+    "files": [
+      "static/chunks/765.7e1be3d05da009d9.js",
+      "static/chunks/856.e755027c71d4f6f2.js"
+    ]
+  }
+}

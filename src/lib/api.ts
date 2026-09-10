@@ -33,6 +33,43 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, authe
   }
   return readResponse<T>(response);
 }
+
+export async function apiFetchBlob(path: string, options: RequestInit = {}, authenticated = true): Promise<Blob> {
+  const token = authenticated ? getAccessToken() : null;
+  const headers = new Headers(options.headers);
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  let response: Response;
+  try { response = await fetch(`${BASE_URL}${path}`, {...options, headers, cache:'no-store'}); }
+  catch { throw new ApiError(0, 'Cannot reach the local backend. Check that Cestos is running on port 8000, then retry.'); }
+  if (response.status === 401 && authenticated) {
+    if (await refreshSession(BASE_URL, token)) {
+      headers.set('Authorization', `Bearer ${getAccessToken()}`);
+      response = await fetch(`${BASE_URL}${path}`, {...options, headers, cache:'no-store'});
+    }
+    if (response.status === 401) {
+      clearTokens();
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('cestos:session-expired'));
+    }
+  }
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    let body;
+    try { body = text ? JSON.parse(text) : undefined; } catch {}
+    throw new ApiError(response.status, body?.error?.message || `Failed to fetch file (${response.status})`);
+  }
+  return response.blob();
+}
+
+export function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
 export interface LoginRequest {

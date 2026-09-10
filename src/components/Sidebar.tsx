@@ -177,7 +177,7 @@ export default function Sidebar({
                     {g.links
                       .filter(([, r]) => {
                         const op = operation('/api/v1/' + r, 'GET');
-                        return op && (op.permissions || []).every(auth.can);
+                        return op && (op.permissions || []).every((p: string) => auth.can(p));
                       })
                       .map(([label, resource]) => (
                         <Link

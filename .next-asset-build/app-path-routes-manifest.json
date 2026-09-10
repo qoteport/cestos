@@ -1,0 +1,10 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/fleet-dashboard/page": "/fleet-dashboard",
+  "/inventory-overview/page": "/inventory-overview",
+  "/page": "/",
+  "/sign-up-login/page": "/sign-up-login",
+  "/workforce-overview/page": "/workforce-overview",
+  "/project-command-center/page": "/project-command-center",
+  "/workspace/[...resource]/page": "/workspace/[...resource]"
+}

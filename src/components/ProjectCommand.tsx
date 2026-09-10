@@ -2,9 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import ProjectRecords from './ProjectRecords';
+import ProjectAssetActions from './ProjectAssetActions';
 import { useData, State, rows, Table, Facts, Row } from './DataUI';
 
 export default function ProjectCommand() {
+  const router = useRouter();
   const list = useData('/api/v1/projects?page_size=100');
   const [id, setId] = useState('');
   const [tab, setTab] = useState('overview');
@@ -46,13 +50,13 @@ export default function ProjectCommand() {
           aria-label="Select project"
           className="input-field max-w-lg"
           value={id}
-          onChange={e => {
+          onChange={(e) => {
             setId(e.target.value);
             window.history.replaceState(null, '', '?project=' + e.target.value);
           }}
         >
           <option value="">Select a project</option>
-          {rows(list.data).map(r => (
+          {rows(list.data).map((r) => (
             <option key={r.id} value={r.id}>
               {r.name}
             </option>
@@ -81,8 +85,11 @@ export default function ProjectCommand() {
                   {d.project?.status && (
                     <span
                       className={`badge ${
-                        d.project.status === 'ACTIVE' ?'badge-active'
-                          : d.project.status === 'MOBILIZING' ?'badge-mobilizing' :'badge-neutral'
+                        d.project.status === 'ACTIVE'
+                          ? 'badge-active'
+                          : d.project.status === 'MOBILIZING'
+                            ? 'badge-mobilizing'
+                            : 'badge-neutral'
                       }`}
                     >
                       {d.project.status}
@@ -105,24 +112,39 @@ export default function ProjectCommand() {
 
               {/* Tab navigation */}
               <nav className="tab-nav overflow-x-auto" aria-label="Project sections">
-                {['overview', 'workforce', 'equipment', 'inventory', 'sites'].map(t => (
-                  <button
-                    key={t}
-                    className={'tab-item ' + (tab === t ? 'active' : '')}
-                    onClick={() => setTab(t)}
-                  >
-                    {t.charAt(0).toUpperCase() + t.slice(1)}
-                  </button>
-                ))}
+                {['overview', 'workforce', 'equipment', 'inventory', 'sites', 'files & notes'].map(
+                  (t) => (
+                    <button
+                      key={t}
+                      className={'tab-item ' + (tab === t ? 'active' : '')}
+                      onClick={() => setTab(t)}
+                    >
+                      {t.charAt(0).toUpperCase() + t.slice(1)}
+                    </button>
+                  )
+                )}
               </nav>
 
               {/* Tab content */}
               <section className="card p-5">
                 {tab === 'overview' && (
-                  <Facts data={{ ...d.project, client: d.client, project_manager: d.project_manager }} />
+                  <Facts
+                    data={{ ...d.project, client: d.client, project_manager: d.project_manager }}
+                  />
                 )}
                 {tab === 'workforce' && <Table data={d.current_employees || []} />}
-                {tab === 'equipment' && <Table data={d.current_assets || []} />}
+                {tab === 'equipment' && (
+                  <div className="space-y-4">
+                    <div className="flex justify-end">
+                      <ProjectAssetActions projectId={id} onSaved={detail.reload} />
+                    </div>
+                    <Table
+                      data={d.current_assets || []}
+                      onSelect={(row) => router.push('/workspace/assets/' + row.id)}
+                    />
+                  </div>
+                )}
+                {tab === 'files & notes' && <ProjectRecords key={id} projectId={id} />}
                 {tab === 'sites' && <Table data={d.sites || []} />}
                 {tab === 'inventory' && (
                   <State loading={summary.loading} error={summary.error} retry={summary.reload}>

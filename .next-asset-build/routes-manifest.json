@@ -1,0 +1,98 @@
+{
+  "version": 3,
+  "pages404": true,
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [
+      {
+        "source": "/api/:path*",
+        "destination": "http://127.0.0.1:8000/api/:path*",
+        "regex": "^/api(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      }
+    ],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/workspace/[...resource]",
+      "regex": "^/workspace/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPresource": "nxtPresource"
+      },
+      "namedRegex": "^/workspace/(?<nxtPresource>.+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/fleet-dashboard",
+      "regex": "^/fleet\\-dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/fleet\\-dashboard(?:/)?$"
+    },
+    {
+      "page": "/inventory-overview",
+      "regex": "^/inventory\\-overview(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/inventory\\-overview(?:/)?$"
+    },
+    {
+      "page": "/project-command-center",
+      "regex": "^/project\\-command\\-center(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/project\\-command\\-center(?:/)?$"
+    },
+    {
+      "page": "/sign-up-login",
+      "regex": "^/sign\\-up\\-login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/sign\\-up\\-login(?:/)?$"
+    },
+    {
+      "page": "/workforce-overview",
+      "regex": "^/workforce\\-overview(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/workforce\\-overview(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSuffix": ".prefetch.rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments"
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

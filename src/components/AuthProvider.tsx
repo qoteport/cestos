@@ -14,7 +14,7 @@ export function AuthProvider({children}:{children:ReactNode}) {
  }catch(e){if(e instanceof ApiError && e.status===401){setUser(null);setAccess(null);}else setError(e instanceof Error?e.message:'Could not restore session.');}finally{setLoading(false);}},[]);
  useEffect(()=>{if(window.location.hash.startsWith('#reset=')&&window.location.pathname!=='/sign-up-login'){window.location.replace('/sign-up-login'+window.location.hash);return;}void reload();const expired=()=>{setUser(null);setAccess(null);setLoading(false);};const changed=(e:StorageEvent)=>{if(e.key?.startsWith('cestos_'))void reload();};window.addEventListener('cestos:session-expired',expired);window.addEventListener('storage',changed);return()=>{window.removeEventListener('cestos:session-expired',expired);window.removeEventListener('storage',changed);};},[reload]);
  const signOut=async()=>{try {await logout();}finally{setUser(null);setAccess(null);window.location.assign('/sign-up-login');}};
- const can=(code:string)=>!!access&&(access.is_superuser||access.permissions.includes(code)||(code.startsWith('inventory.')&&access.permissions.includes('inventory.admin')));
+ const can=(code:string)=>typeof code==='string'&&!!access&&(access.is_superuser||(access.permissions||[]).includes(code)||(code.startsWith('inventory.')&&(access.permissions||[]).includes('inventory.admin')));
  return <Context.Provider value={{user,access,loading,error,reload,signOut,can}}>{children}</Context.Provider>;
 }
 export function useAuth(){const value=useContext(Context);if(!value)throw new Error('AuthProvider missing');return value;}
