@@ -287,3 +287,11 @@ export async function getCriticalStockItems(params?: Record<string, string>): Pr
   const qs = params ? '?' + new URLSearchParams(params).toString() : '';
   return apiFetch<unknown[]>(`/api/v1/inventory/critical-stock${qs}`);
 }
+
+function setTokens(...args: any[]): any {
+  // eslint-disable-next-line no-console
+  console.warn('Placeholder: setTokens is not implemented yet.', args);
+  return null;
+}
+
+export { setTokens };
