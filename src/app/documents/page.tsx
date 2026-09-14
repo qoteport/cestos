@@ -81,7 +81,7 @@ function FileIcon({ name }: { name: string }) {
         ? FileText
         : File;
   return (
-    <div className="w-12 h-14 bg-emerald-50 border border-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+    <div className="w-12 h-14 bg-secondary border border-border text-primary flex items-center justify-center shrink-0">
       <Icon size={25} />
     </div>
   );
@@ -208,49 +208,50 @@ export default function DocumentsPage() {
         : view === 'public' ?'Shared with everyone' :'All documents');
   return (
     <AppLayout>
-      <div className="max-w-[1600px] mx-auto p-4 md:p-8 space-y-6">
-        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+      <div className="space-y-6 fade-in">
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.16em] font-semibold text-emerald-700 mb-2">
-              <FolderOpen size={15} /> Your knowledge, organized
+            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.16em] font-semibold text-muted-foreground mb-1">
+              <FolderOpen size={14} /> Your knowledge, organized
             </div>
-            <h1 className="text-3xl font-bold tracking-tight">Documents</h1>
-            <p className="text-muted-foreground text-sm mt-2">
+            <h1 className="page-title">Documents</h1>
+            <p className="text-sm text-muted-foreground mt-1">
               One home for files across your workspace. Find the detail you need.
             </p>
           </div>
           <button
-            className="btn-primary flex items-center justify-center gap-2 px-5 py-3"
+            className="btn-primary flex items-center justify-center gap-2 px-5 py-2.5"
             onClick={() => setUploading(true)}
           >
-            <Upload size={17} /> Upload documents
+            <Upload size={16} /> Upload documents
           </button>
         </header>
-        <div className="bg-emerald-950 p-5 md:p-7 text-white flex flex-col md:flex-row gap-5 md:items-center justify-between">
+
+        <div className="bg-primary p-5 md:p-6 text-primary-foreground flex flex-col md:flex-row gap-5 md:items-center justify-between">
           <div className="flex items-start gap-3">
             <div className="p-2 bg-white/10">
-              <Sparkles size={23} />
+              <Sparkles size={22} />
             </div>
             <div>
-              <p className="font-semibold text-lg">Search beyond the filename</p>
-              <p className="text-emerald-100/80 text-sm mt-1">
-                Find words inside documents, or describe what you’re looking for.
+              <p className="font-semibold text-base">Search beyond the filename</p>
+              <p className="text-primary-foreground/70 text-sm mt-1">
+                Find words inside documents, or describe what you're looking for.
               </p>
             </div>
           </div>
           <label className="relative md:w-[48%] block">
-            <Search className="absolute left-4 top-3.5 text-slate-500" size={19} />
+            <Search className="absolute left-4 top-3.5 text-muted-foreground" size={18} />
             <input
               aria-label="Search documents and their contents"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Try “drilling progress at the north site”"
-              className="w-full bg-white text-slate-900 placeholder:text-slate-500 pl-11 pr-10 py-3 outline-none focus:ring-4 focus:ring-emerald-400/40"
+              placeholder={"Try \"drilling progress at the north site\""}
+              className="w-full bg-card text-foreground placeholder:text-muted-foreground pl-11 pr-10 py-3 outline-none focus:ring-2 focus:ring-primary/40 border border-border"
             />
             {query && (
               <button
                 aria-label="Clear search"
-                className="absolute right-3 top-3.5 text-slate-500"
+                className="absolute right-3 top-3.5 text-muted-foreground"
                 onClick={() => setQuery('')}
               >
                 <X size={18} />
@@ -258,7 +259,8 @@ export default function DocumentsPage() {
             )}
           </label>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-7">
+
+        <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-6">
           <aside className="space-y-6 lg:border-r lg:pr-5 border-border">
             <nav aria-label="Document collections" className="space-y-1">
               {[
@@ -272,9 +274,9 @@ export default function DocumentsPage() {
                 <button
                   key={key}
                   onClick={() => choose(key)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left ${view === key && !category ? 'bg-emerald-50 text-emerald-900 font-semibold' : 'text-muted-foreground hover:bg-muted'}`}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left transition-colors ${view === key && !category ? 'bg-secondary text-primary font-semibold' : 'text-muted-foreground hover:bg-muted'}`}
                 >
-                  <Icon size={17} />
+                  <Icon size={16} />
                   {label}
                 </button>
               ))}
@@ -288,9 +290,9 @@ export default function DocumentsPage() {
                   <button
                     key={c.name}
                     onClick={() => choose('all', c.name)}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-sm ${category === c.name ? 'bg-muted font-semibold' : 'text-muted-foreground hover:bg-muted'}`}
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${category === c.name ? 'bg-muted font-semibold text-foreground' : 'text-muted-foreground hover:bg-muted'}`}
                   >
-                    <FolderOpen size={15} />
+                    <FolderOpen size={14} />
                     <span className="flex-1 text-left">{c.name}</span>
                     <span className="text-xs tabular-nums">{c.count}</span>
                   </button>
@@ -310,7 +312,7 @@ export default function DocumentsPage() {
                         setTag(tag === t ? '' : t);
                         setPage(1);
                       }}
-                      className={`text-xs px-2 py-1 border ${tag === t ? 'bg-emerald-100 border-emerald-300 text-emerald-900' : 'border-border text-muted-foreground hover:bg-muted'}`}
+                      className={`text-xs px-2 py-1 border transition-colors ${tag === t ? 'bg-secondary border-primary/30 text-primary font-semibold' : 'border-border text-muted-foreground hover:bg-muted'}`}
                     >
                       #{t}
                     </button>
@@ -318,15 +320,16 @@ export default function DocumentsPage() {
                 </div>
               </div>
             )}
-            <div className="bg-muted/60 p-4 flex gap-2 text-xs text-muted-foreground leading-relaxed">
-              <LockKeyhole size={16} className="shrink-0 mt-0.5" />
-              <p>New documents are private. You control sharing from each file’s settings.</p>
+            <div className="bg-muted p-4 flex gap-2 text-xs text-muted-foreground leading-relaxed">
+              <LockKeyhole size={15} className="shrink-0 mt-0.5" />
+              <p>New documents are private. You control sharing from each file's settings.</p>
             </div>
           </aside>
+
           <main className="min-w-0">
             <div className="flex flex-wrap justify-between gap-3 items-center mb-5">
               <div>
-                <h2 className="text-xl font-semibold">{search ? 'Search results' : title}</h2>
+                <h2 className="text-lg font-semibold text-foreground">{search ? 'Search results' : title}</h2>
                 <p className="text-xs text-muted-foreground mt-1">
                   {search
                     ? `Within ${title.toLowerCase()} · `
@@ -337,31 +340,31 @@ export default function DocumentsPage() {
               </div>
               <div className="flex gap-1">
                 <button
-                  className="p-2 hover:bg-muted rounded"
+                  className="p-2 hover:bg-muted text-muted-foreground transition-colors"
                   aria-label="Refresh documents"
                   onClick={refresh}
                 >
-                  <RefreshCw size={17} />
+                  <RefreshCw size={16} />
                 </button>
                 <button
-                  className={`p-2 rounded ${layout === 'grid' ? 'bg-muted' : ''}`}
+                  className={`p-2 transition-colors ${layout === 'grid' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted'}`}
                   onClick={() => setLayout('grid')}
                   aria-label="Grid view"
                 >
-                  <Grid2X2 size={17} />
+                  <Grid2X2 size={16} />
                 </button>
                 <button
-                  className={`p-2 rounded ${layout === 'list' ? 'bg-muted' : ''}`}
+                  className={`p-2 transition-colors ${layout === 'list' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted'}`}
                   onClick={() => setLayout('list')}
                   aria-label="List view"
                 >
-                  <List size={17} />
+                  <List size={16} />
                 </button>
               </div>
             </div>
             {tag && (
               <button
-                className="mb-4 inline-flex items-center gap-2 text-xs bg-muted px-3 py-1.5"
+                className="mb-4 inline-flex items-center gap-2 text-xs bg-muted px-3 py-1.5 text-muted-foreground hover:bg-border transition-colors"
                 onClick={() => setTag('')}
               >
                 <Tag size={12} />
@@ -370,7 +373,7 @@ export default function DocumentsPage() {
               </button>
             )}
             {error && (
-              <p role="alert" className="p-4 mb-4 bg-red-50 text-red-800 text-sm">
+              <p role="alert" className="p-4 mb-4 bg-red-50 text-red-800 text-sm border border-red-200">
                 {error}
                 <button className="ml-3 underline" onClick={refresh}>
                   Retry
@@ -378,7 +381,7 @@ export default function DocumentsPage() {
               </p>
             )}
             {data?.search_warning && (
-              <p role="status" className="text-sm text-amber-800 bg-amber-50 p-3 mb-4">
+              <p role="status" className="text-sm text-amber-800 bg-amber-50 p-3 mb-4 border border-amber-200">
                 {data.search_warning}
               </p>
             )}
@@ -400,14 +403,14 @@ export default function DocumentsPage() {
                   return (
                     <article
                       key={row.id}
-                      className={`border border-border bg-card p-5 hover:shadow-md transition-shadow ${layout === 'list' ? 'sm:flex sm:gap-5 sm:items-start' : ''}`}
+                      className={`border border-border bg-card p-5 card-hover transition-shadow ${layout === 'list' ? 'sm:flex sm:gap-5 sm:items-start' : ''}`}
                     >
                       <div className="flex items-start justify-between gap-3 mb-4">
                         <FileIcon name={row.file_name} />
                         {layout === 'grid' && (
                           <span
                             title={privacy[row.visibility].label}
-                            className="text-muted-foreground bg-muted/60 p-1.5"
+                            className="text-muted-foreground bg-muted p-1.5"
                           >
                             <PrivacyIcon size={14} />
                           </span>
@@ -415,7 +418,7 @@ export default function DocumentsPage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <button
-                          className="font-semibold text-sm text-left hover:text-emerald-700 line-clamp-2 break-words"
+                          className="font-semibold text-sm text-left hover:text-primary line-clamp-2 break-words transition-colors"
                           onClick={() => {
                             setReading(row);
                             setTextPage(1);
@@ -439,11 +442,11 @@ export default function DocumentsPage() {
                           </p>
                         )}
                         {row.match && (
-                          <div className="bg-emerald-50/60 border-l-2 border-emerald-300 px-3 py-2 mt-3">
-                            <p className="text-[10px] uppercase font-semibold text-emerald-800 mb-1">
+                          <div className="bg-secondary/60 border-l-2 border-primary/40 px-3 py-2 mt-3">
+                            <p className="text-[10px] uppercase font-semibold text-primary mb-1">
                               {row.match.location}
                             </p>
-                            <p className="text-xs leading-relaxed text-slate-700 line-clamp-4">
+                            <p className="text-xs leading-relaxed text-foreground/80 line-clamp-4">
                               {row.match.text}
                             </p>
                           </div>
@@ -453,7 +456,7 @@ export default function DocumentsPage() {
                             {row.tags.map((t) => (
                               <button
                                 key={t}
-                                className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5"
+                                className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 hover:bg-border transition-colors"
                                 onClick={() => {
                                   setTag(t);
                                   setPage(1);
@@ -466,7 +469,7 @@ export default function DocumentsPage() {
                         )}
                         <div className="border-t border-border mt-4 pt-3 flex items-center justify-between gap-2">
                           <span
-                            className={`text-[10px] flex items-center gap-1 ${row.index_status === 'READY' ? 'text-emerald-700' : 'text-muted-foreground'}`}
+                            className={`text-[10px] flex items-center gap-1 ${row.index_status === 'READY' ? 'text-primary' : 'text-muted-foreground'}`}
                             title={row.index_message || undefined}
                           >
                             {row.index_status === 'READY' ? (
@@ -480,7 +483,7 @@ export default function DocumentsPage() {
                           </span>
                           <div className="flex items-center gap-1.5">
                             <button
-                              className="px-2.5 py-1 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold flex items-center gap-1 transition border border-emerald-200/70"
+                              className="btn-secondary text-xs flex items-center gap-1 py-1 px-2.5"
                               onClick={() => handleViewDocument(row)}
                               title={`View document ${row.title}`}
                             >
@@ -488,7 +491,7 @@ export default function DocumentsPage() {
                               <span>View</span>
                             </button>
                             <button
-                              className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                              className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                               onClick={() => void download(row)}
                               aria-label={`Download ${row.title}`}
                               title={`Download ${row.title}`}
@@ -497,7 +500,7 @@ export default function DocumentsPage() {
                             </button>
                             {row.can_manage && (
                               <button
-                                className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                                className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                                 onClick={() => setSelected(row)}
                                 aria-label={`Manage ${row.title}`}
                                 title={`Manage ${row.title}`}
@@ -515,8 +518,8 @@ export default function DocumentsPage() {
             )}
             {!loading && !error && !data?.items.length && (
               <div className="text-center border border-dashed border-border py-20 px-6">
-                <FolderOpen size={38} className="mx-auto text-emerald-700/50 mb-4" />
-                <h3 className="font-semibold">
+                <FolderOpen size={36} className="mx-auto text-muted-foreground/50 mb-4" />
+                <h3 className="font-semibold text-foreground">
                   {search ? 'No matching documents' : 'A home for your documents'}
                 </h3>
                 <p className="text-sm text-muted-foreground mt-2 max-w-sm mx-auto">
@@ -559,6 +562,7 @@ export default function DocumentsPage() {
             )}
           </main>
         </div>
+
         {uploading && (
           <UploadModal
             categories={data?.categories.map((c) => c.name) || []}
@@ -613,7 +617,7 @@ export default function DocumentsPage() {
               <div className="space-y-5">
                 {text.map((chunk, i) => (
                   <section key={i}>
-                    <h3 className="text-xs font-semibold text-emerald-800 mb-2">
+                    <h3 className="text-xs font-semibold text-primary mb-2">
                       {chunk.location}
                     </h3>
                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{chunk.text}</p>
@@ -637,7 +641,7 @@ export default function DocumentsPage() {
                 </div>
               </div>
             ) : (
-              <p className="bg-muted p-5 text-sm">
+              <p className="bg-muted p-5 text-sm text-muted-foreground">
                 {reading.index_message ||
                   'Text is not ready yet. You can download the original file.'}
               </p>
@@ -695,8 +699,8 @@ function UploadModal({
       }}
     >
       <form onSubmit={submit} className="space-y-5">
-        <label className="block border-2 border-dashed border-emerald-200 bg-emerald-50/50 p-8 text-center cursor-pointer">
-          <Upload size={28} className="mx-auto mb-3 text-emerald-700" />
+        <label className="block border-2 border-dashed border-border bg-muted/50 p-8 text-center cursor-pointer hover:bg-muted transition-colors">
+          <Upload size={28} className="mx-auto mb-3 text-primary" />
           <span className="block font-semibold text-sm">Choose your files</span>
           <span className="block text-xs text-muted-foreground mt-2">
             Any file format · text extraction depends on the format
@@ -758,7 +762,7 @@ function UploadModal({
           </p>
         )}
         {busy && (
-          <p role="status" className="text-xs">
+          <p role="status" className="text-xs text-muted-foreground">
             {progress}
           </p>
         )}
@@ -872,7 +876,7 @@ function ManageModal({
             return (
               <label
                 key={value}
-                className={`flex gap-3 p-4 border cursor-pointer ${visibility === value ? 'border-emerald-600 bg-emerald-50/50' : 'border-border'}`}
+                className={`flex gap-3 p-4 border cursor-pointer transition-colors ${visibility === value ? 'border-primary bg-secondary/50' : 'border-border hover:bg-muted'}`}
               >
                 <input
                   type="radio"
@@ -880,7 +884,7 @@ function ManageModal({
                   checked={visibility === value}
                   onChange={() => setVisibility(value)}
                 />
-                <Icon size={18} />
+                <Icon size={18} className={visibility === value ? 'text-primary' : 'text-muted-foreground'} />
                 <span>
                   <span className="text-sm font-semibold block">{privacy[value].label}</span>
                   <span className="text-xs text-muted-foreground">

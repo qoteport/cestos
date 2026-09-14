@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { CheckCircle, Clock, AlertTriangle, Settings, XCircle, BarChart2 } from 'lucide-react';
 import { getFleetDashboard, type FleetDashboard } from '@/lib/api';
 
