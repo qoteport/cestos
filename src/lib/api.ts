@@ -1,6 +1,6 @@
 // Browser calls stay on this origin; Next.js proxies to the local backend.
 import {getAccessToken, getRefreshToken, clearTokens, refreshSession} from './session';
-export {getAccessToken, getRefreshToken, clearTokens, setTokens} from './session';
+export {getAccessToken, getRefreshToken, clearTokens} from './session';
 export const BASE_URL = '';
 export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); this.name = 'ApiError'; }
@@ -314,3 +314,11 @@ export async function getCriticalStockItems(params?: Record<string, string>): Pr
   const qs = params ? '?' + new URLSearchParams(params).toString() : '';
   return apiFetch<unknown[]>(`/api/v1/inventory/critical-stock${qs}`);
 }
+
+function setTokens(...args: any[]): any {
+  // eslint-disable-next-line no-console
+  console.warn('Placeholder: setTokens is not implemented yet.', args);
+  return null;
+}
+
+export { setTokens };

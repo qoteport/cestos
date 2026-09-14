@@ -85,11 +85,8 @@ export default function ProjectCommand() {
                   {d.project?.status && (
                     <span
                       className={`badge ${
-                        d.project.status === 'ACTIVE'
-                          ? 'badge-active'
-                          : d.project.status === 'MOBILIZING'
-                            ? 'badge-mobilizing'
-                            : 'badge-neutral'
+                        d.project.status === 'ACTIVE' ?'badge-active'
+                          : d.project.status === 'MOBILIZING' ?'badge-mobilizing' :'badge-neutral'
                       }`}
                     >
                       {d.project.status}

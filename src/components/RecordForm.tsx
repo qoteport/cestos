@@ -165,12 +165,9 @@ function Reference({
   resource: string;
 }) {
   const route =
-    field === 'category_id'
-      ? resource.startsWith('inventory/')
-        ? 'inventory/categories'
-        : 'asset-categories'
-      : field === 'parent_category_id'
-        ? 'inventory/categories'
+    field === 'category_id' ? resource.startsWith('inventory/')
+        ? 'inventory/categories' :'asset-categories'
+      : field === 'parent_category_id' ?'inventory/categories'
         : lookup[field];
   const [search, setSearch] = useState('');
   const [options, setOptions] = useState<Row[]>([]);
@@ -423,13 +420,9 @@ function Fields({
                     className="input-field"
                     value={val}
                     type={
-                      s.format === 'date'
-                        ? 'date'
-                        : s.format === 'date-time'
-                          ? 'datetime-local'
-                          : s.type === 'integer' || s.type === 'number'
-                            ? 'number'
-                            : 'text'
+                      s.format === 'date' ?'date'
+                        : s.format === 'date-time' ?'datetime-local'
+                          : s.type === 'integer'|| s.type === 'number' ?'number' :'text'
                     }
                     step="any"
                     min={s.minimum}

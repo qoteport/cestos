@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Plus, Truck } from 'lucide-react';
 import { useAuth } from './AuthProvider';
-import { useData, rows, State, Modal, Row } from './DataUI';
+import { useData, rows, State, Modal } from './DataUI';
 import AssetAssignmentModal from './AssetAssignmentModal';
 function Assignment({
   assetId,

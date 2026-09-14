@@ -1,8 +1,8 @@
 'use client';
 import { useState } from 'react';
-import { ArrowRight, MapPin, Truck, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Truck, CheckCircle2 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
-import { Modal, Row, rows, useData, State, display } from './DataUI';
+import { Modal, Row, rows, useData, State } from './DataUI';
 export default function AssetAssignmentModal({
   asset,
   currentProject,
@@ -179,8 +179,7 @@ export default function AssetAssignmentModal({
         <p className="text-xs text-muted-foreground flex gap-2">
           <CheckCircle2 size={15} />
           {transfer
-            ? 'The current assignment closes and its history is preserved when the transfer succeeds.'
-            : 'The asset’s availability and project assignment update together.'}
+            ? 'The current assignment closes and its history is preserved when the transfer succeeds.' :'The asset’s availability and project assignment update together.'}
         </p>
         {error && (
           <p role="alert" className="text-sm text-red-700 bg-red-50 rounded p-3">

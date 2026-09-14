@@ -4,7 +4,8 @@ import { imageHosts } from './image-hosts.config.mjs';
 const nextConfig = {
   productionBrowserSourceMaps: false,
   async rewrites() {
-    const backend = (process.env.CESTOS_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
+    // CESTOS_API_BACKEND_URL takes priority over CESTOS_API_URL (which may be overridden by .env.local to localhost)
+    const backend = (process.env.CESTOS_API_BACKEND_URL || process.env.CESTOS_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
     return [{ source: '/api/:path*', destination: `${backend}/api/:path*` }];
   },
   distDir: process.env.DIST_DIR || '.next',
