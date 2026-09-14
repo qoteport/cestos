@@ -81,7 +81,7 @@ function FileIcon({ name }: { name: string }) {
         ? FileText
         : File;
   return (
-    <div className="w-12 h-14 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-xl flex items-center justify-center shrink-0">
+    <div className="w-12 h-14 bg-emerald-50 border border-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
       <Icon size={25} />
     </div>
   );
@@ -226,9 +226,9 @@ export default function DocumentsPage() {
             <Upload size={17} /> Upload documents
           </button>
         </header>
-        <div className="bg-emerald-950 rounded-2xl p-5 md:p-7 text-white flex flex-col md:flex-row gap-5 md:items-center justify-between">
+        <div className="bg-emerald-950 p-5 md:p-7 text-white flex flex-col md:flex-row gap-5 md:items-center justify-between">
           <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-white/10">
+            <div className="p-2 bg-white/10">
               <Sparkles size={23} />
             </div>
             <div>
@@ -245,7 +245,7 @@ export default function DocumentsPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Try “drilling progress at the north site”"
-              className="w-full bg-white text-slate-900 placeholder:text-slate-500 rounded-xl pl-11 pr-10 py-3 outline-none focus:ring-4 focus:ring-emerald-400/40"
+              className="w-full bg-white text-slate-900 placeholder:text-slate-500 pl-11 pr-10 py-3 outline-none focus:ring-4 focus:ring-emerald-400/40"
             />
             {query && (
               <button
@@ -272,7 +272,7 @@ export default function DocumentsPage() {
                 <button
                   key={key}
                   onClick={() => choose(key)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-left ${view === key && !category ? 'bg-emerald-50 text-emerald-900 font-semibold' : 'text-muted-foreground hover:bg-muted'}`}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left ${view === key && !category ? 'bg-emerald-50 text-emerald-900 font-semibold' : 'text-muted-foreground hover:bg-muted'}`}
                 >
                   <Icon size={17} />
                   {label}
@@ -288,7 +288,7 @@ export default function DocumentsPage() {
                   <button
                     key={c.name}
                     onClick={() => choose('all', c.name)}
-                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${category === c.name ? 'bg-muted font-semibold' : 'text-muted-foreground hover:bg-muted'}`}
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-sm ${category === c.name ? 'bg-muted font-semibold' : 'text-muted-foreground hover:bg-muted'}`}
                   >
                     <FolderOpen size={15} />
                     <span className="flex-1 text-left">{c.name}</span>
@@ -310,7 +310,7 @@ export default function DocumentsPage() {
                         setTag(tag === t ? '' : t);
                         setPage(1);
                       }}
-                      className={`text-xs px-2 py-1 rounded-md border ${tag === t ? 'bg-emerald-100 border-emerald-300 text-emerald-900' : 'border-border text-muted-foreground hover:bg-muted'}`}
+                      className={`text-xs px-2 py-1 border ${tag === t ? 'bg-emerald-100 border-emerald-300 text-emerald-900' : 'border-border text-muted-foreground hover:bg-muted'}`}
                     >
                       #{t}
                     </button>
@@ -318,7 +318,7 @@ export default function DocumentsPage() {
                 </div>
               </div>
             )}
-            <div className="bg-muted/60 rounded-xl p-4 flex gap-2 text-xs text-muted-foreground leading-relaxed">
+            <div className="bg-muted/60 p-4 flex gap-2 text-xs text-muted-foreground leading-relaxed">
               <LockKeyhole size={16} className="shrink-0 mt-0.5" />
               <p>New documents are private. You control sharing from each file’s settings.</p>
             </div>
@@ -361,7 +361,7 @@ export default function DocumentsPage() {
             </div>
             {tag && (
               <button
-                className="mb-4 inline-flex items-center gap-2 text-xs bg-muted rounded-full px-3 py-1.5"
+                className="mb-4 inline-flex items-center gap-2 text-xs bg-muted px-3 py-1.5"
                 onClick={() => setTag('')}
               >
                 <Tag size={12} />
@@ -370,7 +370,7 @@ export default function DocumentsPage() {
               </button>
             )}
             {error && (
-              <p role="alert" className="p-4 mb-4 bg-red-50 text-red-800 rounded-lg text-sm">
+              <p role="alert" className="p-4 mb-4 bg-red-50 text-red-800 text-sm">
                 {error}
                 <button className="ml-3 underline" onClick={refresh}>
                   Retry
@@ -378,14 +378,14 @@ export default function DocumentsPage() {
               </p>
             )}
             {data?.search_warning && (
-              <p role="status" className="text-sm text-amber-800 bg-amber-50 p-3 rounded-lg mb-4">
+              <p role="status" className="text-sm text-amber-800 bg-amber-50 p-3 mb-4">
                 {data.search_warning}
               </p>
             )}
             {loading ? (
               <div role="status" className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="h-52 rounded-xl bg-muted animate-pulse" />
+                  <div key={i} className="h-52 bg-muted animate-pulse" />
                 ))}
                 <span className="sr-only">Loading documents</span>
               </div>
@@ -400,14 +400,14 @@ export default function DocumentsPage() {
                   return (
                     <article
                       key={row.id}
-                      className={`rounded-xl border border-border bg-card p-5 hover:shadow-md transition-shadow ${layout === 'list' ? 'sm:flex sm:gap-5 sm:items-start' : ''}`}
+                      className={`border border-border bg-card p-5 hover:shadow-md transition-shadow ${layout === 'list' ? 'sm:flex sm:gap-5 sm:items-start' : ''}`}
                     >
                       <div className="flex items-start justify-between gap-3 mb-4">
                         <FileIcon name={row.file_name} />
                         {layout === 'grid' && (
                           <span
                             title={privacy[row.visibility].label}
-                            className="text-muted-foreground bg-muted/60 p-1.5 rounded-full"
+                            className="text-muted-foreground bg-muted/60 p-1.5"
                           >
                             <PrivacyIcon size={14} />
                           </span>
@@ -453,7 +453,7 @@ export default function DocumentsPage() {
                             {row.tags.map((t) => (
                               <button
                                 key={t}
-                                className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded"
+                                className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5"
                                 onClick={() => {
                                   setTag(t);
                                   setPage(1);
@@ -480,7 +480,7 @@ export default function DocumentsPage() {
                           </span>
                           <div className="flex items-center gap-1.5">
                             <button
-                              className="px-2.5 py-1 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold rounded-md flex items-center gap-1 transition border border-emerald-200/70"
+                              className="px-2.5 py-1 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold flex items-center gap-1 transition border border-emerald-200/70"
                               onClick={() => handleViewDocument(row)}
                               title={`View document ${row.title}`}
                             >
@@ -514,7 +514,7 @@ export default function DocumentsPage() {
               </div>
             )}
             {!loading && !error && !data?.items.length && (
-              <div className="text-center rounded-2xl border border-dashed border-border py-20 px-6">
+              <div className="text-center border border-dashed border-border py-20 px-6">
                 <FolderOpen size={38} className="mx-auto text-emerald-700/50 mb-4" />
                 <h3 className="font-semibold">
                   {search ? 'No matching documents' : 'A home for your documents'}
@@ -637,7 +637,7 @@ export default function DocumentsPage() {
                 </div>
               </div>
             ) : (
-              <p className="bg-muted rounded-lg p-5 text-sm">
+              <p className="bg-muted p-5 text-sm">
                 {reading.index_message ||
                   'Text is not ready yet. You can download the original file.'}
               </p>
@@ -695,7 +695,7 @@ function UploadModal({
       }}
     >
       <form onSubmit={submit} className="space-y-5">
-        <label className="block border-2 border-dashed border-emerald-200 bg-emerald-50/50 rounded-xl p-8 text-center cursor-pointer">
+        <label className="block border-2 border-dashed border-emerald-200 bg-emerald-50/50 p-8 text-center cursor-pointer">
           <Upload size={28} className="mx-auto mb-3 text-emerald-700" />
           <span className="block font-semibold text-sm">Choose your files</span>
           <span className="block text-xs text-muted-foreground mt-2">
@@ -748,7 +748,7 @@ function UploadModal({
             Separate tags with commas.
           </span>
         </label>
-        <p className="flex gap-2 text-xs bg-muted p-3 rounded-lg text-muted-foreground">
+        <p className="flex gap-2 text-xs bg-muted p-3 text-muted-foreground">
           <LockKeyhole size={16} className="shrink-0" />
           Files start private. After uploading, use file settings to change visibility.
         </p>
@@ -872,7 +872,7 @@ function ManageModal({
             return (
               <label
                 key={value}
-                className={`flex gap-3 p-4 border rounded-lg cursor-pointer ${visibility === value ? 'border-emerald-600 bg-emerald-50/50' : 'border-border'}`}
+                className={`flex gap-3 p-4 border cursor-pointer ${visibility === value ? 'border-emerald-600 bg-emerald-50/50' : 'border-border'}`}
               >
                 <input
                   type="radio"
@@ -892,7 +892,7 @@ function ManageModal({
             );
           })}
         </fieldset>
-        <div className="text-xs text-muted-foreground bg-muted rounded-lg p-3">
+        <div className="text-xs text-muted-foreground bg-muted p-3">
           {states[row.index_status]}
           {row.index_message && <p className="mt-1">{row.index_message}</p>}
           <button
