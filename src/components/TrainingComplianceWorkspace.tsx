@@ -2,10 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import {
-  GraduationCap, Award, ShieldCheck, AlertTriangle, Plus, Filter, Search,
-  RefreshCw, CheckCircle, ArrowLeft, Calendar, FileText, User, Eye
-} from 'lucide-react';
+import { GraduationCap, ShieldCheck, AlertTriangle, Plus, Filter, Search, RefreshCw, ArrowLeft, Calendar } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { Row, display, Modal } from './DataUI';
 
@@ -266,8 +263,7 @@ export default function TrainingComplianceWorkspace() {
                     const daysLeft = item.days_left ?? item.days_remaining ?? 15;
                     const urgencyBadge =
                       daysLeft <= 7
-                        ? 'bg-rose-100 text-rose-800 border-rose-300 font-bold'
-                        : 'bg-amber-100 text-amber-800 border-amber-300 font-semibold';
+                        ? 'bg-rose-100 text-rose-800 border-rose-300 font-bold' :'bg-amber-100 text-amber-800 border-amber-300 font-semibold';
                     return (
                       <tr key={item.id || idx} className="hover:bg-muted/30 transition-colors">
                         <td className="p-3 font-semibold text-foreground">

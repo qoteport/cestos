@@ -27,7 +27,7 @@ export default function WorkforceDistributionChart({ projectId, departmentId }: 
   if (projectId) queryParams.set('project_id', projectId);
   if (departmentId) queryParams.set('department_id', departmentId);
 
-  const url = '/api/v1/hr/workforce-stats' + (queryParams.toString() ? '?' + queryParams.toString() : '');
+  const url = '/api/v1/employees/dashboard-summary' + (queryParams.toString() ? '?' + queryParams.toString() : '');
   const statsRes = useData(url);
 
   const byProject = statsRes.data?.by_project || [];

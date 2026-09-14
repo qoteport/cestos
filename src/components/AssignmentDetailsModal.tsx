@@ -1,10 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  Briefcase, MapPin, UserCheck, Calendar, Clock,
-  Edit, FileText, CheckCircle, Info, Tag, User, Shield
-} from 'lucide-react';
+import { Briefcase, MapPin, UserCheck, Calendar, Edit, FileText } from 'lucide-react';
 import { Modal, Row, display, title } from './DataUI';
 import { apiFetch } from '@/lib/api';
 
@@ -68,13 +65,9 @@ export default function AssignmentDetailsModal({
   const supervisorName = item.supervisor_name || (typeof item.supervisor === 'object' ? [item.supervisor?.first_name, item.supervisor?.last_name].filter(Boolean).join(' ') : null) || item.supervisor_id || 'None assigned';
 
   const statusColor =
-    item.status === 'ACTIVE'
-      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-      : item.status === 'COMPLETED'
-      ? 'bg-blue-100 text-blue-800 border-blue-300'
-      : item.status === 'CANCELLED'
-      ? 'bg-rose-100 text-rose-800 border-rose-300'
-      : 'bg-amber-100 text-amber-800 border-amber-300';
+    item.status === 'ACTIVE' ?'bg-emerald-100 text-emerald-800 border-emerald-300'
+      : item.status === 'COMPLETED' ?'bg-blue-100 text-blue-800 border-blue-300'
+      : item.status === 'CANCELLED' ?'bg-rose-100 text-rose-800 border-rose-300' :'bg-amber-100 text-amber-800 border-amber-300';
 
   return (
     <Modal name={`Assignment Details — ${item.assignment_number || 'Record'}`} onClose={onClose}>

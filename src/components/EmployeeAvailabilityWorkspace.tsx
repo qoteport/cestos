@@ -2,10 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import {
-  Users, Calendar, Clock, Briefcase, Plus, Filter, Search, RefreshCw,
-  CheckCircle, ArrowLeft, UserCheck, ShieldCheck, MapPin, Award, Eye
-} from 'lucide-react';
+import { Users, Calendar, Clock, Briefcase, Filter, Search, RefreshCw, CheckCircle, ArrowLeft, UserCheck, ShieldCheck, MapPin, Eye } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { Row, display, Modal } from './DataUI';
 import RecordForm from './RecordForm';

@@ -1,23 +1,7 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import {
-  ArrowLeft,
-  Building2,
-  MapPin,
-  User,
-  Package,
-  Layers,
-  History,
-  FileText,
-  Plus,
-  Upload,
-  Download,
-  AlertTriangle,
-  Boxes,
-  DollarSign,
-  Edit,
-} from 'lucide-react';
+import { ArrowLeft, Building2, Package, FileText, Plus, Upload, Download, AlertTriangle, Boxes, DollarSign,  } from 'lucide-react';
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import { useAuth } from './AuthProvider';
 import { useData, State, Row, rows, Table, Facts, Modal } from './DataUI';
@@ -186,9 +170,7 @@ export default function StoreDetailView({ storeId }: { storeId: string }) {
       <div className="border-b flex gap-4 text-xs font-semibold">
         <button
           className={`pb-2 border-b-2 flex items-center gap-1.5 ${
-            tab === 'stock'
-              ? 'border-primary text-primary font-bold'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+            tab === 'stock' ?'border-primary text-primary font-bold' :'border-transparent text-muted-foreground hover:text-foreground'
           }`}
           onClick={() => setTab('stock')}
         >
@@ -197,9 +179,7 @@ export default function StoreDetailView({ storeId }: { storeId: string }) {
         </button>
         <button
           className={`pb-2 border-b-2 flex items-center gap-1.5 ${
-            tab === 'bins'
-              ? 'border-primary text-primary font-bold'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+            tab === 'bins' ?'border-primary text-primary font-bold' :'border-transparent text-muted-foreground hover:text-foreground'
           }`}
           onClick={() => setTab('bins')}
         >
@@ -208,9 +188,7 @@ export default function StoreDetailView({ storeId }: { storeId: string }) {
         </button>
         <button
           className={`pb-2 border-b-2 flex items-center gap-1.5 ${
-            tab === 'files'
-              ? 'border-primary text-primary font-bold'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+            tab === 'files' ?'border-primary text-primary font-bold' :'border-transparent text-muted-foreground hover:text-foreground'
           }`}
           onClick={() => setTab('files')}
         >

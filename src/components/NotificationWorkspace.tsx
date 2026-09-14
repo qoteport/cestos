@@ -1,26 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  Bell,
-  CheckCircle2,
-  Share2,
-  Plus,
-  RefreshCw,
-  Search,
-  Filter,
-  Layers,
-  Wrench,
-  Package,
-  Users,
-  FolderKanban,
-  Clock,
-  Mail,
-  ShieldAlert,
-  Play,
-  Trash2,
-  Edit3,
-} from 'lucide-react';
+import { Bell, CheckCircle2, Share2, Plus, RefreshCw, Search, Filter, Wrench, Package, Users, FolderKanban, Clock, Mail, ShieldAlert, Play, Trash2,  } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from './AuthProvider';
 import { useData, State, Row, rows, Modal, title } from './DataUI';
@@ -267,8 +248,7 @@ export default function NotificationWorkspace() {
         <button
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             tab === 'notifications'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+              ? 'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
           }`}
           onClick={() => setTab('notifications')}
         >
@@ -277,9 +257,7 @@ export default function NotificationWorkspace() {
         </button>
         <button
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
-            tab === 'schedules'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+            tab === 'schedules' ?'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
           }`}
           onClick={() => setTab('schedules')}
         >
@@ -368,8 +346,7 @@ export default function NotificationWorkspace() {
                         isResolved
                           ? 'bg-slate-50/60 border-slate-200 text-slate-600 opacity-80'
                           : isRead
-                            ? 'bg-white border-border'
-                            : 'bg-blue-50/30 border-blue-200 shadow-sm'
+                            ? 'bg-white border-border' :'bg-blue-50/30 border-blue-200 shadow-sm'
                       }`}
                     >
                       <div className="flex flex-wrap justify-between items-start gap-3">
@@ -392,11 +369,8 @@ export default function NotificationWorkspace() {
                             {/* Priority Badge */}
                             <span
                               className={`badge text-2xs font-bold uppercase ${
-                                priority === 'CRITICAL'
-                                  ? 'bg-red-100 text-red-800 border-red-200'
-                                  : priority === 'IMPORTANT'
-                                    ? 'bg-amber-100 text-amber-800 border-amber-200'
-                                    : 'bg-blue-100 text-blue-800 border-blue-200'
+                                priority === 'CRITICAL' ?'bg-red-100 text-red-800 border-red-200'
+                                  : priority === 'IMPORTANT' ?'bg-amber-100 text-amber-800 border-amber-200' :'bg-blue-100 text-blue-800 border-blue-200'
                               }`}
                             >
                               {priority}

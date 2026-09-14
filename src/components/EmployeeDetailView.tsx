@@ -3,12 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  ArrowLeft, Edit, Upload, Archive, RefreshCw, UserCheck, Phone,
-  FileText, GraduationCap, Award, Shield, Briefcase, Clock, Calendar,
-  Activity, Plus, CheckCircle, XCircle, Download, ExternalLink, Trash2, User,
-  Key, Lock, Mail, Stethoscope, ShieldAlert, FileCheck, Tag, Filter, Check, Eye
-} from 'lucide-react';
+import { ArrowLeft, Edit, Upload, Archive, UserCheck, Phone, FileText, GraduationCap, Award, Shield, Briefcase, Clock, Calendar, Activity, Plus, CheckCircle, Download, ExternalLink, Trash2, User, Key, Mail, FileCheck, Filter, Check, Eye } from 'lucide-react';
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import { Row, display, title, Modal } from './DataUI';
 import RecordForm from './RecordForm';
@@ -1848,11 +1843,8 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                       item.asset_category_id ||
                       '—';
                     const statusColor =
-                      item.status === 'ACTIVE'
-                        ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                        : item.status === 'REVOKED' || item.status === 'EXPIRED'
-                        ? 'bg-rose-100 text-rose-800 border-rose-200'
-                        : 'bg-amber-100 text-amber-800 border-amber-200';
+                      item.status === 'ACTIVE' ?'bg-emerald-100 text-emerald-800 border-emerald-200'
+                        : item.status === 'REVOKED'|| item.status === 'EXPIRED' ?'bg-rose-100 text-rose-800 border-rose-200' :'bg-amber-100 text-amber-800 border-amber-200';
                     return (
                       <tr key={item.id || idx} className="border-t hover:bg-muted/30">
                         <td className="p-2.5 font-semibold text-foreground">{display(targetName)}</td>

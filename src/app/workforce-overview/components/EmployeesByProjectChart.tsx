@@ -23,7 +23,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function EmployeesByProjectChart({ data: passedData }: { data?: Array<{ project: string; count: number }> }) {
-  const statsRes = useData('/api/v1/hr/workforce-stats');
+  const statsRes = useData('/api/v1/employees/dashboard-summary');
   const data = passedData || statsRes.data?.by_project || [];
 
   if (!passedData && statsRes.loading) {

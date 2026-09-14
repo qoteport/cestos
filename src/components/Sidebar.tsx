@@ -3,24 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  LayoutDashboard,
-  FileText,
-  FolderKanban,
-  Users,
-  Wrench,
-  Truck,
-  Package,
-  ChevronDown,
-  PanelLeftClose,
-  PanelLeftOpen,
-  LogOut,
-  User,
-  Bell,
-  ShieldCheck,
-  Zap,
-  Sparkles,
-} from 'lucide-react';
+import { LayoutDashboard, FileText, FolderKanban, Users, Truck, Package, ChevronDown, PanelLeftClose, PanelLeftOpen, LogOut, User, Bell, ShieldCheck,  } from 'lucide-react';
 import AppLogo from './ui/AppLogo';
 import { useAuth } from './AuthProvider';
 import { operation } from './ResourceWorkspace';
@@ -200,14 +183,12 @@ export default function Sidebar({
 
   const active = (href: string) =>
     path === href || (href === '/projects-overview' && path === '/project-command-center')
-      ? 'bg-secondary text-primary font-semibold'
-      : 'text-muted-foreground hover:bg-muted hover:text-foreground';
+      ? 'bg-secondary text-primary font-semibold' :'text-muted-foreground hover:bg-muted hover:text-foreground';
 
   return (
     <aside
       className={
-        'border-r bg-card flex flex-col flex-shrink-0 sidebar-transition no-print ' +
-        (collapsed ? 'w-16' : 'w-60')
+        'border-r bg-card flex flex-col flex-shrink-0 sidebar-transition no-print ' + (collapsed ?'w-16' : 'w-60')
       }
     >
       {/* Logo */}
@@ -290,8 +271,7 @@ export default function Sidebar({
                           {visibleLinks.map(([label, resource]) => (
                             <Link
                               className={
-                                'block px-2 py-1.5 rounded text-xs transition-colors ' +
-                                active('/workspace/' + resource)
+                                'block px-2 py-1.5 rounded text-xs transition-colors ' + active('/workspace/' + resource)
                               }
                               href={'/workspace/' + resource}
                               key={resource}

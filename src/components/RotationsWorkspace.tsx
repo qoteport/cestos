@@ -2,13 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import {
-  RotateCcw, Calendar, Clock, Plus, Filter, Search, RefreshCw,
-  CheckCircle, ArrowLeft, Users, Briefcase, AlertCircle, Eye, Edit, ChevronRight
-} from 'lucide-react';
+import { RotateCcw, Calendar, Clock, Plus, Filter, Search, RefreshCw, ArrowLeft, Eye } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { Row, display, Modal } from './DataUI';
-import RecordForm from './RecordForm';
+
 
 export default function RotationsWorkspace() {
   const [loading, setLoading] = useState(true);
@@ -208,11 +205,8 @@ export default function RotationsWorkspace() {
                   const empName = item.employee_name || item.employee?.first_name ? `${item.employee?.first_name} ${item.employee?.last_name}` : item.employee_id || 'Employee';
                   const projName = item.project_name || item.project?.name || item.project_id || 'General Operations';
                   const statusBadge =
-                    item.status === 'ON_SITE' || item.status === 'ACTIVE'
-                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                      : item.status === 'OFF_SITE' || item.status === 'ON_REST'
-                      ? 'bg-amber-100 text-amber-800 border-amber-300'
-                      : 'bg-blue-100 text-blue-800 border-blue-300';
+                    item.status === 'ON_SITE' || item.status === 'ACTIVE' ?'bg-emerald-100 text-emerald-800 border-emerald-300'
+                      : item.status === 'OFF_SITE'|| item.status === 'ON_REST' ?'bg-amber-100 text-amber-800 border-amber-300' :'bg-blue-100 text-blue-800 border-blue-300';
 
                   return (
                     <tr key={item.id || idx} className="hover:bg-muted/30 transition-colors">

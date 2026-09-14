@@ -1,27 +1,7 @@
 'use client';
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import {
-  ArrowLeft,
-  Package,
-  Layers,
-  Building2,
-  History,
-  DollarSign,
-  TrendingDown,
-  TrendingUp,
-  AlertTriangle,
-  Boxes,
-  Plus,
-  Minus,
-  SlidersHorizontal,
-  FileText,
-  Truck,
-  Tag,
-  Clock,
-  CheckCircle2,
-  Calendar,
-} from 'lucide-react';
+import { ArrowLeft, Package, Building2, History, DollarSign, TrendingUp, AlertTriangle, Boxes, Plus, Minus, SlidersHorizontal, Truck, Tag,  } from 'lucide-react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -32,7 +12,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
-import { useData, State, Row, rows, Table, Facts, Modal } from './DataUI';
+import { useData, State, rows, Facts, Modal } from './DataUI';
 import RecordForm from './RecordForm';
 import { operation } from './ResourceWorkspace';
 import { useAuth } from './AuthProvider';
@@ -448,9 +428,7 @@ export default function ItemDetailView({ itemId }: { itemId: string }) {
             <button
               onClick={() => setTab('overview')}
               className={`pb-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-1.5 ${
-                tab === 'overview'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                tab === 'overview' ?'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               <Package size={14} />
@@ -460,9 +438,7 @@ export default function ItemDetailView({ itemId }: { itemId: string }) {
             <button
               onClick={() => setTab('stores')}
               className={`pb-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-1.5 ${
-                tab === 'stores'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                tab === 'stores' ?'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               <Building2 size={14} />
@@ -472,9 +448,7 @@ export default function ItemDetailView({ itemId }: { itemId: string }) {
             <button
               onClick={() => setTab('history')}
               className={`pb-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-1.5 ${
-                tab === 'history'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                tab === 'history' ?'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               <History size={14} />
@@ -484,9 +458,7 @@ export default function ItemDetailView({ itemId }: { itemId: string }) {
             <button
               onClick={() => setTab('suppliers')}
               className={`pb-2.5 text-xs font-semibold border-b-2 transition flex items-center gap-1.5 ${
-                tab === 'suppliers'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                tab === 'suppliers' ?'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               <Truck size={14} />
@@ -525,15 +497,13 @@ export default function ItemDetailView({ itemId }: { itemId: string }) {
                         Number(overview.quantity_on_hand || 0) <= 0
                           ? 'bg-red-100 text-red-800'
                           : Number(overview.quantity_on_hand || 0) <= Number(overview.minimum_stock_level || 0)
-                          ? 'bg-amber-100 text-amber-800'
-                          : 'bg-emerald-100 text-emerald-800'
+                          ? 'bg-amber-100 text-amber-800' :'bg-emerald-100 text-emerald-800'
                       }`}
                     >
                       {Number(overview.quantity_on_hand || 0) <= 0
                         ? 'OUT OF STOCK'
                         : Number(overview.quantity_on_hand || 0) <= Number(overview.minimum_stock_level || 0)
-                        ? 'LOW STOCK'
-                        : 'HEALTHY STOCK'}
+                        ? 'LOW STOCK' :'HEALTHY STOCK'}
                     </span>
                   </div>
 
@@ -644,8 +614,7 @@ export default function ItemDetailView({ itemId }: { itemId: string }) {
                                   isReceipt
                                     ? 'bg-emerald-100 text-emerald-800'
                                     : isIssue
-                                    ? 'bg-amber-100 text-amber-800'
-                                    : 'bg-slate-100 text-slate-800'
+                                    ? 'bg-amber-100 text-amber-800' :'bg-slate-100 text-slate-800'
                                 }`}
                               >
                                 {txn.transaction_type?.replace(/_/g, ' ') || 'MOVEMENT'}

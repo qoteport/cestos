@@ -44,7 +44,7 @@ export default function Topbar() {
     <header className="min-h-14 border-b bg-card flex items-center px-4 md:px-6 gap-3 flex-shrink-0 no-print">
       {/* Search */}
       <form
-        className="hidden md:flex flex-1 max-w-xl items-center gap-2 bg-muted/40 border border-border px-3 py-1.5 rounded-lg focus-within:ring-2 focus-within:ring-primary/40 focus-within:border-primary/40 transition-all"
+        className="hidden md:flex flex-1 max-w-xl items-center gap-2 bg-muted/40 border border-border px-3 py-1.5 focus-within:ring-2 focus-within:ring-primary/40 focus-within:border-primary/40 transition-all"
         onSubmit={handleSearchSubmit}
       >
         <Search size={16} className="text-muted-foreground flex-shrink-0" />
@@ -79,7 +79,7 @@ export default function Topbar() {
         )}
         <button
           type="submit"
-          className="btn-primary text-xs py-1 px-2.5 font-600 ml-1 rounded flex items-center gap-1"
+          className="btn-primary text-xs py-1 px-2.5 font-600 ml-1 flex items-center gap-1"
         >
           <span>Search</span>
         </button>
@@ -90,7 +90,7 @@ export default function Topbar() {
         {/* Command Center Button */}
         <Link
           href="/command-center"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary font-600 text-xs transition-colors border border-primary/20"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary font-600 text-xs transition-colors border border-primary/20"
           title="Open Action Command Center"
         >
           <Zap size={14} className="fill-primary/20" />
@@ -101,7 +101,7 @@ export default function Topbar() {
         {auth.can('intelligence.read') && (
           <Link
             href="/intelligence"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md gradient-brand text-white font-600 text-xs shadow-sm hover:opacity-90 transition-opacity"
+            className="flex items-center gap-1.5 px-3 py-1.5 gradient-brand text-white font-600 text-xs shadow-sm hover:opacity-90 transition-opacity"
             title="Open Executive Operations Intelligence & AI Wizard"
           >
             <Sparkles size={14} />
@@ -113,11 +113,11 @@ export default function Topbar() {
         <Link
           aria-label={'Notifications' + (unread ? ', ' + unread + ' unread' : '')}
           href="/workspace/hr/notifications"
-          className="relative p-2 rounded hover:bg-muted"
+          className="relative p-2 hover:bg-muted"
         >
           <Bell size={18} />
           {unread > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 rounded-full bg-accent text-white text-[10px] px-1">
+            <span className="absolute -top-0.5 -right-0.5 bg-accent text-white text-[10px] px-1">
               {unread}
             </span>
           )}
@@ -126,11 +126,11 @@ export default function Topbar() {
         {/* User menu */}
         <div className="relative">
           <button
-            className="flex items-center gap-2 px-2 py-2 rounded hover:bg-muted"
+            className="flex items-center gap-2 px-2 py-2 hover:bg-muted"
             onClick={() => setShow(!show)}
             aria-expanded={show}
           >
-            <span className="w-7 h-7 gradient-brand rounded-full flex items-center justify-center text-xs font-bold text-white">
+            <span className="w-7 h-7 gradient-brand flex items-center justify-center text-xs font-bold text-white">
               {auth?.user?.first_name?.[0]}
               {auth?.user?.last_name?.[0]}
             </span>
@@ -146,7 +146,7 @@ export default function Topbar() {
                 {/* Profile Header */}
                 <div className="pb-3 px-1">
                   <div className="flex items-center gap-3">
-                    <span className="w-10 h-10 gradient-brand rounded-full flex items-center justify-center text-sm font-bold text-white shadow-sm flex-shrink-0">
+                    <span className="w-10 h-10 gradient-brand flex items-center justify-center text-sm font-bold text-white shadow-sm flex-shrink-0">
                       {auth?.user?.first_name?.[0]}
                       {auth?.user?.last_name?.[0]}
                     </span>
@@ -159,7 +159,7 @@ export default function Topbar() {
                         {(auth?.access?.roles || ['Staff']).map((role) => (
                           <span
                             key={role}
-                            className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 capitalize"
+                            className="inline-block px-1.5 py-0.5 text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 capitalize"
                           >
                             {role.replace('_', ' ')}
                           </span>
@@ -178,7 +178,7 @@ export default function Topbar() {
                         : '/workspace/employees'
                     }
                     onClick={() => setShow(false)}
-                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                    className="flex items-center gap-2.5 px-2.5 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
                   >
                     <User size={15} className="text-muted-foreground" />
                     <span>My Profile</span>
@@ -187,7 +187,7 @@ export default function Topbar() {
                   <Link
                     href="/workspace/hr/me/time-logs"
                     onClick={() => setShow(false)}
-                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                    className="flex items-center gap-2.5 px-2.5 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
                   >
                     <Clock size={15} className="text-muted-foreground" />
                     <span>My Activity & Time Logs</span>
@@ -196,7 +196,7 @@ export default function Topbar() {
                   <Link
                     href="/workspace/hr/me/leave-requests"
                     onClick={() => setShow(false)}
-                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                    className="flex items-center gap-2.5 px-2.5 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
                   >
                     <Calendar size={15} className="text-muted-foreground" />
                     <span>My Leave Requests</span>
@@ -205,7 +205,7 @@ export default function Topbar() {
                   <Link
                     href="/workspace/hr/notifications"
                     onClick={() => setShow(false)}
-                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                    className="flex items-center gap-2.5 px-2.5 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
                   >
                     <Bell size={15} className="text-muted-foreground" />
                     <span>Notifications</span>
@@ -215,7 +215,7 @@ export default function Topbar() {
                     <Link
                       href="/workspace/admin"
                       onClick={() => setShow(false)}
-                      className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                      className="flex items-center gap-2.5 px-2.5 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
                     >
                       <ShieldCheck size={15} className="text-muted-foreground" />
                       <span>System Administration</span>
@@ -226,7 +226,7 @@ export default function Topbar() {
                 {/* Sign out */}
                 <div className="pt-2">
                   <button
-                    className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-md text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors"
+                    className="flex items-center justify-center gap-2 w-full px-3 py-2 text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors"
                     onClick={() => {
                       setShow(false);
                       void auth?.signOut();

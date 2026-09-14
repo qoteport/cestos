@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   FolderKanban,
   Wrench,
@@ -81,8 +81,7 @@ function actionIcon(action: string) {
       return <Users size={13} />;
     case 'asset':
       return <Wrench size={13} />;
-    case 'inventory':
-    case 'transfer':
+    case 'inventory': case'transfer':
       return <Package size={13} />;
     case 'location':
       return <Layers size={13} />;
@@ -100,8 +99,7 @@ function iconBg(action: string) {
       return 'bg-purple-100 text-purple-700';
     case 'asset':
       return 'bg-amber-100 text-amber-700';
-    case 'inventory':
-    case 'transfer':
+    case 'inventory': case'transfer':
       return 'bg-green-100 text-green-700';
     default:
       return 'bg-slate-100 text-slate-700';

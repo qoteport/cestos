@@ -3,11 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  FileText, AlertTriangle, Search, RefreshCw, ArrowLeft, Eye, CheckCircle,
-  ExternalLink, User, ArrowRight, ShieldAlert, Download, Clock
-} from 'lucide-react';
-import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
+import { FileText, AlertTriangle, Search, RefreshCw, ArrowLeft, Eye, CheckCircle, ArrowRight, ShieldAlert, Clock } from 'lucide-react';
+import { apiFetch, apiFetchBlob } from '@/lib/api';
 import { Row, display } from './DataUI';
 
 export default function ExpiringDocumentsWorkspace() {
@@ -209,8 +206,7 @@ export default function ExpiringDocumentsWorkspace() {
                     daysLeft <= 7
                       ? 'bg-rose-100 text-rose-800 border-rose-300 font-bold'
                       : daysLeft <= 15
-                      ? 'bg-amber-100 text-amber-800 border-amber-300 font-semibold'
-                      : 'bg-blue-100 text-blue-800 border-blue-200';
+                      ? 'bg-amber-100 text-amber-800 border-amber-300 font-semibold' :'bg-blue-100 text-blue-800 border-blue-200';
 
                   return (
                     <tr key={doc.id || idx} className="hover:bg-muted/30 transition-colors">

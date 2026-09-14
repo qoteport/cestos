@@ -43,8 +43,8 @@ export default function BrandPanel() {
         <div className="space-y-3 mb-10">
           {FEATURES?.map(f => (
             <div key={f?.id} className="flex items-center gap-3">
-              <div className="w-5 h-5 rounded-full border-2 border-blue-300 flex items-center justify-center flex-shrink-0">
-                <div className="w-2 h-2 rounded-full bg-blue-300" />
+              <div className="w-5 h-5 border-2 border-blue-300 flex items-center justify-center flex-shrink-0">
+                <div className="w-2 h-2 bg-blue-300" />
               </div>
               <span className="text-sm text-blue-100 font-400">{f?.text}</span>
             </div>

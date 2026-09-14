@@ -1,20 +1,8 @@
 'use client';
 import React, { useState } from 'react';
-import {
-  BookOpen,
-  Boxes,
-  ArrowRightLeft,
-  Sliders,
-  TrendingUp,
-  FileCheck,
-  Building2,
-  AlertTriangle,
-  PackageCheck,
-  ShieldCheck,
-  HelpCircle,
-  Layers,
-  Search,
-} from 'lucide-react';
+import { BookOpen, ArrowRightLeft, Sliders, TrendingUp, AlertTriangle, PackageCheck, Layers,  } from 'lucide-react';
+import Icon from '@/components/ui/AppIcon';
+
 
 export default function SystemManual() {
   const [activeSection, setActiveSection] = useState<
