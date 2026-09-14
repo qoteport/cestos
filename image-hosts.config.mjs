@@ -19,4 +19,8 @@ export const imageHosts = [
         protocol: 'https',
         hostname: 'img.rocket.new',
     },
+    {
+        protocol: 'https',
+        hostname: 'cestos-global-reach--cestos-global-reach.us-central1.hosted.app',
+    },
 ];

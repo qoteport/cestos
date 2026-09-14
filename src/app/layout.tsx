@@ -15,7 +15,10 @@ export const metadata: Metadata = {
   description: 'Cestos Operations helps mining and drilling companies manage workforce, equipment fleet, and inventory across multiple active projects from one command platform.',
   icons: {
     icon: [
-      { url: '/favicon.ico', type: 'image/x-icon' },
+      { url: 'https://cestos-global-reach--cestos-global-reach.us-central1.hosted.app/assets/cestos-logo-with-company-name-no-bg-BQ8Mdlo4.jpg', type: 'image/jpeg' },
+    ],
+    apple: [
+      { url: 'https://cestos-global-reach--cestos-global-reach.us-central1.hosted.app/assets/cestos-logo-with-company-name-no-bg-BQ8Mdlo4.jpg', type: 'image/jpeg' },
     ],
   },
 };
