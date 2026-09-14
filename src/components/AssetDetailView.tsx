@@ -1221,15 +1221,10 @@ const componentCreateOp = {
                               <div className="flex items-center gap-2 mt-1">
                                 <span
                                   className={`badge text-sm py-1 px-3 ${
-                                    asset?.status === 'OPERATING'
-                                      ? 'badge-active'
-                                      : asset?.status === 'AVAILABLE'
-                                        ? 'badge-standby'
-                                        : asset?.status === 'BREAKDOWN'
-                                          ? 'badge-breakdown'
-                                          : asset?.status === 'MAINTENANCE'
-                                            ? 'badge-maintenance'
-                                            : 'badge-neutral'
+                                    asset?.status === 'OPERATING' ?'badge-active'
+                                      : asset?.status === 'AVAILABLE' ?'badge-standby'
+                                        : asset?.status === 'BREAKDOWN' ?'badge-breakdown'
+                                          : asset?.status === 'MAINTENANCE' ?'badge-maintenance' :'badge-neutral'
                                   }`}
                                 >
                                   {asset?.status?.replace(/_/g, ' ') || 'UNKNOWN'}
@@ -1275,15 +1270,10 @@ const componentCreateOp = {
                                         <span className="text-amber-600 font-bold text-xs">➔</span>
                                         <span
                                           className={`badge text-xs ${
-                                            r.new_status === 'OPERATING'
-                                              ? 'badge-active'
-                                              : r.new_status === 'AVAILABLE'
-                                                ? 'badge-standby'
-                                                : r.new_status === 'BREAKDOWN'
-                                                  ? 'badge-breakdown'
-                                                  : r.new_status === 'MAINTENANCE'
-                                                    ? 'badge-maintenance'
-                                                    : 'badge-neutral'
+                                            r.new_status === 'OPERATING' ?'badge-active'
+                                              : r.new_status === 'AVAILABLE' ?'badge-standby'
+                                                : r.new_status === 'BREAKDOWN' ?'badge-breakdown'
+                                                  : r.new_status === 'MAINTENANCE' ?'badge-maintenance' :'badge-neutral'
                                           }`}
                                         >
                                           {r.new_status?.replace(/_/g, ' ') || 'NEW STATUS'}
@@ -1447,14 +1437,10 @@ const componentCreateOp = {
       {selected && (
         <Modal
           name={
-            tab === 'activity'
-              ? 'Activity Detail · ' + (selected.action || 'Action')
-              : tab === 'maintenance'
-                ? 'Maintenance Job Details · ' + (selected.title || 'Job')
-                : tab === 'fuel-logs'
-                  ? 'Fuel Log Details & Dip Readings · ' + (selected.recorded_at ? new Date(selected.recorded_at).toLocaleDateString() : 'Fuel Entry')
-                  : tab === 'assignments'
-                    ? 'Assignment Record Details · ' + (selected.project_name || selected.project?.name || 'Project Assignment')
+            tab === 'activity' ?'Activity Detail · ' + (selected.action || 'Action')
+              : tab === 'maintenance' ?'Maintenance Job Details · ' + (selected.title || 'Job')
+                : tab === 'fuel-logs' ?'Fuel Log Details & Dip Readings · ' + (selected.recorded_at ? new Date(selected.recorded_at).toLocaleDateString() : 'Fuel Entry')
+                  : tab === 'assignments' ?'Assignment Record Details · ' + (selected.project_name || selected.project?.name || 'Project Assignment')
                     : selected.title || selected.name || title(tab) + ' record'
           }
           onClose={() => {
@@ -1492,24 +1478,17 @@ const componentCreateOp = {
                   <div className="flex items-center gap-2 mt-1">
                     <span
                       className={`badge ${
-                        selected.status === 'COMPLETED'
-                          ? 'badge-active'
-                          : selected.status === 'IN_PROGRESS'
-                            ? 'badge-maintenance'
-                            : selected.status === 'CANCELLED'
-                              ? 'badge-neutral'
-                              : 'badge-standby'
+                        selected.status === 'COMPLETED' ?'badge-active'
+                          : selected.status === 'IN_PROGRESS' ?'badge-maintenance'
+                            : selected.status === 'CANCELLED' ?'badge-neutral' :'badge-standby'
                       }`}
                     >
                       {selected.status?.replace(/_/g, ' ') || 'OPEN'}
                     </span>
                     <span
                       className={`badge ${
-                        selected.priority === 'CRITICAL'
-                          ? 'badge-breakdown'
-                          : selected.priority === 'HIGH'
-                            ? 'badge-maintenance'
-                            : 'badge-neutral'
+                        selected.priority === 'CRITICAL' ?'badge-breakdown'
+                          : selected.priority === 'HIGH' ?'badge-maintenance' :'badge-neutral'
                       }`}
                     >
                       {selected.priority || 'NORMAL'} Priority
@@ -1867,11 +1846,8 @@ const componentCreateOp = {
                   <div className="flex items-center gap-2 mt-1">
                     <span
                       className={`badge ${
-                        selected.status === 'ACTIVE'
-                          ? 'badge-active'
-                          : selected.status === 'COMPLETED'
-                            ? 'badge-neutral'
-                            : 'badge-standby'
+                        selected.status === 'ACTIVE' ?'badge-active'
+                          : selected.status === 'COMPLETED' ?'badge-neutral' :'badge-standby'
                       }`}
                     >
                       {selected.status?.replace(/_/g, ' ') || 'ACTIVE'}
@@ -1946,9 +1922,7 @@ const componentCreateOp = {
                   <p className="font-medium text-foreground">
                     {selected.ending_meter != null
                       ? `${selected.ending_meter} ${asset.meter_type?.replace(/_/g, ' ') || ''}`
-                      : selected.status === 'ACTIVE'
-                        ? 'Active on site'
-                        : '—'}
+                      : selected.status === 'ACTIVE' ?'Active on site' :'—'}
                   </p>
                 </div>
               </div>

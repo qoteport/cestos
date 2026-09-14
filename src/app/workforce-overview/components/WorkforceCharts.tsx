@@ -104,9 +104,9 @@ export default function WorkforceCharts({
   if (availabilityStatus) queryParams.set('availability_status', availabilityStatus);
   if (projectId) queryParams.set('project_id', projectId);
 
-  const url = '/api/v1/hr/workforce-stats' + (queryParams.toString() ? '?' + queryParams.toString() : '');
+  const url = '/api/v1/employees/dashboard-summary' + (queryParams.toString() ? '?' + queryParams.toString() : '');
   const statsRes = useData(url);
-  const byDept = statsRes.data?.by_department || [];
+  const byDept = (statsRes.data?.by_department || []).map((d: any) => ({ dept: d.department ?? d.dept, count: d.count }));
   const byProj = statsRes.data?.by_project || [];
 
   return (

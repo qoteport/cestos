@@ -29,6 +29,8 @@ import {
 import AppLayout from '@/components/AppLayout';
 import { Modal } from '@/components/DataUI';
 import { apiFetch, apiFetchBlob, downloadBlob, getAccessToken } from '@/lib/api';
+import Icon from '@/components/ui/AppIcon';
+
 
 interface DocumentRow {
   id: string;
@@ -68,8 +70,7 @@ const states: Record<string, string> = {
 };
 const size = (bytes: number) =>
   bytes >= 1048576
-    ? (bytes / 1048576).toFixed(1) + ' MB'
-    : Math.max(1, Math.round(bytes / 1024)) + ' KB';
+    ? (bytes / 1048576).toFixed(1) + 'MB' : Math.max(1, Math.round(bytes / 1024)) +' KB';
 function FileIcon({ name }: { name: string }) {
   const ext = name.split('.').pop()?.toLowerCase();
   const Icon = ['xlsx', 'xls', 'csv'].includes(ext || '')
@@ -203,11 +204,8 @@ export default function DocumentsPage() {
     category ||
     (view === 'for-you'
       ? 'For you'
-      : view === 'super-private'
-        ? 'Super Private'
-        : view === 'public'
-          ? 'Shared with everyone'
-          : 'All documents');
+      : view === 'super-private' ?'Super Private'
+        : view === 'public' ?'Shared with everyone' :'All documents');
   return (
     <AppLayout>
       <div className="max-w-[1600px] mx-auto p-4 md:p-8 space-y-6">
@@ -333,8 +331,7 @@ export default function DocumentsPage() {
                   {search
                     ? `Within ${title.toLowerCase()} · `
                     : view === 'for-you'
-                      ? 'Files you uploaded or attached to your employee profile · '
-                      : ''}
+                      ? 'Files you uploaded or attached to your employee profile · ' :''}
                   {data?.total ?? '—'} documents
                 </p>
               </div>
@@ -887,11 +884,8 @@ function ManageModal({
                 <span>
                   <span className="text-sm font-semibold block">{privacy[value].label}</span>
                   <span className="text-xs text-muted-foreground">
-                    {value === 'PRIVATE'
-                      ? 'Uploader, the employee it belongs to, and authorized oversight roles.'
-                      : value === 'PUBLIC'
-                        ? 'Everyone signed in to your organization.'
-                        : 'Only you, the administrator marking this file. Other administrators and the original owner lose access.'}
+                    {value === 'PRIVATE' ?'Uploader, the employee it belongs to, and authorized oversight roles.'
+                      : value === 'PUBLIC' ?'Everyone signed in to your organization.' :'Only you, the administrator marking this file. Other administrators and the original owner lose access.'}
                   </span>
                 </span>
               </label>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Shield, MapPin, Calendar, Clock, Edit, FileText, CheckCircle, UserCheck, AlertTriangle } from 'lucide-react';
+import { Shield, Calendar, Edit, FileText, UserCheck } from 'lucide-react';
 import { Modal, Row, display } from './DataUI';
 import { apiFetch } from '@/lib/api';
 
@@ -70,11 +70,8 @@ export default function AuthorizationDetailsModal({
   const targetCategory = item.category_name || item.asset_category_name || (typeof item.asset_category === 'object' ? item.asset_category?.name : null) || item.asset_category_id;
 
   const statusColor =
-    item.status === 'ACTIVE'
-      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-      : item.status === 'REVOKED' || item.status === 'EXPIRED'
-      ? 'bg-rose-100 text-rose-800 border-rose-300'
-      : 'bg-amber-100 text-amber-800 border-amber-300';
+    item.status === 'ACTIVE' ?'bg-emerald-100 text-emerald-800 border-emerald-300'
+      : item.status === 'REVOKED'|| item.status === 'EXPIRED' ?'bg-rose-100 text-rose-800 border-rose-300' :'bg-amber-100 text-amber-800 border-amber-300';
 
   return (
     <Modal name={`Asset Authorization Details — ${display(item.authorization_type || 'Record')}`} onClose={onClose}>

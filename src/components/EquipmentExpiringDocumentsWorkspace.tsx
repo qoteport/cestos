@@ -3,10 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  Truck, AlertTriangle, Search, RefreshCw, ArrowLeft, ExternalLink,
-  ShieldAlert, ShieldCheck, Clock, FileText, CheckCircle, Filter
-} from 'lucide-react';
+import { Truck, AlertTriangle, Search, RefreshCw, ArrowLeft, ExternalLink, ShieldAlert, ShieldCheck, Clock, CheckCircle, Filter } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 
 interface ExpiringItem {
@@ -263,8 +260,7 @@ export default function EquipmentExpiringDocumentsWorkspace() {
                           <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${
                             item.category === 'REGISTRATION' ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300' :
                             item.category === 'INSURANCE' ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' :
-                            item.category === 'WARRANTY' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' :
-                            'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                            item.category === 'WARRANTY'? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
                           }`}>
                             {item.category}
                           </span>
@@ -290,10 +286,7 @@ export default function EquipmentExpiringDocumentsWorkspace() {
                       {/* Days Remaining */}
                       <td className="px-4 py-3">
                         <span className={`font-bold ${
-                          isExpired ? 'text-rose-600 dark:text-rose-400' :
-                          isCritical ? 'text-rose-500' :
-                          isWarning ? 'text-amber-600 dark:text-amber-400' :
-                          'text-emerald-600 dark:text-emerald-400'
+                          isExpired ? 'text-rose-600 dark:text-rose-400' : isCritical ?'text-rose-500': isWarning ?'text-amber-600 dark:text-amber-400': 'text-emerald-600 dark:text-emerald-400'
                         }`}>
                           {isExpired ? `${Math.abs(days)} days ago` : `${days} days`}
                         </span>

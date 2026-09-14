@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Calendar, Filter, RefreshCw, SlidersHorizontal, X } from 'lucide-react';
+import { Filter, RefreshCw, SlidersHorizontal, X } from 'lucide-react';
 import { getProjects, getDateRangeFromPreset, type ProjectRead } from '@/lib/api';
 import { Modal } from '@/components/DataUI';
 

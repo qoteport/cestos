@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
-import contract from '@/lib/contract.json';
+
 import { Modal } from '@/components/DataUI';
 import RecordForm from '@/components/RecordForm';
 import { operation } from '@/components/ResourceWorkspace';

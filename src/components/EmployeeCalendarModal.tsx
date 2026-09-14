@@ -1,10 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  Calendar, ChevronLeft, ChevronRight, X, Clock,
-  FileText, Activity, CheckCircle, AlertCircle, RefreshCw, User, Briefcase, Eye, Edit
-} from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Clock, FileText, Activity, Briefcase, Eye, Edit } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { Row, display, title, Modal } from './DataUI';
 import AssignmentDetailsModal from './AssignmentDetailsModal';

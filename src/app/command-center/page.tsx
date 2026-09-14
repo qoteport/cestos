@@ -1,36 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import {
-  Search,
-  Play,
-  Zap,
-  Users,
-  FolderKanban,
-  Wrench,
-  Package,
-  ShieldCheck,
-  Building2,
-  Lock,
-  PlusCircle,
-  Clock,
-  ArrowRightLeft,
-  Fuel,
-  Gauge,
-  Receipt,
-  Truck,
-  DollarSign,
-  UserPlus,
-  Briefcase,
-  Layers,
-  MapPin,
-  CheckCircle2,
-  MinusCircle,
-  SlidersHorizontal,
-  Boxes,
-  Tag,
-  ClipboardCheck,
-} from 'lucide-react';
+import { Search, Play, Zap, Users, FolderKanban, Wrench, Package, ShieldCheck, Building2, Lock, PlusCircle, Clock, ArrowRightLeft, Fuel, Gauge, Receipt, Truck, DollarSign, UserPlus, Briefcase, MapPin, CheckCircle2, MinusCircle, SlidersHorizontal, Boxes, Tag, ClipboardCheck,  } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/components/AuthProvider';
 import RecordForm from '@/components/RecordForm';
@@ -38,6 +9,8 @@ import AssetAssignmentModal from '@/components/AssetAssignmentModal';
 import { operation } from '@/components/ResourceWorkspace';
 import { Row } from '@/components/DataUI';
 import { toast } from 'sonner';
+import Icon from '@/components/ui/AppIcon';
+
 
 type CategoryKey = 'ALL' | 'WORKFORCE' | 'PROJECTS' | 'FLEET' | 'INVENTORY' | 'ADMIN';
 
@@ -610,8 +583,7 @@ export default function CommandCenterPage() {
                       key={cmd.id}
                       className={`card p-5 flex flex-col justify-between transition-all border hover:shadow-md ${
                         authorized
-                          ? 'hover:border-primary/40 bg-card'
-                          : 'opacity-75 bg-muted/20 border-border/80'
+                          ? 'hover:border-primary/40 bg-card' :'opacity-75 bg-muted/20 border-border/80'
                       }`}
                     >
                       <div>

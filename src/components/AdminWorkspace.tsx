@@ -1,28 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  ShieldCheck,
-  Users,
-  KeyRound,
-  CalendarCheck,
-  FileText,
-  Plus,
-  RefreshCw,
-  Search,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  UserCheck,
-  UserX,
-  Lock,
-  Mail,
-  UserPlus,
-  ShieldAlert,
-  Sliders,
-  Filter,
-  BookOpen,
-} from 'lucide-react';
+import { ShieldCheck, Users, KeyRound, CalendarCheck, FileText, Plus, RefreshCw, Search, CheckCircle2, XCircle, Clock, UserCheck, UserX, Mail, UserPlus, ShieldAlert, Filter, BookOpen,  } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from './AuthProvider';
 import { useData, State, Row, rows, Modal, title } from './DataUI';
@@ -125,8 +104,7 @@ export default function AdminWorkspace() {
   const employeesRes = useData('/api/v1/employees?page_size=100');
   const employeeList = rows(employeesRes.data);
 
-  const leaveUrl = leaveStatusFilter === 'ALL' 
-    ? '/api/v1/employees/leave-requests/all' 
+  const leaveUrl = leaveStatusFilter === 'ALL' ?'/api/v1/employees/leave-requests/all' 
     : `/api/v1/employees/leave-requests/all?status=${leaveStatusFilter}`;
   const leaveRes = useData(leaveUrl);
   const leaveList = rows(leaveRes.data);
@@ -275,9 +253,7 @@ export default function AdminWorkspace() {
         <button
           onClick={() => setTab('users')}
           className={`px-4 py-2.5 font-medium text-sm border-b-2 transition flex items-center gap-2 ${
-            tab === 'users'
-              ? 'border-primary text-primary font-semibold'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+            tab === 'users' ?'border-primary text-primary font-semibold' :'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
           <Users className="w-4 h-4" />
@@ -287,9 +263,7 @@ export default function AdminWorkspace() {
         <button
           onClick={() => setTab('leave')}
           className={`px-4 py-2.5 font-medium text-sm border-b-2 transition flex items-center gap-2 ${
-            tab === 'leave'
-              ? 'border-primary text-primary font-semibold'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+            tab === 'leave' ?'border-primary text-primary font-semibold' :'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
           <CalendarCheck className="w-4 h-4" />
@@ -299,9 +273,7 @@ export default function AdminWorkspace() {
         <button
           onClick={() => setTab('roles')}
           className={`px-4 py-2.5 font-medium text-sm border-b-2 transition flex items-center gap-2 ${
-            tab === 'roles'
-              ? 'border-primary text-primary font-semibold'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+            tab === 'roles' ?'border-primary text-primary font-semibold' :'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
           <KeyRound className="w-4 h-4" />
@@ -311,9 +283,7 @@ export default function AdminWorkspace() {
         <button
           onClick={() => setTab('audit')}
           className={`px-4 py-2.5 font-medium text-sm border-b-2 transition flex items-center gap-2 ${
-            tab === 'audit'
-              ? 'border-primary text-primary font-semibold'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+            tab === 'audit' ?'border-primary text-primary font-semibold' :'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
           <FileText className="w-4 h-4" />
@@ -323,9 +293,7 @@ export default function AdminWorkspace() {
         <button
           onClick={() => setTab('manual')}
           className={`px-4 py-2.5 font-medium text-sm border-b-2 transition flex items-center gap-2 ${
-            tab === 'manual'
-              ? 'border-primary text-primary font-semibold'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
+            tab === 'manual' ?'border-primary text-primary font-semibold' :'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
           <BookOpen className="w-4 h-4" />

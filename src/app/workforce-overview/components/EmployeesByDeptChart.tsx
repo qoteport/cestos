@@ -23,8 +23,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function EmployeesByDeptChart({ data: passedData }: { data?: Array<{ dept: string; count: number }> }) {
-  const statsRes = useData('/api/v1/hr/workforce-stats');
-  const data = passedData || statsRes.data?.by_department || [];
+  const statsRes = useData('/api/v1/employees/dashboard-summary');
+  const rawData = passedData || (statsRes.data?.by_department || []).map((d: any) => ({ dept: d.department ?? d.dept, count: d.count }));
+  const data = rawData;
 
   if (!passedData && statsRes.loading) {
     return (

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Search, Filter } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { getAssets } from '@/lib/api';
 
 interface AssetItem {

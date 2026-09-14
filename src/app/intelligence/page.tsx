@@ -2,38 +2,8 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import {
-  Sparkles,
-  BrainCircuit,
-  Send,
-  RefreshCw,
-  Lock,
-  Wrench,
-  Fuel,
-  Users,
-  FolderKanban,
-  Package,
-  TrendingUp,
-  Database,
-  Search,
-  Bot,
-  User as UserIcon,
-  X,
-  Filter,
-  BarChart3,
-  MapPin,
-  Building2,
-  Calendar,
-  MessageSquare,
-  Printer,
-  Play,
-  Tag,
-  Briefcase,
-  ExternalLink,
-} from 'lucide-react';
-import {
-  BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend,
-} from 'recharts';
+import { Sparkles, BrainCircuit, Send, RefreshCw, Lock, Wrench, Fuel, Users, FolderKanban, Package, TrendingUp, Database, Search, Bot, User as UserIcon, X, Filter, MapPin, Building2, Calendar, Printer, Play, Tag, ExternalLink,  } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,  } from 'recharts';
 import AppLayout from '@/components/AppLayout';
 import AppLogo from '@/components/ui/AppLogo';
 import { useAuth } from '@/components/AuthProvider';
@@ -801,16 +771,11 @@ export default function IntelligencePage() {
                   <Filter size={13} className="text-primary" />
                   <span>Status:</span>
                   <strong className="text-primary font-700">
-                    {status === 'OPERATING'
-                      ? 'Operating Fleet'
-                      : status === 'AVAILABLE'
-                      ? 'Available Fleet'
-                      : status === 'ACTIVE'
-                      ? 'Active Personnel'
-                      : status === 'IN_PROGRESS'
-                      ? 'In Progress'
-                      : status === 'MAINTENANCE'
-                      ? 'Maintenance'
+                    {status === 'OPERATING' ?'Operating Fleet'
+                      : status === 'AVAILABLE' ?'Available Fleet'
+                      : status === 'ACTIVE' ?'Active Personnel'
+                      : status === 'IN_PROGRESS' ?'In Progress'
+                      : status === 'MAINTENANCE' ?'Maintenance'
                       : status}
                   </strong>
                 </span>
@@ -1262,8 +1227,7 @@ export default function IntelligencePage() {
                         <div
                           className={`p-4 rounded-2xl text-xs leading-relaxed space-y-3 ${
                             isUser
-                              ? 'bg-primary text-white rounded-tr-none'
-                              : 'bg-card border border-border text-foreground shadow-sm rounded-tl-none'
+                              ? 'bg-primary text-white rounded-tr-none' :'bg-card border border-border text-foreground shadow-sm rounded-tl-none'
                           }`}
                         >
                           {/* Tool Badges */}
