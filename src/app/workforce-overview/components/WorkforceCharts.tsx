@@ -106,8 +106,20 @@ export default function WorkforceCharts({
 
   const url = '/api/v1/employees/dashboard-summary' + (queryParams.toString() ? '?' + queryParams.toString() : '');
   const statsRes = useData(url);
-  const byDept = (statsRes.data?.by_department || []).map((d: any) => ({ dept: d.department ?? d.dept, count: d.count }));
-  const byProj = statsRes.data?.by_project || [];
+
+  const rawDept = statsRes.data?.employees_by_department || statsRes.data?.by_department;
+  const byDept: Array<{ dept: string; count: number }> = Array.isArray(rawDept)
+    ? rawDept.map((d: any) => ({ dept: d.department ?? d.dept ?? d.name ?? 'Unassigned', count: Number(d.count ?? d.value ?? 0) }))
+    : typeof rawDept === 'object' && rawDept !== null
+    ? Object.entries(rawDept).map(([dept, count]) => ({ dept: dept || 'Unassigned', count: Number(count || 0) }))
+    : [];
+
+  const rawProj = statsRes.data?.employees_by_project || statsRes.data?.by_project;
+  const byProj: Array<{ project: string; count: number }> = Array.isArray(rawProj)
+    ? rawProj.map((d: any) => ({ project: d.project ?? d.name ?? 'Unknown', count: Number(d.count ?? d.value ?? 0) }))
+    : typeof rawProj === 'object' && rawProj !== null
+    ? Object.entries(rawProj).map(([project, count]) => ({ project: project || 'Unknown', count: Number(count || 0) }))
+    : [];
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

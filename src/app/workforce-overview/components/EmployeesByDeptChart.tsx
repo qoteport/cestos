@@ -22,10 +22,28 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+function parseDeptData(resData: any): Array<{ dept: string; count: number }> {
+  if (!resData) return [];
+  const raw = resData.employees_by_department || resData.by_department;
+  if (!raw) return [];
+  if (Array.isArray(raw)) {
+    return raw.map((d: any) => ({
+      dept: d.department ?? d.dept ?? d.name ?? 'Unassigned',
+      count: Number(d.count ?? d.value ?? 0),
+    }));
+  }
+  if (typeof raw === 'object') {
+    return Object.entries(raw).map(([dept, count]) => ({
+      dept: dept || 'Unassigned',
+      count: Number(count || 0),
+    }));
+  }
+  return [];
+}
+
 export default function EmployeesByDeptChart({ data: passedData }: { data?: Array<{ dept: string; count: number }> }) {
   const statsRes = useData('/api/v1/employees/dashboard-summary');
-  const rawData = passedData || (statsRes.data?.by_department || []).map((d: any) => ({ dept: d.department ?? d.dept, count: d.count }));
-  const data = rawData;
+  const data = passedData || parseDeptData(statsRes.data);
 
   if (!passedData && statsRes.loading) {
     return (

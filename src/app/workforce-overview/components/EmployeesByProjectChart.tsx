@@ -22,9 +22,28 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+function parseProjData(resData: any): Array<{ project: string; count: number }> {
+  if (!resData) return [];
+  const raw = resData.employees_by_project || resData.by_project;
+  if (!raw) return [];
+  if (Array.isArray(raw)) {
+    return raw.map((d: any) => ({
+      project: d.project ?? d.name ?? 'Unknown',
+      count: Number(d.count ?? d.value ?? 0),
+    }));
+  }
+  if (typeof raw === 'object') {
+    return Object.entries(raw).map(([project, count]) => ({
+      project: project || 'Unknown',
+      count: Number(count || 0),
+    }));
+  }
+  return [];
+}
+
 export default function EmployeesByProjectChart({ data: passedData }: { data?: Array<{ project: string; count: number }> }) {
   const statsRes = useData('/api/v1/employees/dashboard-summary');
-  const data = passedData || statsRes.data?.by_project || [];
+  const data = passedData || parseProjData(statsRes.data);
 
   if (!passedData && statsRes.loading) {
     return (

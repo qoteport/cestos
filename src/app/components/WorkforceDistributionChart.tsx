@@ -30,7 +30,12 @@ export default function WorkforceDistributionChart({ projectId, departmentId }: 
   const url = '/api/v1/employees/dashboard-summary' + (queryParams.toString() ? '?' + queryParams.toString() : '');
   const statsRes = useData(url);
 
-  const byProject = statsRes.data?.by_project || [];
+  const rawProj = statsRes.data?.employees_by_project || statsRes.data?.by_project;
+  const chartData: Array<{ project: string; employees: number }> = Array.isArray(rawProj)
+    ? rawProj.map((item: any) => ({ project: item.project ?? item.name ?? 'Unknown', employees: Number(item.count ?? item.value ?? 0) }))
+    : typeof rawProj === 'object' && rawProj !== null
+    ? Object.entries(rawProj).map(([project, count]) => ({ project: project || 'Unknown', employees: Number(count || 0) }))
+    : [];
 
   if (statsRes.loading) {
     return (
@@ -40,18 +45,13 @@ export default function WorkforceDistributionChart({ projectId, departmentId }: 
     );
   }
 
-  if (byProject.length === 0) {
+  if (chartData.length === 0) {
     return (
       <div className="h-[200px] flex items-center justify-center text-xs text-muted-foreground">
         No workforce project deployment records found in database.
       </div>
     );
   }
-
-  const chartData = byProject.map((item: any) => ({
-    project: item.project,
-    employees: item.count,
-  }));
 
   return (
     <ResponsiveContainer width="100%" height={200}>
