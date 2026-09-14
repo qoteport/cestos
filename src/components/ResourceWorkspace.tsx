@@ -56,6 +56,7 @@ function ClientLogo({ clientId }: { clientId: string }) {
   );
 }
 export default function ResourceWorkspace({ resource }: { resource: string }) {
+  const searchParams = useSearchParams();
   if (resource === 'projects') return <ProjectRegister />;
   if (resource === 'employees/available') return <EmployeeAvailabilityWorkspace />;
   if (resource === 'rotations/current' || resource === 'rotations/upcoming') return <RotationsWorkspace />;
@@ -71,13 +72,21 @@ export default function ResourceWorkspace({ resource }: { resource: string }) {
   const matchItem = /^(inventory\/items|items)\/([0-9a-f-]{36})$/i.exec(resource);
   if (matchItem) return <ItemDetailView itemId={matchItem[2]} />;
 
-  const match = /^(employees|assets)\/([0-9a-f-]{36})$/i.exec(resource);
+  const match = /^(employees|assets)\/([0-9a-f-]{36}|me)$/i.exec(resource);
   if (match)
     return match[1] === 'employees' ? (
       <EmployeeDetailView employeeId={match[2]} />
     ) : (
       <AssetDetailView assetId={match[2]} />
     );
+
+  if (resource === 'employees') {
+    const isAll = searchParams.get('view') === 'all' || searchParams.has('search') || searchParams.has('page');
+    if (!isAll) {
+      return <EmployeeDetailView employeeId="me" />;
+    }
+  }
+
   return <ResourceList key={resource} resource={resource} />;
 }
 

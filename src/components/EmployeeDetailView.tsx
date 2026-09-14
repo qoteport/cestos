@@ -185,29 +185,54 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
     setLoading(true);
     setError('');
 
-    const root = `/api/v1/employees/${employeeId}`;
+    async function loadData() {
+      let targetId = employeeId;
+      if (employeeId === 'me') {
+        try {
+          const myProfile = await apiFetch<Row>('/api/v1/hr/me');
+          if (myProfile?.id) {
+            targetId = myProfile.id;
+          } else {
+            if (active) setError('No active employee profile linked to your account.');
+            if (active) setLoading(false);
+            return;
+          }
+        } catch (e: any) {
+          if (active) setError(e.message || 'Failed to load user profile.');
+          if (active) setLoading(false);
+          return;
+        }
+      }
 
-    Promise.all([
-      apiFetch<Row>(root).catch(e => { if (active) setError(e.message); return null; }),
-      apiFetch<Row>(`${root}/overview`).catch(() => null),
-      apiFetch<any>(`${root}/family`).catch(() => []),
-      apiFetch<any>(`${root}/emergency-contacts`).catch(() => []),
-      apiFetch<any>(`${root}/assignments`).catch(() => []),
-      apiFetch<any>(`${root}/activity`).catch(() => []),
-      apiFetch<any>(`${root}/documents`).catch(() => []),
-      apiFetch<any>(`${root}/resumes`).catch(() => []),
-    ]).then(([empData, overData, famData, emData, assignData, actData, docData, resData]) => {
-      if (!active) return;
-      if (empData) setEmployee(empData);
-      if (overData) setOverview(overData);
-      setFamily(toArray(famData));
-      setEmergency(toArray(emData));
-      setAssignments(toArray(assignData));
-      setActivities(toArray(actData));
-      setDocuments(toArray(docData));
-      setResumes(toArray(resData));
-      setLoading(false);
-    });
+      const root = `/api/v1/employees/${targetId}`;
+
+      try {
+        const [empData, overData, famData, emData, assignData, actData, docData, resData] = await Promise.all([
+          apiFetch<Row>(root).catch(e => { if (active) setError(e.message); return null; }),
+          apiFetch<Row>(`${root}/overview`).catch(() => null),
+          apiFetch<any>(`${root}/family`).catch(() => []),
+          apiFetch<any>(`${root}/emergency-contacts`).catch(() => []),
+          apiFetch<any>(`${root}/assignments`).catch(() => []),
+          apiFetch<any>(`${root}/activity`).catch(() => []),
+          apiFetch<any>(`${root}/documents`).catch(() => []),
+          apiFetch<any>(`${root}/resumes`).catch(() => []),
+        ]);
+
+        if (!active) return;
+        if (empData) setEmployee(empData);
+        if (overData) setOverview(overData);
+        setFamily(toArray(famData));
+        setEmergency(toArray(emData));
+        setAssignments(toArray(assignData));
+        setActivities(toArray(actData));
+        setDocuments(toArray(docData));
+        setResumes(toArray(resData));
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadData();
 
     return () => { active = false; };
   }, [employeeId, version]);
@@ -469,8 +494,8 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
     return (
       <div className="card border-red-200 p-6 space-y-4">
         <p className="text-red-700 font-semibold">{error || 'Employee record not found.'}</p>
-        <Link href="/workspace/employees" className="btn-secondary">
-          <ArrowLeft size={14} /> Return to Employees List
+        <Link href="/workspace/employees?view=all" className="btn-secondary">
+          <ArrowLeft size={14} /> View Employee Directory
         </Link>
       </div>
     );
@@ -522,8 +547,8 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
       {/* Header Bar */}
       <div className="flex flex-wrap justify-between items-start gap-4 border-b pb-5">
         <div>
-          <Link href="/workspace/employees" className="text-xs text-primary flex gap-1 items-center mb-2 hover:underline">
-            <ArrowLeft size={14} /> All Employees
+          <Link href="/workspace/employees?view=all" className="text-xs text-primary flex gap-1 items-center mb-2 hover:underline">
+            <ArrowLeft size={14} /> Employee Directory
           </Link>
           <div className="flex items-center gap-3">
             <span className="text-xs font-mono font-bold bg-secondary px-2.5 py-1 rounded text-primary border">

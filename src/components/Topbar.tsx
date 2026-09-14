@@ -172,11 +172,7 @@ export default function Topbar() {
                 {/* Quick Navigation / Profile links */}
                 <div className="py-2 space-y-0.5">
                   <Link
-                    href={
-                      (auth?.user as any)?.employee_id
-                        ? `/workspace/employees/${(auth?.user as any).employee_id}`
-                        : '/workspace/employees'
-                    }
+                    href="/workspace/employees"
                     onClick={() => setShow(false)}
                     className="flex items-center gap-2.5 px-2.5 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
                   >

@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Search, Play, Zap, Users, FolderKanban, Wrench, Package, ShieldCheck, Building2, Lock, PlusCircle, Clock, ArrowRightLeft, Fuel, Gauge, Receipt, Truck, DollarSign, UserPlus, Briefcase, MapPin, CheckCircle2, MinusCircle, SlidersHorizontal, Boxes, Tag, ClipboardCheck,  } from 'lucide-react';
+import { Search, Play, Zap, Users, FolderKanban, Wrench, Package, ShieldCheck, Building2, Lock, PlusCircle, Clock, ArrowRightLeft, Fuel, Gauge, Receipt, Truck, DollarSign, UserPlus, UserCheck, Briefcase, MapPin, CheckCircle2, MinusCircle, SlidersHorizontal, Boxes, Tag, ClipboardCheck, } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/components/AuthProvider';
 import RecordForm from '@/components/RecordForm';
 import AssetAssignmentModal from '@/components/AssetAssignmentModal';
+import EditEmployeeModal from '@/components/EditEmployeeModal';
+import RegisterUserModal from '@/components/RegisterUserModal';
 import { operation } from '@/components/ResourceWorkspace';
 import { Row } from '@/components/DataUI';
 import { toast } from 'sonner';
@@ -24,8 +26,9 @@ interface CommandDef {
   icon: React.ElementType;
   resource?: string;
   path?: string;
+  targetPathPattern?: string;
   method?: string;
-  customModalType?: 'assignment' | null;
+  customModalType?: 'assignment' | 'edit-employee' | 'employee-select' | 'create-user' | null;
   tags: string[];
 }
 
@@ -44,6 +47,17 @@ const COMMAND_REGISTRY: CommandDef[] = [
     tags: ['employee', 'staff', 'add employee', 'register', 'personnel', 'hr', 'hire'],
   },
   {
+    id: 'edit-employee',
+    title: 'Edit Employee Profile & Information',
+    description: 'Update employee personal details, contact info, position, department, and employment status.',
+    category: 'WORKFORCE',
+    categoryName: 'Workforce & HR',
+    permission: 'employees.write',
+    icon: UserCheck,
+    customModalType: 'edit-employee',
+    tags: ['edit employee', 'update employee', 'employee profile', 'change position', 'department', 'hr', 'staff'],
+  },
+  {
     id: 'record-salary',
     title: 'Record Employee Salary & Compensation',
     description: 'Assign or update employee salary details, pay rate, pay period, currency, and effective start date.',
@@ -51,8 +65,9 @@ const COMMAND_REGISTRY: CommandDef[] = [
     categoryName: 'Workforce & HR',
     permission: 'employees.contracts.manage',
     icon: DollarSign,
+    customModalType: 'employee-select',
+    targetPathPattern: '/api/v1/hr/employees/{id}/salaries',
     resource: 'hr/salaries',
-    path: '/api/v1/hr/salaries',
     tags: ['salary', 'pay', 'compensation', 'wage', 'contract', 'payroll', 'hr'],
   },
   {
@@ -63,8 +78,9 @@ const COMMAND_REGISTRY: CommandDef[] = [
     categoryName: 'Workforce & HR',
     permission: 'employees.manage',
     icon: Clock,
+    customModalType: 'employee-select',
+    targetPathPattern: '/api/v1/employees/{id}/time-logs',
     resource: 'hr/time-logs',
-    path: '/api/v1/hr/time-logs',
     tags: ['time', 'attendance', 'hours', 'clock', 'shift', 'timelog'],
   },
   {
@@ -75,8 +91,9 @@ const COMMAND_REGISTRY: CommandDef[] = [
     categoryName: 'Workforce & HR',
     permission: 'employees.manage',
     icon: Users,
+    customModalType: 'employee-select',
+    targetPathPattern: '/api/v1/employees/{id}/leave-requests',
     resource: 'hr/leave-requests',
-    path: '/api/v1/hr/leave-requests',
     tags: ['leave', 'vacation', 'time off', 'sick leave', 'rotation'],
   },
   {
@@ -377,14 +394,13 @@ const COMMAND_REGISTRY: CommandDef[] = [
   {
     id: 'create-user',
     title: 'Register System User Account',
-    description: 'Provision a login account for an employee and attach security roles.',
+    description: 'Provision a login account for an employee and attach security roles and access permissions.',
     category: 'ADMIN',
     categoryName: 'Administration & System',
     permission: 'users.manage',
     icon: UserPlus,
-    resource: 'users',
-    path: '/api/v1/users',
-    tags: ['user', 'account', 'login', 'access', 'register user', 'admin'],
+    customModalType: 'create-user',
+    tags: ['user', 'account', 'login', 'access', 'register user', 'roles', 'permissions', 'admin'],
   },
 ];
 
@@ -405,6 +421,9 @@ export default function CommandCenterPage() {
   // Modal execution state
   const [activeCommand, setActiveCommand] = useState<CommandDef | null>(null);
   const [showAssetAssignment, setShowAssetAssignment] = useState(false);
+  const [showEditEmployee, setShowEditEmployee] = useState(false);
+  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [pendingSelectCommand, setPendingSelectCommand] = useState<CommandDef | null>(null);
 
   // Filter commands by search and category
   const filteredCommands = useMemo(() => {
@@ -443,9 +462,41 @@ export default function CommandCenterPage() {
       return;
     }
 
+    if (cmd.customModalType === 'edit-employee') {
+      setShowEditEmployee(true);
+      return;
+    }
+
+    if (cmd.customModalType === 'create-user') {
+      setShowCreateUser(true);
+      return;
+    }
+
+    if (cmd.customModalType === 'employee-select') {
+      setPendingSelectCommand(cmd);
+      return;
+    }
+
     if (cmd.path && cmd.resource) {
       setActiveCommand(cmd);
     }
+  };
+
+  const handleEmployeeSelectedForCommand = (employee: Row) => {
+    if (!pendingSelectCommand) return;
+    const targetPath = pendingSelectCommand.targetPathPattern
+      ? pendingSelectCommand.targetPathPattern.replace('{id}', employee.id)
+      : pendingSelectCommand.path;
+
+    const empName = [employee.first_name, employee.last_name].filter(Boolean).join(' ') || 'Employee';
+
+    setActiveCommand({
+      ...pendingSelectCommand,
+      path: targetPath,
+      title: `${pendingSelectCommand.title} (${empName})`,
+    });
+
+    setPendingSelectCommand(null);
   };
 
   const activeOp: Row | null = useMemo(() => {
@@ -684,6 +735,38 @@ export default function CommandCenterPage() {
             toast.success('Equipment assigned successfully!');
             setShowAssetAssignment(false);
           }}
+        />
+      )}
+
+      {/* Edit Employee Modal */}
+      {showEditEmployee && (
+        <EditEmployeeModal
+          onClose={() => setShowEditEmployee(false)}
+          onSaved={() => {
+            toast.success('Employee profile updated successfully!');
+            setShowEditEmployee(false);
+          }}
+        />
+      )}
+
+      {/* Register System User Account Modal */}
+      {showCreateUser && (
+        <RegisterUserModal
+          onClose={() => setShowCreateUser(false)}
+          onSaved={() => {
+            toast.success('System user account registered successfully!');
+            setShowCreateUser(false);
+          }}
+        />
+      )}
+
+      {/* Select Employee Modal for Employee-dependent Commands */}
+      {pendingSelectCommand && (
+        <EditEmployeeModal
+          title={`Select Employee`}
+          subtitle={`Choose an employee for "${pendingSelectCommand.title}".`}
+          onClose={() => setPendingSelectCommand(null)}
+          onSelectEmployee={(emp) => handleEmployeeSelectedForCommand(emp)}
         />
       )}
     </AppLayout>
