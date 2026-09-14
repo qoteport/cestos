@@ -21,9 +21,11 @@ export default function FleetKPIGrid({
 }) {
   const [data, setData] = useState<FleetDashboard | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadData = React.useCallback(() => {
     setLoading(true);
+    setError(null);
     const params: Record<string, string> = {};
     if (statusFilter) params.status = statusFilter;
     if (categoryId) params.category_id = categoryId;
@@ -33,10 +35,20 @@ export default function FleetKPIGrid({
     if (dateTo) params.date_to = dateTo;
 
     getFleetDashboard(params)
-      .then(setData)
-      .catch(() => setData(null))
+      .then((res) => {
+        setData(res);
+        setError(null);
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'Failed to connect to backend.');
+        setData(null);
+      })
       .finally(() => setLoading(false));
   }, [statusFilter, categoryId, locationId, projectId, dateFrom, dateTo]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const kpis = [
     {
@@ -106,10 +118,23 @@ export default function FleetKPIGrid({
       sub: 'Pending disposition',
       icon: <XCircle size={17} />,
       colorClass: 'text-red-600',
-      bgClass: 'bg-red-50',
-      isAlert: true,
     },
   ];
+
+  if (error && !loading) {
+    return (
+      <div className="card p-4 flex items-center justify-between bg-red-50/50 border border-red-200 text-xs text-red-700">
+        <span>Failed to load fleet dashboard stats: {error}</span>
+        <button
+          type="button"
+          onClick={loadData}
+          className="px-3 py-1 bg-red-600 text-white rounded font-medium hover:bg-red-700 transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 2xl:grid-cols-7 gap-4">
