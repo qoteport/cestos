@@ -116,6 +116,41 @@ const fieldEnums: Record<string, string[]> = {
   ],
 };
 
+function SupplierInput({
+  value,
+  onChange,
+  required,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  required: boolean;
+}) {
+  const [suppliers, setSuppliers] = useState<{ id: string; name: string }[]>([]);
+  const listId = useId();
+  useEffect(() => {
+    apiFetch<{ id: string; name: string }[]>('/api/v1/fuel-suppliers')
+      .then((s) => setSuppliers(s || []))
+      .catch(() => {});
+  }, []);
+  return (
+    <div>
+      <input
+        className="input-field"
+        list={listId}
+        value={value || ''}
+        required={required}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Type or select supplier name…"
+      />
+      <datalist id={listId}>
+        {suppliers.map((s) => (
+          <option key={s.id} value={s.name} />
+        ))}
+      </datalist>
+    </div>
+  );
+}
+
 function Reference({
   field,
   value,
@@ -343,7 +378,13 @@ function Fields({
                   {title(key)}
                   {required.includes(key) ? ' *' : ''}
                 </label>
-                {key.endsWith('_id') ? (
+                {key === 'supplier' ? (
+                  <SupplierInput
+                    value={val}
+                    onChange={set}
+                    required={required.includes(key)}
+                  />
+                ) : key.endsWith('_id') ? (
                   <Reference
                     field={key}
                     value={val}
@@ -424,6 +465,7 @@ export default function RecordForm({
   operation,
   path,
   initial,
+  method,
   onClose,
   onSaved,
   title: customTitle,
@@ -434,6 +476,7 @@ export default function RecordForm({
   operation: Row;
   path: string;
   initial?: Row;
+  method?: string;
   onClose: () => void;
   onSaved: (row: Row) => void;
   title?: string;
@@ -544,7 +587,7 @@ export default function RecordForm({
         result =
           savedAsset ||
           (await apiFetch<Row>(path, {
-            method: initial ? 'PATCH' : 'POST',
+            method: method || (initial?.id ? 'PATCH' : 'POST'),
             body: JSON.stringify(body),
           }));
         setSavedAsset(result);
@@ -572,7 +615,7 @@ export default function RecordForm({
         result = await apiFetch(path + '/upload', { method: 'POST', body: form });
       } else {
         result = await apiFetch(path, {
-          method: initial ? 'PATCH' : 'POST',
+          method: method || (initial?.id ? 'PATCH' : 'POST'),
           body: JSON.stringify(body),
         });
         if (file && employeeId) {

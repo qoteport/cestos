@@ -254,6 +254,33 @@ export async function getAssets(params?: Record<string, string>): Promise<Pagina
   return apiFetch<PaginatedResponse<unknown>>(`/api/v1/assets${qs}`);
 }
 
+export async function getFuelSuppliers(): Promise<{ id: string; name: string }[]> {
+  return apiFetch<{ id: string; name: string }[]>('/api/v1/fuel-suppliers');
+}
+
+export async function uploadLogFile(assetId: string, logType: string, logId: string, title: string, file: File): Promise<unknown> {
+  const fd = new FormData();
+  fd.append('title', title);
+  fd.append('file', file);
+  return apiFetch(`/api/v1/assets/${assetId}/logs/${logType}/${logId}/files`, {
+    method: 'POST',
+    body: fd,
+  });
+}
+
+export async function getLogFiles(assetId: string, logType: string, logId: string): Promise<unknown[]> {
+  return apiFetch<unknown[]>(`/api/v1/assets/${assetId}/logs/${logType}/${logId}/files`);
+}
+
+export async function downloadLogFile(assetId: string, fileId: string, filename: string): Promise<void> {
+  const blob = await apiFetchBlob(`/api/v1/assets/${assetId}/log-files/${fileId}/download`);
+  downloadBlob(blob, filename);
+}
+
+export async function getAssignmentSummary(assetId: string, assignmentId: string): Promise<unknown> {
+  return apiFetch(`/api/v1/assets/${assetId}/assignments/${assignmentId}/summary`);
+}
+
 // ─── Inventory ───────────────────────────────────────────────────────────────
 
 export interface InventoryDashboard {
