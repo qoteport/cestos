@@ -4,16 +4,39 @@ import React, { useEffect, useState } from 'react';
 import { Users, UserCheck, Briefcase, RotateCcw } from 'lucide-react';
 import { getWorkforceDashboard, type WorkforceDashboard } from '@/lib/api';
 
-export default function WorkforceKPIStrip() {
+export default function WorkforceKPIStrip({
+  departmentId,
+  employmentStatus,
+  availabilityStatus,
+  projectId,
+  dateFrom,
+  dateTo,
+}: {
+  departmentId?: string;
+  employmentStatus?: string;
+  availabilityStatus?: string;
+  projectId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}) {
   const [data, setData] = useState<WorkforceDashboard | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getWorkforceDashboard()
+    setLoading(true);
+    const params: Record<string, string> = {};
+    if (departmentId) params.department_id = departmentId;
+    if (employmentStatus) params.employment_status = employmentStatus;
+    if (availabilityStatus) params.availability_status = availabilityStatus;
+    if (projectId) params.project_id = projectId;
+    if (dateFrom) params.date_from = dateFrom;
+    if (dateTo) params.date_to = dateTo;
+
+    getWorkforceDashboard(params)
       .then(setData)
       .catch(() => setData(null))
       .finally(() => setLoading(false));
-  }, []);
+  }, [departmentId, employmentStatus, availabilityStatus, projectId, dateFrom, dateTo]);
 
   const kpis = [
     {

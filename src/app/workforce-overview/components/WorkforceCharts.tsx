@@ -1,19 +1,10 @@
 'use client';
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,  } from 'recharts';
-
-// ── Employees by Department ──────────────────────────────────────────────────
-const DEPT_DATA = [
-  { dept: 'Drilling', count: 52 },
-  { dept: 'Engineering', count: 38 },
-  { dept: 'Logistics', count: 27 },
-  { dept: 'Admin', count: 19 },
-  { dept: 'Safety', count: 14 },
-  { dept: 'Finance', count: 11 },
-  { dept: 'IT', count: 7 },
-];
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { useData } from '@/components/DataUI';
 
 const DEPT_COLORS = ['var(--primary)', '#7C3AED', '#D97706', '#0891B2', '#6B7280', '#15803D', '#DC2626'];
+const PROJ_COLORS = ['var(--primary)', '#7C3AED', '#D97706', '#0891B2', '#6B7280', '#0891B2', '#15803D'];
 
 const DeptTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -29,37 +20,6 @@ const DeptTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-function EmployeesByDeptChart() {
-  return (
-    <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={DEPT_DATA} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} barSize={22}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-        <XAxis dataKey="dept" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-        <Tooltip content={<DeptTooltip />} cursor={{ fill: 'var(--muted)', opacity: 0.5 }} />
-        <Bar dataKey="count" radius={[3, 3, 0, 0]}>
-          {DEPT_DATA.map((entry, index) => (
-            <Cell key={`dept-cell-${entry.dept}`} fill={DEPT_COLORS[index % DEPT_COLORS.length]} />
-          ))}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
-  );
-}
-
-// ── Employees by Project ─────────────────────────────────────────────────────
-const PROJ_DATA = [
-  { project: 'Alpha', count: 42 },
-  { project: 'Bravo', count: 31 },
-  { project: 'Delta', count: 18 },
-  { project: 'Main Yard', count: 12 },
-  { project: 'Head Office', count: 9 },
-  { project: 'On Leave', count: 8 },
-  { project: 'Training', count: 5 },
-];
-
-const PROJ_COLORS = ['var(--primary)', '#7C3AED', '#D97706', '#0891B2', '#6B7280', '#0891B2', '#15803D'];
-
 const ProjTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
@@ -74,17 +34,24 @@ const ProjTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-function EmployeesByProjectChart() {
+function EmployeesByDeptChart({ data }: { data: Array<{ dept: string; count: number }> }) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-[220px] flex items-center justify-center text-xs text-muted-foreground">
+        No department records found in database.
+      </div>
+    );
+  }
   return (
     <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={PROJ_DATA} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} barSize={22}>
+      <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} barSize={22}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-        <XAxis dataKey="project" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+        <XAxis dataKey="dept" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
         <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-        <Tooltip content={<ProjTooltip />} cursor={{ fill: 'var(--muted)', opacity: 0.5 }} />
+        <Tooltip content={<DeptTooltip />} cursor={{ fill: 'var(--muted)', opacity: 0.5 }} />
         <Bar dataKey="count" radius={[3, 3, 0, 0]}>
-          {PROJ_DATA.map((entry, index) => (
-            <Cell key={`proj-cell-${entry.project}`} fill={PROJ_COLORS[index % PROJ_COLORS.length]} />
+          {data.map((entry, index) => (
+            <Cell key={`dept-cell-${entry.dept}-${index}`} fill={DEPT_COLORS[index % DEPT_COLORS.length]} />
           ))}
         </Bar>
       </BarChart>
@@ -92,23 +59,77 @@ function EmployeesByProjectChart() {
   );
 }
 
+function EmployeesByProjectChart({ data }: { data: Array<{ project: string; count: number }> }) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-[220px] flex items-center justify-center text-xs text-muted-foreground">
+        No project deployment records found in database.
+      </div>
+    );
+  }
+  return (
+    <ResponsiveContainer width="100%" height={220}>
+      <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} barSize={22}>
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+        <XAxis dataKey="project" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+        <Tooltip content={<ProjTooltip />} cursor={{ fill: 'var(--muted)', opacity: 0.5 }} />
+        <Bar dataKey="count" radius={[3, 3, 0, 0]}>
+          {data.map((entry, index) => (
+            <Cell key={`proj-cell-${entry.project}-${index}`} fill={PROJ_COLORS[index % PROJ_COLORS.length]} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+interface WorkforceChartsProps {
+  departmentId?: string;
+  employmentStatus?: string;
+  availabilityStatus?: string;
+  projectId?: string;
+}
+
 // ── Combined export ──────────────────────────────────────────────────────────
-export default function WorkforceCharts() {
+export default function WorkforceCharts({
+  departmentId,
+  employmentStatus,
+  availabilityStatus,
+  projectId,
+}: WorkforceChartsProps) {
+  const queryParams = new URLSearchParams();
+  if (departmentId) queryParams.set('department_id', departmentId);
+  if (employmentStatus) queryParams.set('employment_status', employmentStatus);
+  if (availabilityStatus) queryParams.set('availability_status', availabilityStatus);
+  if (projectId) queryParams.set('project_id', projectId);
+
+  const url = '/api/v1/hr/workforce-stats' + (queryParams.toString() ? '?' + queryParams.toString() : '');
+  const statsRes = useData(url);
+  const byDept = statsRes.data?.by_department || [];
+  const byProj = statsRes.data?.by_project || [];
+
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
       <div className="card p-5">
-        <div className="mb-4">
-          <p className="text-sm font-700 text-foreground">Employees by Department</p>
-          <p className="text-xs text-muted-foreground">Current headcount per department</p>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-700 text-foreground">Employees by Department</p>
+            <p className="text-xs text-muted-foreground">Current headcount per department</p>
+          </div>
+          {statsRes.loading && <span className="text-[11px] text-muted-foreground animate-pulse">Loading live data...</span>}
         </div>
-        <EmployeesByDeptChart />
+        <EmployeesByDeptChart data={byDept} />
       </div>
       <div className="card p-5">
-        <div className="mb-4">
-          <p className="text-sm font-700 text-foreground">Employees by Project</p>
-          <p className="text-xs text-muted-foreground">Current deployment distribution</p>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-700 text-foreground">Employees by Project</p>
+            <p className="text-xs text-muted-foreground">Current deployment distribution</p>
+          </div>
+          {statsRes.loading && <span className="text-[11px] text-muted-foreground animate-pulse">Loading live data...</span>}
         </div>
-        <EmployeesByProjectChart />
+        <EmployeesByProjectChart data={byProj} />
       </div>
     </div>
   );

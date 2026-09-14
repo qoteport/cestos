@@ -10,7 +10,11 @@ interface AssetItem {
   asset_code?: string;
   code?: string;
   asset_number?: string;
+  serial_number?: string;
+  registration_number?: string;
   name?: string;
+  asset_name?: string;
+  title?: string;
   category?: { name?: string } | string;
   status?: string;
   project?: { name?: string } | string;
@@ -90,15 +94,32 @@ function formatDate(d?: string): string {
   catch { return d; }
 }
 
-export default function AssetStatusTable() {
+interface AssetStatusTableProps {
+  statusFilter?: string;
+  categoryId?: string;
+  locationId?: string;
+  projectId?: string;
+}
+
+export default function AssetStatusTable({
+  statusFilter: headerStatusFilter,
+  categoryId,
+  locationId,
+  projectId,
+}: AssetStatusTableProps) {
   const [assets, setAssets] = useState<AssetItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [localStatusFilter, setLocalStatusFilter] = useState('');
+
+  const activeStatusFilter = headerStatusFilter || localStatusFilter;
 
   useEffect(() => {
     const params: Record<string, string> = { page_size: '50' };
-    if (statusFilter) params.status = statusFilter;
+    if (activeStatusFilter) params.status = activeStatusFilter;
+    if (categoryId) params.category_id = categoryId;
+    if (locationId) params.location_id = locationId;
+    if (projectId) params.project_id = projectId;
     if (search) params.search = search;
 
     setLoading(true);
@@ -106,7 +127,7 @@ export default function AssetStatusTable() {
       .then(res => setAssets((res?.items as AssetItem[]) ?? []))
       .catch(() => setAssets([]))
       .finally(() => setLoading(false));
-  }, [statusFilter, search]);
+  }, [activeStatusFilter, categoryId, locationId, projectId, search]);
 
   return (
     <div className="card">
@@ -117,9 +138,9 @@ export default function AssetStatusTable() {
             {STATUS_FILTERS.map(f => (
               <button
                 key={f.id}
-                onClick={() => setStatusFilter(f.value)}
+                onClick={() => setLocalStatusFilter(f.value)}
                 className={`px-2.5 py-1 rounded text-xs font-600 transition-colors ${
-                  statusFilter === f.value ? 'bg-secondary text-primary' : 'text-muted-foreground hover:bg-muted'
+                  activeStatusFilter === f.value ? 'bg-secondary text-primary' : 'text-muted-foreground hover:bg-muted'
                 }`}
               >
                 {f.label}
@@ -135,10 +156,6 @@ export default function AssetStatusTable() {
               className="input-field pl-8 py-1.5 text-xs w-44"
             />
           </div>
-          <button className="btn-secondary text-xs py-1.5">
-            <Filter size={13} />
-            Filters
-          </button>
         </div>
       </div>
 
@@ -155,7 +172,7 @@ export default function AssetStatusTable() {
         </div>
       ) : assets.length === 0 ? (
         <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-          No assets found{statusFilter ? ` with status "${statusFilter}"` : ''}.
+          No assets found{activeStatusFilter ? ` with status "${activeStatusFilter}"` : ''}.
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -179,11 +196,11 @@ export default function AssetStatusTable() {
                 <tr key={asset?.id ?? idx}>
                   <td>
                     <Link href="/fleet-dashboard" className="entity-link text-sm font-700">
-                      {asset?.asset_code ?? asset?.code ?? '—'}
+                      {asset?.asset_number ?? asset?.asset_code ?? asset?.code ?? asset?.id?.slice(0, 8) ?? '—'}
                     </Link>
                   </td>
-                  <td className="text-xs text-muted-foreground tabular-nums">{asset?.asset_number ?? '—'}</td>
-                  <td className="text-sm text-foreground">{asset?.name ?? '—'}</td>
+                  <td className="text-xs text-muted-foreground tabular-nums">{asset?.serial_number ?? asset?.registration_number ?? asset?.asset_number ?? '—'}</td>
+                  <td className="text-sm text-foreground">{asset?.name ?? asset?.asset_name ?? asset?.title ?? '—'}</td>
                   <td className="text-xs text-muted-foreground">{getCategoryName(asset?.category)}</td>
                   <td>
                     <span className={`badge ${getStatusClass(asset?.status)}`}>

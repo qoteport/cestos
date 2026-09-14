@@ -10,12 +10,13 @@ export default function AssetAssignmentModal({
   onClose,
   onSaved,
 }: {
-  asset: Row;
+  asset?: Row;
   currentProject?: Row | null;
   projectId?: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const [selectedAssetId, setSelectedAssetId] = useState(asset?.id || '');
   const [target, setTarget] = useState(projectId || '');
   const [location, setLocation] = useState('');
   const [operator, setOperator] = useState('');
@@ -24,17 +25,33 @@ export default function AssetAssignmentModal({
   const [returnAt, setReturnAt] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const assetsData = useData(asset ? null : '/api/v1/assets?page_size=100');
   const projects = useData('/api/v1/projects?page_size=100');
   const locations = useData('/api/v1/locations?page_size=100');
   const people = useData('/api/v1/employees?page_size=100');
+
+  const activeAsset = asset || rows(assetsData.data).find((r) => r.id === selectedAssetId);
+  const currentAssignedProjectName =
+    currentProject?.name ||
+    activeAsset?.current_project?.name ||
+    activeAsset?.project_name ||
+    activeAsset?.current_project_name ||
+    activeAsset?.current_assignment?.project?.name;
   const destination = rows(projects.data).find((r) => r.id === target);
-  const transfer = !!currentProject;
+  const transfer = !!currentAssignedProjectName;
+
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    const assetIdToUse = activeAsset?.id || selectedAssetId;
+    if (!assetIdToUse) {
+      setError('Please select an equipment asset to assign.');
+      return;
+    }
+
     setBusy(true);
     setError('');
     try {
-      await apiFetch('/api/v1/assets/' + asset.id + (transfer ? '/transfer' : '/assignments'), {
+      await apiFetch('/api/v1/assets/' + assetIdToUse + (transfer ? '/transfer' : '/assignments'), {
         method: 'POST',
         body: JSON.stringify({
           project_id: target,
@@ -55,24 +72,55 @@ export default function AssetAssignmentModal({
       setBusy(false);
     }
   }
+
   return (
     <Modal name={transfer ? 'Transfer asset' : 'Assign asset to project'} onClose={onClose}>
       <form onSubmit={save} className="space-y-5">
-        <div className="flex items-center gap-3">
-          <span className="p-3 rounded-lg bg-secondary text-primary">
-            <Truck size={24} />
-          </span>
-          <div>
-            <h3 className="font-semibold">{asset.name}</h3>
-            <p className="text-xs text-muted-foreground">
-              {asset.asset_number} · {asset.status?.replace(/_/g, ' ')}
-            </p>
+        {!asset ? (
+          <label className="block text-xs font-semibold">
+            Equipment / Asset *
+            <select
+              className="input-field mt-1 text-xs"
+              value={selectedAssetId}
+              required
+              onChange={(e) => setSelectedAssetId(e.target.value)}
+            >
+              <option value="">Select equipment asset to assign…</option>
+              {rows(assetsData.data).map((a) => {
+                const projName =
+                  a.current_project?.name ||
+                  a.project_name ||
+                  a.current_project_name ||
+                  a.current_assignment?.project?.name;
+                const statusLabel = projName
+                  ? `Assigned: ${projName}`
+                  : a.status?.replace(/_/g, ' ') || 'AVAILABLE';
+                return (
+                  <option key={a.id} value={a.id}>
+                    {a.name || a.asset_code || a.code} ({a.asset_number || 'No Code'}) — {statusLabel}
+                  </option>
+                );
+              })}
+            </select>
+          </label>
+        ) : (
+          <div className="flex items-center gap-3">
+            <span className="p-3 rounded-lg bg-secondary text-primary">
+              <Truck size={24} />
+            </span>
+            <div>
+              <h3 className="font-semibold">{activeAsset?.name}</h3>
+              <p className="text-xs text-muted-foreground">
+                {activeAsset?.asset_number} · {activeAsset?.status?.replace(/_/g, ' ')}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
+
         <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center">
           <section className="rounded-lg border p-4 bg-muted/40 min-h-24">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">From</p>
-            <p className="font-semibold mt-2">{currentProject?.name || 'Unassigned fleet'}</p>
+            <p className="font-semibold mt-2">{currentAssignedProjectName || 'Unassigned fleet'}</p>
             <p className="text-xs text-muted-foreground mt-1">Current assignment</p>
           </section>
           <ArrowRight size={24} className="text-primary" />
@@ -152,7 +200,7 @@ export default function AssetAssignmentModal({
                 step="0.01"
                 value={meter}
                 onChange={(e) => setMeter(e.target.value)}
-                placeholder={String(asset.current_meter_reading ?? '')}
+                placeholder={String(activeAsset?.current_meter_reading ?? '')}
               />
             </label>
             <label className="text-xs font-semibold">

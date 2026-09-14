@@ -1,9 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Clock, FileText, Activity } from 'lucide-react';
+import {
+  Calendar, ChevronLeft, ChevronRight, X, Clock,
+  FileText, Activity, CheckCircle, AlertCircle, RefreshCw, User, Briefcase, Eye, Edit
+} from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { Row, display, title, Modal } from './DataUI';
+import AssignmentDetailsModal from './AssignmentDetailsModal';
+import RecordForm from './RecordForm';
 
 interface EmployeeCalendarModalProps {
   employeeId: string;
@@ -25,13 +30,15 @@ export default function EmployeeCalendarModal({
   const [leaveRequests, setLeaveRequests] = useState<Row[]>([]);
   const [activities, setActivities] = useState<Row[]>([]);
   const [rotations, setRotations] = useState<Row[]>([]);
+  const [assignments, setAssignments] = useState<Row[]>([]);
+
+  const [viewingAssignment, setViewingAssignment] = useState<Row | null>(null);
+  const [editingAssignment, setEditingAssignment] = useState<Row | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Fetch performance, schedule, attendance & activity data
-  useEffect(() => {
-    let active = true;
+  const reloadData = () => {
     setLoading(true);
     setError('');
 
@@ -42,16 +49,20 @@ export default function EmployeeCalendarModal({
       apiFetch<Row[]>(`${root}/leave-requests`).catch(() => []),
       apiFetch<Row[]>(`${root}/activity`).catch(() => []),
       apiFetch<Row[]>(`${root}/rotations`).catch(() => []),
-    ]).then(([timeData, leaveData, actData, rotData]) => {
-      if (!active) return;
+      apiFetch<Row[]>(`${root}/assignments`).catch(() => []),
+    ]).then(([timeData, leaveData, actData, rotData, assignData]) => {
       setTimeLogs(Array.isArray(timeData) ? timeData : (timeData as any)?.items || []);
       setLeaveRequests(Array.isArray(leaveData) ? leaveData : (leaveData as any)?.items || []);
       setActivities(Array.isArray(actData) ? actData : (actData as any)?.items || []);
       setRotations(Array.isArray(rotData) ? rotData : (rotData as any)?.items || []);
+      setAssignments(Array.isArray(assignData) ? assignData : (assignData as any)?.items || []);
       setLoading(false);
     });
+  };
 
-    return () => { active = false; };
+  // Fetch performance, schedule, attendance & activity data
+  useEffect(() => {
+    reloadData();
   }, [employeeId]);
 
   // Calendar calculations
@@ -118,12 +129,21 @@ export default function EmployeeCalendarModal({
       return start && end && dateStr >= start && dateStr <= end;
     });
 
-    return { timeLog: log, leaves, activities: acts, rotations: rots };
+    // Project assignments active on this date
+    const dayAssignments = assignments.filter(a => {
+      const start = a.start_date ? String(a.start_date).slice(0, 10) : a.mobilization_date ? String(a.mobilization_date).slice(0, 10) : '';
+      const end = a.end_date ? String(a.end_date).slice(0, 10) : a.demobilization_date ? String(a.demobilization_date).slice(0, 10) : '';
+      if (!start) return false;
+      if (end) return dateStr >= start && dateStr <= end;
+      return dateStr >= start;
+    });
+
+    return { timeLog: log, leaves, activities: acts, rotations: rots, assignments: dayAssignments };
   };
 
   // Calculate monthly KPIs
   const currentMonthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
-  
+
   const daysPresentCount = timeLogs.filter(t => {
     const d = t.date ? String(t.date).slice(0, 7) : t.check_in ? String(t.check_in).slice(0, 7) : '';
     return d === currentMonthKey;
@@ -131,6 +151,7 @@ export default function EmployeeCalendarModal({
 
   const approvedLeavesCount = leaveRequests.filter(l => l.status === 'APPROVED').length;
   const pendingLeavesCount = leaveRequests.filter(l => l.status === 'PENDING').length;
+  const activeAssignmentsCount = assignments.filter(a => a.status === 'ACTIVE' || !a.status).length;
   const totalActivitiesCount = activities.length;
 
   // Render Days Grid
@@ -150,9 +171,9 @@ export default function EmployeeCalendarModal({
       const isSelected = dateStr === selectedDate;
       const isToday = dateStr === new Date().toISOString().slice(0, 10);
 
-      const { timeLog, leaves, activities: dayActs, rotations: dayRots } = getEventsForDate(dateStr);
+      const { timeLog, leaves, activities: dayActs, assignments: dayAssigns } = getEventsForDate(dateStr);
 
-      const hasEvents = !!timeLog || leaves.length > 0 || dayActs.length > 0 || dayRots.length > 0;
+      const hasEvents = !!timeLog || leaves.length > 0 || dayActs.length > 0 || dayAssigns.length > 0;
 
       days.push(
         <div
@@ -175,6 +196,7 @@ export default function EmployeeCalendarModal({
             {/* Event indicators dots */}
             {hasEvents && (
               <div className="flex gap-1 items-center">
+                {dayAssigns.length > 0 && <span className="w-2 h-2 rounded-full bg-purple-600" title="Project Assignment" />}
                 {leaves.length > 0 && <span className="w-2 h-2 rounded-full bg-emerald-500" title="Leave" />}
                 {timeLog && <span className="w-2 h-2 rounded-full bg-blue-600" title="Time Log" />}
                 {dayActs.length > 0 && <span className="w-2 h-2 rounded-full bg-amber-500" title="Activity" />}
@@ -183,7 +205,18 @@ export default function EmployeeCalendarModal({
           </div>
 
           {/* Event badges on calendar day */}
-          <div className="space-y-1 text-[10px] overflow-hidden">
+          <div className="space-y-0.5 text-[10px] overflow-hidden">
+            {dayAssigns.map((a, idx) => (
+              <span
+                key={`asgn-${idx}`}
+                className="block truncate px-1 py-0.5 rounded bg-purple-100 text-purple-900 font-semibold flex items-center gap-1 border border-purple-200"
+                title={`Project Assignment: ${a.project_name || a.role_on_project || 'Assignment'}`}
+              >
+                <Briefcase size={10} className="shrink-0 text-purple-700" />
+                <span className="truncate">{a.project_name || a.role_on_project || 'Project'}</span>
+              </span>
+            ))}
+
             {timeLog && (
               <span className="block truncate px-1 py-0.5 rounded bg-blue-100 text-blue-800 font-medium flex items-center gap-1">
                 <Clock size={10} className="shrink-0" />
@@ -193,7 +226,7 @@ export default function EmployeeCalendarModal({
 
             {leaves.map((l, idx) => (
               <span
-                key={idx}
+                key={`lv-${idx}`}
                 className={`block truncate px-1 py-0.5 rounded font-medium flex items-center gap-1 ${
                   l.status === 'APPROVED' ?'bg-emerald-100 text-emerald-800' :'bg-amber-100 text-amber-800'
                 }`}
@@ -203,7 +236,7 @@ export default function EmployeeCalendarModal({
               </span>
             ))}
 
-            {!timeLog && leaves.length === 0 && dayActs.length > 0 && (
+            {!timeLog && leaves.length === 0 && dayAssigns.length === 0 && dayActs.length > 0 && (
               <span className="block truncate px-1 py-0.5 rounded bg-muted text-muted-foreground flex items-center gap-1">
                 <Activity size={10} className="shrink-0" />
                 <span className="truncate">{dayActs.length} {dayActs.length === 1 ? 'event' : 'events'}</span>
@@ -223,7 +256,12 @@ export default function EmployeeCalendarModal({
     <Modal name={`Schedule & Performance Calendar — ${employeeName}`} onClose={onClose}>
       <div className="space-y-6">
         {/* KPI Performance Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border-b pb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 border-b pb-4">
+          <div className="p-3 rounded bg-purple-50/70 border border-purple-200">
+            <span className="text-[11px] font-semibold text-purple-700 block">Project Assignments</span>
+            <span className="text-xl font-bold text-purple-900">{activeAssignmentsCount} Active</span>
+          </div>
+
           <div className="p-3 rounded bg-blue-50/70 border border-blue-200">
             <span className="text-[11px] font-semibold text-blue-700 block">Logged Present ({monthNames[month]})</span>
             <span className="text-xl font-bold text-blue-900">{daysPresentCount} Days</span>
@@ -239,9 +277,9 @@ export default function EmployeeCalendarModal({
             <span className="text-xl font-bold text-amber-900">{pendingLeavesCount} Requests</span>
           </div>
 
-          <div className="p-3 rounded bg-purple-50/70 border border-purple-200">
-            <span className="text-[11px] font-semibold text-purple-700 block">Total Audit Logs</span>
-            <span className="text-xl font-bold text-purple-900">{totalActivitiesCount} Events</span>
+          <div className="p-3 rounded bg-slate-50 border border-slate-200">
+            <span className="text-[11px] font-semibold text-slate-700 block">Total Audit Logs</span>
+            <span className="text-xl font-bold text-slate-900">{totalActivitiesCount} Events</span>
           </div>
         </div>
 
@@ -271,7 +309,8 @@ export default function EmployeeCalendarModal({
             <button onClick={goToToday} className="btn-secondary text-xs">
               Go To Today
             </button>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-purple-600" /> Assignment</span>
               <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-blue-600" /> Time Log</span>
               <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Leave</span>
               <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Activity</span>
@@ -281,7 +320,7 @@ export default function EmployeeCalendarModal({
 
         {loading ? (
           <div className="p-12 text-center text-muted-foreground animate-pulse">
-            Loading performance calendar & leave bookings...
+            Loading performance calendar, project assignments & leave bookings...
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -318,8 +357,51 @@ export default function EmployeeCalendarModal({
               </div>
 
               <div className="space-y-4 max-h-[380px] overflow-y-auto scrollbar-thin pr-1">
-                {/* Time Log Section */}
+                {/* Project Assignments Section */}
                 <div className="space-y-2">
+                  <h5 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5">
+                    <Briefcase size={14} className="text-purple-600" /> Project Assignments
+                  </h5>
+                  {selectedEvents.assignments.length > 0 ? (
+                    selectedEvents.assignments.map((a, i) => (
+                      <div key={i} className="p-3 bg-purple-50/70 border border-purple-200 rounded text-xs space-y-1.5">
+                        <div className="flex justify-between items-center font-bold text-purple-900">
+                          <span>{display(a.project_name || a.project_id || 'Project Assignment')}</span>
+                          <span className="px-1.5 py-0.5 rounded bg-purple-200 text-purple-900 text-[10px]">
+                            {display(a.status || 'ACTIVE')}
+                          </span>
+                        </div>
+                        <p className="text-purple-800 text-[11px]">
+                          Role: <strong>{display(a.role_on_project || 'Member')}</strong>
+                        </p>
+                        <p className="text-purple-700 text-[11px]">
+                          Dates: {display(a.start_date)} to {display(a.end_date || 'Ongoing')}
+                        </p>
+                        <div className="flex items-center gap-2 pt-1.5 border-t border-purple-200">
+                          <button
+                            type="button"
+                            className="text-[11px] font-semibold text-purple-900 hover:underline flex items-center gap-1"
+                            onClick={() => setViewingAssignment(a)}
+                          >
+                            <Eye size={12} /> View Details
+                          </button>
+                          <button
+                            type="button"
+                            className="text-[11px] font-semibold text-purple-900 hover:underline flex items-center gap-1"
+                            onClick={() => setEditingAssignment(a)}
+                          >
+                            <Edit size={12} /> Edit
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic pl-2">No project assignment on this date.</p>
+                  )}
+                </div>
+
+                {/* Time Log Section */}
+                <div className="space-y-2 border-t pt-3">
                   <h5 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5">
                     <Clock size={14} className="text-blue-600" /> Attendance / Time Log
                   </h5>
@@ -387,6 +469,36 @@ export default function EmployeeCalendarModal({
           </div>
         )}
       </div>
+
+      {/* Sub-modals inside Calendar */}
+      {viewingAssignment && (
+        <AssignmentDetailsModal
+          assignment={viewingAssignment}
+          employeeName={employeeName}
+          onClose={() => setViewingAssignment(null)}
+          onEdit={(item) => setEditingAssignment(item)}
+        />
+      )}
+
+      {editingAssignment && (
+        <RecordForm
+          resource="employee-assignments"
+          path={`/api/v1/employees/${employeeId}/assignments/${editingAssignment.id}`}
+          title="Update Project Assignment"
+          initial={editingAssignment}
+          method="PATCH"
+          operation={{
+            schema: { $ref: '#/components/schemas/EmployeeAssignmentUpdate' },
+            permissions: [],
+          }}
+          employeeId={employeeId}
+          onClose={() => setEditingAssignment(null)}
+          onSaved={() => {
+            setEditingAssignment(null);
+            reloadData();
+          }}
+        />
+      )}
     </Modal>
   );
 }

@@ -5,14 +5,6 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
 
-const DATA = [
-  { project: 'Alpha', value: 48200 },
-  { project: 'Bravo', value: 31400 },
-  { project: 'Delta', value: 18900 },
-  { project: 'Yard', value: 7200 },
-  { project: 'Office', value: 3100 },
-];
-
 const COLORS = ['var(--primary)', '#7C3AED', '#D97706', '#0891B2', '#6B7280'];
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -21,7 +13,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       <div className="bg-card border border-border rounded shadow-card-md px-3 py-2 text-xs">
         <p className="font-600 text-foreground">{label}</p>
         <p className="text-muted-foreground mt-0.5">
-          <span className="font-600 text-foreground">${payload[0].value.toLocaleString()}</span> consumed
+          <span className="font-600 text-foreground">${Number(payload[0].value).toLocaleString()}</span> consumed
         </p>
       </div>
     );
@@ -29,10 +21,18 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export default function ConsumptionByProjectChart() {
+export default function ConsumptionByProjectChart({ data }: { data: Array<{ project: string; value: number }> }) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-[220px] flex items-center justify-center text-xs text-muted-foreground">
+        No project consumption transactions recorded in database.
+      </div>
+    );
+  }
+
   return (
     <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={DATA} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barSize={32}>
+      <BarChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barSize={32}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
         <XAxis dataKey="project" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
         <YAxis
@@ -43,8 +43,8 @@ export default function ConsumptionByProjectChart() {
         />
         <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--muted)', opacity: 0.5 }} />
         <Bar dataKey="value" radius={[3, 3, 0, 0]}>
-          {DATA.map((entry, index) => (
-            <Cell key={`cbp-cell-${entry.project}`} fill={COLORS[index % COLORS.length]} />
+          {data.map((entry, index) => (
+            <Cell key={`cbp-cell-${entry.project}-${index}`} fill={COLORS[index % COLORS.length]} />
           ))}
         </Bar>
       </BarChart>

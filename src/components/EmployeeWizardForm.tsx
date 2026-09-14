@@ -77,6 +77,7 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [contractFile, setContractFile] = useState<File | null>(null);
 
   // Step 4: Emergency Contacts
   const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContactItem[]>([]);
@@ -91,16 +92,16 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
     let active = true;
     apiFetch<any>('/api/v1/departments?page_size=100')
       .then(d => { if (active) setDepartments(Array.isArray(d) ? d : d.items || []); })
-      .catch(() => {});
+      .catch(() => { });
     apiFetch<any>('/api/v1/positions?page_size=100')
       .then(d => { if (active) setPositions(Array.isArray(d) ? d : d.items || []); })
-      .catch(() => {});
+      .catch(() => { });
     apiFetch<any>('/api/v1/employees?page_size=100')
       .then(d => { if (active) setSupervisors(Array.isArray(d) ? d : d.items || []); })
-      .catch(() => {});
+      .catch(() => { });
     apiFetch<any>('/api/v1/locations?page_size=100')
       .then(d => { if (active) setLocations(Array.isArray(d) ? d : d.items || []); })
-      .catch(() => {});
+      .catch(() => { });
     return () => { active = false; };
   }, []);
 
@@ -174,7 +175,11 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!validateStep(step)) return;
+    if (busy) return;
+    if (step < 5) { nextStep(); return; }
+    for (const stage of [1, 4]) {
+      if (!validateStep(stage)) { setStep(stage); return; }
+    }
 
     setBusy(true);
     setError('');
@@ -184,8 +189,9 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
       const payload: Record<string, any> = {};
 
       Object.entries({ ...personal, ...employment }).forEach(([k, v]) => {
-        if (v !== '' && v !== null && v !== undefined) {
-          payload[k] = v;
+        const value = typeof v === 'string' ? v.trim() : v;
+        if (k !== 'availability_status' && value !== '' && value !== null && value !== undefined) {
+          payload[k] = value;
         }
       });
 
@@ -241,6 +247,28 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
             });
           } catch {
             // resume upload error handled gracefully
+          }
+        }
+
+        // Upload contract document if selected
+        if (contractFile) {
+          try {
+            const formData = new FormData();
+            formData.append('file', contractFile);
+            formData.append(
+              'title',
+              `Employment Contract - ${personal.first_name || ''} ${personal.last_name || ''}`.trim() || contractFile.name
+            );
+            formData.append('document_type', 'EMPLOYMENT_CONTRACT');
+            const startDate = employment.contract_start_date || employment.hire_date;
+            if (startDate) formData.append('issue_date', startDate);
+            if (employment.contract_end_date) formData.append('expiry_date', employment.contract_end_date);
+            await apiFetch(`/api/v1/employees/${empId}/documents/upload`, {
+              method: 'POST',
+              body: formData,
+            });
+          } catch {
+            // contract upload error handled gracefully
           }
         }
 
@@ -308,12 +336,12 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                     isActive
                       ? 'bg-primary text-white border-primary shadow-sm'
                       : isDone
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300' :'bg-muted/50 text-muted-foreground border-transparent hover:bg-muted'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                      : 'bg-muted/50 text-muted-foreground border-transparent hover:bg-muted'
                   }`}
                 >
-                  <span className={`w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold ${
-                    isActive ? 'bg-white text-primary' : isDone ? 'bg-emerald-600 text-white' : 'bg-muted-foreground/20'
-                  }`}>
+                  <span className={`w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold ${isActive ? 'bg-white text-primary' : isDone ? 'bg-emerald-600 text-white' : 'bg-muted-foreground/20'
+                    }`}>
                     {isDone ? <Check size={12} /> : s.num}
                   </span>
                   <span>{s.label}</span>
@@ -416,11 +444,11 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                     onChange={e => setPersonal({ ...personal, marital_status: e.target.value })}
                   >
                     <option value="">Select status...</option>
-                    <option value="Single">Single</option>
-                    <option value="Married">Married</option>
-                    <option value="Divorced">Divorced</option>
-                    <option value="Widowed">Widowed</option>
-                    <option value="Separated">Separated</option>
+                    <option value="SINGLE">Single</option>
+                    <option value="MARRIED">Married</option>
+                    <option value="DIVORCED">Divorced</option>
+                    <option value="WIDOWED">Widowed</option>
+                    <option value="SEPARATED">Separated</option>
                   </select>
                 </div>
               </div>
@@ -589,15 +617,7 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                     <option value="UNAVAILABLE">Unavailable</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1">Hire Date</label>
-                  <input
-                    type="date"
-                    className="input-field"
-                    value={employment.hire_date}
-                    onChange={e => setEmployment({ ...employment, hire_date: e.target.value })}
-                  />
-                </div>
+
                 <div>
                   <label className="block text-xs font-semibold mb-1">Supervisor</label>
                   <select
@@ -614,17 +634,42 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1">Home Location</label>
+                  <label className="block text-xs font-semibold mb-1">Work Location</label>
                   <select
                     className="input-field"
                     value={employment.home_location_id}
                     onChange={e => setEmployment({ ...employment, home_location_id: e.target.value })}
                   >
-                    <option value="">Select home location...</option>
+                    <option value="">Select work location...</option>
                     {locations.map(l => (
                       <option key={l.id} value={l.id}>{l.name}</option>
                     ))}
                   </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Hire Date</label>
+                  <input
+                    type="date"
+                    className="input-field"
+                    value={employment.hire_date}
+                    onChange={e => {
+                      const newHireDate = e.target.value;
+                      setEmployment(prev => ({
+                        ...prev,
+                        hire_date: newHireDate,
+                        contract_start_date: prev.contract_start_date || newHireDate,
+                      }));
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Contract Start Date</label>
+                  <input
+                    type="date"
+                    className="input-field"
+                    value={employment.contract_start_date || employment.hire_date}
+                    onChange={e => setEmployment({ ...employment, contract_start_date: e.target.value })}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1">Contract End Date</label>
@@ -634,6 +679,41 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                     value={employment.contract_end_date}
                     onChange={e => setEmployment({ ...employment, contract_end_date: e.target.value })}
                   />
+                </div>
+                <div className="md:col-span-2 border rounded p-4 space-y-3 bg-muted/20">
+                  <span className="text-xs font-bold uppercase text-primary tracking-wider block">
+                    Employment Contract Attachment (Optional)
+                  </span>
+                  <p className="text-xs text-muted-foreground">
+                    Attach the signed employment contract or agreement document. Start and end dates above will be saved with the document.
+                  </p>
+                  {contractFile ? (
+                    <div className="p-3 bg-card border rounded text-xs flex items-center justify-between">
+                      <span className="font-semibold text-primary truncate max-w-[300px]">
+                        {contractFile.name}
+                      </span>
+                      <button
+                        type="button"
+                        className="text-red-600 text-xs hover:underline"
+                        onClick={() => setContractFile(null)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="p-3 border-2 border-dashed rounded text-center bg-card">
+                      <label className="btn-secondary cursor-pointer text-xs">
+                        <Upload size={14} />
+                        Attach Contract Document
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                          className="hidden"
+                          onChange={e => setContractFile(e.target.files?.[0] || null)}
+                        />
+                      </label>
+                    </div>
+                  )}
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-xs font-semibold mb-1">Employment Notes</label>
@@ -832,6 +912,15 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                             placeholder="mary.doe@gmail.com"
                           />
                         </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-[11px] font-semibold mb-1">Address (Optional)</label>
+                          <input
+                            className="input-field text-xs"
+                            value={contact.address || ''}
+                            onChange={e => updateEmergencyContact(index, 'address', e.target.value)}
+                            placeholder="Street address, city or community..."
+                          />
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -898,6 +987,7 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                 {/* Attachments Review */}
                 <div className="border rounded p-4 bg-muted/20 space-y-2">
                   <h4 className="text-xs font-bold uppercase text-primary tracking-wider">Attachments</h4>
+                  <p className="text-xs">Contract: {contractFile ? contractFile.name : 'No contract attached'}</p>
                   <p className="text-xs">Photo: {photoFile ? photoFile.name : 'No photo uploaded'}</p>
                   <p className="text-xs">Resume: {resumeFile ? resumeFile.name : 'No resume uploaded'}</p>
                 </div>
@@ -909,7 +999,7 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                   </h4>
                   {emergencyContacts.map((c, i) => (
                     <p key={i} className="text-xs text-foreground font-medium">
-                      #{i + 1}: {c.full_name} ({c.relationship}) — {c.primary_phone}
+                      #{i + 1}: {c.full_name} ({c.relationship}) — {c.primary_phone} {c.address ? `• ${c.address}` : ''}
                     </p>
                   ))}
                   {emergencyContacts.length === 0 && <p className="text-xs text-muted-foreground">None added</p>}

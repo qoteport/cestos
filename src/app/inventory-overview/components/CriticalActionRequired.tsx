@@ -4,9 +4,13 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, TrendingDown, RotateCcw, ChevronRight } from 'lucide-react';
 import { getCriticalStockItems, getLowStockItems } from '@/lib/api';
+import { Modal } from '@/components/DataUI';
+import RecordForm from '@/components/RecordForm';
+import { operation } from '@/components/ResourceWorkspace';
 
 interface StockItem {
   id?: string;
+  item_id?: string;
   item?: { id?: string; name?: string; item_number?: string } | string;
   item_name?: string;
   item_number?: string;
@@ -19,6 +23,7 @@ interface StockItem {
   estimated_days_remaining?: number;
   lead_time_days?: number;
   store?: { name?: string } | string;
+  store_id?: string;
   store_name?: string;
   reorder_status?: string;
   criticality?: string;
@@ -28,7 +33,16 @@ interface StockItem {
 function getItemName(item: StockItem): string {
   if (typeof item?.item === 'object' && item?.item?.name) return item.item.name;
   if (typeof item?.item === 'string') return item.item;
+  if (item?.name) return String(item.name);
   return item?.item_name ?? '—';
+}
+
+function getItemId(item: StockItem): string {
+  if (typeof item?.item === 'object' && item?.item?.id) return item.item.id;
+  if (typeof item?.item === 'string') return item.item;
+  if (item?.id) return String(item.id);
+  if (item?.item_id) return String(item.item_id);
+  return '';
 }
 
 function getItemSku(item: StockItem): string {
@@ -49,24 +63,37 @@ function getStoreName(item: StockItem): string {
 }
 
 function getOnHand(item: StockItem): number {
-  return item?.available_quantity ?? item?.quantity_on_hand ?? item?.quantity ?? 0;
+  const val = item?.available_quantity ?? item?.quantity_available ?? item?.quantity_on_hand ?? item?.quantity ?? 0;
+  return Number(val) || 0;
 }
 
 type FilterId = 'filter-all' | 'filter-critical' | 'filter-low' | 'filter-reorder';
+
+// Backend may return a raw array or a paginated { items: [] } / { results: [] } envelope.
+function toArray(value: unknown): StockItem[] {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === 'object') {
+    const obj = value as { items?: StockItem[]; results?: StockItem[] };
+    if (Array.isArray(obj.items)) return obj.items;
+    if (Array.isArray(obj.results)) return obj.results;
+  }
+  return [];
+}
 
 export default function CriticalActionRequired() {
   const [criticalItems, setCriticalItems] = useState<StockItem[]>([]);
   const [lowItems, setLowItems] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterId>('filter-all');
+  const [reorderItem, setReorderItem] = useState<StockItem | null>(null);
 
   useEffect(() => {
     Promise.allSettled([
       getCriticalStockItems({ page_size: '20' } as Record<string, string>),
       getLowStockItems({ page_size: '20' } as Record<string, string>),
     ]).then(([crit, low]) => {
-      setCriticalItems(crit.status === 'fulfilled' ? (crit.value as StockItem[]) : []);
-      setLowItems(low.status === 'fulfilled' ? (low.value as StockItem[]) : []);
+      setCriticalItems(crit.status === 'fulfilled' ? toArray(crit.value) : []);
+      setLowItems(low.status === 'fulfilled' ? toArray(low.value) : []);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -140,6 +167,7 @@ export default function CriticalActionRequired() {
             const leadTime = item?.lead_time_days;
             const daysUrgent = days !== undefined && leadTime !== undefined && days < leadTime;
             const isCritical = item._severity === 'CRITICAL';
+            const itemId = getItemId(item);
             return (
               <div key={item?.id ?? idx} className="px-4 py-3.5 hover:bg-muted/40 transition-colors">
                 <div className="flex items-start gap-3">
@@ -173,8 +201,16 @@ export default function CriticalActionRequired() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <Link href="/inventory-overview" className="btn-ghost text-xs py-1 px-2">View</Link>
-                    <button className="btn-accent text-xs py-1 px-2.5">
+                    <Link
+                      href={itemId ? '/workspace/inventory/items/' + itemId : '/workspace/inventory/items'}
+                      className="btn-ghost text-xs py-1 px-2"
+                    >
+                      View
+                    </Link>
+                    <button
+                      onClick={() => setReorderItem(item)}
+                      className="btn-accent text-xs py-1 px-2.5 flex items-center gap-1"
+                    >
                       <RotateCcw size={12} />
                       Reorder
                     </button>
@@ -188,10 +224,36 @@ export default function CriticalActionRequired() {
 
       <div className="px-4 py-2.5 border-t border-border flex items-center justify-between">
         <span className="text-xs text-muted-foreground">Showing {filtered.length} items requiring attention</span>
-        <Link href="/inventory-overview" className="text-xs text-primary font-600 hover:underline flex items-center gap-1">
+        <Link href="/workspace/inventory/forecast" className="text-xs text-primary font-600 hover:underline flex items-center gap-1">
           View Forecast & Reorder Center <ChevronRight size={12} />
         </Link>
       </div>
+
+      {reorderItem && (
+        <Modal
+          name={`Reorder ${getItemName(reorderItem)}`}
+          onClose={() => setReorderItem(null)}
+        >
+          <RecordForm
+            resource="inventory/requests"
+            operation={
+              operation('/api/v1/inventory/requests', 'POST') || {
+                method: 'POST',
+                permissions: ['inventory.requests.create'],
+              }
+            }
+            path="/api/v1/inventory/requests"
+            initial={{
+              item_id: getItemId(reorderItem),
+              store_id: reorderItem.store_id || undefined,
+            }}
+            onClose={() => setReorderItem(null)}
+            onSaved={() => {
+              setReorderItem(null);
+            }}
+          />
+        </Modal>
+      )}
     </div>
   );
 }

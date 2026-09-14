@@ -22,10 +22,11 @@ export function refreshSession(base: string, failedAccess: string | null): Promi
     if (!token) return false;
     const response = await fetch(`${base}/api/v1/auth/refresh`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({refresh_token:token}), cache:'no-store' });
     if (response.status === 401) { if (getRefreshToken() === token) clearTokens(); return false; }
-    if (!response.ok) throw new Error('Session could not be renewed. Please retry.');
-    const data = await response.json();
+    const text = await response.text();
+    let data: any = {};
+    try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
     if (getRefreshToken() !== token) return !!getAccessToken(); // Logout or a new login won the race.
-    setTokens(data.access_token, data.refresh_token);
+    setTokens(data.access_token || '', data.refresh_token || '');
     return true;
   };
   const pending = Promise.resolve(typeof navigator !== 'undefined' && navigator.locks ? navigator.locks.request('cestos-session-refresh', rotate) : rotate()).then(value => value).finally(() => { refreshing = null; });

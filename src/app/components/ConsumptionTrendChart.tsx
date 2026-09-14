@@ -4,31 +4,20 @@ import React from 'react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
+import { useData } from '@/components/DataUI';
 
-const DATA = [
-  { date: 'Aug 10', alpha: 4200, bravo: 2800, delta: 800 },
-  { date: 'Aug 13', alpha: 3800, bravo: 3100, delta: 1100 },
-  { date: 'Aug 16', alpha: 5100, bravo: 2600, delta: 900 },
-  { date: 'Aug 19', alpha: 4700, bravo: 3400, delta: 1300 },
-  { date: 'Aug 22', alpha: 6200, bravo: 2900, delta: 1100 },
-  { date: 'Aug 25', alpha: 5800, bravo: 3200, delta: 1600 },
-  { date: 'Aug 28', alpha: 4300, bravo: 2700, delta: 2100 },
-  { date: 'Aug 31', alpha: 5500, bravo: 3600, delta: 1800 },
-  { date: 'Sep 3', alpha: 6800, bravo: 3100, delta: 1400 },
-  { date: 'Sep 6', alpha: 5200, bravo: 2800, delta: 2300 },
-  { date: 'Sep 9', alpha: 4900, bravo: 3300, delta: 1900 },
-];
+const AREA_COLORS = ['var(--primary)', '#7C3AED', '#D97706', '#0891B2', '#15803D', '#DC2626'];
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-card border border-border rounded shadow-card-md px-3 py-2.5 text-xs">
+      <div className="bg-card border border-border rounded shadow-card-md px-3 py-2 text-xs">
         <p className="font-600 text-foreground mb-1.5">{label}</p>
         {payload.map((p: any) => (
           <div key={`tooltip-${p.dataKey}`} className="flex items-center gap-2 mb-0.5">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
             <span className="text-muted-foreground capitalize">{p.name}:</span>
-            <span className="font-600 text-foreground tabular-nums">{p.value.toLocaleString()} L</span>
+            <span className="font-600 text-foreground tabular-nums">${Number(p.value).toLocaleString()}</span>
           </div>
         ))}
       </div>
@@ -37,35 +26,78 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export default function ConsumptionTrendChart() {
+export default function ConsumptionTrendChart({ projectId }: { projectId?: string }) {
+  const queryParams = new URLSearchParams();
+  if (projectId) queryParams.set('project_id', projectId);
+
+  const url = '/api/v1/inventory/stats' + (queryParams.toString() ? '?' + queryParams.toString() : '');
+  const statsRes = useData(url);
+
+  const trendData = statsRes.data?.consumption_trend || [];
+  const projectConsumption = statsRes.data?.consumption_by_project || [];
+
+  if (statsRes.loading) {
+    return (
+      <div className="h-[200px] flex items-center justify-center text-xs text-muted-foreground animate-pulse">
+        Loading live inventory consumption data from database...
+      </div>
+    );
+  }
+
+  if (trendData.length === 0 && projectConsumption.length === 0) {
+    return (
+      <div className="h-[200px] flex items-center justify-center text-xs text-muted-foreground">
+        No material issues or consumption records found in database.
+      </div>
+    );
+  }
+
+  // If daily trend records exist, map them; otherwise map by-project consumption
+  const chartData = trendData.length > 0 ? trendData : projectConsumption.map((p: any) => ({
+    date: p.project,
+    value: p.value,
+  }));
+
+  const keys = trendData.length > 0
+    ? Object.keys(chartData[0] || {}).filter((k) => k !== 'date')
+    : ['value'];
+
   return (
     <ResponsiveContainer width="100%" height={200}>
-      <AreaChart data={DATA} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+      <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
         <defs>
-          <linearGradient id="gradAlpha" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.18} />
-            <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
-          </linearGradient>
-          <linearGradient id="gradBravo" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#7C3AED" stopOpacity={0.15} />
-            <stop offset="95%" stopColor="#7C3AED" stopOpacity={0} />
-          </linearGradient>
-          <linearGradient id="gradDelta" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#D97706" stopOpacity={0.15} />
-            <stop offset="95%" stopColor="#D97706" stopOpacity={0} />
-          </linearGradient>
+          {keys.map((key, idx) => (
+            <linearGradient id={`grad-${key}`} x1="0" y1="0" x2="0" y2="1" key={key}>
+              <stop offset="5%" stopColor={AREA_COLORS[idx % AREA_COLORS.length]} stopOpacity={0.2} />
+              <stop offset="95%" stopColor={AREA_COLORS[idx % AREA_COLORS.length]} stopOpacity={0} />
+            </linearGradient>
+          ))}
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
         <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+        <YAxis
+          tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
+          axisLine={false}
+          tickLine={false}
+          tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+        />
         <Tooltip content={<CustomTooltip />} />
         <Legend
           formatter={(value) => <span style={{ fontSize: 11, color: 'var(--muted-foreground)', textTransform: 'capitalize' }}>{value}</span>}
           iconSize={8}
         />
-        <Area type="monotone" dataKey="alpha" name="Alpha" stroke="var(--primary)" strokeWidth={2} fill="url(#gradAlpha)" dot={false} />
-        <Area type="monotone" dataKey="bravo" name="Bravo" stroke="#7C3AED" strokeWidth={2} fill="url(#gradBravo)" dot={false} />
-        <Area type="monotone" dataKey="delta" name="Delta" stroke="#D97706" strokeWidth={2} fill="url(#gradDelta)" dot={false} />
+        {keys.map((key, idx) => (
+          <Area
+            key={key}
+            type="monotone"
+            dataKey={key}
+            name={key === 'value' ? 'Material Issued Value' : key}
+            stroke={AREA_COLORS[idx % AREA_COLORS.length]}
+            strokeWidth={2}
+            fill={`url(#grad-${key})`}
+            dot={false}
+          />
+        ))}
       </AreaChart>
     </ResponsiveContainer>
   );

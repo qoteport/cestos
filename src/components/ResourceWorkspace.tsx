@@ -2,15 +2,26 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Plus, RefreshCw, Search, ArrowLeft } from 'lucide-react';
+import { Plus, RefreshCw, Search, ArrowLeft, ArrowRight, ExternalLink } from 'lucide-react';
 import contract from '@/lib/contract.json';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, apiFetchBlob } from '@/lib/api';
 import { useAuth } from './AuthProvider';
 import { Row, title, rows, display, useData, State, Table, Facts, Modal } from './DataUI';
 import RecordForm from './RecordForm';
 import AssetDetailView from './AssetDetailView';
 import EmployeeDetailView from './EmployeeDetailView';
 import EmployeeWizardForm from './EmployeeWizardForm';
+import { ProjectRegister } from './ProjectDashboard';
+import EmployeeAvailabilityWorkspace from './EmployeeAvailabilityWorkspace';
+import RotationsWorkspace from './RotationsWorkspace';
+import TrainingComplianceWorkspace from './TrainingComplianceWorkspace';
+import ExpiringDocumentsWorkspace from './ExpiringDocumentsWorkspace';
+import EquipmentExpiringDocumentsWorkspace from './EquipmentExpiringDocumentsWorkspace';
+import StoreDetailView from './StoreDetailView';
+import ItemDetailView from './ItemDetailView';
+import NotificationWorkspace from './NotificationWorkspace';
+import AdminWorkspace from './AdminWorkspace';
+
 const routes: Row = contract.routes;
 export function operation(path: string, method: string): Row | null {
   const key =
@@ -20,7 +31,46 @@ export function operation(path: string, method: string): Row | null {
     );
   return key ? routes[key][method] || null : null;
 }
+function ClientLogo({ clientId }: { clientId: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    apiFetchBlob(`/api/v1/clients/${clientId}/logo`)
+      .then((blob) => {
+        if (active) setSrc(URL.createObjectURL(blob));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [clientId]);
+  if (!src) return null;
+  return (
+    <div className="mb-4">
+      <img
+        src={src}
+        alt="Client logo"
+        className="h-16 w-auto max-w-48 rounded border border-border object-contain bg-white p-1"
+      />
+    </div>
+  );
+}
 export default function ResourceWorkspace({ resource }: { resource: string }) {
+  if (resource === 'projects') return <ProjectRegister />;
+  if (resource === 'employees/available') return <EmployeeAvailabilityWorkspace />;
+  if (resource === 'rotations/current' || resource === 'rotations/upcoming') return <RotationsWorkspace />;
+  if (resource === 'training/compliance') return <TrainingComplianceWorkspace />;
+  if (resource === 'employee-documents/expiring') return <ExpiringDocumentsWorkspace />;
+  if (resource === 'assets/expiring-documents' || resource === 'assets/expiring') return <EquipmentExpiringDocumentsWorkspace />;
+  if (resource === 'hr/notifications' || resource === 'notifications' || resource === 'notification-schedules') return <NotificationWorkspace />;
+  if (resource === 'admin' || resource === 'users' || resource === 'roles' || resource === 'admin/users' || resource === 'admin/roles' || resource === 'admin/leave') return <AdminWorkspace />;
+
+  const matchStore = /^(inventory\/stores|stores)\/([0-9a-f-]{36})$/i.exec(resource);
+  if (matchStore) return <StoreDetailView storeId={matchStore[2]} />;
+
+  const matchItem = /^(inventory\/items|items)\/([0-9a-f-]{36})$/i.exec(resource);
+  if (matchItem) return <ItemDetailView itemId={matchItem[2]} />;
+
   const match = /^(employees|assets)\/([0-9a-f-]{36})$/i.exec(resource);
   if (match)
     return match[1] === 'employees' ? (
@@ -30,6 +80,7 @@ export default function ResourceWorkspace({ resource }: { resource: string }) {
     );
   return <ResourceList key={resource} resource={resource} />;
 }
+
 function ResourceList({ resource }: { resource: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -141,6 +192,7 @@ function ResourceList({ resource }: { resource: string }) {
         <p className="mt-2 text-muted-foreground">Choose a section from the navigation.</p>
       </div>
     );
+
   return (
     <div className="space-y-5 fade-in">
       <div className="flex flex-wrap justify-between gap-4 items-end">
@@ -207,21 +259,24 @@ function ResourceList({ resource }: { resource: string }) {
             <div className="card overflow-hidden">
               <Table
                 data={list}
-                onSelect={(r) => {
-                  if (resource === 'employees' || resource.startsWith('employees/')) {
-                    router.push('/workspace/employees/' + r.id);
-                  } else if (resource === 'assets' || resource === 'assets/available') {
-                    router.push('/workspace/assets/' + r.id);
+                onSelect={(row) => {
+                  if (resource === 'inventory/stores' || resource === 'stores') {
+                    router.push('/workspace/inventory/stores/' + row.id);
+                  } else if (resource === 'hr/salaries' && row.employee_id) {
+                    router.push('/workspace/employees/' + row.employee_id);
+                  } else if (resource === 'employees') {
+                    router.push('/workspace/employees/' + row.id);
+                  } else if (resource === 'assets') {
+                    router.push('/workspace/assets/' + row.id);
                   } else {
-                    setSelected(r);
-                    setActionError('');
+                    setSelected(row);
                   }
                 }}
               />
-              {read.parameters?.includes('page') && (
-                <div className="flex justify-between items-center p-4 border-t text-sm">
+              {pages > 1 && (
+                <div className="flex items-center justify-between border-t p-3 text-xs text-muted-foreground">
                   <span>
-                    Page {page} of {pages}
+                    Showing {list.length} of {total} records
                   </span>
                   <div className="flex gap-2">
                     <button
@@ -259,7 +314,41 @@ function ResourceList({ resource }: { resource: string }) {
           <State loading={detail.loading} error={detail.error} retry={detail.reload}>
             {current && (
               <>
-                <Facts data={current} />
+                {resource === 'clients' && current?.profile_photo_url && (
+                  <ClientLogo clientId={current.id} />
+                )}
+                {(resource === 'inventory/items' || resource === 'items') ? (
+                  <div className="space-y-4">
+                    <Facts
+                      data={{
+                        'Item Number / SKU': current.item_number || current.sku || 'N/A',
+                        'Item Name': current.name || 'N/A',
+                        'Category': current.category_name || current.category?.name || 'Catalog Item',
+                        'Base Unit': current.unit_symbol || current.base_unit?.symbol || 'units',
+                        'Standard Cost': current.standard_cost != null ? `$${Number(current.standard_cost).toFixed(2)}` : 'N/A',
+                        'Minimum Stock Level': current.minimum_stock_level ?? 0,
+                        'Reorder Point': current.reorder_point ?? 0,
+                        'Status': current.is_active !== false ? 'Active' : 'Inactive',
+                      }}
+                    />
+                    <div className="p-3.5 bg-blue-50/80 border border-blue-200/80 rounded-xl text-xs text-slate-800 flex items-center justify-between flex-wrap gap-2 mt-4">
+                      <div>
+                        <span className="font-bold text-slate-900 block">Complete Item Detail Page Available</span>
+                        <span className="text-muted-foreground text-[11px]">View live stock levels, consumption trends, store balances & actions.</span>
+                      </div>
+                      <Link
+                        className="btn-primary text-xs font-semibold shrink-0 flex items-center gap-1.5 shadow-xs"
+                        href={'/workspace/inventory/items/' + current.id}
+                        onClick={() => setSelected(null)}
+                      >
+                        <span>More Details & Charts</span>
+                        <ArrowRight size={13} />
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <Facts data={current} />
+                )}
                 {current.items && (
                   <div className="mt-6">
                     <h3 className="font-semibold mb-3">Items</h3>
@@ -267,11 +356,21 @@ function ResourceList({ resource }: { resource: string }) {
                   </div>
                 )}
                 <div className="flex flex-wrap gap-2 mt-6 border-t pt-4">
+                  {(resource === 'inventory/items' || resource === 'items') && (
+                    <Link
+                      className="btn-primary text-xs font-semibold flex items-center gap-1.5"
+                      href={'/workspace/inventory/items/' + current.id}
+                      onClick={() => setSelected(null)}
+                    >
+                      <span>More Details / Full Workspace</span>
+                      <ExternalLink size={13} />
+                    </Link>
+                  )}
                   {allowed(update) &&
                     (!resource.startsWith('inventory/') ||
                       !current.status ||
                       current.status === 'DRAFT') && (
-                      <button className="btn-secondary" onClick={() => setEditing(true)}>
+                      <button className="btn-secondary text-xs" onClick={() => setEditing(true)}>
                         Edit record
                       </button>
                     )}

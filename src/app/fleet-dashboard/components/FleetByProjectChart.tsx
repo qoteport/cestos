@@ -1,10 +1,17 @@
 'use client';
 import React from 'react';
-import dynamic from 'next/dynamic';
+import FleetBarChart from './FleetBarChart';
 
-const FleetBarChart = dynamic(() => import('./FleetBarChart'), { ssr: false });
+interface FleetByProjectChartProps {
+  statusFilter?: string;
+  categoryId?: string;
+  locationId?: string;
+  projectId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
 
-export default function FleetByProjectChart() {
+export default function FleetByProjectChart(props: FleetByProjectChartProps) {
   return (
     <div className="card p-5 h-full">
       <div className="flex items-center justify-between mb-4">
@@ -27,7 +34,7 @@ export default function FleetByProjectChart() {
           </div>
         </div>
       </div>
-      <FleetBarChart />
+      <FleetBarChart {...props} />
     </div>
   );
 }

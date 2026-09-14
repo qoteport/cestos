@@ -17,46 +17,53 @@ interface Transaction {
   unit?: { symbol?: string; name?: string } | string;
   from_store?: { name?: string } | string;
   to_store?: { name?: string } | string;
+  to_store_name?: string;
   store?: { name?: string } | string;
   store_name?: string;
   [key: string]: unknown;
 }
 
 function getTypeInfo(type?: string): { label: string; typeClass: string; icon: React.ReactNode; qtyClass: string } {
-  switch (type?.toUpperCase()) {
-    case 'RECEIPT': case'RECEIVE':
-      return { label: 'RECEIPT', typeClass: 'text-green-600 bg-green-50', icon: <ArrowDownCircle size={13} />, qtyClass: 'text-green-700' };
-    case 'ISSUE':
-      return { label: 'ISSUE', typeClass: 'text-red-600 bg-red-50', icon: <ArrowUpCircle size={13} />, qtyClass: 'text-red-600' };
-    case 'TRANSFER':
-      return { label: 'TRANSFER', typeClass: 'text-blue-600 bg-blue-50', icon: <ArrowLeftRight size={13} />, qtyClass: 'text-primary' };
-    case 'RETURN':
-      return { label: 'RETURN', typeClass: 'text-purple-600 bg-purple-50', icon: <RotateCcw size={13} />, qtyClass: 'text-purple-600' };
-    case 'ADJUSTMENT':
-      return { label: 'ADJUST', typeClass: 'text-amber-600 bg-amber-50', icon: <RotateCcw size={13} />, qtyClass: 'text-amber-600' };
-    default:
-      return { label: type ?? 'TXN', typeClass: 'text-muted-foreground bg-muted', icon: <ArrowLeftRight size={13} />, qtyClass: 'text-foreground' };
+  const upper = type?.toUpperCase() || '';
+  if (upper.includes('RECEIPT') || upper.includes('RECEIVE') || upper.includes('OPENING')) {
+    return { label: 'RECEIPT', typeClass: 'text-green-600 bg-green-50', icon: <ArrowDownCircle size={13} />, qtyClass: 'text-green-700' };
   }
+  if (upper.includes('ISSUE') || upper.includes('CONSUMPTION')) {
+    return { label: 'ISSUE', typeClass: 'text-red-600 bg-red-50', icon: <ArrowUpCircle size={13} />, qtyClass: 'text-red-600' };
+  }
+  if (upper.includes('TRANSFER')) {
+    return { label: 'TRANSFER', typeClass: 'text-blue-600 bg-blue-50', icon: <ArrowLeftRight size={13} />, qtyClass: 'text-primary' };
+  }
+  if (upper.includes('RETURN')) {
+    return { label: 'RETURN', typeClass: 'text-purple-600 bg-purple-50', icon: <RotateCcw size={13} />, qtyClass: 'text-purple-600' };
+  }
+  if (upper.includes('ADJUST')) {
+    return { label: 'ADJUST', typeClass: 'text-amber-600 bg-amber-50', icon: <RotateCcw size={13} />, qtyClass: 'text-amber-600' };
+  }
+  return { label: type ?? 'TXN', typeClass: 'text-muted-foreground bg-muted', icon: <ArrowLeftRight size={13} />, qtyClass: 'text-foreground' };
 }
 
 function getItemName(txn: Transaction): string {
   if (typeof txn?.item === 'object' && txn?.item?.name) return txn.item.name;
   if (typeof txn?.item === 'string') return txn.item;
-  return txn?.item_name ?? '—';
+  if (txn?.item_name) return String(txn.item_name);
+  return '—';
 }
 
 function getStoreName(txn: Transaction): string {
-  const from = typeof txn?.from_store === 'object' ? txn.from_store?.name : txn?.from_store;
-  const to = typeof txn?.to_store === 'object' ? txn.to_store?.name : txn?.to_store;
+  const from = typeof txn?.from_store === 'object' ? txn.from_store?.name : (txn?.from_store || txn?.from_store_name);
+  const to = typeof txn?.to_store === 'object' ? txn.to_store?.name : (txn?.to_store || txn?.to_store_name);
   if (from && to) return `${from} → ${to}`;
+  if (to) return `To: ${to}`;
+  if (from) return `From: ${from}`;
   const store = typeof txn?.store === 'object' ? txn.store?.name : txn?.store;
-  return store ?? txn?.store_name ?? '—';
+  return (store ?? txn?.store_name ?? '—') as string;
 }
 
 function getQtyDisplay(txn: Transaction, typeInfo: ReturnType<typeof getTypeInfo>): string {
   const qty = txn?.quantity ?? txn?.quantity_change;
   if (qty === undefined || qty === null) return '—';
-  const unit = typeof txn?.unit === 'object' ? txn.unit?.symbol ?? txn.unit?.name : txn?.unit;
+  const unit = typeof txn?.unit === 'object' ? (txn.unit?.symbol ?? txn.unit?.name) : (txn?.unit || txn?.unit_symbol);
   const prefix = typeInfo.label === 'ISSUE' ? '-' : typeInfo.label === 'RECEIPT' || typeInfo.label === 'RETURN' ? '+' : '';
   return `${prefix}${Math.abs(Number(qty))}${unit ? ' ' + unit : ''}`;
 }

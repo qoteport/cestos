@@ -43,12 +43,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden bg-background print:h-auto print:overflow-visible print:block print:bg-white">
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0 print:h-auto print:overflow-visible print:block print:w-full">
         <Topbar />
-        <main className="flex-1 overflow-y-auto scrollbar-thin">
-          <div className="max-w-screen-2xl mx-auto px-4 py-6 md:px-6 xl:px-8">
+        <main className="flex-1 overflow-y-auto scrollbar-thin print:h-auto print:overflow-visible print:block print:p-0">
+          <div className="max-w-screen-2xl mx-auto px-4 py-6 md:px-6 xl:px-8 print:max-w-full print:p-0 print:m-0">
             {children}
           </div>
         </main>

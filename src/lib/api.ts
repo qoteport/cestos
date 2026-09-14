@@ -5,15 +5,43 @@ export const BASE_URL = '';
 export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); this.name = 'ApiError'; }
 }
+// Extracts a human-readable message from DRF/FastAPI style error/validation bodies.
+function extractErrorMessage(body: any, status: number): string {
+  if (body?.error?.message) {
+    const details = body.error.details ?? body.error.errors;
+    if (Array.isArray(details) && details.length) {
+      const msgs = details
+        .map((d: any) => (d?.loc ? `${d.loc[d.loc.length - 1]}: ${d.msg}` : d?.msg))
+        .filter(Boolean);
+      if (msgs.length) return `${body.error.message}: ${msgs.join('; ')}`;
+    }
+    return body.error.message;
+  }
+  if (typeof body?.detail === 'string') return body.detail;
+  if (Array.isArray(body?.detail)) {
+    const msgs = body.detail
+      .map((d: any) => (d?.loc ? `${d.loc[d.loc.length - 1]}: ${d.msg}` : d?.msg))
+      .filter(Boolean);
+    if (msgs.length) return msgs.join('; ');
+  }
+  if (body && typeof body === 'object' && !Array.isArray(body)) {
+    const fieldMsgs = Object.entries(body)
+      .filter(([, v]) => Array.isArray(v) || typeof v === 'string')
+      .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`);
+    if (fieldMsgs.length) return fieldMsgs.join('; ');
+  }
+  return `Request failed (${status}). Please retry.`;
+}
 async function readResponse<T>(response: Response): Promise<T> {
   if (response.status === 204) return undefined as T;
   const text = await response.text();
   let body;
   try { body = text ? JSON.parse(text) : undefined; } catch { body = undefined; }
-  if (!response.ok) throw new ApiError(response.status, body?.error?.message || (typeof body?.detail === 'string' ? body.detail : `Request failed (${response.status}). Please retry.`));
+  if (!response.ok) throw new ApiError(response.status, extractErrorMessage(body, response.status));
   return body as T;
 }
 export async function apiFetch<T>(path: string, options: RequestInit = {}, authenticated = true): Promise<T> {
+  if (typeof window === 'undefined') return {} as T;
   const token = authenticated ? getAccessToken() : null;
   const headers = new Headers(options.headers);
   if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json');
@@ -114,6 +142,26 @@ export async function logout(): Promise<void> {
 // ─── Operations / Dashboard ──────────────────────────────────────────────────
 
 export interface OperationsSummary {
+  employees?: {
+    total: number;
+    active: number;
+    assigned: number;
+    unassigned: number;
+  };
+  projects?: {
+    total: number;
+    active: number;
+    planning: number;
+    paused: number;
+  };
+  assets?: {
+    total: number;
+    operating: number;
+    available: number;
+    maintenance: number;
+    breakdown: number;
+    unassigned: number;
+  };
   active_projects?: number;
   active_employees?: number;
   operating_assets?: number;
@@ -128,8 +176,50 @@ export interface OperationsSummary {
   [key: string]: unknown;
 }
 
-export async function getOperationsSummary(): Promise<OperationsSummary> {
-  return apiFetch<OperationsSummary>('/api/v1/operations/summary');
+export async function getOperationsSummary(params?: Record<string, string>): Promise<OperationsSummary> {
+  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  return apiFetch<OperationsSummary>(`/api/v1/operations/summary${qs}`);
+}
+
+export function getDateRangeFromPreset(preset: string): { dateFrom: string; dateTo: string } {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  const formatDate = (d: Date) => {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  switch (preset) {
+    case 'today':
+      return { dateFrom: formatDate(now), dateTo: formatDate(now) };
+    case 'this_week': {
+      const dayOfWeek = now.getDay();
+      const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() + diffToMonday);
+      return { dateFrom: formatDate(monday), dateTo: formatDate(now) };
+    }
+    case 'this_month': {
+      const firstOfMonth = new Date(year, month, 1);
+      return { dateFrom: formatDate(firstOfMonth), dateTo: formatDate(now) };
+    }
+    case 'this_quarter': {
+      const quarterMonth = Math.floor(month / 3) * 3;
+      const startOfQuarter = new Date(year, quarterMonth, 1);
+      return { dateFrom: formatDate(startOfQuarter), dateTo: formatDate(now) };
+    }
+    case 'ytd': {
+      const startOfYear = new Date(year, 0, 1);
+      return { dateFrom: formatDate(startOfYear), dateTo: formatDate(now) };
+    }
+    case 'all_time':
+    default:
+      return { dateFrom: '', dateTo: '' };
+  }
 }
 
 // ─── Projects ────────────────────────────────────────────────────────────────
@@ -202,8 +292,9 @@ export interface WorkforceDashboard {
   [key: string]: unknown;
 }
 
-export async function getWorkforceDashboard(): Promise<WorkforceDashboard> {
-  return apiFetch<WorkforceDashboard>('/api/v1/employees/dashboard-summary');
+export async function getWorkforceDashboard(params?: Record<string, string>): Promise<WorkforceDashboard> {
+  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  return apiFetch<WorkforceDashboard>(`/api/v1/employees/dashboard-summary${qs}`);
 }
 
 export async function getUpcomingRotations(days = 14): Promise<unknown[]> {
@@ -231,22 +322,35 @@ export async function getEmployees(params?: Record<string, string>): Promise<Pag
 
 export interface FleetDashboard {
   total?: number;
+  total_assets?: number;
   operating?: number;
+  operating_assets?: number;
   available?: number;
+  available_assets?: number;
   standby?: number;
+  standby_assets?: number;
   breakdown?: number;
+  breakdown_assets?: number;
   under_maintenance?: number;
+  maintenance_assets?: number;
   out_of_service?: number;
+  out_of_service_assets?: number;
   critical_defects?: number;
+  critical_open_defects?: number;
   expiring_insurance?: number;
   expiring_registrations?: number;
+  expiring_documents?: number;
   stale_meter_readings?: number;
+  assets_without_recent_meter_reading?: number;
   by_project?: { project: string; count: number }[];
+  assets_by_project?: Record<string, number> | { project: string; count: number }[];
+  assets?: Record<string, any>[];
   [key: string]: unknown;
 }
 
-export async function getFleetDashboard(): Promise<FleetDashboard> {
-  return apiFetch<FleetDashboard>('/api/v1/assets/dashboard-summary');
+export async function getFleetDashboard(params?: Record<string, string>): Promise<FleetDashboard> {
+  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  return apiFetch<FleetDashboard>(`/api/v1/assets/dashboard-summary${qs}`);
 }
 
 export async function getAssets(params?: Record<string, string>): Promise<PaginatedResponse<unknown>> {
@@ -284,20 +388,27 @@ export async function getAssignmentSummary(assetId: string, assignmentId: string
 // ─── Inventory ───────────────────────────────────────────────────────────────
 
 export interface InventoryDashboard {
-  total_value?: number;
+  total_inventory_value?: number | string;
+  total_value?: number | string;
+  low_stock_items?: number;
   low_stock_count?: number;
+  out_of_stock_items?: number;
   out_of_stock_count?: number;
+  critical_stock_items?: number;
   critical_stock_count?: number;
   pending_requests?: number;
   in_transit_transfers?: number;
+  quarantined_items?: number;
   quarantined_count?: number;
+  items_requiring_reorder?: number;
   reorder_required?: number;
   recent_transactions?: unknown[];
   [key: string]: unknown;
 }
 
-export async function getInventoryDashboard(): Promise<InventoryDashboard> {
-  return apiFetch<InventoryDashboard>('/api/v1/inventory/dashboard-summary');
+export async function getInventoryDashboard(params?: Record<string, string>): Promise<InventoryDashboard> {
+  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  return apiFetch<InventoryDashboard>(`/api/v1/inventory/dashboard-summary${qs}`);
 }
 
 export async function getInventoryTransactions(params?: Record<string, string>): Promise<PaginatedResponse<unknown>> {

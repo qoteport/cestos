@@ -41,8 +41,8 @@ export default function FleetAttentionPanel() {
       icon: <AlertTriangle size={15} />,
       iconColor: 'text-red-500',
       borderColor: 'border-red-400',
-      title: `${data?.critical_defects ?? 0} Critical Defect${(data?.critical_defects ?? 0) !== 1 ? 's' : ''}`,
-      count: data?.critical_defects ?? 0,
+      title: `${data?.critical_defects ?? data?.critical_open_defects ?? 0} Critical Defect${(data?.critical_defects ?? data?.critical_open_defects ?? 0) !== 1 ? 's' : ''}`,
+      count: data?.critical_defects ?? data?.critical_open_defects ?? 0,
       href: '/fleet-dashboard',
     },
     {
@@ -59,8 +59,8 @@ export default function FleetAttentionPanel() {
       icon: <FileText size={15} />,
       iconColor: 'text-amber-500',
       borderColor: 'border-amber-400',
-      title: `${data?.expiring_registrations ?? 0} Registrations Expiring`,
-      count: data?.expiring_registrations ?? 0,
+      title: `${data?.expiring_registrations ?? data?.expiring_documents ?? 0} Registrations Expiring`,
+      count: data?.expiring_registrations ?? data?.expiring_documents ?? 0,
       href: '/fleet-dashboard',
     },
     {
@@ -68,8 +68,8 @@ export default function FleetAttentionPanel() {
       icon: <Activity size={15} />,
       iconColor: 'text-primary',
       borderColor: 'border-primary',
-      title: `${data?.stale_meter_readings ?? 0} Stale Meter Readings`,
-      count: data?.stale_meter_readings ?? 0,
+      title: `${data?.stale_meter_readings ?? data?.assets_without_recent_meter_reading ?? 0} Stale Meter Readings`,
+      count: data?.stale_meter_readings ?? data?.assets_without_recent_meter_reading ?? 0,
       href: '/fleet-dashboard',
     },
   ].filter(s => s.count > 0);

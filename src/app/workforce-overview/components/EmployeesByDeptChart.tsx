@@ -4,17 +4,7 @@ import React from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
-
-const DATA = [
-  { dept: 'Drilling', count: 68 },
-  { dept: 'Geology', count: 22 },
-  { dept: 'HSE', count: 18 },
-  { dept: 'Logistics', count: 24 },
-  { dept: 'Engineering', count: 14 },
-  { dept: 'Operations', count: 21 },
-  { dept: 'Admin', count: 9 },
-  { dept: 'Finance', count: 8 },
-];
+import { useData } from '@/components/DataUI';
 
 const COLORS = ['var(--primary)', '#7C3AED', '#D97706', '#0891B2', '#15803D', '#E8530A', '#6B7280', '#0891B2'];
 
@@ -32,17 +22,36 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export default function EmployeesByDeptChart() {
+export default function EmployeesByDeptChart({ data: passedData }: { data?: Array<{ dept: string; count: number }> }) {
+  const statsRes = useData('/api/v1/hr/workforce-stats');
+  const data = passedData || statsRes.data?.by_department || [];
+
+  if (!passedData && statsRes.loading) {
+    return (
+      <div className="h-[220px] flex items-center justify-center text-xs text-muted-foreground animate-pulse">
+        Loading live department data from database...
+      </div>
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-[220px] flex items-center justify-center text-xs text-muted-foreground">
+        No department records found in database.
+      </div>
+    );
+  }
+
   return (
     <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={DATA} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} barSize={22}>
+      <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} barSize={22}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
         <XAxis dataKey="dept" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} allowDecimals={false} />
         <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--muted)', opacity: 0.5 }} />
         <Bar dataKey="count" radius={[3, 3, 0, 0]}>
-          {DATA.map((entry, index) => (
-            <Cell key={`dept-cell-${entry.dept}`} fill={COLORS[index % COLORS.length]} />
+          {data.map((entry: any, index: number) => (
+            <Cell key={`dept-cell-${entry.dept}-${index}`} fill={COLORS[index % COLORS.length]} />
           ))}
         </Bar>
       </BarChart>

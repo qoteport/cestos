@@ -3,33 +3,138 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Edit, Upload, Archive, UserCheck, Phone, FileText, GraduationCap, Award, Shield, Briefcase, Clock, Calendar, Activity, Plus, Download, ExternalLink, Trash2, User, Key, Mail, FileCheck, Filter, Check } from 'lucide-react';
+import {
+  ArrowLeft, Edit, Upload, Archive, RefreshCw, UserCheck, Phone,
+  FileText, GraduationCap, Award, Shield, Briefcase, Clock, Calendar,
+  Activity, Plus, CheckCircle, XCircle, Download, ExternalLink, Trash2, User,
+  Key, Lock, Mail, Stethoscope, ShieldAlert, FileCheck, Tag, Filter, Check, Eye
+} from 'lucide-react';
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import { Row, display, title, Modal } from './DataUI';
 import RecordForm from './RecordForm';
 import EmployeeWizardForm from './EmployeeWizardForm';
 import EmployeeCalendarModal from './EmployeeCalendarModal';
+import AssignmentDetailsModal from './AssignmentDetailsModal';
+import AuthorizationDetailsModal from './AuthorizationDetailsModal';
+import { useAuth } from './AuthProvider';
 import contract from '@/lib/contract.json';
 import Icon from '@/components/ui/AppIcon';
 
 
 const routes: Row = contract.routes;
 
+export function formatAuditActivity(act: Row) {
+  const rawAction = String(act.action || act.summary || 'employee.updated').toLowerCase();
+  const summary = typeof act.summary === 'string' ? act.summary : typeof act.description === 'string' ? act.description : '';
+  const timestamp = act.occurred_at || act.created_at || act.timestamp;
+
+  let titleStr = 'Employee Record Updated';
+  let descStr = summary || 'Employee profile details were updated.';
+  let IconNode: React.ComponentType<{ size?: number; className?: string }> = Edit;
+  let badgeColor = 'bg-blue-100 text-blue-800 border-blue-200';
+
+  if (rawAction.includes('employee.created') || rawAction.includes('employee_created') || rawAction === 'created') {
+    titleStr = 'Employee Profile Created';
+    descStr = summary || 'New employee profile onboarded into system';
+    IconNode = Plus;
+    badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+  } else if (rawAction.includes('document_added') || rawAction.includes('document.added') || rawAction.includes('document_upload')) {
+    titleStr = 'Document Uploaded';
+    descStr = summary ? `Uploaded document: ${summary}` : 'Uploaded supporting document to profile';
+    IconNode = FileText;
+    badgeColor = 'bg-purple-100 text-purple-800 border-purple-200';
+  } else if (rawAction.includes('emergency')) {
+    titleStr = 'Emergency Contact Updated';
+    descStr = summary || 'Added or updated emergency contact details';
+    IconNode = Phone;
+    badgeColor = 'bg-amber-100 text-amber-800 border-amber-200';
+  } else if (rawAction.includes('family')) {
+    titleStr = 'Family Member Updated';
+    descStr = summary || 'Added or updated family dependent details';
+    IconNode = UserCheck;
+    badgeColor = 'bg-indigo-100 text-indigo-800 border-indigo-200';
+  } else if (rawAction.includes('assignment')) {
+    titleStr = 'Project Assignment Updated';
+    descStr = summary || 'Assigned to operational project or role updated';
+    IconNode = Briefcase;
+    badgeColor = 'bg-cyan-100 text-cyan-800 border-cyan-200';
+  } else if (rawAction.includes('license') || rawAction.includes('qualification') || rawAction.includes('skill')) {
+    titleStr = 'Qualification / Licence Added';
+    descStr = summary || 'Added operational licence or skill qualification';
+    IconNode = Award;
+    badgeColor = 'bg-teal-100 text-teal-800 border-teal-200';
+  } else if (rawAction.includes('training')) {
+    titleStr = 'Training Course Recorded';
+    descStr = summary || 'Recorded completed training or safety course';
+    IconNode = GraduationCap;
+    badgeColor = 'bg-sky-100 text-sky-800 border-sky-200';
+  } else if (rawAction.includes('leave')) {
+    titleStr = 'Leave Booking Submitted';
+    descStr = summary || 'Submitted leave request booking';
+    IconNode = Calendar;
+    badgeColor = 'bg-amber-100 text-amber-800 border-amber-200';
+  } else if (rawAction.includes('time') || rawAction.includes('log')) {
+    titleStr = 'Working Shift Logged';
+    descStr = summary || 'Recorded working shift time log';
+    IconNode = Clock;
+    badgeColor = 'bg-blue-100 text-blue-800 border-blue-200';
+  } else if (rawAction.includes('archived')) {
+    titleStr = 'Profile Archived & Terminated';
+    descStr = summary || 'Archived employee profile and set status to Terminated';
+    IconNode = Archive;
+    badgeColor = 'bg-rose-100 text-rose-800 border-rose-200';
+  } else if (rawAction.includes('restored')) {
+    titleStr = 'Profile Restored';
+    descStr = summary || 'Restored archived profile to active status';
+    IconNode = CheckCircle;
+    badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+  } else if (rawAction.includes('employee.updated') || rawAction.includes('employee_updated') || rawAction === 'updated') {
+    titleStr = 'Profile Information Updated';
+    descStr = summary || 'Updated personal, contact, or employment profile details';
+    IconNode = Edit;
+    badgeColor = 'bg-blue-100 text-blue-800 border-blue-200';
+  } else if (summary) {
+    titleStr = summary;
+    descStr = rawAction.replace(/[._]/g, ' ');
+  }
+
+  let formattedDate = '—';
+  if (timestamp) {
+    try {
+      const d = new Date(timestamp);
+      formattedDate = d.toLocaleString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      formattedDate = String(timestamp);
+    }
+  }
+
+  return { titleStr, descStr, formattedDate, IconNode, badgeColor };
+}
+
 export default function EmployeeDetailView({ employeeId }: { employeeId: string }) {
   const router = useRouter();
+  const auth = useAuth();
   const [employee, setEmployee] = useState<Row | null>(null);
   const [overview, setOverview] = useState<Row | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [version, setVersion] = useState(0);
+  const canManageContracts = auth.can('employees.contracts.manage') || auth.can('employees.documents.manage') || auth.can('employees.write') || auth.access?.is_superuser;
+  const canDownloadDocs = auth.can('documents.download') || auth.access?.is_superuser;
 
   // Active tab state
   const [activeTab, setActiveTab] = useState<
-    'profile' | 'contracts' | 'documents' | 'family' |
+    'profile' | 'salaries' | 'contracts' | 'documents' | 'family' |
     'skills' | 'training' | 'assignments' | 'authorizations' | 'time' | 'activity'
   >('profile');
 
   // Tab Data States
+  const [salaries, setSalaries] = useState<Row[]>([]);
   const [family, setFamily] = useState<Row[]>([]);
   const [emergency, setEmergency] = useState<Row[]>([]);
   const [resumes, setResumes] = useState<Row[]>([]);
@@ -62,7 +167,10 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
   // Edit states
   const [editingItem, setEditingItem] = useState<{ kind: 'time' | 'leave' | 'contract' | 'doc'; row: Row } | null>(null);
 
-  const [activeSubModal, setActiveSubModal] = useState<{ name: string; schemaName: string; path: string; method?: string } | null>(null);
+  const [viewingAssignment, setViewingAssignment] = useState<Row | null>(null);
+  const [viewingAuthorization, setViewingAuthorization] = useState<Row | null>(null);
+  const [assetMap, setAssetMap] = useState<Record<string, string>>({});
+  const [activeSubModal, setActiveSubModal] = useState<{ name: string; schemaName: string; path: string; method?: string; initial?: Row } | null>(null);
   const [actionError, setActionError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -73,6 +181,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
   const toArray = (d: any): Row[] => Array.isArray(d) ? d : Array.isArray(d?.items) ? d.items : [];
 
   // Reload trigger
+  const [version, setVersion] = useState(0);
   const reloadAll = () => setVersion(v => v + 1);
 
   // Fetch Main Employee Profile & Overview and Core Sub-data for Overview Grid
@@ -145,7 +254,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
     if (!employeeId) return;
     const root = `/api/v1/employees/${employeeId}`;
 
-    if (activeTab === 'contracts' || activeTab === 'documents') {
+    if (activeTab === 'salaries') {
+      apiFetch<any>(`/api/v1/hr/employees/${employeeId}/salaries`).then(d => setSalaries(toArray(d))).catch(() => setSalaries([]));
+    } else if (activeTab === 'contracts' || activeTab === 'documents') {
       apiFetch<any>(`${root}/documents`).then(d => setDocuments(toArray(d))).catch(() => setDocuments([]));
       apiFetch<any>(`${root}/resumes`).then(r => setResumes(toArray(r))).catch(() => setResumes([]));
     } else if (activeTab === 'family') {
@@ -162,6 +273,21 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
       apiFetch<any>(`${root}/rotations`).then(d => setRotations(toArray(d))).catch(() => setRotations([]));
     } else if (activeTab === 'authorizations') {
       apiFetch<any>(`${root}/asset-authorizations`).then(d => setAuthorizations(toArray(d))).catch(() => setAuthorizations([]));
+      Promise.all([
+        apiFetch<any>('/api/v1/assets?page_size=100').catch(() => null),
+        apiFetch<any>('/api/v1/asset-categories?page_size=100').catch(() => null),
+      ]).then(([assetsData, categoriesData]) => {
+        const map: Record<string, string> = {};
+        const assetsList = toArray(assetsData);
+        assetsList.forEach((a: Row) => {
+          if (a.id) map[a.id] = a.name || a.title || a.asset_number || a.id;
+        });
+        const catList = toArray(categoriesData);
+        catList.forEach((c: Row) => {
+          if (c.id) map[c.id] = c.name || c.title || c.code || c.id;
+        });
+        setAssetMap(map);
+      });
     } else if (activeTab === 'time') {
       apiFetch<any>(`${root}/time-logs`).then(d => setTimeLogs(toArray(d))).catch(() => setTimeLogs([]));
       apiFetch<any>(`${root}/leave-requests`).then(d => setLeaveRequests(toArray(d))).catch(() => setLeaveRequests([]));
@@ -172,10 +298,17 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
 
   const toggleArchive = async () => {
     if (!employee) return;
-    const action = employee.is_active ? 'archive' : 'restore';
+    const isArchiving = employee.is_active;
+    const action = isArchiving ? 'archive' : 'restore';
     setBusy(true);
     setActionError('');
     try {
+      if (isArchiving) {
+        await apiFetch(`/api/v1/employees/${employeeId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ employment_status: 'TERMINATED' }),
+        });
+      }
       await apiFetch(`/api/v1/employees/${employeeId}/${action}`, { method: 'POST' });
       reloadAll();
     } catch (e: any) {
@@ -356,6 +489,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
 
   const tabs = [
     { id: 'profile', label: 'Personal & Role', icon: UserCheck },
+    { id: 'salaries', label: 'Salaries & Compensation', icon: FileCheck },
     { id: 'contracts', label: 'Contracts', icon: FileCheck },
     { id: 'documents', label: 'Resumes, Docs & Notes', icon: FileText },
     { id: 'family', label: 'Family & Emergency', icon: Phone },
@@ -663,7 +797,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   <div key={item.id || idx} className="p-2.5 bg-muted/30 border rounded text-xs flex items-center justify-between gap-2">
                     <div>
                       <p className="font-bold text-foreground">{item.full_name} ({item.relationship})</p>
-                      <p className="text-muted-foreground text-[11px]">{item.primary_phone}</p>
+                      <p className="text-muted-foreground text-[11px]">{item.primary_phone}{item.address ? ` • ${item.address}` : ''}</p>
                     </div>
                     <button
                       type="button"
@@ -761,7 +895,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               <button
                 className="btn-secondary text-[11px] py-1 px-2"
                 onClick={() => setActiveSubModal({
-                  name: 'Assign to Project',
+                  name: 'New Project Assignment',
                   schemaName: 'EmployeeAssignmentCreate',
                   path: `/api/v1/employees/${employeeId}/assignments`,
                 })}
@@ -775,10 +909,38 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                 <p className="text-xs text-muted-foreground py-4 text-center">No active project assignments.</p>
               ) : (
                 assignments.map((item, idx) => (
-                  <div key={item.id || idx} className="p-2.5 bg-muted/30 border rounded text-xs space-y-1">
+                  <div key={item.id || idx} className="p-2.5 bg-muted/30 hover:bg-muted/50 border rounded text-xs space-y-1 transition-all">
                     <div className="flex justify-between font-bold text-foreground">
-                      <span>{item.assignment_number || 'Assignment'}</span>
-                      <span className="text-primary font-semibold">{display(item.status)}</span>
+                      <span
+                        className="cursor-pointer hover:text-primary transition-colors flex items-center gap-1.5"
+                        onClick={() => setViewingAssignment(item)}
+                      >
+                        {item.assignment_number || 'Assignment'}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-primary font-semibold">{display(item.status)}</span>
+                        <button
+                          type="button"
+                          className="text-xs text-primary font-600 hover:underline inline-flex items-center gap-0.5"
+                          onClick={() => setViewingAssignment(item)}
+                        >
+                          <Eye size={11} /> View
+                        </button>
+                        {item.id && (
+                          <button
+                            type="button"
+                            className="text-xs text-primary font-600 hover:underline inline-flex items-center gap-0.5"
+                            onClick={() => setActiveSubModal({
+                              name: 'Update Project Assignment',
+                              schemaName: 'EmployeeAssignmentUpdate',
+                              path: `/api/v1/employees/${employeeId}/assignments/${item.id}`,
+                              initial: item,
+                            })}
+                          >
+                            <Edit size={11} /> Edit
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <p className="text-muted-foreground text-[11px]">
                       Role: {display(item.role_on_project || 'Member')} · Start: {display(item.start_date)}
@@ -797,18 +959,129 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               </h2>
             </div>
 
-            <div className="max-h-64 overflow-y-auto scrollbar-thin pr-1 space-y-2">
+            <div className="max-h-72 overflow-y-auto scrollbar-thin pr-1 space-y-2">
               {activities.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">No recent activity events.</p>
+                <p className="text-xs text-muted-foreground py-4 text-center">No recent activity events recorded.</p>
               ) : (
-                activities.slice(0, 10).map((act, idx) => (
-                  <div key={act.id || idx} className="p-2 bg-muted/20 border-l-2 border-primary pl-2.5 text-xs space-y-0.5">
-                    <p className="font-semibold text-foreground">{act.action || act.summary}</p>
-                    <p className="text-[10px] text-muted-foreground">{display(act.occurred_at || act.created_at)}</p>
-                  </div>
-                ))
+                activities.slice(0, 10).map((act, idx) => {
+                  const { titleStr, descStr, formattedDate, IconNode, badgeColor } = formatAuditActivity(act);
+                  return (
+                    <div key={act.id || idx} className="p-2.5 bg-muted/20 border rounded text-xs space-y-1 hover:bg-muted/40 transition-colors">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className={`p-1 rounded-full border text-[10px] shrink-0 ${badgeColor}`}>
+                            <IconNode size={11} />
+                          </span>
+                          <span className="font-bold text-foreground truncate">{titleStr}</span>
+                        </div>
+                        <span className="text-[10px] font-medium text-muted-foreground shrink-0">{formattedDate}</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground pl-5 leading-snug">{descStr}</p>
+                    </div>
+                  );
+                })
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: Salaries & Compensation */}
+      {activeTab === 'salaries' && (
+        <div className="space-y-6 fade-in">
+          {/* Active Salary Alert Banner */}
+          <div className="p-4 rounded border bg-emerald-50/60 border-emerald-200 flex flex-wrap justify-between items-center gap-4">
+            <div>
+              <span className="text-xs font-bold text-emerald-900 block uppercase tracking-wider">
+                Active Salary & Compensation Status
+              </span>
+              {salaries.find(s => !s.end_date) ? (
+                <p className="text-xs text-emerald-800 mt-1">
+                  Current Active Salary: <strong>{salaries.find(s => !s.end_date)?.currency} {Number(salaries.find(s => !s.end_date)?.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</strong> / {salaries.find(s => !s.end_date)?.pay_period} (Effective since: {display(salaries.find(s => !s.end_date)?.start_date)})
+                </p>
+              ) : (
+                <p className="text-xs text-emerald-800 mt-1">
+                  No active salary period currently recorded for this employee.
+                </p>
+              )}
+            </div>
+            <button
+              className="btn-primary text-xs bg-emerald-700 hover:bg-emerald-800"
+              onClick={() => setActiveSubModal({
+                name: 'Record Employee Salary',
+                schemaName: 'SalaryCreate',
+                path: `/api/v1/hr/employees/${employeeId}/salaries`,
+              })}
+            >
+              <Plus size={14} /> Record New Salary
+            </button>
+          </div>
+
+          {/* Salary History Table */}
+          <div className="card p-5 space-y-4">
+            <h2 className="text-base font-bold text-foreground border-b pb-3 flex items-center gap-2">
+              <FileCheck size={18} className="text-emerald-700" />
+              Salary & Compensation History ({salaries.length})
+            </h2>
+
+            {salaries.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground space-y-2">
+                <FileCheck size={32} className="mx-auto opacity-40 text-emerald-700" />
+                <p className="text-sm font-semibold text-foreground">No salary history recorded yet</p>
+                <p className="text-xs">Click "Record New Salary" to add compensation details for this employee.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-muted text-muted-foreground font-semibold">
+                    <tr>
+                      <th className="p-2.5">Amount</th>
+                      <th className="p-2.5">Currency</th>
+                      <th className="p-2.5">Pay Period</th>
+                      <th className="p-2.5">Start Date</th>
+                      <th className="p-2.5">End Date</th>
+                      <th className="p-2.5">Status</th>
+                      <th className="p-2.5">Notes</th>
+                      <th className="p-2.5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {salaries.map((item, idx) => (
+                      <tr key={item.id || idx} className="border-t hover:bg-muted/30">
+                        <td className="p-2.5 font-bold text-foreground">
+                          {Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                        </td>
+                        <td className="p-2.5 font-semibold">{item.currency}</td>
+                        <td className="p-2.5">{display(item.pay_period)}</td>
+                        <td className="p-2.5">{display(item.start_date)}</td>
+                        <td className="p-2.5">{display(item.end_date || 'Present')}</td>
+                        <td className="p-2.5">
+                          <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${!item.end_date ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-700'}`}>
+                            {!item.end_date ? 'ACTIVE' : 'CLOSED'}
+                          </span>
+                        </td>
+                        <td className="p-2.5 max-w-xs truncate">{display(item.notes)}</td>
+                        <td className="p-2.5 text-right">
+                          {!item.end_date && (
+                            <button
+                              type="button"
+                              className="btn-secondary text-[11px] py-1 px-2 text-rose-700 hover:bg-rose-50"
+                              onClick={() => setActiveSubModal({
+                                name: 'Close Active Salary Period',
+                                schemaName: 'SalaryEnd',
+                                path: `/api/v1/hr/salaries/${item.id}/end`,
+                              })}
+                            >
+                              End Salary
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -826,12 +1099,14 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                 Contract end date: <strong>{display(employee.contract_end_date)}</strong>. Cestos automated alert rules notify management before contract expiration.
               </p>
             </div>
-            <button
-              className="btn-primary text-xs bg-indigo-700 hover:bg-indigo-800"
-              onClick={() => setShowContractModal(true)}
-            >
-              <Plus size={14} /> Upload New Contract Document
-            </button>
+            {canManageContracts && (
+              <button
+                className="btn-primary text-xs bg-indigo-700 hover:bg-indigo-800"
+                onClick={() => setShowContractModal(true)}
+              >
+                <Plus size={14} /> Upload New Contract Document
+              </button>
+            )}
           </div>
 
           {/* Contracts List Table */}
@@ -1459,7 +1734,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               <button
                 className="btn-primary text-xs"
                 onClick={() => setActiveSubModal({
-                  name: 'Assign to Project',
+                  name: 'New Project Assignment',
                   schemaName: 'EmployeeAssignmentCreate',
                   path: `/api/v1/employees/${employeeId}/assignments`,
                 })}
@@ -1479,15 +1754,47 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                       <th className="p-2.5">Role</th>
                       <th className="p-2.5">Start Date</th>
                       <th className="p-2.5">Status</th>
+                      <th className="p-2.5 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {assignments.map((item, idx) => (
                       <tr key={item.id || idx} className="border-t hover:bg-muted/30">
-                        <td className="p-2.5 font-semibold text-foreground">{item.assignment_number || '—'}</td>
+                        <td className="p-2.5 font-semibold text-foreground">
+                          <button
+                            type="button"
+                            className="hover:text-primary transition-colors text-left font-semibold"
+                            onClick={() => setViewingAssignment(item)}
+                          >
+                            {item.assignment_number || '—'}
+                          </button>
+                        </td>
                         <td className="p-2.5">{display(item.role_on_project || 'Member')}</td>
                         <td className="p-2.5">{display(item.start_date)}</td>
                         <td className="p-2.5">{display(item.status)}</td>
+                        <td className="p-2.5 text-right">
+                          <button
+                            type="button"
+                            className="text-xs text-primary font-600 hover:underline inline-flex items-center gap-1 mr-3"
+                            onClick={() => setViewingAssignment(item)}
+                          >
+                            <Eye size={12} /> View
+                          </button>
+                          {item.id && (
+                            <button
+                              type="button"
+                              className="text-xs text-primary font-600 hover:underline inline-flex items-center gap-1"
+                              onClick={() => setActiveSubModal({
+                                name: 'Update Project Assignment',
+                                schemaName: 'EmployeeAssignmentUpdate',
+                                path: `/api/v1/employees/${employeeId}/assignments/${item.id}`,
+                                initial: item,
+                              })}
+                            >
+                              <Edit size={12} /> Edit
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1504,7 +1811,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
           <div className="flex justify-between items-center border-b pb-3">
             <h2 className="text-base font-bold text-foreground">Equipment & Asset Authorizations</h2>
             <button
-              className="btn-primary text-xs"
+              className="btn-primary text-xs flex items-center gap-1.5"
               onClick={() => setActiveSubModal({
                 name: 'Add Authorization',
                 schemaName: 'AssetAuthorizationCreate',
@@ -1524,19 +1831,68 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   <tr>
                     <th className="p-2.5">Asset / Category</th>
                     <th className="p-2.5">Type</th>
+                    <th className="p-2.5">Valid From</th>
                     <th className="p-2.5">Valid Until</th>
                     <th className="p-2.5">Status</th>
+                    <th className="p-2.5 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {authorizations.map((item, idx) => (
-                    <tr key={item.id || idx} className="border-t hover:bg-muted/30">
-                      <td className="p-2.5 font-semibold text-foreground">{display(item.asset_id || item.asset_category_id)}</td>
-                      <td className="p-2.5">{display(item.authorization_type)}</td>
-                      <td className="p-2.5">{display(item.valid_until)}</td>
-                      <td className="p-2.5">{display(item.status)}</td>
-                    </tr>
-                  ))}
+                  {authorizations.map((item, idx) => {
+                    const targetName =
+                      assetMap[item.asset_id] ||
+                      assetMap[item.asset_category_id] ||
+                      item.asset_name ||
+                      item.category_name ||
+                      item.asset_id ||
+                      item.asset_category_id ||
+                      '—';
+                    const statusColor =
+                      item.status === 'ACTIVE'
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                        : item.status === 'REVOKED' || item.status === 'EXPIRED'
+                        ? 'bg-rose-100 text-rose-800 border-rose-200'
+                        : 'bg-amber-100 text-amber-800 border-amber-200';
+                    return (
+                      <tr key={item.id || idx} className="border-t hover:bg-muted/30">
+                        <td className="p-2.5 font-semibold text-foreground">{display(targetName)}</td>
+                        <td className="p-2.5">{display(item.authorization_type)}</td>
+                        <td className="p-2.5">{display(item.valid_from)}</td>
+                        <td className="p-2.5">{display(item.valid_until)}</td>
+                        <td className="p-2.5">
+                          <span className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${statusColor}`}>
+                            {display(item.status || 'ACTIVE')}
+                          </span>
+                        </td>
+                        <td className="p-2.5 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              className="btn-secondary py-1 px-2 text-[11px] flex items-center gap-1"
+                              title="View Details"
+                              onClick={() => setViewingAuthorization(item)}
+                            >
+                              <Eye size={12} /> View
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-secondary py-1 px-2 text-[11px] flex items-center gap-1"
+                              title="Edit Authorization"
+                              onClick={() => setActiveSubModal({
+                                name: 'Edit Authorization',
+                                schemaName: 'AssetAuthorizationUpdate',
+                                path: `/api/v1/employees/${employeeId}/asset-authorizations/${item.id}`,
+                                method: 'PATCH',
+                                initial: item,
+                              })}
+                            >
+                              <Edit size={12} /> Edit
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1724,53 +2080,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
           ) : (
             <div className="space-y-3">
               {activities.map((act, idx) => {
-                const rawAction = String(act.action || act.summary || 'employee.updated').toLowerCase();
-                const summary = act.summary || '';
-                const timestamp = act.occurred_at || act.created_at;
-
-                let titleStr = 'Employee Record Updated';
-                let IconNode = Activity;
-                let badgeColor = 'bg-blue-100 text-blue-800';
-
-                if (rawAction.includes('created')) {
-                  titleStr = 'Employee Profile Created';
-                  IconNode = Plus;
-                  badgeColor = 'bg-emerald-100 text-emerald-800';
-                } else if (rawAction.includes('updated')) {
-                  titleStr = 'Updated Employee Profile Details';
-                  IconNode = Edit;
-                  badgeColor = 'bg-blue-100 text-blue-800';
-                } else if (rawAction.includes('document')) {
-                  titleStr = summary ? `Uploaded Document (${summary})` : 'Uploaded Supporting Document';
-                  IconNode = FileText;
-                  badgeColor = 'bg-purple-100 text-purple-800';
-                } else if (rawAction.includes('emergency')) {
-                  titleStr = 'Emergency Contact Updated';
-                  IconNode = Phone;
-                  badgeColor = 'bg-amber-100 text-amber-800';
-                } else if (rawAction.includes('family')) {
-                  titleStr = 'Family Member Updated';
-                  IconNode = UserCheck;
-                  badgeColor = 'bg-indigo-100 text-indigo-800';
-                } else if (rawAction.includes('time') || rawAction.includes('log')) {
-                  titleStr = 'Logged Working Time';
-                  IconNode = Clock;
-                  badgeColor = 'bg-blue-100 text-blue-800';
-                } else if (rawAction.includes('leave')) {
-                  titleStr = 'Submitted Leave Booking';
-                  IconNode = Calendar;
-                  badgeColor = 'bg-emerald-100 text-emerald-800';
-                } else if (rawAction.includes('archived')) {
-                  titleStr = 'Archived Profile Record';
-                  IconNode = Archive;
-                  badgeColor = 'bg-rose-100 text-rose-800';
-                } else if (summary) {
-                  titleStr = summary;
-                }
-
-                const dateStr = timestamp ? new Date(timestamp).toLocaleString('en-US', {
-                  month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
-                }) : '—';
+                const { titleStr, descStr, formattedDate, IconNode, badgeColor } = formatAuditActivity(act);
 
                 return (
                   <div key={act.id || idx} className="p-3 bg-muted/20 border rounded flex items-center justify-between gap-4 hover:bg-muted/40 transition-all">
@@ -1780,13 +2090,11 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                       </span>
                       <div>
                         <p className="text-xs font-bold text-foreground">{titleStr}</p>
-                        {act.summary && act.summary !== titleStr && (
-                          <p className="text-[11px] text-muted-foreground">{act.summary}</p>
-                        )}
+                        <p className="text-[11px] text-muted-foreground">{descStr}</p>
                       </div>
                     </div>
                     <span className="text-[11px] font-mono text-muted-foreground whitespace-nowrap">
-                      {dateStr}
+                      {formattedDate}
                     </span>
                   </div>
                 );
@@ -1995,10 +2303,12 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               const startVal = (form.elements.namedItem('leave_start') as HTMLInputElement).value;
               const endVal = (form.elements.namedItem('leave_end') as HTMLInputElement).value;
               const reasonVal = (form.elements.namedItem('leave_reason') as HTMLTextAreaElement).value;
+              const fileInput = form.elements.namedItem('leave_file') as HTMLInputElement;
+              const file = fileInput?.files?.[0];
 
               setBusy(true);
               try {
-                await apiFetch(`/api/v1/employees/${employeeId}/leave-requests`, {
+                const leaveRes = await apiFetch<Row>(`/api/v1/employees/${employeeId}/leave-requests`, {
                   method: 'POST',
                   body: JSON.stringify({
                     leave_type: typeVal,
@@ -2007,6 +2317,21 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                     reason: reasonVal,
                   }),
                 });
+
+                if (file && employeeId) {
+                  try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('title', `Leave Supporting Document (${typeVal}) - ${startVal} to ${endVal}`);
+                    formData.append('document_type', 'OTHER');
+                    await apiFetch(`/api/v1/employees/${employeeId}/documents/upload`, {
+                      method: 'POST',
+                      body: formData,
+                    });
+                  } catch (attErr) {
+                    console.error('Failed to attach document to leave request:', attErr);
+                  }
+                }
 
                 setShowLeaveModal(false);
                 reloadAll();
@@ -2047,6 +2372,19 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               <textarea required name="leave_reason" rows={2} className="input-field" placeholder="Provide reason for leave booking..." />
             </div>
 
+            <div>
+              <label className="block text-xs font-semibold mb-1 flex items-center justify-between">
+                <span>Attach Supporting File / Certificate</span>
+                <span className="text-[10px] text-muted-foreground font-normal">(Optional — Medical certificate, letter, etc.)</span>
+              </label>
+              <input
+                type="file"
+                name="leave_file"
+                accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                className="input-field text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-muted"
+              />
+            </div>
+
             <div className="flex justify-end gap-2 border-t pt-3">
               <button type="button" className="btn-secondary text-xs" onClick={() => setShowLeaveModal(false)}>Cancel</button>
               <button disabled={busy} type="submit" className="btn-primary text-xs bg-emerald-700 hover:bg-emerald-800">
@@ -2073,6 +2411,15 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               const hoursVal = Number((form.elements.namedItem('log_hours') as HTMLInputElement).value) || 8;
               const notesVal = (form.elements.namedItem('log_notes') as HTMLTextAreaElement).value;
 
+              const buildIsoTime = (d: string, t?: string) => {
+                if (!d || !t || !t.trim()) return null;
+                const parts = t.trim().split(':');
+                const hh = (parts[0] || '08').padStart(2, '0');
+                const mm = (parts[1] || '00').padStart(2, '0');
+                const ss = (parts[2] || '00').padStart(2, '0');
+                return `${d}T${hh}:${mm}:${ss}Z`;
+              };
+
               setBusy(true);
               try {
                 if (isPeriod && startVal && endVal && startVal < endVal) {
@@ -2083,32 +2430,42 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
 
                   while (cur <= endDate) {
                     const dateStr = cur.toISOString().slice(0, 10);
-                    // Skip weekends if desired or log all
+                    // Skip weekends
                     if (cur.getDay() !== 0 && cur.getDay() !== 6) {
+                      const payload: Row = {
+                        date: dateStr,
+                        notes: notesVal ? `${notesVal} (${hoursVal}h/day)` : `Period booking (${startVal} to ${endVal})`,
+                      };
+
+                      const checkInIso = buildIsoTime(dateStr, checkInVal || '08:00');
+                      const checkOutIso = buildIsoTime(dateStr, checkOutVal || '17:00');
+
+                      if (checkInIso) payload.check_in = checkInIso;
+                      if (checkOutIso) payload.check_out = checkOutIso;
+
                       await apiFetch(`/api/v1/employees/${employeeId}/time-logs`, {
                         method: 'POST',
-                        body: JSON.stringify({
-                          date: dateStr,
-                          check_in: `${dateStr}T${checkInVal || '08:00'}:00`,
-                          check_out: `${dateStr}T${checkOutVal || '17:00'}:00`,
-                          hours_worked: hoursVal,
-                          notes: notesVal || `Period booking (${startVal} to ${endVal})`,
-                        }),
+                        body: JSON.stringify(payload),
                       });
                     }
                     cur.setDate(cur.getDate() + 1);
                   }
                 } else {
                   // Single day log
+                  const payload: Row = {
+                    date: startVal,
+                    notes: notesVal ? `${notesVal} (${hoursVal} hrs)` : `${hoursVal} hrs worked`,
+                  };
+
+                  const checkInIso = buildIsoTime(startVal, checkInVal);
+                  const checkOutIso = buildIsoTime(startVal, checkOutVal);
+
+                  if (checkInIso) payload.check_in = checkInIso;
+                  if (checkOutIso) payload.check_out = checkOutIso;
+
                   await apiFetch(`/api/v1/employees/${employeeId}/time-logs`, {
                     method: 'POST',
-                    body: JSON.stringify({
-                      date: startVal,
-                      check_in: checkInVal ? `${startVal}T${checkInVal}:00` : null,
-                      check_out: checkOutVal ? `${startVal}T${checkOutVal}:00` : null,
-                      hours_worked: hoursVal,
-                      notes: notesVal,
-                    }),
+                    body: JSON.stringify(payload),
                   });
                 }
 
@@ -2277,19 +2634,268 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
         />
       )}
 
+      {/* MODAL: View Assignment Details */}
+      {viewingAssignment && (
+        <AssignmentDetailsModal
+          assignment={viewingAssignment}
+          employeeName={fullName}
+          onClose={() => setViewingAssignment(null)}
+          onEdit={(item) =>
+            setActiveSubModal({
+              name: 'Update Project Assignment',
+              schemaName: 'EmployeeAssignmentUpdate',
+              path: `/api/v1/employees/${employeeId}/assignments/${item.id}`,
+              initial: item,
+            })
+          }
+        />
+      )}
+
+      {/* MODAL: Edit Existing Item (Time Log / Leave) */}
+      {editingItem && (
+        <Modal
+          name={editingItem.kind === 'time' ? 'Edit Time Log Entry' : 'Edit Leave Request'}
+          onClose={() => setEditingItem(null)}
+        >
+          <form
+            className="space-y-4"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const form = e.currentTarget;
+              setBusy(true);
+              try {
+                if (editingItem.kind === 'time') {
+                  const dateVal = (form.elements.namedItem('edit_date') as HTMLInputElement).value;
+                  const checkInVal = (form.elements.namedItem('edit_checkin') as HTMLInputElement).value;
+                  const checkOutVal = (form.elements.namedItem('edit_checkout') as HTMLInputElement).value;
+                  const notesVal = (form.elements.namedItem('edit_notes') as HTMLTextAreaElement).value;
+
+                  const buildIsoTime = (d: string, t?: string) => {
+                    if (!d || !t || !t.trim()) return null;
+                    const parts = t.trim().split(':');
+                    const hh = (parts[0] || '08').padStart(2, '0');
+                    const mm = (parts[1] || '00').padStart(2, '0');
+                    const ss = (parts[2] || '00').padStart(2, '0');
+                    return `${d}T${hh}:${mm}:${ss}Z`;
+                  };
+
+                  const body: Row = {
+                    date: dateVal,
+                    notes: notesVal || null,
+                  };
+                  const inTime = buildIsoTime(dateVal, checkInVal);
+                  const outTime = buildIsoTime(dateVal, checkOutVal);
+                  if (inTime) body.check_in = inTime;
+                  if (outTime) body.check_out = outTime;
+
+                  await apiFetch(`/api/v1/employees/${employeeId}/time-logs/${editingItem.row.id}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify(body),
+                  });
+                } else if (editingItem.kind === 'leave') {
+                  const typeVal = (form.elements.namedItem('edit_leave_type') as HTMLSelectElement).value;
+                  const startVal = (form.elements.namedItem('edit_start') as HTMLInputElement).value;
+                  const endVal = (form.elements.namedItem('edit_end') as HTMLInputElement).value;
+                  const reasonVal = (form.elements.namedItem('edit_reason') as HTMLTextAreaElement).value;
+                  const fileInput = form.elements.namedItem('edit_leave_file') as HTMLInputElement;
+                  const file = fileInput?.files?.[0];
+
+                  await apiFetch(`/api/v1/employees/${employeeId}/leave-requests/${editingItem.row.id}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                      leave_type: typeVal,
+                      start_date: startVal,
+                      end_date: endVal,
+                      reason: reasonVal,
+                    }),
+                  });
+
+                  if (file && employeeId) {
+                    try {
+                      const formData = new FormData();
+                      formData.append('file', file);
+                      formData.append('title', `Leave Supporting Document (${typeVal}) - ${startVal} to ${endVal}`);
+                      formData.append('document_type', 'OTHER');
+                      await apiFetch(`/api/v1/employees/${employeeId}/documents/upload`, {
+                        method: 'POST',
+                        body: formData,
+                      });
+                    } catch (attErr) {
+                      console.error('Failed to attach document to leave request edit:', attErr);
+                    }
+                  }
+                }
+                setEditingItem(null);
+                reloadAll();
+              } catch (err: any) {
+                setActionError(err?.message || 'Failed to update entry.');
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {editingItem.kind === 'time' ? (
+              <>
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Date *</label>
+                  <input
+                    required
+                    type="date"
+                    name="edit_date"
+                    className="input-field"
+                    defaultValue={editingItem.row.date ? String(editingItem.row.date).slice(0, 10) : ''}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">Check In Time</label>
+                    <input
+                      type="time"
+                      name="edit_checkin"
+                      className="input-field"
+                      defaultValue={editingItem.row.check_in ? String(editingItem.row.check_in).slice(11, 16) : '08:00'}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">Check Out Time</label>
+                    <input
+                      type="time"
+                      name="edit_checkout"
+                      className="input-field"
+                      defaultValue={editingItem.row.check_out ? String(editingItem.row.check_out).slice(11, 16) : '17:00'}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Notes / Description</label>
+                  <textarea
+                    name="edit_notes"
+                    rows={2}
+                    className="input-field"
+                    defaultValue={editingItem.row.notes || ''}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Leave Type *</label>
+                  <select
+                    name="edit_leave_type"
+                    className="input-field"
+                    defaultValue={editingItem.row.leave_type || 'ANNUAL'}
+                  >
+                    <option value="ANNUAL">Annual Leave</option>
+                    <option value="SICK">Sick Leave</option>
+                    <option value="MATERNITY">Maternity Leave</option>
+                    <option value="PATERNITY">Paternity Leave</option>
+                    <option value="COMPASSIONATE">Compassionate Leave</option>
+                    <option value="UNPAID">Unpaid Leave</option>
+                    <option value="STUDY">Study Leave</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">Start Date *</label>
+                    <input
+                      required
+                      type="date"
+                      name="edit_start"
+                      className="input-field"
+                      defaultValue={editingItem.row.start_date ? String(editingItem.row.start_date).slice(0, 10) : ''}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">End Date *</label>
+                    <input
+                      required
+                      type="date"
+                      name="edit_end"
+                      className="input-field"
+                      defaultValue={editingItem.row.end_date ? String(editingItem.row.end_date).slice(0, 10) : ''}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Reason / Notes</label>
+                  <textarea
+                    name="edit_reason"
+                    rows={2}
+                    className="input-field"
+                    defaultValue={editingItem.row.reason || ''}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold mb-1 flex items-center justify-between">
+                    <span>Attach Supporting File / Certificate</span>
+                    <span className="text-[10px] text-muted-foreground font-normal">(Optional — Medical certificate, letter, etc.)</span>
+                  </label>
+                  <input
+                    type="file"
+                    name="edit_leave_file"
+                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                    className="input-field text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-muted"
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="flex justify-end gap-2 border-t pt-3">
+              <button type="button" className="btn-secondary text-xs" onClick={() => setEditingItem(null)}>
+                Cancel
+              </button>
+              <button disabled={busy} type="submit" className="btn-primary text-xs">
+                {busy ? 'Saving...' : 'Update Record'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
       {/* MODAL: Generic Sub-item Record Form */}
       {activeSubModal && (
         <RecordForm
-          resource="employees"
+          resource={activeSubModal.schemaName.includes('Assignment') ? 'employee-assignments' : 'employees'}
           path={activeSubModal.path}
+          title={activeSubModal.name}
+          initial={activeSubModal.initial}
+          method={activeSubModal.initial ? 'PATCH' : activeSubModal.method || 'POST'}
           operation={{
             schema: { $ref: `#/components/schemas/${activeSubModal.schemaName}` },
             permissions: [],
           }}
+          employeeId={employeeId}
+          employeeData={employee || undefined}
           onClose={() => setActiveSubModal(null)}
           onSaved={() => {
             setActiveSubModal(null);
             reloadAll();
+          }}
+        />
+      )}
+
+      {/* MODAL: View Authorization Details */}
+      {viewingAuthorization && (
+        <AuthorizationDetailsModal
+          authorization={viewingAuthorization}
+          employeeName={employee ? `${employee.first_name || ''} ${employee.last_name || ''}`.trim() : undefined}
+          assetName={assetMap[viewingAuthorization.asset_id] || assetMap[viewingAuthorization.asset_category_id]}
+          onClose={() => setViewingAuthorization(null)}
+          onEdit={(itemToEdit) => {
+            setViewingAuthorization(null);
+            setActiveSubModal({
+              name: 'Edit Authorization',
+              schemaName: 'AssetAuthorizationUpdate',
+              path: `/api/v1/employees/${employeeId}/asset-authorizations/${itemToEdit.id}`,
+              method: 'PATCH',
+              initial: itemToEdit,
+            });
           }}
         />
       )}
