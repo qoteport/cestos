@@ -8,7 +8,6 @@ import {login,setTokens,apiFetch,clearTokens} from '@/lib/api'
 export default function LoginForm() {
   const router = useRouter();
   const auth = useAuth();
-  const [org, setOrg] = useState(process.env.NEXT_PUBLIC_ORGANIZATION_ID || '');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -29,14 +28,16 @@ export default function LoginForm() {
       setToken(reset);
       window.history.replaceState(null, '', window.location.pathname);
     }
-    const saved = localStorage.getItem('cestos_organization');
-    if (saved) setOrg(saved);
   }, [auth.user, auth.loading, router]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError('');
+    const org =
+      process.env.NEXT_PUBLIC_ORGANIZATION_ID ||
+      localStorage.getItem('cestos_organization') ||
+      'b54b9c8e-f503-4a46-a987-5953c045ff00';
     try {
       if (token) {
         if (password !== confirm) throw new Error('Passwords do not match.');
@@ -92,30 +93,17 @@ export default function LoginForm() {
 
         <form onSubmit={submit} className="space-y-5">
           {!token && (
-            <>
-              <label className="block text-sm font-semibold">
-                Organization ID
-                <input
-                  className="input-field mt-2 font-mono text-xs"
-                  value={org}
-                  onChange={(e) => setOrg(e.target.value)}
-                  required
-                  pattern="[0-9a-fA-F-]{36}"
-                  autoComplete="organization"
-                />
-              </label>
-              <label className="block text-sm font-semibold">
-                Work email
-                <input
-                  className="input-field mt-2"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  type="email"
-                  autoComplete="username"
-                  required
-                />
-              </label>
-            </>
+            <label className="block text-sm font-semibold">
+              Work email
+              <input
+                className="input-field mt-2"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                type="email"
+                autoComplete="username"
+                required
+              />
+            </label>
           )}
 
           <label className="block text-sm font-semibold">
