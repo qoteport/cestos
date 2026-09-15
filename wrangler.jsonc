@@ -20,7 +20,10 @@
       "service": "cestos"
     }
   ],
+{
   "vars": {
-    "CESTOS_API_BACKEND_URL": "https://cestos-oversight.fly.dev"
-  }
+    "CESTOS_API_BACKEND_URL": "https://cestos-oversight.fly.dev",
+    "CESTOS_API_URL": "https://cestos-oversight.fly.dev"
+  },
+}
 }
