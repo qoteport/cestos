@@ -23,7 +23,9 @@ export default function LoginForm() {
       router.replace('/');
       return;
     }
-    const reset = new URLSearchParams(window.location.hash.slice(1)).get('reset');
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const searchParams = new URLSearchParams(window.location.search);
+    const reset = hashParams.get('reset') || hashParams.get('token') || searchParams.get('reset') || searchParams.get('token');
     if (reset) {
       setToken(reset);
       window.history.replaceState(null, '', window.location.pathname);

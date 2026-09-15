@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { RotateCcw, Calendar, Clock, Plus, Filter, Search, RefreshCw, ArrowLeft, Eye } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { Row, display, Modal } from './DataUI';
+import SearchableSelect from './SearchableSelect';
 
 
 export default function RotationsWorkspace() {
@@ -262,92 +263,172 @@ export default function RotationsWorkspace() {
       {/* MODAL: Create New Rotation Schedule */}
       {showCreateModal && (
         <Modal name="Schedule New Employee Rotation" onClose={() => setShowCreateModal(false)}>
-          <form
-            className="space-y-4"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              const form = e.currentTarget;
-              const empId = (form.elements.namedItem('rotation_employee_id') as HTMLSelectElement).value;
-              const projId = (form.elements.namedItem('rotation_project_id') as HTMLSelectElement).value;
-              const patternVal = (form.elements.namedItem('rotation_pattern') as HTMLInputElement).value;
-              const startVal = (form.elements.namedItem('rotation_start') as HTMLInputElement).value;
-              const endVal = (form.elements.namedItem('rotation_end') as HTMLInputElement).value;
-              const statusVal = (form.elements.namedItem('rotation_status') as HTMLSelectElement).value;
-
-              try {
-                await apiFetch(`/api/v1/employees/${empId}/rotations`, {
-                  method: 'POST',
-                  body: JSON.stringify({
-                    project_id: projId || undefined,
-                    rotation_pattern: patternVal,
-                    start_date: startVal,
-                    end_date: endVal || undefined,
-                    status: statusVal,
-                  }),
-                });
-
-                setShowCreateModal(false);
-                reload();
-              } catch (err: any) {
-                alert(err?.message || 'Failed to create rotation schedule.');
-              }
+          <CreateRotationForm
+            employees={employees}
+            projects={projects}
+            initialEmployeeId={creatingForEmployee}
+            onClose={() => setShowCreateModal(false)}
+            onSuccess={() => {
+              setShowCreateModal(false);
+              reload();
             }}
-          >
-            <div>
-              <label className="block text-xs font-semibold mb-1">Employee *</label>
-              <select required name="rotation_employee_id" className="input-field">
-                <option value="">Select Employee...</option>
-                {employees.map(e => (
-                  <option key={e.id} value={e.id}>
-                    {[e.first_name, e.last_name].filter(Boolean).join(' ') || e.name || e.employee_number} ({e.position_name || e.title || 'Staff'})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold mb-1">Project Assignment (Optional)</label>
-              <select name="rotation_project_id" className="input-field">
-                <option value="">Select Project...</option>
-                {projects.map(p => (
-                  <option key={p.id} value={p.id}>{p.title || p.name || p.project_number}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold mb-1">Rotation Pattern *</label>
-                <input required type="text" name="rotation_pattern" className="input-field" defaultValue="28/28 Days" placeholder="e.g. 28/28 Days, 14/14 Days" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1">Status *</label>
-                <select name="rotation_status" className="input-field" defaultValue="ON_SITE">
-                  <option value="ON_SITE">On Site (Active Shift)</option>
-                  <option value="OFF_SITE">Off Site (Rest Break)</option>
-                  <option value="SCHEDULED">Scheduled / Upcoming</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold mb-1">Start Date *</label>
-                <input required type="date" name="rotation_start" className="input-field" defaultValue={new Date().toISOString().slice(0, 10)} />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1">End / Next Swap Date</label>
-                <input type="date" name="rotation_end" className="input-field" />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 border-t pt-3">
-              <button type="button" className="btn-secondary text-xs" onClick={() => setShowCreateModal(false)}>Cancel</button>
-              <button type="submit" className="btn-primary text-xs">Create Rotation</button>
-            </div>
-          </form>
+          />
         </Modal>
       )}
     </div>
+  );
+}
+
+function CreateRotationForm({
+  employees,
+  projects,
+  initialEmployeeId,
+  onClose,
+  onSuccess,
+}: {
+  employees: Row[];
+  projects: Row[];
+  initialEmployeeId?: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [employeeId, setEmployeeId] = useState(initialEmployeeId || '');
+  const [projectId, setProjectId] = useState('');
+  const [rotationPattern, setRotationPattern] = useState('28/28 Days');
+  const [status, setStatus] = useState('ON_SITE');
+  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [endDate, setEndDate] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const employeeOptions = employees.map((e) => ({
+    value: String(e.id),
+    label: [e.first_name, e.last_name].filter(Boolean).join(' ') || e.name || e.employee_number || String(e.id),
+    sublabel: `${e.employee_number ? '#' + e.employee_number + ' · ' : ''}${e.department_name || e.position_name || e.title || 'Staff'}`,
+    badge: e.department_name || undefined,
+  }));
+
+  const projectOptions = projects.map((p) => ({
+    value: String(p.id),
+    label: p.name || p.title || p.project_number || String(p.id),
+    sublabel: p.project_number ? `Project #${p.project_number}` : undefined,
+  }));
+
+  const statusOptions = [
+    { value: 'ON_SITE', label: 'On Site (Active Shift)' },
+    { value: 'OFF_SITE', label: 'Off Site (Rest Break)' },
+    { value: 'SCHEDULED', label: 'Scheduled / Upcoming' },
+  ];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!employeeId) {
+      setError('Please select an employee.');
+      return;
+    }
+    setSubmitting(true);
+    setError('');
+    try {
+      await apiFetch(`/api/v1/employees/${employeeId}/rotations`, {
+        method: 'POST',
+        body: JSON.stringify({
+          project_id: projectId || undefined,
+          rotation_pattern: rotationPattern,
+          start_date: startDate,
+          end_date: endDate || undefined,
+          status,
+        }),
+      });
+      onSuccess();
+    } catch (err: any) {
+      setError(err?.message || 'Failed to create rotation schedule.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form className="space-y-4" onSubmit={handleSubmit}>
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded">
+          {error}
+        </div>
+      )}
+
+      <div>
+        <label className="block text-xs font-semibold mb-1">Employee *</label>
+        <SearchableSelect
+          options={employeeOptions}
+          value={employeeId}
+          onChange={(val) => setEmployeeId(val)}
+          placeholder="Search and select employee..."
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold mb-1">Project Assignment (Optional)</label>
+        <SearchableSelect
+          options={projectOptions}
+          value={projectId}
+          onChange={(val) => setProjectId(val)}
+          placeholder="Search and select project..."
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold mb-1">Rotation Pattern *</label>
+          <input
+            required
+            type="text"
+            className="input-field text-xs"
+            value={rotationPattern}
+            onChange={(e) => setRotationPattern(e.target.value)}
+            placeholder="e.g. 28/28 Days, 14/14 Days"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold mb-1">Status *</label>
+          <SearchableSelect
+            options={statusOptions}
+            value={status}
+            onChange={(val) => setStatus(val)}
+            placeholder="Select status..."
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold mb-1">Start Date *</label>
+          <input
+            required
+            type="date"
+            className="input-field text-xs"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold mb-1">End / Next Swap Date</label>
+          <input
+            type="date"
+            className="input-field text-xs"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 border-t pt-3">
+        <button type="button" className="btn-secondary text-xs" onClick={onClose}>
+          Cancel
+        </button>
+        <button type="submit" disabled={submitting} className="btn-primary text-xs">
+          {submitting ? 'Creating...' : 'Create Rotation'}
+        </button>
+      </div>
+    </form>
   );
 }

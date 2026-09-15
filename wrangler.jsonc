@@ -19,5 +19,8 @@
       "binding": "WORKER_SELF_REFERENCE",
       "service": "cestos-ops-insights"
     }
-  ]
+  ],
+  "vars": {
+    "CESTOS_API_BACKEND_URL": "http://127.0.0.1:8000"
+  }
 }

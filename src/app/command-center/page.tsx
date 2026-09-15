@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Search, Play, Zap, Users, FolderKanban, Wrench, Package, ShieldCheck, Building2, Lock, PlusCircle, Clock, ArrowRightLeft, Fuel, Gauge, Receipt, Truck, DollarSign, UserPlus, UserCheck, Briefcase, MapPin, CheckCircle2, MinusCircle, SlidersHorizontal, Boxes, Tag, ClipboardCheck, } from 'lucide-react';
+import { Search, Play, Zap, Users, FolderKanban, Wrench, Package, ShieldCheck, Building2, Lock, PlusCircle, Clock, ArrowRightLeft, Fuel, Gauge, Receipt, Truck, DollarSign, UserPlus, UserCheck, Briefcase, MapPin, CheckCircle2, MinusCircle, SlidersHorizontal, Boxes, Tag, ClipboardCheck, ClipboardList, ShieldAlert, AlertTriangle, RotateCcw, BookmarkPlus, Layers } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/components/AuthProvider';
 import RecordForm from '@/components/RecordForm';
 import AssetAssignmentModal from '@/components/AssetAssignmentModal';
 import EditEmployeeModal from '@/components/EditEmployeeModal';
 import RegisterUserModal from '@/components/RegisterUserModal';
+import SelectAssetModal from '@/components/SelectAssetModal';
 import { operation } from '@/components/ResourceWorkspace';
 import { Row } from '@/components/DataUI';
 import { toast } from 'sonner';
@@ -28,7 +29,7 @@ interface CommandDef {
   path?: string;
   targetPathPattern?: string;
   method?: string;
-  customModalType?: 'assignment' | 'edit-employee' | 'employee-select' | 'create-user' | null;
+  customModalType?: 'assignment' | 'edit-employee' | 'employee-select' | 'asset-select' | 'create-user' | null;
   tags: string[];
 }
 
@@ -86,7 +87,7 @@ const COMMAND_REGISTRY: CommandDef[] = [
   {
     id: 'request-leave',
     title: 'Request Employee Leave',
-    description: 'File an annual, sick, or rotation leave request for an employee.',
+    description: 'File an annual, sick, rotational, emergency, or study leave request for an employee.',
     category: 'WORKFORCE',
     categoryName: 'Workforce & HR',
     permission: 'employees.manage',
@@ -94,7 +95,7 @@ const COMMAND_REGISTRY: CommandDef[] = [
     customModalType: 'employee-select',
     targetPathPattern: '/api/v1/employees/{id}/leave-requests',
     resource: 'hr/leave-requests',
-    tags: ['leave', 'vacation', 'time off', 'sick leave', 'rotation'],
+    tags: ['leave', 'vacation', 'time off', 'sick leave', 'annual leave', 'rotational off-duty', 'emergency leave', 'leave type', 'rotation'],
   },
   {
     id: 'create-department',
@@ -119,6 +120,18 @@ const COMMAND_REGISTRY: CommandDef[] = [
     resource: 'positions',
     path: '/api/v1/positions',
     tags: ['position', 'role', 'title', 'job', 'rank'],
+  },
+  {
+    id: 'record-incident',
+    title: 'Report Safety Incident / Injury',
+    description: 'Log a workplace safety incident, injury event, near-miss, or environmental release for HSE compliance.',
+    category: 'WORKFORCE',
+    categoryName: 'Workforce & HR',
+    permission: 'employees.manage',
+    icon: ShieldAlert,
+    resource: 'incidents',
+    path: '/api/v1/incidents',
+    tags: ['incident', 'injury', 'near miss', 'hse', 'safety', 'accident', 'incident report'],
   },
 
   // --- Projects & Sites ---
@@ -184,15 +197,68 @@ const COMMAND_REGISTRY: CommandDef[] = [
     tags: ['assign asset', 'equipment assignment', 'deploy', 'operator', 'fleet'],
   },
   {
+    id: 'add-equipment-component',
+    title: 'Add Equipment Component / Assembly',
+    description: 'Attach a new component, engine module, transmission, or mechanical sub-assembly to an equipment asset.',
+    category: 'FLEET',
+    categoryName: 'Fleet & Equipment',
+    permission: 'assets.create',
+    icon: Boxes,
+    customModalType: 'asset-select',
+    targetPathPattern: '/api/v1/assets/{id}/components',
+    resource: 'components',
+    tags: ['component', 'subassembly', 'part', 'engine', 'transmission', 'equipment', 'attach component', 'specs'],
+  },
+  {
+    id: 'create-work-order',
+    title: 'Create Maintenance Work Order',
+    description: 'Issue a structured work order for preventive maintenance, emergency repair, or component overhaul.',
+    category: 'FLEET',
+    categoryName: 'Fleet & Equipment',
+    permission: 'assets.logs.write',
+    icon: ClipboardList,
+    customModalType: 'asset-select',
+    targetPathPattern: '/api/v1/assets/maintenance-logs',
+    resource: 'maintenance/work-orders',
+    tags: ['work order', 'maintenance', 'repair', 'task', 'mechanic', 'service', 'breakdown'],
+  },
+  {
+    id: 'report-equipment-defect',
+    title: 'Report Equipment Defect / Breakdown',
+    description: 'Log a mechanical defect, damage report, fluid leak, or safety fault on an equipment asset.',
+    category: 'FLEET',
+    categoryName: 'Fleet & Equipment',
+    permission: 'assets.logs.write',
+    icon: AlertTriangle,
+    customModalType: 'asset-select',
+    targetPathPattern: '/api/v1/assets/{id}/defects',
+    resource: 'maintenance/defects',
+    tags: ['defect', 'breakdown', 'fault', 'damage', 'leak', 'hazard', 'equipment defect', 'safety'],
+  },
+  {
+    id: 'record-equipment-inspection',
+    title: 'Record Equipment Safety Inspection',
+    description: 'Perform and log pre-start walkaround inspection, safety checklist, or compliance audit.',
+    category: 'FLEET',
+    categoryName: 'Fleet & Equipment',
+    permission: 'assets.logs.write',
+    icon: ClipboardCheck,
+    customModalType: 'asset-select',
+    targetPathPattern: '/api/v1/assets/{id}/inspections',
+    resource: 'inspections',
+    tags: ['inspection', 'pre-start', 'walkaround', 'checklist', 'safety', 'audit', 'compliance'],
+  },
+  {
     id: 'create-maintenance-log',
-    title: 'Record Maintenance Log / Work Order',
+    title: 'Record Maintenance Log / Service',
     description: 'Log preventative maintenance, repair work order, or service completed on an asset.',
     category: 'FLEET',
     categoryName: 'Fleet & Equipment',
     permission: 'assets.logs.write',
     icon: Wrench,
-    resource: 'maintenance/work-orders',
-    path: '/api/v1/assets/maintenance-logs',
+    customModalType: 'asset-select',
+    targetPathPattern: '/api/v1/assets/maintenance-logs',
+    resource: 'maintenance',
     tags: ['maintenance', 'repair', 'service', 'work order', 'breakdown', 'fix'],
   },
   {
@@ -203,8 +269,9 @@ const COMMAND_REGISTRY: CommandDef[] = [
     categoryName: 'Fleet & Equipment',
     permission: 'assets.logs.write',
     icon: Gauge,
+    customModalType: 'asset-select',
+    targetPathPattern: '/api/v1/assets/{id}/meter-readings',
     resource: 'assets/meter-readings',
-    path: '/api/v1/assets/meter-readings',
     tags: ['meter', 'hour meter', 'odometer', 'usage', 'reading', 'hours'],
   },
   {
@@ -215,9 +282,22 @@ const COMMAND_REGISTRY: CommandDef[] = [
     categoryName: 'Fleet & Equipment',
     permission: 'assets.logs.write',
     icon: Fuel,
+    customModalType: 'asset-select',
+    targetPathPattern: '/api/v1/assets/{id}/fuel-logs',
     resource: 'fuel-logs',
-    path: '/api/v1/assets/fuel-logs',
     tags: ['fuel', 'diesel', 'petrol', 'refuel', 'liters', 'consumption'],
+  },
+  {
+    id: 'create-asset-category',
+    title: 'Create Asset Category',
+    description: 'Define a new category classification for equipment assets (e.g. Excavators, Drill Rigs, Light Vehicles).',
+    category: 'FLEET',
+    categoryName: 'Fleet & Equipment',
+    permission: 'assets.manage',
+    icon: Tag,
+    resource: 'asset-categories',
+    path: '/api/v1/asset-categories',
+    tags: ['category', 'asset category', 'type', 'classification', 'fleet'],
   },
   {
     id: 'request-asset-transfer',
@@ -332,14 +412,14 @@ const COMMAND_REGISTRY: CommandDef[] = [
   {
     id: 'create-supplier',
     title: 'Register Supplier / Vendor',
-    description: 'Add vendor details, supplier contacts, lead times, and unit purchase pricing.',
+    description: 'Add vendor details, supplier contacts, country, address, lead times, and unit purchase pricing.',
     category: 'INVENTORY',
     categoryName: 'Inventory & Supplies',
     permission: 'inventory.manage',
     icon: Truck,
     resource: 'inventory/suppliers',
     path: '/api/v1/inventory/suppliers',
-    tags: ['supplier', 'vendor', 'contractor', 'pricing', 'lead time', 'purchase order'],
+    tags: ['supplier', 'vendor', 'contractor', 'pricing', 'lead time', 'purchase order', 'country', 'address', 'location'],
   },
   {
     id: 'create-unit-measure',
@@ -376,6 +456,30 @@ const COMMAND_REGISTRY: CommandDef[] = [
     resource: 'inventory/stock-counts',
     path: '/api/v1/inventory/stock-counts',
     tags: ['stock count', 'audit', 'cycle count', 'stocktake', 'reconciliation', 'inventory audit'],
+  },
+  {
+    id: 'record-stock-return',
+    title: 'Record Stock Return (+)',
+    description: 'Return unused spare parts, surplus materials, or tools back to warehouse inventory.',
+    category: 'INVENTORY',
+    categoryName: 'Inventory & Supplies',
+    permission: 'inventory.manage',
+    icon: RotateCcw,
+    resource: 'inventory/returns',
+    path: '/api/v1/inventory/returns',
+    tags: ['return', 'stock return', 'surplus', 'undo issue', 'inventory', 'store'],
+  },
+  {
+    id: 'reserve-stock',
+    title: 'Create Stock Reservation',
+    description: 'Reserve inventory stock items for an upcoming project or planned maintenance work order.',
+    category: 'INVENTORY',
+    categoryName: 'Inventory & Supplies',
+    permission: 'inventory.manage',
+    icon: BookmarkPlus,
+    resource: 'inventory/reservations',
+    path: '/api/v1/inventory/reservations',
+    tags: ['reserve', 'reservation', 'hold', 'allocate', 'inventory', 'store'],
   },
 
   // --- Administration & Security ---
@@ -424,6 +528,7 @@ export default function CommandCenterPage() {
   const [showEditEmployee, setShowEditEmployee] = useState(false);
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [pendingSelectCommand, setPendingSelectCommand] = useState<CommandDef | null>(null);
+  const [pendingAssetSelectCommand, setPendingAssetSelectCommand] = useState<CommandDef | null>(null);
 
   // Filter commands by search and category
   const filteredCommands = useMemo(() => {
@@ -477,6 +582,11 @@ export default function CommandCenterPage() {
       return;
     }
 
+    if (cmd.customModalType === 'asset-select') {
+      setPendingAssetSelectCommand(cmd);
+      return;
+    }
+
     if (cmd.path && cmd.resource) {
       setActiveCommand(cmd);
     }
@@ -497,6 +607,23 @@ export default function CommandCenterPage() {
     });
 
     setPendingSelectCommand(null);
+  };
+
+  const handleAssetSelectedForCommand = (asset: Row) => {
+    if (!pendingAssetSelectCommand) return;
+    const targetPath = pendingAssetSelectCommand.targetPathPattern
+      ? pendingAssetSelectCommand.targetPathPattern.replace('{id}', asset.id)
+      : pendingAssetSelectCommand.path;
+
+    const assetName = `${asset.name}${asset.asset_number ? ` (${asset.asset_number})` : ''}`;
+
+    setActiveCommand({
+      ...pendingAssetSelectCommand,
+      path: targetPath,
+      title: `${pendingAssetSelectCommand.title} - ${assetName}`,
+    });
+
+    setPendingAssetSelectCommand(null);
   };
 
   const activeOp: Row | null = useMemo(() => {
@@ -767,6 +894,16 @@ export default function CommandCenterPage() {
           subtitle={`Choose an employee for "${pendingSelectCommand.title}".`}
           onClose={() => setPendingSelectCommand(null)}
           onSelectEmployee={(emp) => handleEmployeeSelectedForCommand(emp)}
+        />
+      )}
+
+      {/* Select Asset Modal for Asset-dependent Commands */}
+      {pendingAssetSelectCommand && (
+        <SelectAssetModal
+          title={`Select Equipment Asset`}
+          subtitle={`Choose an equipment asset for "${pendingAssetSelectCommand.title}".`}
+          onClose={() => setPendingAssetSelectCommand(null)}
+          onSelectAsset={(asset) => handleAssetSelectedForCommand(asset)}
         />
       )}
     </AppLayout>

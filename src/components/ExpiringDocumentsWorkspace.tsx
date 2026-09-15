@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FileText, AlertTriangle, Search, RefreshCw, ArrowLeft, Eye, CheckCircle, ArrowRight, ShieldAlert, Clock } from 'lucide-react';
 import { apiFetch, apiFetchBlob } from '@/lib/api';
+import { toast } from 'sonner';
 import { Row, display } from './DataUI';
 
 export default function ExpiringDocumentsWorkspace() {
@@ -49,7 +50,7 @@ export default function ExpiringDocumentsWorkspace() {
     const empId = doc.employee_id;
     const docId = doc.id || doc.document_id;
     if (!empId || !docId) {
-      alert('Document download path unavailable.');
+      toast.error('Document download path unavailable.');
       return;
     }
 

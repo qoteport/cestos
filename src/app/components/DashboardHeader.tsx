@@ -106,7 +106,7 @@ export default function DashboardHeader({
             className="px-3 py-1.5 bg-primary text-primary-foreground font-semibold rounded-lg text-xs hover:bg-primary/90 transition flex items-center gap-1.5 shadow-sm"
           >
             <SlidersHorizontal size={14} />
-            Filter Database Data
+            Filter Data
             {activeFilterCount > 0 && (
               <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-white text-primary font-bold">
                 {activeFilterCount}

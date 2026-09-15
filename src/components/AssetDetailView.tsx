@@ -19,6 +19,8 @@ import {
   Shield,
   ArrowRightLeft,
   Download,
+  Eye,
+  Paperclip,
   AlertTriangle,
   CheckCircle,
 } from 'lucide-react';
@@ -168,7 +170,9 @@ export default function AssetDetailView({ assetId }: { assetId: string }) {
   const overview = useData(root + '/overview');
   const metrics = useData(root + '/operating-metrics');
   const [tab, setTab] = useState('overview');
+  const [maintenanceFilter, setMaintenanceFilter] = useState('ALL');
   const [page, setPage] = useState(1);
+
   const path = root + '/' + tab;
   const allowed = (p: string, method = 'GET') => {
     const op = operation(p, method);
@@ -193,6 +197,14 @@ export default function AssetDetailView({ assetId }: { assetId: string }) {
   const [selected, setSelected] = useState<Row | null>(null);
   const [error, setError] = useState('');
   const [photo, setPhoto] = useState('');
+  const [previewFile, setPreviewFile] = useState<{
+    id?: string;
+    title: string;
+    filename: string;
+    size_bytes?: number;
+    url?: string;
+    blob?: Blob;
+  } | null>(null);
   const d = overview.data;
   const asset = d?.asset;
   const primary = d?.latest_photos?.find((r: Row) => r.is_primary) || d?.latest_photos?.[0];
@@ -375,7 +387,52 @@ const componentCreateOp = {
   permissions: ['assets.update'],
 };
 
+const assetEditOp = {
+  schema: {
+    type: 'object',
+    required: ['name'],
+    properties: {
+      name: { type: 'string', title: 'Asset / Equipment Name' },
+      asset_number: { type: 'string', title: 'Asset Tag / Equipment Number' },
+      category_id: { type: 'string', format: 'uuid', title: 'Asset Category' },
+      manufacturer: { type: 'string', title: 'Manufacturer / Make' },
+      model: { type: 'string', title: 'Model' },
+      year_of_manufacture: { type: 'integer', title: 'Year of Manufacture' },
+      serial_number: { type: 'string', title: 'Serial Number / VIN' },
+      chassis_number: { type: 'string', title: 'Chassis Number' },
+      engine_manufacturer: { type: 'string', title: 'Engine Manufacturer' },
+      engine_model: { type: 'string', title: 'Engine Model' },
+      ownership_type: {
+        type: 'string',
+        enum: ['OWNED', 'LEASED', 'RENTED'],
+        title: 'Ownership Type',
+        default: 'OWNED',
+      },
+      status: {
+        type: 'string',
+        enum: ['OPERATIONAL', 'STANDBY', 'MAINTENANCE', 'BREAKDOWN', 'OUT_OF_SERVICE'],
+        title: 'Asset Status',
+      },
+      meter_type: {
+        type: 'string',
+        enum: ['HOURS', 'ODOMETER_KM', 'ODOMETER_MILES', 'NONE'],
+        title: 'Meter Reading Type',
+      },
+      current_meter_reading: { type: 'number', title: 'Current Meter Reading' },
+      purchase_price: { type: 'number', title: 'Purchase Price / Asset Cost ($)' },
+      purchase_currency: { type: 'string', title: 'Purchase Currency', default: 'USD' },
+      purchase_date: { type: 'string', format: 'date', title: 'Purchase Date' },
+      location_id: { type: 'string', format: 'uuid', title: 'Default Location / Base Site' },
+      responsible_employee_id: { type: 'string', format: 'uuid', title: 'Responsible Manager / Engineer' },
+    },
+  },
+  permissions: ['assets.update'],
+};
+
   function resolveTabOperation(p: string, method: string): Row | null {
+    if (p === root || p === '/api/v1/assets/' + assetId) {
+      return assetEditOp;
+    }
     if (p.endsWith('/complete')) {
       return assignmentCompleteOp;
     }
@@ -617,6 +674,26 @@ const componentCreateOp = {
     }
   }
 
+  async function handleLogFileView(f: Row) {
+    setError('');
+    try {
+      const blob = await apiFetchBlob(
+        '/api/v1/assets/' + assetId + '/log-files/' + f.id + '/download'
+      );
+      const objectUrl = URL.createObjectURL(blob);
+      setPreviewFile({
+        id: String(f.id),
+        title: f.title || f.file_name || 'Attached Evidence File',
+        filename: f.file_name || 'file',
+        size_bytes: f.size_bytes,
+        url: objectUrl,
+        blob,
+      });
+    } catch (err: any) {
+      setError(err.message || 'Unable to load file preview');
+    }
+  }
+
   async function handleLogFileDownload(fileId: string, filename: string) {
     try {
       const blob = await apiFetchBlob(
@@ -625,6 +702,25 @@ const componentCreateOp = {
       downloadBlob(blob, filename);
     } catch (err: any) {
       setError(err.message || 'Download failed');
+    }
+  }
+
+  async function handleDocumentView(row: Row) {
+    setError('');
+    try {
+      const docId = row.document_id || row.id;
+      const blob = await apiFetchBlob(root + '/documents/' + docId + '/download');
+      const objectUrl = URL.createObjectURL(blob);
+      setPreviewFile({
+        id: String(docId),
+        title: row.title || row.file_name || 'Asset Document',
+        filename: row.file_name || 'document.pdf',
+        size_bytes: row.file_size_bytes,
+        url: objectUrl,
+        blob,
+      });
+    } catch (e: any) {
+      setError(e.message || 'Unable to view document preview');
     }
   }
   async function download(row: Row) {
@@ -680,7 +776,7 @@ const componentCreateOp = {
                 {allowed(root, 'PATCH') && (
                   <button
                     className="btn-secondary text-xs"
-                    onClick={() => openForm(root, 'Edit asset', asset)}
+                    onClick={() => openForm(root, 'Edit asset', asset, assetEditOp)}
                   >
                     <Edit size={14} />
                     Edit asset
@@ -985,6 +1081,66 @@ const componentCreateOp = {
                   </div>
                 </header>
                 <State loading={records.loading} error={records.error} retry={records.reload}>
+                  {tab === 'maintenance' && (
+                    <div className="p-4 border-b bg-muted/30 space-y-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="card p-3 bg-white border border-border">
+                          <span className="text-2xs font-semibold text-muted-foreground uppercase block">
+                            Total Maintenance Jobs
+                          </span>
+                          <span className="text-lg font-bold text-foreground">
+                            {rows(records.data).length}
+                          </span>
+                        </div>
+                        <div className="card p-3 bg-white border border-border">
+                          <span className="text-2xs font-semibold text-muted-foreground uppercase block">
+                            Recurring Schedules
+                          </span>
+                          <span className="text-lg font-bold text-blue-700">
+                            {rows(records.data).filter((r: Row) => r.is_recurring).length}
+                          </span>
+                        </div>
+                        <div className="card p-3 bg-white border border-border">
+                          <span className="text-2xs font-semibold text-muted-foreground uppercase block">
+                            In Progress Jobs
+                          </span>
+                          <span className="text-lg font-bold text-amber-700">
+                            {rows(records.data).filter((r: Row) => String(r.status || '').toUpperCase() === 'IN_PROGRESS').length}
+                          </span>
+                        </div>
+                        <div className="card p-3 bg-white border border-border">
+                          <span className="text-2xs font-semibold text-muted-foreground uppercase block">
+                            Completed Jobs
+                          </span>
+                          <span className="text-lg font-bold text-emerald-700">
+                            {
+                              rows(records.data).filter((r: Row) =>
+                                ['COMPLETED', 'RESOLVED', 'CLOSED', 'POSTED'].includes(
+                                  String(r.status || '').toUpperCase()
+                                )
+                              ).length
+                            }
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs font-semibold text-muted-foreground">Filter Maintenance View:</label>
+                          <select
+                            className="input-field text-xs font-medium max-w-xs"
+                            value={maintenanceFilter}
+                            onChange={(e) => setMaintenanceFilter(e.target.value)}
+                          >
+                            <option value="ALL">All Maintenance Records</option>
+                            <option value="RECURRING">Recurring Maintenance Schedules</option>
+                            <option value="IN_PROGRESS">In Progress Jobs</option>
+                            <option value="SCHEDULED">Scheduled / Open</option>
+                            <option value="COMPLETED">Completed Jobs</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {tab === 'assignments' && rows(records.data).length > 0 && (
                     <div className="p-4 border-b bg-muted/30 space-y-4">
                       <div className="flex items-center gap-3 flex-wrap">
@@ -1357,6 +1513,23 @@ const componentCreateOp = {
                                     : null) ||
                                   'Assigned Site',
                               }))
+                            : tab === 'maintenance'
+                              ? rows(records.data)
+                                  .filter((r: Row) => {
+                                    if (maintenanceFilter === 'RECURRING') return !!r.is_recurring;
+                                    if (maintenanceFilter === 'IN_PROGRESS') return String(r.status || '').toUpperCase() === 'IN_PROGRESS';
+                                    if (maintenanceFilter === 'COMPLETED')
+                                      return ['COMPLETED', 'RESOLVED', 'CLOSED', 'POSTED'].includes(String(r.status || '').toUpperCase());
+                                    if (maintenanceFilter === 'SCHEDULED')
+                                      return ['SCHEDULED', 'OPEN', 'PENDING', 'DRAFT'].includes(String(r.status || '').toUpperCase());
+                                    return true;
+                                  })
+                                  .map((r: Row) => ({
+                                    ...r,
+                                    schedule_type: r.is_recurring ? `Recurring (${r.recurrence_interval_days || 7}d)` : 'Scheduled Job',
+                                    scheduled_date_fmt: r.scheduled_date ? new Date(r.scheduled_date).toLocaleDateString() : '—',
+                                    cost_fmt: r.cost != null ? `$${Number(r.cost).toFixed(2)}` : '—',
+                                  }))
                             : tab === 'activity'
                               ? rows(records.data).map((r: Row) => {
                                   const formatted = formatAssetAuditActivity(r);
@@ -1390,7 +1563,7 @@ const componentCreateOp = {
                                 'supplier',
                               ]
                             : tab === 'maintenance'
-                              ? ['title', 'maintenance_type', 'priority', 'status', 'scheduled_date']
+                              ? ['title', 'maintenance_type', 'priority', 'status', 'schedule_type', 'scheduled_date_fmt', 'cost_fmt']
                               : tab === 'meter-readings'
                                 ? ['recorded_at', 'reading_type', 'reading', 'project_site_location', 'source']
                                 : tab === 'activity'
@@ -2065,21 +2238,31 @@ const componentCreateOp = {
               {logFiles.length > 0 ? (
                 <ul className="divide-y border rounded bg-white text-xs">
                   {logFiles.map((f: Row) => (
-                    <li key={f.id} className="p-2.5 flex justify-between items-center">
-                      <div>
-                        <strong className="block font-medium">{f.title || f.file_name}</strong>
+                    <li key={f.id} className="p-2.5 flex justify-between items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <strong className="block font-medium truncate">{f.title || f.file_name}</strong>
                         <span className="text-muted-foreground text-[11px]">
-                          {f.file_name} ·{' '}
-                          {f.size_bytes ? Math.round(f.size_bytes / 1024) + ' KB' : ''}
+                          {f.file_name} {f.size_bytes ? `· ${Math.round(f.size_bytes / 1024)} KB` : ''}
                         </span>
                       </div>
-                      <button
-                        className="btn-secondary text-xs"
-                        onClick={() => handleLogFileDownload(f.id, f.file_name || 'file')}
-                      >
-                        <Download size={12} />
-                        Download
-                      </button>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          className="btn-secondary text-xs flex items-center gap-1"
+                          onClick={() => void handleLogFileView(f)}
+                          title="View file preview"
+                        >
+                          <Eye size={12} />
+                          View
+                        </button>
+                        <button
+                          className="btn-secondary text-xs flex items-center gap-1"
+                          onClick={() => handleLogFileDownload(f.id, f.file_name || 'file')}
+                          title="Download file"
+                        >
+                          <Download size={12} />
+                          Download
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -2092,19 +2275,36 @@ const componentCreateOp = {
           )}
           <div className="flex gap-2 mt-5 border-t pt-4 flex-wrap">
             {(tab === 'documents' || selected.document_id) && (
-              <button
-                className="btn-primary text-xs"
-                onClick={() =>
-                  void download(
-                    selected.document_id
-                      ? { id: selected.document_id, title: selected.title || 'document' }
-                      : selected
-                  )
-                }
-              >
-                <Download size={13} />
-                Download
-              </button>
+              <>
+                <button
+                  className="btn-secondary text-xs flex items-center gap-1"
+                  onClick={() =>
+                    void handleDocumentView(
+                      selected.document_id
+                        ? { id: selected.document_id, title: selected.title || 'document' }
+                        : selected
+                    )
+                  }
+                  title="View document preview"
+                >
+                  <Eye size={13} />
+                  View
+                </button>
+                <button
+                  className="btn-primary text-xs flex items-center gap-1"
+                  onClick={() =>
+                    void download(
+                      selected.document_id
+                        ? { id: selected.document_id, title: selected.title || 'document' }
+                        : selected
+                    )
+                  }
+                  title="Download document"
+                >
+                  <Download size={13} />
+                  Download
+                </button>
+              </>
             )}
             {tab === 'maintenance' && auth.can('assets.update') && (
               <button
@@ -2260,6 +2460,59 @@ const componentCreateOp = {
             reload();
           }}
         />
+      )}
+      {previewFile && (
+        <Modal
+          name={`Document & Evidence Preview: ${previewFile.title || previewFile.filename}`}
+          onClose={() => setPreviewFile(null)}
+        >
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-muted/30 border rounded-lg text-xs">
+              <div>
+                <h4 className="font-bold text-foreground text-sm">{previewFile.title}</h4>
+                <p className="text-muted-foreground text-[11px]">
+                  {previewFile.filename} {previewFile.size_bytes ? `· ${Math.round(previewFile.size_bytes / 1024)} KB` : ''}
+                </p>
+              </div>
+              {previewFile.blob && (
+                <button
+                  className="btn-primary text-xs flex items-center gap-1.5"
+                  onClick={() => downloadBlob(previewFile.blob!, previewFile.filename)}
+                >
+                  <Download size={13} /> Download File
+                </button>
+              )}
+            </div>
+
+            <div className="border rounded-lg bg-slate-950 p-2 min-h-[300px] flex items-center justify-center text-center overflow-hidden">
+              {previewFile.url && (previewFile.filename.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i) || previewFile.blob?.type.startsWith('image/')) ? (
+                <img
+                  src={previewFile.url}
+                  alt={previewFile.title}
+                  className="max-h-[500px] max-w-full object-contain rounded"
+                />
+              ) : previewFile.url && (previewFile.filename.match(/\.(pdf|txt|html)$/i) || previewFile.blob?.type.includes('pdf')) ? (
+                <iframe
+                  src={previewFile.url}
+                  title={previewFile.title}
+                  className="w-full h-[500px] rounded bg-white"
+                />
+              ) : (
+                <div className="p-8 text-slate-400 space-y-3">
+                  <FileText size={48} className="mx-auto text-slate-500" />
+                  <p className="text-xs font-medium">Inline preview not available for this file type.</p>
+                  <p className="text-[11px] text-slate-500">{previewFile.filename}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end border-t pt-3">
+              <button type="button" className="btn-secondary text-xs" onClick={() => setPreviewFile(null)}>
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

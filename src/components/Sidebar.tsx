@@ -43,10 +43,11 @@ const groups: SidebarGroup[] = [
         title: 'Personnel & Rotations',
         links: [
           ['Employees', 'employees'],
-          ['Salaries & Compensation', 'hr/salaries'],
           ['Availability', 'employees/available'],
           ['Rotations', 'rotations/current'],
-          ['Upcoming rotations', 'rotations/upcoming'],
+          ['Upcoming rotations', 'rotations/upcoming'],          
+          ['Salaries & Compensation', 'hr/salaries'],
+          ['Leave management', 'leave-management'],
         ],
       },
       {
@@ -54,6 +55,7 @@ const groups: SidebarGroup[] = [
         links: [
           ['Training compliance', 'training/compliance'],
           ['Expiring documents', 'employee-documents/expiring'],
+          ['Incident reports', 'incidents'],
           ['Departments', 'departments'],
           ['Positions', 'positions'],
         ],
@@ -78,6 +80,7 @@ const groups: SidebarGroup[] = [
       {
         title: 'Operations & Maintenance',
         links: [
+          ['Maintenance & Schedules', 'maintenance'],
           ['Work orders', 'maintenance/work-orders'],
           ['Defects', 'maintenance/defects'],
           ['Inspections', 'inspections'],
@@ -122,10 +125,10 @@ const groups: SidebarGroup[] = [
       {
         title: 'Stock Control & Audits',
         links: [
-          ['Current Stock Register', 'inventory/stock-register'],
-          ['Stock Counts & Audits', 'inventory/audits'],
+          ['Current Stock Register', 'inventory/stock'],
+          ['Stock Counts & Audits', 'inventory/stock-counts'],
           ['Stock Adjustments', 'inventory/adjustments'],
-          ['Movement Ledger', 'inventory/movements'],
+          ['Movement Ledger', 'inventory/transactions'],
           ['Custody Log', 'inventory/custody'],
         ],
       },
@@ -133,8 +136,8 @@ const groups: SidebarGroup[] = [
         title: 'Planning & Vendors',
         links: [
           ['Reorder Recommendations', 'inventory/reorder-recommendations'],
-          ['Demand Forecast', 'inventory/demand-forecast'],
-          ['Stock Policies', 'inventory/policies'],
+          ['Demand Forecast', 'inventory/forecast'],
+          ['Stock Policies', 'inventory/stock-policies'],
           ['Suppliers & Vendors', 'inventory/suppliers'],
           ['Batches & Lots', 'inventory/lots'],
           ['Serial Numbers', 'inventory/serials'],
@@ -258,7 +261,8 @@ export default function Sidebar({
                     {g.sections.map((sec, sIdx) => {
                       const visibleLinks = sec.links.filter(([, r]) => {
                         const op = operation('/api/v1/' + r, 'GET');
-                        return op && (op.permissions || []).every((p: string) => auth.can(p));
+                        if (!op) return true;
+                        return (op.permissions || []).every((p: string) => auth.can(p));
                       });
                       if (!visibleLinks.length) return null;
                       return (

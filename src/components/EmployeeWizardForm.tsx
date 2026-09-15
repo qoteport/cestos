@@ -57,8 +57,8 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
 
   // Step 2: Employment Details
   const [employment, setEmployment] = useState({
-    department_id: initial?.department_id || '',
-    position_id: initial?.position_id || '',
+    department_id: initial?.department_id || (typeof initial?.department === 'object' ? initial?.department?.id : '') || '',
+    position_id: initial?.position_id || (typeof initial?.position === 'object' ? initial?.position?.id : '') || '',
     job_title: initial?.job_title || '',
     employment_type: initial?.employment_type || 'FULL_TIME',
     employment_status: initial?.employment_status || 'ACTIVE',
@@ -91,11 +91,43 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
   useEffect(() => {
     let active = true;
     apiFetch<any>('/api/v1/departments?page_size=100')
-      .then(d => { if (active) setDepartments(Array.isArray(d) ? d : d.items || []); })
+      .then(d => {
+        if (!active) return;
+        const list = Array.isArray(d) ? d : d.items || [];
+        setDepartments(list);
+        if (initial) {
+          const deptVal = (initial.department?.name || initial.department_name || initial.department || '').toString().toLowerCase();
+          const matchDept = list.find((item: any) =>
+            item.id === initial.department_id ||
+            item.id === initial.department?.id ||
+            (deptVal && item.name?.toLowerCase() === deptVal)
+          );
+          if (matchDept) {
+            setEmployment(prev => ({ ...prev, department_id: matchDept.id }));
+          }
+        }
+      })
       .catch(() => { });
+
     apiFetch<any>('/api/v1/positions?page_size=100')
-      .then(d => { if (active) setPositions(Array.isArray(d) ? d : d.items || []); })
+      .then(d => {
+        if (!active) return;
+        const list = Array.isArray(d) ? d : d.items || [];
+        setPositions(list);
+        if (initial) {
+          const posVal = (initial.job_title || initial.position?.title || initial.position?.name || initial.position || '').toString().toLowerCase();
+          const matchPos = list.find((item: any) =>
+            item.id === initial.position_id ||
+            item.id === initial.position?.id ||
+            (posVal && (item.title || item.name)?.toLowerCase() === posVal)
+          );
+          if (matchPos) {
+            setEmployment(prev => ({ ...prev, position_id: matchPos.id }));
+          }
+        }
+      })
       .catch(() => { });
+
     apiFetch<any>('/api/v1/employees?page_size=100')
       .then(d => { if (active) setSupervisors(Array.isArray(d) ? d : d.items || []); })
       .catch(() => { });
@@ -176,7 +208,12 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (busy) return;
-    if (step < 5) { nextStep(); return; }
+    if (step < 5) {
+      if (validateStep(step)) {
+        setStep(s => Math.min(s + 1, 5));
+      }
+      return;
+    }
     for (const stage of [1, 4]) {
       if (!validateStep(stage)) { setStep(stage); return; }
     }
@@ -356,7 +393,15 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form
+          onSubmit={handleSubmit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+              e.preventDefault();
+            }
+          }}
+          className="space-y-6"
+        >
           {/* STEP 1: Personal Details */}
           {step === 1 && (
             <div className="space-y-4 fade-in">

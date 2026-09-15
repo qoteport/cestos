@@ -146,8 +146,8 @@ export default function EditEmployeeModal({
               filteredEmployees.map((emp) => {
                 const fullName = `${emp.first_name || ''} ${emp.last_name || ''}`.trim() || 'Unnamed Employee';
                 const empNo = emp.employee_number || emp.code || 'No ID';
-                const jobTitle = emp.job_title || emp.position?.name || 'No Position';
-                const deptName = emp.department?.name || emp.department_name || 'No Department';
+                const jobTitle = emp.job_title || emp.position?.name || emp.position?.title || 'No Position';
+                const deptName = emp.department?.name || emp.department_name || (typeof emp.department === 'string' ? emp.department : '') || 'No Department';
                 const status = (emp.employment_status || 'ACTIVE').toUpperCase();
 
                 return (

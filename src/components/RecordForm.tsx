@@ -6,6 +6,7 @@ import contract from '@/lib/contract.json';
 import { apiFetch } from '@/lib/api';
 import { Modal, Row, title, rows, display } from './DataUI';
 import EmployeeWizardForm from './EmployeeWizardForm';
+import SearchableSelect, { SearchableSelectOption, MultiSearchableSelect } from './SearchableSelect';
 const schemas: Row = contract.schemas;
 export function resolve(s: Row): Row {
   if (s.$ref) return resolve(schemas[s.$ref.split('/').pop()!] || {});
@@ -468,7 +469,7 @@ function Reference({
 }: {
   field: string;
   value: any;
-  onChange: (v: any, row?: Row) => void;
+  onChange: (v: any, row?: Row, extraData?: Row) => void;
   required: boolean;
   resource: string;
   formData?: Row;
@@ -563,98 +564,87 @@ function Reference({
 
   const selectedRow = options.find((r) => String(r.id) === String(value)) || selectedEntity;
 
-  if (field === 'supervisor_id' || field === 'manager_employee_id' || route === 'employees') {
-    const superRows = options.filter(isSupervisorRow);
-    const otherRows = options.filter((r) => !isSupervisorRow(r));
-    const labelTitle = field === 'manager_employee_id' ? 'Department Manager' : field === 'supervisor_id' ? 'Supervisor' : getFieldLabel(field, resource);
+  const fieldLabel = field === 'manager_employee_id' ? 'Department Manager' : field === 'supervisor_id' ? 'Supervisor' : getFieldLabel(field, resource);
 
-    const selectedFallbackLabel = selectedRow
-      ? formatLookupOptionLabel(selectedRow, route)
-      : (
-          formData?.manager_name ||
-          formData?.manager_employee_name ||
-          formData?.manager_employee?.name ||
-          formData?.responsible_employee_name ||
-          formData?.responsible_employee?.name ||
-          formData?.primary_operator_name ||
-          formData?.primary_operator?.name ||
-          formData?.employee_name ||
-          (formData?.employee ? [formData.employee.first_name, formData.employee.last_name].filter(Boolean).join(' ') || formData.employee.name : null) ||
-          (value ? `Selected ${labelTitle} (${String(value).slice(0, 8)}...)` : '')
-        );
+  const selectedFallbackLabel = selectedRow
+    ? formatLookupOptionLabel(selectedRow, route)
+    : (
+        formData?.manager_name ||
+        formData?.manager_employee_name ||
+        formData?.manager_employee?.name ||
+        formData?.responsible_employee_name ||
+        formData?.responsible_employee?.name ||
+        formData?.primary_operator_name ||
+        formData?.primary_operator?.name ||
+        formData?.employee_name ||
+        (formData?.employee ? [formData.employee.first_name, formData.employee.last_name].filter(Boolean).join(' ') || formData.employee.name : null) ||
+        (value ? `Selected ${fieldLabel} (${String(value).slice(0, 8)}...)` : '')
+      );
+
+  const searchableOptions: SearchableSelectOption[] = options.map((r) => ({
+    value: String(r.id),
+    label: formatLookupOptionLabel(r, route),
+    badge: (field === 'supervisor_id' || route === 'employees') && isSupervisorRow(r) ? 'Supervisor' : undefined,
+    raw: r,
+  }));
+
+  if (value && !searchableOptions.some((opt) => String(opt.value) === String(value))) {
+    searchableOptions.unshift({
+      value: String(value),
+      label: selectedFallbackLabel || `Selected ${fieldLabel}`,
+    });
+  }
+
+  if (field === 'assigned_employee_id') {
+    let currentValues: string[] = [];
+    if (Array.isArray(value)) {
+      currentValues = value.map(String).filter(Boolean);
+    } else if (Array.isArray(formData?.assigned_employee_ids)) {
+      currentValues = formData.assigned_employee_ids.map(String).filter(Boolean);
+    } else if (typeof value === 'string' && value.trim()) {
+      currentValues = value.split(',').map((s) => s.trim()).filter(Boolean);
+    } else if (typeof formData?.assigned_employee_id === 'string' && formData.assigned_employee_id.trim()) {
+      currentValues = formData.assigned_employee_id.split(',').map((s) => s.trim()).filter(Boolean);
+    }
 
     return (
       <div className="space-y-1">
-        <input
-          aria-label={'Find ' + labelTitle}
-          className="input-field text-xs"
-          placeholder={`Find ${labelTitle.toLowerCase()} by name…`}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <select
-          aria-label={labelTitle}
-          className="input-field text-xs"
+        <MultiSearchableSelect
+          options={searchableOptions}
+          values={currentValues}
+          onChange={(nextValues, selectedOpts) => {
+            const primaryId = nextValues[0] || '';
+            const commaNames = selectedOpts.map((o) => o.label.replace(/\s*\([^)]*\)/g, '').trim()).join(', ');
+            const matchedRow = options.find((r) => String(r.id) === String(primaryId)) || selectedOpts[0]?.raw;
+
+            const extraUpdates: Row = {
+              assigned_employee_id: primaryId,
+              assigned_employee_ids: nextValues,
+              assigned_employee_name: commaNames,
+              assigned_employee_names: commaNames,
+            };
+            onChange(primaryId, matchedRow, extraUpdates);
+          }}
+          placeholder="Search and select technicians / employees (multiple allowed)..."
           required={required}
-          value={value || ''}
-          onChange={(e) => onChange(e.target.value, options.find((r) => String(r.id) === String(e.target.value)))}
-        >
-          <option value="">Select {labelTitle.toLowerCase()}…</option>
-          {value && !options.some(r => String(r.id) === String(value)) && (
-            <option value={value}>{selectedFallbackLabel || value}</option>
-          )}
-          {superRows.length > 0 && (
-            <optgroup label="Supervisors & Managers">
-              {superRows.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {formatLookupOptionLabel(r, route)}
-                </option>
-              ))}
-            </optgroup>
-          )}
-          <optgroup label={superRows.length > 0 ? "Other Employees" : "All Employees"}>
-            {otherRows.map((r) => (
-              <option key={r.id} value={r.id}>
-                {formatLookupOptionLabel(r, route)}
-              </option>
-            ))}
-          </optgroup>
-        </select>
+        />
         {error && <p className="text-xs text-red-700">{error}</p>}
       </div>
     );
   }
 
-  const selectedFallbackLabel = selectedRow
-    ? formatLookupOptionLabel(selectedRow, route)
-    : (value ? `Selected ${getFieldLabel(field, resource)} (${String(value).slice(0, 8)}...)` : '');
-
   return (
     <div className="space-y-1">
-      <input
-        aria-label={'Find ' + getFieldLabel(field, resource)}
-        className="input-field text-xs"
-        placeholder={field === 'location_id' && selectedProjectId ? 'Find project site location…' : 'Find ' + getFieldLabel(field, resource).toLowerCase() + '…'}
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
-      <select
-        aria-label={getFieldLabel(field, resource)}
-        className="input-field text-xs"
-        required={required}
+      <SearchableSelect
+        options={searchableOptions}
         value={value || ''}
-        onChange={(e) => onChange(e.target.value, options.find((r) => String(r.id) === String(e.target.value)))}
-      >
-        <option value="">Select {getFieldLabel(field, resource).toLowerCase()}…</option>
-        {value && !options.some((r) => String(r.id) === String(value)) && (
-          <option value={value}>{selectedFallbackLabel || value}</option>
-        )}
-        {options.map((r) => (
-          <option key={r.id} value={r.id}>
-            {formatLookupOptionLabel(r, route)}
-          </option>
-        ))}
-      </select>
+        onChange={(val, opt) => {
+          const matchedRow = options.find((r) => String(r.id) === String(val)) || opt?.raw;
+          onChange(val, matchedRow);
+        }}
+        placeholder={`Search and select ${fieldLabel.toLowerCase()}...`}
+        required={required}
+      />
       {error && <p className="text-xs text-red-700">{error}</p>}
       {route === 'inventory/suppliers' && (
         <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center justify-between">
@@ -752,10 +742,15 @@ function Fields({
   const additionalFields = fields.filter(([k]) => !isPrimary(k));
 
   const renderField = ([key, raw]: [string, any]) => {
+    if (key === 'recurrence_interval_days') {
+      const isRec = data.is_recurring === true || data.is_recurring === 'true';
+      if (!isRec) return null;
+    }
+
     const s = resolve(raw as Row);
     const val = data[key] ?? s.default ?? '';
-    const set = (value: any, row?: Row) => {
-      const next = { ...data, [key]: value };
+    const set = (value: any, row?: Row, extraData?: Row) => {
+      const next = { ...data, ...extraData, [key]: value };
       if (key === 'project_id' && data.project_id !== value) {
         next.location_id = '';
       }
@@ -957,25 +952,27 @@ function clean(data: Row, schema: Row): Row {
   return out;
 }
 export default function RecordForm({
-  resource,
+  resource = '',
   operation,
   path,
   initial,
   method,
   onClose,
   onSaved,
+  onSuccess,
   title: customTitle,
   allowFile,
   employeeId,
   employeeData,
 }: {
-  resource: string;
+  resource?: string;
   operation: Row;
   path: string;
   initial?: Row;
   method?: string;
-  onClose: () => void;
-  onSaved: (row: Row) => void;
+  onClose?: () => void;
+  onSaved?: (row: Row) => void;
+  onSuccess?: () => void;
   title?: string;
   allowFile?: boolean;
   employeeId?: string;
@@ -985,7 +982,7 @@ export default function RecordForm({
     (path === '/api/v1/employees' || /^\/api\/v1\/employees\/[^\/]+$/.test(path)) &&
     !path.includes('/create-issue');
   if (isEmployeeMainRecord) {
-    return <EmployeeWizardForm initial={initial} onClose={onClose} onSaved={onSaved} />;
+    return <EmployeeWizardForm initial={initial} onClose={onClose || (() => {})} onSaved={onSaved || (() => {})} />;
   }
   const isAssetMainRecord =
     path === '/api/v1/assets' || /^\/api\/v1\/assets\/[0-9a-f-]{36}$/i.test(path);
@@ -1015,17 +1012,16 @@ export default function RecordForm({
     delete schema.properties.image_url;
   }
   if (schema.properties) {
+    delete schema.properties.file_url;
+    delete schema.properties.file_name;
+    delete schema.properties.mime_type;
+    delete schema.properties.file_size;
+    delete schema.properties.file_hash;
     delete schema.properties.evidence_photo_url;
   }
   if (isAssetMainRecord && schema.properties) {
     delete schema.properties.photo_url;
     delete schema.properties.profile_photo_url;
-    if (initial) {
-      delete schema.properties.current_meter_reading;
-      delete schema.properties.status;
-      delete schema.properties.ownership_type;
-      delete schema.properties.is_active;
-    }
   }
 
   const assetMatch = path.match(
@@ -1037,11 +1033,18 @@ export default function RecordForm({
     'fuel-reductions': 'FUEL_REDUCTION',
     inspections: 'INSPECTION',
     'meter-readings': 'METER',
+    defects: 'DEFECT',
   };
   const logType = assetMatch ? logTypes[assetMatch[2]] : undefined;
   const hasAssetDocument = !!assetMatch && !!schema.properties?.document_id;
   if (hasAssetDocument) delete schema.properties.document_id;
-  const supportsAssetFiles = allowFile || !!logType || hasAssetDocument || resource.includes('receipts');
+  const supportsAssetFiles =
+    allowFile ||
+    !!logType ||
+    hasAssetDocument ||
+    resource.includes('receipts') ||
+    resource.includes('defect') ||
+    path.includes('defect');
   const kind = resource.replace('inventory/', '');
   if (schema.properties?.items && resource.startsWith('inventory/')) {
     const base = [
@@ -1201,7 +1204,8 @@ export default function RecordForm({
             setUploadedCount(index + 1);
           }
         }
-        onSaved(result);
+        if (onSaved) onSaved(result);
+        if (onSuccess) onSuccess();
         return;
       }
       if (isAssetMainRecord) {
@@ -1226,7 +1230,8 @@ export default function RecordForm({
           }
           await apiFetch('/api/v1/asset-media/' + media.id + '/set-primary', { method: 'POST' });
         }
-        onSaved(result);
+        if (onSaved) onSaved(result);
+        if (onSuccess) onSuccess();
         return;
       }
       if (isClientMainRecord) {
@@ -1245,7 +1250,8 @@ export default function RecordForm({
             body: upload,
           });
         }
-        onSaved(result);
+        if (onSaved) onSaved(result);
+        if (onSuccess) onSuccess();
         return;
       }
       if (isItemMainRecord) {
@@ -1267,9 +1273,40 @@ export default function RecordForm({
             result = { ...result, image_url: photoRes.image_url };
           }
         }
-        onSaved(result);
+        if (onSaved) onSaved(result);
+        if (onSuccess) onSuccess();
         return;
       }
+      const isUploadEndpoint =
+        path.includes('/upload') ||
+        path.includes('/resumes') ||
+        resource.includes('upload') ||
+        resource.includes('resumes');
+
+      if (isUploadEndpoint) {
+        if (!file && !initial?.id) {
+          setError('Please select a file to upload.');
+          setBusy(false);
+          return;
+        }
+        const form = new FormData();
+        if (file) {
+          form.append('file', file);
+        }
+        for (const [k, v] of Object.entries(body)) {
+          if (v !== null && v !== undefined && v !== '') {
+            form.append(k, String(v));
+          }
+        }
+        if (!body.title && file?.name) {
+          form.append('title', file.name);
+        }
+        result = await apiFetch(path, { method: 'POST', body: form });
+        if (onSaved) onSaved(result);
+        if (onSuccess) onSuccess();
+        return;
+      }
+
       if (file && resource === 'hr/me/leave-requests') {
         const form = new FormData();
         for (const [k, v] of Object.entries(body)) form.append(k, String(v));
@@ -1316,7 +1353,8 @@ export default function RecordForm({
           } catch {}
         }
       }
-      onSaved(result);
+      if (onSaved) onSaved(result);
+      if (onSuccess) onSuccess();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save.');
     } finally {
@@ -1337,7 +1375,7 @@ export default function RecordForm({
   const formDesc = formExplanations[resource] || formExplanations[resource.replace('inventory/', '')];
 
   return (
-    <Modal name={modalName} onClose={onClose}>
+    <Modal name={modalName} onClose={onClose || (() => {})}>
       <form onSubmit={submit} className="space-y-5">
         {formDesc && (
           <p className="text-xs text-primary/90 bg-primary/5 border border-primary/10 rounded-lg p-3 flex items-start gap-2">
@@ -1462,14 +1500,19 @@ export default function RecordForm({
         )}
         {(allowFile ||
           employeeId ||
+          path.includes('/upload') ||
+          path.includes('/resumes') ||
           resource === 'employees' ||
           resource === 'hr/me/leave-requests') && (
           <label className="block text-xs font-semibold border-t pt-3">
-            Attach Supporting File / Certificate (Optional)
+            {path.includes('/upload') || path.includes('/resumes')
+              ? 'Select File to Upload *'
+              : 'Attach Supporting File / Certificate (Optional)'}
             <input
+              required={path.includes('/upload') || path.includes('/resumes')}
               className="input-field mt-1 text-xs p-1"
               type="file"
-              accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+              accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt"
               onChange={(e) => setFile(e.target.files?.[0] || null)}
             />
           </label>

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Sparkles, BrainCircuit, Send, RefreshCw, Lock, Wrench, Fuel, Users, FolderKanban, Package, TrendingUp, Database, Search, Bot, User as UserIcon, X, Filter, MapPin, Building2, Calendar, Printer, Play, Tag, ExternalLink,  } from 'lucide-react';
+import { Sparkles, BrainCircuit, Send, RefreshCw, Lock, Wrench, Fuel, Users, FolderKanban, Package, TrendingUp, Database, Search, Bot, User as UserIcon, X, Filter, MapPin, Building2, Calendar, Printer, Play, Tag, ExternalLink, AlertTriangle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,  } from 'recharts';
 import AppLayout from '@/components/AppLayout';
 import AppLogo from '@/components/ui/AppLogo';
@@ -20,6 +20,8 @@ interface IntelligenceMetrics {
     breakdown?: number;
     standby?: number;
     utilization_rate_pct?: number;
+    open_defects_count?: number;
+    critical_defects_count?: number;
     by_category?: Array<{ category: string; count: number }>;
   };
   fuel_efficiency?: {
@@ -52,6 +54,33 @@ interface IntelligenceMetrics {
     total_locations?: number;
     total_clients?: number;
     active_maintenance_jobs?: number;
+    open_defects_count?: number;
+    critical_defects_count?: number;
+  };
+  defect_intelligence?: {
+    open_defects_count?: number;
+    critical_defects_count?: number;
+    high_defects_count?: number;
+    medium_defects_count?: number;
+    low_defects_count?: number;
+    defects_by_severity?: Array<{ severity: string; count: number }>;
+    active_maintenance_jobs?: number;
+  };
+  site_intelligence?: {
+    total_active_sites?: number;
+    site_capacity_breakdown?: Array<{
+      site_id: string;
+      site_name: string;
+      fleet_count: number;
+      workforce_count: number;
+      open_defects: number;
+      stock_value: number;
+    }>;
+  };
+  efficiency_analytics?: {
+    fleet_availability_ratio?: number;
+    workforce_idle_count?: number;
+    estimated_fuel_cost_usd?: number;
   };
 }
 
@@ -435,6 +464,9 @@ export default function IntelligencePage() {
   const wp = metrics?.workforce_productivity;
   const ii = metrics?.inventory_intelligence;
   const fs = metrics?.financial_summary;
+  const di = metrics?.defect_intelligence;
+  const si = metrics?.site_intelligence;
+  const ea = metrics?.efficiency_analytics;
 
   const matchSearch = (textStr: string) => {
     if (!searchQuery.trim()) return true;
@@ -828,6 +860,22 @@ export default function IntelligencePage() {
             </div>
           </div>
 
+          {/* Mechanical & Defect Risk */}
+          <div className="kpi-card">
+            <div className="flex items-center justify-between mb-2">
+              <span className="kpi-label">Critical Defect Risk</span>
+              <div className={`w-7 h-7 rounded flex items-center justify-center ${(fu?.critical_defects_count ?? 0) > 0 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                <AlertTriangle size={15} />
+              </div>
+            </div>
+            <div className={`kpi-value ${(fu?.critical_defects_count ?? 0) > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
+              {loadingMetrics ? '—' : (fu?.critical_defects_count ?? fs?.critical_defects_count ?? 0)}
+            </div>
+            <div className="kpi-sub mt-1 text-2xs">
+              {(fu?.open_defects_count ?? fs?.open_defects_count ?? 0)} total open equipment defects
+            </div>
+          </div>
+
           {/* Fuel Index */}
           <div className="kpi-card">
             <div className="flex items-center justify-between mb-2">
@@ -888,23 +936,7 @@ export default function IntelligencePage() {
               {loadingMetrics ? '—' : `$${((ii?.total_stock_valuation ?? 0) / 1000).toFixed(1)}k`}
             </div>
             <div className="kpi-sub mt-1 text-2xs">
-              {ii?.total_catalog_items ?? 0} catalog items
-            </div>
-          </div>
-
-          {/* Operational Sites */}
-          <div className="kpi-card">
-            <div className="flex items-center justify-between mb-2">
-              <span className="kpi-label">Active Sites</span>
-              <div className="w-7 h-7 rounded flex items-center justify-center bg-amber-50 text-amber-700">
-                <MapPin size={15} />
-              </div>
-            </div>
-            <div className="kpi-value text-amber-700">
-              {loadingMetrics ? '—' : fs?.total_locations ?? 0}
-            </div>
-            <div className="kpi-sub mt-1 text-2xs">
-              {fs?.total_projects ?? 0} active projects
+              {ii?.total_catalog_items ?? 0} catalog items ({fs?.total_locations ?? 0} sites)
             </div>
           </div>
         </div>
@@ -1050,6 +1082,162 @@ export default function IntelligencePage() {
               </ResponsiveContainer>
             )}
           </div>
+
+          {/* Chart 5: Equipment Defect Severity Breakdown */}
+          <div className="card p-5 xl:col-span-2">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm font-700 text-foreground">Defect & Maintenance Risk Heatmap</p>
+                <p className="text-xs text-muted-foreground">Open equipment defects classified by operational severity</p>
+              </div>
+              <span className="badge badge-warning">Defect Telemetry</span>
+            </div>
+
+            {loadingMetrics ? (
+              <div className="h-[200px] bg-muted animate-pulse rounded" />
+            ) : (di?.defects_by_severity || []).length === 0 ? (
+              <div className="h-[200px] flex items-center justify-center text-xs text-muted-foreground">
+                No active defect logs found in database for current scope.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={di?.defects_by_severity || []} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} barSize={32}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis dataKey="severity" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip cursor={{ fill: 'var(--muted)', opacity: 0.5 }} />
+                  <Bar dataKey="count" name="Open Defects" radius={[4, 4, 0, 0]}>
+                    {(di?.defects_by_severity || []).map((entry, index) => (
+                      <Cell
+                        key={`def-cell-${entry.severity}-${index}`}
+                        fill={entry.severity === 'Critical' ? '#DC2626' : entry.severity === 'High' ? '#D97706' : entry.severity === 'Medium' ? '#2563EB' : '#16A34A'}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        {/* Site Operational Capacity & Risk Matrix Table */}
+        <div className="card p-5 space-y-4">
+          <div className="flex items-center justify-between border-b pb-3 border-border">
+            <div>
+              <h3 className="text-sm font-700 text-foreground flex items-center gap-2">
+                <MapPin size={17} className="text-primary" />
+                <span>Site Operational Capacity & Risk Matrix</span>
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Comparative analytical breakdown of fleet equipment, active workforce, open defects, and stock valuation per site
+              </p>
+            </div>
+            <span className="badge badge-neutral text-xs">
+              {si?.total_active_sites ?? 0} Operational Sites
+            </span>
+          </div>
+
+          {loadingMetrics ? (
+            <div className="h-32 bg-muted animate-pulse rounded" />
+          ) : (si?.site_capacity_breakdown || []).length === 0 ? (
+            <div className="p-6 text-center text-xs text-muted-foreground">
+              No active operational site telemetry available for current filter criteria.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40 text-muted-foreground font-600">
+                    <th className="py-2.5 px-3">Site / Location Name</th>
+                    <th className="py-2.5 px-3 text-center">Fleet Assets</th>
+                    <th className="py-2.5 px-3 text-center">Assigned Workforce</th>
+                    <th className="py-2.5 px-3 text-center">Open Defects</th>
+                    <th className="py-2.5 px-3 text-right">Stock Valuation ($)</th>
+                    <th className="py-2.5 px-3 text-center">Interactive Scope</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60 font-500">
+                  {(si?.site_capacity_breakdown || []).map((site, idx) => (
+                    <tr key={idx} className="hover:bg-muted/30 transition-colors">
+                      <td className="py-2.5 px-3 font-700 text-foreground flex items-center gap-2">
+                        <MapPin size={13} className="text-primary flex-shrink-0" />
+                        <span>{site.site_name}</span>
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span className="badge badge-neutral">{site.fleet_count} assets</span>
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span className="badge badge-info">{site.workforce_count} staff</span>
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        {site.open_defects > 0 ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-2xs font-700 bg-rose-100 text-rose-800">
+                            <AlertTriangle size={10} />
+                            <span>{site.open_defects} open</span>
+                          </span>
+                        ) : (
+                          <span className="text-emerald-600 font-600">0 defects</span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-700 text-foreground">
+                        ${(site.stock_value || 0).toLocaleString()}
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <button
+                          onClick={() => setLocationId(site.site_id)}
+                          className="px-2.5 py-1 rounded bg-primary/10 text-primary hover:bg-primary/20 text-xs font-600 transition-colors"
+                        >
+                          Filter Site
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Operational Efficiency & Cost Projections */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="card p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center flex-shrink-0">
+              <Fuel size={20} />
+            </div>
+            <div>
+              <span className="text-2xs font-700 text-muted-foreground uppercase tracking-wider block">Est. Fuel Cost Projection</span>
+              <span className="text-lg font-800 text-foreground block mt-0.5">
+                ${(ea?.estimated_fuel_cost_usd ?? 0).toLocaleString()}
+              </span>
+              <span className="text-2xs text-muted-foreground">Based on logged consumption ($1.45/L)</span>
+            </div>
+          </div>
+
+          <div className="card p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center flex-shrink-0">
+              <Users size={20} />
+            </div>
+            <div>
+              <span className="text-2xs font-700 text-muted-foreground uppercase tracking-wider block">Idle Workforce Personnel</span>
+              <span className="text-lg font-800 text-foreground block mt-0.5">
+                {ea?.workforce_idle_count ?? 0} staff available
+              </span>
+              <span className="text-2xs text-muted-foreground">Unassigned to active projects</span>
+            </div>
+          </div>
+
+          <div className="card p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center flex-shrink-0">
+              <Wrench size={20} />
+            </div>
+            <div>
+              <span className="text-2xs font-700 text-muted-foreground uppercase tracking-wider block">Fleet Ready Availability</span>
+              <span className="text-lg font-800 text-emerald-700 block mt-0.5">
+                {ea?.fleet_availability_ratio ?? 0}% ready
+              </span>
+              <span className="text-2xs text-muted-foreground">Assets available for dispatch</span>
+            </div>
+          </div>
         </div>
 
         {/* Operational Telemetry Summary */}
@@ -1088,6 +1276,19 @@ export default function IntelligencePage() {
                 <span className="text-xl font-800 text-rose-800 mt-1 block">{fu?.breakdown ?? 0}</span>
                 <span className="text-[11px] text-rose-600 mt-0.5 block font-500">Requires defect resolution</span>
               </div>
+            </div>
+
+            <div className="pt-3 border-t border-border flex items-center justify-between text-xs">
+              <div className="flex items-center gap-1.5">
+                <AlertTriangle size={14} className={(fu?.critical_defects_count ?? fs?.critical_defects_count ?? 0) > 0 ? "text-rose-600 animate-pulse" : "text-emerald-600"} />
+                <span className="font-600 text-foreground">Equipment Defect Telemetry:</span>
+                <span className="text-muted-foreground">
+                  <strong className="text-foreground">{fu?.open_defects_count ?? fs?.open_defects_count ?? 0}</strong> open defects
+                </span>
+              </div>
+              <span className={`px-2 py-0.5 rounded text-2xs font-700 ${(fu?.critical_defects_count ?? fs?.critical_defects_count ?? 0) > 0 ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                {fu?.critical_defects_count ?? fs?.critical_defects_count ?? 0} Critical
+              </span>
             </div>
           </div>
 

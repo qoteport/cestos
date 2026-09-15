@@ -7,9 +7,13 @@ import { useAuth } from './AuthProvider';
 import { useData, State, Row, rows, Modal, title } from './DataUI';
 import SystemManual from './SystemManual';
 
-export default function AdminWorkspace() {
+export default function AdminWorkspace({
+  initialTab = 'users',
+}: {
+  initialTab?: 'users' | 'roles' | 'leave' | 'audit' | 'manual';
+} = {}) {
   const auth = useAuth();
-  const [tab, setTab] = useState<'users' | 'roles' | 'leave' | 'audit' | 'manual'>('users');
+  const [tab, setTab] = useState<'users' | 'roles' | 'leave' | 'audit' | 'manual'>(initialTab);
   const [search, setSearch] = useState('');
   const [leaveStatusFilter, setLeaveStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
   const [actionError, setActionError] = useState('');

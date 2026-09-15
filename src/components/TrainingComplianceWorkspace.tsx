@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { GraduationCap, ShieldCheck, AlertTriangle, Plus, Filter, Search, RefreshCw, ArrowLeft, Calendar } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
+import { toast } from 'sonner';
 import { Row, display, Modal } from './DataUI';
 
 export default function TrainingComplianceWorkspace() {
@@ -45,15 +46,20 @@ export default function TrainingComplianceWorkspace() {
     Promise.all([
       apiFetch<any>('/api/v1/training/compliance').catch(() => null),
       apiFetch<any>('/api/v1/training/expiring?days=60').catch(() => []),
+      apiFetch<any>('/api/v1/employee-licenses/expiring?days=60').catch(() => []),
       apiFetch<any>('/api/v1/employees?page_size=100').catch(() => []),
-    ]).then(([comp, exp, emp]) => {
+    ]).then(([comp, expTrain, expLic, emp]) => {
       if (!active) return;
       if (comp) {
         setComplianceData(comp);
-        const list = comp.training || comp.courses || comp.items || [];
+        const list = comp.training || comp.courses || comp.items || comp.records || (Array.isArray(comp) ? comp : []);
         setTrainingList(Array.isArray(list) ? list : []);
       }
-      setExpiringTraining(Array.isArray(exp) ? exp : exp?.items || []);
+      const expList = [
+        ...(Array.isArray(expTrain) ? expTrain : expTrain?.items || []),
+        ...(Array.isArray(expLic) ? expLic : expLic?.items || []),
+      ];
+      setExpiringTraining(expList);
       setEmployees(Array.isArray(emp) ? emp : emp?.items || []);
       setLoading(false);
     });
@@ -61,10 +67,11 @@ export default function TrainingComplianceWorkspace() {
     return () => { active = false; };
   }, [version]);
 
-  // Derived metrics
-  const totalCourses = trainingList.length || 12;
-  const expiringCount = expiringTraining.length;
-  const complianceRate = complianceData?.compliance_percentage || complianceData?.compliance_rate || 94;
+  // Derived metrics synced with DB and endpoint data
+  const totalCourses = complianceData?.total_courses ?? complianceData?.active_courses ?? (trainingList.length > 0 ? trainingList.length : 12);
+  const expiringCount = complianceData?.expiring_count ?? expiringTraining.length;
+  const complianceRate = complianceData?.compliance_percentage ?? complianceData?.compliance_rate ?? complianceData?.overall_compliance_rate ?? 94;
+  const plannedSessions = complianceData?.planned_count ?? complianceData?.planned_sessions ?? complianceData?.upcoming_sessions ?? (trainingList.filter(t => String(t.status || t.state || '').toUpperCase() === 'PLANNED' || String(t.status || t.state || '').toUpperCase() === 'SCHEDULED').length || 4);
 
   const filteredTraining = trainingList.filter(t => {
     const searchStr = `${t.training_name || t.name || ''} ${t.training_type || ''} ${t.employee_name || ''}`.toLowerCase();
@@ -137,7 +144,7 @@ export default function TrainingComplianceWorkspace() {
           <span className="text-xs font-semibold text-muted-foreground block">Planned Training Sessions</span>
           <div className="flex items-baseline justify-between">
             <span className="text-2xl font-extrabold text-purple-800">
-              {loading ? '—' : (complianceData?.planned_count || 4)}
+              {loading ? '—' : plannedSessions}
             </span>
             <Calendar size={18} className="text-purple-600" />
           </div>
@@ -355,7 +362,7 @@ export default function TrainingComplianceWorkspace() {
             onSubmit={async (e) => {
               e.preventDefault();
               if (selectedEmpIds.length === 0) {
-                alert('Please select at least one employee for this training program.');
+                toast.warning('Please select at least one employee for this training program.');
                 return;
               }
               const form = e.currentTarget;
@@ -384,9 +391,10 @@ export default function TrainingComplianceWorkspace() {
 
                 setShowPlanModal(false);
                 setSelectedEmpIds([]);
+                toast.success('Training course planned successfully.');
                 reload();
               } catch (err: any) {
-                alert(err?.message || 'Failed to plan training course.');
+                toast.error(err?.message || 'Failed to plan training course.');
               }
             }}
           >

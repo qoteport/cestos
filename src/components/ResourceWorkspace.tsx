@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Plus, RefreshCw, Search, ArrowLeft, ArrowRight, ExternalLink } from 'lucide-react';
+import { Plus, RefreshCw, Search, ArrowLeft, ArrowRight, ExternalLink, Truck, Clock, CheckCircle, MapPin, Eye } from 'lucide-react';
 import contract from '@/lib/contract.json';
 import { apiFetch, apiFetchBlob } from '@/lib/api';
 import { useAuth } from './AuthProvider';
@@ -21,6 +21,78 @@ import StoreDetailView from './StoreDetailView';
 import ItemDetailView from './ItemDetailView';
 import NotificationWorkspace from './NotificationWorkspace';
 import AdminWorkspace from './AdminWorkspace';
+import IncidentReportingWorkspace from './IncidentReportingWorkspace';
+import LeaveManagementWorkspace from './LeaveManagementWorkspace';
+
+function getEmployeeFullName(emp: Row): string {
+  if (!emp) return 'Employee';
+  const nameParts = [emp.first_name, emp.last_name].filter(Boolean).join(' ');
+  if (nameParts.trim()) return nameParts.trim();
+  if (emp.name && typeof emp.name === 'string') return emp.name;
+  if (emp.full_name && typeof emp.full_name === 'string') return emp.full_name;
+  if (emp.employee_name && typeof emp.employee_name === 'string') return emp.employee_name;
+  if (emp.user && typeof emp.user === 'object') {
+    const uParts = [emp.user.first_name, emp.user.last_name].filter(Boolean).join(' ');
+    if (uParts.trim()) return uParts.trim();
+    if (emp.user.name) return emp.user.name;
+    if (emp.user.email) return emp.user.email;
+  }
+  if (emp.employee_number) return `Staff #${emp.employee_number}`;
+  if (emp.id) return `Staff #${String(emp.id).slice(0, 8)}`;
+  return 'Employee';
+}
+
+function getEmployeeDepartment(emp: Row, departments: Row[]): string {
+  if (!emp) return 'General Operations';
+  if (emp.department_name && typeof emp.department_name === 'string') return emp.department_name;
+  if (emp.department && typeof emp.department === 'object' && emp.department.name) return emp.department.name;
+  if (emp.department_title && typeof emp.department_title === 'string') return emp.department_title;
+  if (emp.department_id) {
+    const match = departments.find((d) => String(d.id) === String(emp.department_id));
+    if (match) return match.name || match.title || 'Department';
+  }
+  return 'General Operations';
+}
+
+function getEmployeeRole(emp: Row, positions: Row[]): string {
+  if (!emp) return 'Operations Staff';
+  if (emp.position_name && typeof emp.position_name === 'string') return emp.position_name;
+  if (emp.position && typeof emp.position === 'object' && emp.position.name) return emp.position.name;
+  if (emp.job_title && typeof emp.job_title === 'string') return emp.job_title;
+  if (emp.title && typeof emp.title === 'string') return emp.title;
+  if (emp.position_title && typeof emp.position_title === 'string') return emp.position_title;
+  if (emp.user_role && typeof emp.user_role === 'string') return emp.user_role;
+  if (emp.position_id) {
+    const match = positions.find((p) => String(p.id) === String(emp.position_id));
+    if (match) return match.name || match.title || 'Position';
+  }
+  return 'Operations Staff';
+}
+
+function getEmployeeLeaveInfo(emp: Row, leaveRequests: Row[]): { onLeave: boolean; leaveDetails?: Row } {
+  if (emp.on_leave === true || emp.employment_status === 'ON_LEAVE' || emp.status === 'ON_LEAVE') {
+    return { onLeave: true };
+  }
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const activeLeave = leaveRequests.find((l) => {
+    if (String(l.employee_id) !== String(emp.id)) return false;
+    if (l.status !== 'APPROVED') return false;
+    if (!l.start_date || !l.end_date) return false;
+    return l.start_date <= todayStr && l.end_date >= todayStr;
+  });
+  if (activeLeave) {
+    return { onLeave: true, leaveDetails: activeLeave };
+  }
+  return { onLeave: false };
+}
+
+import EquipmentComponentsWorkspace from './EquipmentComponentsWorkspace';
+import EquipmentMeterReadingsWorkspace from './EquipmentMeterReadingsWorkspace';
+import EquipmentMaintenanceWorkspace from './EquipmentMaintenanceWorkspace';
+import EquipmentWorkOrdersWorkspace from './EquipmentWorkOrdersWorkspace';
+import EquipmentDefectsWorkspace from './EquipmentDefectsWorkspace';
+import EquipmentInspectionsWorkspace from './EquipmentInspectionsWorkspace';
+import EquipmentFuelLogsWorkspace from './EquipmentFuelLogsWorkspace';
 
 const routes: Row = contract.routes;
 export function operation(path: string, method: string): Row | null {
@@ -55,39 +127,51 @@ function ClientLogo({ clientId }: { clientId: string }) {
     </div>
   );
 }
-export default function ResourceWorkspace({ resource }: { resource: string }) {
-  const searchParams = useSearchParams();
-  if (resource === 'projects') return <ProjectRegister />;
-  if (resource === 'employees/available') return <EmployeeAvailabilityWorkspace />;
-  if (resource === 'rotations/current' || resource === 'rotations/upcoming') return <RotationsWorkspace />;
-  if (resource === 'training/compliance') return <TrainingComplianceWorkspace />;
-  if (resource === 'employee-documents/expiring') return <ExpiringDocumentsWorkspace />;
-  if (resource === 'assets/expiring-documents' || resource === 'assets/expiring') return <EquipmentExpiringDocumentsWorkspace />;
-  if (resource === 'hr/notifications' || resource === 'notifications' || resource === 'notification-schedules') return <NotificationWorkspace />;
-  if (resource === 'admin' || resource === 'users' || resource === 'roles' || resource === 'admin/users' || resource === 'admin/roles' || resource === 'admin/leave') return <AdminWorkspace />;
+function normalizeResource(res: string): string {
+  if (res === 'inventory/stock-register') return 'inventory/stock';
+  if (res === 'inventory/audits') return 'inventory/stock-counts';
+  if (res === 'inventory/movements') return 'inventory/transactions';
+  if (res === 'inventory/demand-forecast') return 'inventory/forecast';
+  if (res === 'inventory/policies') return 'inventory/stock-policies';
+  return res;
+}
 
-  const matchStore = /^(inventory\/stores|stores)\/([0-9a-f-]{36})$/i.exec(resource);
+export default function ResourceWorkspace({ resource }: { resource: string }) {
+  const normResource = normalizeResource(resource);
+  const searchParams = useSearchParams();
+  if (normResource === 'projects') return <ProjectRegister />;
+  if (normResource === 'employees/available') return <EmployeeAvailabilityWorkspace />;
+  if (normResource === 'rotations/current' || normResource === 'rotations/upcoming') return <RotationsWorkspace />;
+  if (normResource === 'training/compliance') return <TrainingComplianceWorkspace />;
+  if (normResource === 'employee-documents/expiring') return <ExpiringDocumentsWorkspace />;
+  if (normResource === 'assets/expiring-documents' || normResource === 'assets/expiring') return <EquipmentExpiringDocumentsWorkspace />;
+  if (normResource === 'hr/notifications' || normResource === 'notifications' || normResource === 'notification-schedules') return <NotificationWorkspace />;
+  if (normResource === 'admin/leave' || normResource === 'leave-management' || normResource === 'hr/leave-requests' || normResource === 'employees/leave-requests' || normResource === 'leaves' || normResource === 'leave') return <LeaveManagementWorkspace />;
+  if (normResource === 'admin' || normResource === 'users' || normResource === 'roles' || normResource === 'admin/users' || normResource === 'admin/roles') return <AdminWorkspace initialTab="users" />;
+  if (normResource === 'incidents' || normResource === 'hr/incidents' || normResource === 'safety/incidents' || normResource === 'incident-reports') return <IncidentReportingWorkspace />;
+
+  // Standalone Equipment Workspaces
+  if (normResource === 'components' || normResource === 'assets/components') return <EquipmentComponentsWorkspace />;
+  if (normResource === 'assets/meter-readings' || normResource === 'meter-readings' || normResource === 'meter_readings') return <EquipmentMeterReadingsWorkspace />;
+  if (normResource === 'maintenance' || normResource === 'assets/maintenance') return <EquipmentMaintenanceWorkspace />;
+  if (normResource === 'maintenance/work-orders' || normResource === 'work-orders' || normResource === 'work_orders') return <EquipmentWorkOrdersWorkspace />;
+  if (normResource === 'maintenance/defects' || normResource === 'defects' || normResource === 'assets/defects') return <EquipmentDefectsWorkspace />;
+  if (normResource === 'inspections' || normResource === 'assets/inspections') return <EquipmentInspectionsWorkspace />;
+  if (normResource === 'fuel-logs' || normResource === 'fuel_logs' || normResource === 'assets/fuel-logs') return <EquipmentFuelLogsWorkspace />;
+
+  const matchStore = /^(inventory\/stores|stores)\/([0-9a-f-]{36})$/i.exec(normResource);
   if (matchStore) return <StoreDetailView storeId={matchStore[2]} />;
 
-  const matchItem = /^(inventory\/items|items)\/([0-9a-f-]{36})$/i.exec(resource);
+  const matchItem = /^(inventory\/items|items)\/([0-9a-f-]{36})$/i.exec(normResource);
   if (matchItem) return <ItemDetailView itemId={matchItem[2]} />;
 
-  const match = /^(employees|assets)\/([0-9a-f-]{36}|me)$/i.exec(resource);
-  if (match)
-    return match[1] === 'employees' ? (
-      <EmployeeDetailView employeeId={match[2]} />
-    ) : (
-      <AssetDetailView assetId={match[2]} />
-    );
+  const matchAsset = /^(assets)\/([0-9a-f-]{36})$/i.exec(normResource);
+  if (matchAsset) return <AssetDetailView assetId={matchAsset[2]} />;
 
-  if (resource === 'employees') {
-    const isAll = searchParams.get('view') === 'all' || searchParams.has('search') || searchParams.has('page');
-    if (!isAll) {
-      return <EmployeeDetailView employeeId="me" />;
-    }
-  }
+  const matchEmployee = /^(employees)\/([0-9a-f-]{36}|me)$/i.exec(normResource);
+  if (matchEmployee) return <EmployeeDetailView employeeId={matchEmployee[2]} />;
 
-  return <ResourceList key={resource} resource={resource} />;
+  return <ResourceList key={normResource} resource={normResource} />;
 }
 
 function ResourceList({ resource }: { resource: string }) {
@@ -103,12 +187,68 @@ function ResourceList({ resource }: { resource: string }) {
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
+  const [departments, setDepartments] = useState<Row[]>([]);
+  const [positions, setPositions] = useState<Row[]>([]);
+  const [roles, setRoles] = useState<Row[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<Row[]>([]);
+  const [deptFilter, setDeptFilter] = useState('');
+  const [posFilter, setPosFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+
   useEffect(() => {
     const value = queryParam;
     setSearch(value);
     setQuery(value);
     setPage(1);
   }, [resource, queryParam]);
+
+  useEffect(() => {
+    if (resource !== 'employees') return;
+    let active = true;
+    apiFetch<any>('/api/v1/departments?page_size=100')
+      .then((d) => {
+        if (!active) return;
+        setDepartments(Array.isArray(d) ? d : d.items || []);
+      })
+      .catch(() => {});
+    apiFetch<any>('/api/v1/positions?page_size=100')
+      .then((d) => {
+        if (!active) return;
+        setPositions(Array.isArray(d) ? d : d.items || []);
+      })
+      .catch(() => {});
+    apiFetch<any>('/api/v1/employees/leave-requests/all')
+      .catch(() => apiFetch<any>('/api/v1/hr/leave-requests'))
+      .then((d) => {
+        if (!active) return;
+        const lList = Array.isArray(d) ? d : d?.items || [];
+        setLeaveRequests(lList);
+      })
+      .catch(() => {});
+    apiFetch<any>('/api/v1/users/roles/all')
+      .then((d) => {
+        if (!active) return;
+        const rList = Array.isArray(d) ? d : d.items || [];
+        setRoles(rList);
+      })
+      .catch(() => {
+        if (active) {
+          setRoles([
+            { id: 'system_administrator', name: 'System Administrator' },
+            { id: 'hr_manager', name: 'HR Manager' },
+            { id: 'project_manager', name: 'Project Manager' },
+            { id: 'site_supervisor', name: 'Site Supervisor' },
+            { id: 'field_worker', name: 'Field Worker' },
+            { id: 'storekeeper', name: 'Storekeeper' },
+            { id: 'operations_lead', name: 'Operations Lead' },
+          ]);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [resource]);
+
   const [selected, setSelected] = useState<Row | null>(null);
   const [editing, setEditing] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -116,9 +256,44 @@ function ResourceList({ resource }: { resource: string }) {
   if (read?.parameters?.includes('page')) params.set('page', String(page));
   if (read?.parameters?.includes('page_size')) params.set('page_size', '20');
   if (query && read?.parameters?.includes('search')) params.set('search', query);
+  if (deptFilter && read?.parameters?.includes('department_id')) params.set('department_id', deptFilter);
+  if (posFilter && read?.parameters?.includes('position_id')) params.set('position_id', posFilter);
   const req = useData(allowed(read) ? path + '?' + params : null);
   const list = rows(req.data);
-  const total = req.data?.total ?? list.length;
+
+  let displayList = list;
+  if (resource === 'employees') {
+    if (deptFilter) {
+      displayList = displayList.filter((r) => {
+        const dId = r.department_id || r.department?.id;
+        const dName = (r.department_name || r.department?.name || r.department || '').toString().toLowerCase();
+        return dId === deptFilter || dName === deptFilter.toLowerCase();
+      });
+    }
+    if (posFilter) {
+      displayList = displayList.filter((r) => {
+        const pId = r.position_id || r.position?.id;
+        const pTitle = (r.job_title || r.position?.title || r.position?.name || r.position || '').toString().toLowerCase();
+        return pId === posFilter || pTitle === posFilter.toLowerCase();
+      });
+    }
+    if (roleFilter) {
+      displayList = displayList.filter((r) => {
+        const rVal = (
+          r.user_role ||
+          r.role ||
+          r.user?.role ||
+          r.system_role ||
+          (Array.isArray(r.roles) ? r.roles.map((x: any) => x.name || x.code || x).join(' ') : '')
+        )
+          .toString()
+          .toLowerCase();
+        return rVal.includes(roleFilter.toLowerCase());
+      });
+    }
+  }
+
+  const total = req.data?.total ?? displayList.length;
   const pages = req.data?.pages ?? Math.max(1, Math.ceil(total / 20));
   const label = title(resource.split('/').pop()!);
   const detail = useData(
@@ -244,7 +419,82 @@ function ResourceList({ resource }: { resource: string }) {
               setPage(1);
             }}
           >
-            {read.parameters?.includes('search') ? (
+            {resource === 'employees' ? (
+              <div className="flex flex-wrap gap-2 items-center w-full">
+                <input
+                  aria-label={'Search ' + label}
+                  className="input-field flex-1 min-w-full"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search employee name, number, email..."
+                />
+                <select
+                  aria-label="Filter by department"
+                  className="input-field w-auto min-w-[150px] bg-background text-xs"
+                  value={deptFilter}
+                  onChange={(e) => {
+                    setDeptFilter(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="">All Departments</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  aria-label="Filter by position"
+                  className="input-field w-auto min-w-[150px] bg-background text-xs"
+                  value={posFilter}
+                  onChange={(e) => {
+                    setPosFilter(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="">All Positions</option>
+                  {positions.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.title || p.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  aria-label="Filter by user role"
+                  className="input-field w-auto min-w-[150px] bg-background text-xs"
+                  value={roleFilter}
+                  onChange={(e) => {
+                    setRoleFilter(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="">All User Roles</option>
+                  {roles.map((r) => (
+                    <option key={r.id || r.code || r.name} value={r.name || r.code || r.id}>
+                      {r.name || r.title || r.code}
+                    </option>
+                  ))}
+                </select>
+              
+                {(search || deptFilter || posFilter || roleFilter) && (
+                  <button
+                    type="button"
+                    className="btn-secondary text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      setSearch('');
+                      setQuery('');
+                      setDeptFilter('');
+                      setPosFilter('');
+                      setRoleFilter('');
+                      setPage(1);
+                    }}
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            ) : read.parameters?.includes('search') ? (
               <>
                 <input
                   aria-label={'Search ' + label}
@@ -266,26 +516,239 @@ function ResourceList({ resource }: { resource: string }) {
           </form>
           <State loading={req.loading} error={req.error} retry={req.reload}>
             <div className="card overflow-hidden">
-              <Table
-                data={list}
-                onSelect={(row) => {
-                  if (resource === 'inventory/stores' || resource === 'stores') {
-                    router.push('/workspace/inventory/stores/' + row.id);
-                  } else if (resource === 'hr/salaries' && row.employee_id) {
-                    router.push('/workspace/employees/' + row.employee_id);
-                  } else if (resource === 'employees') {
-                    router.push('/workspace/employees/' + row.id);
-                  } else if (resource === 'assets') {
-                    router.push('/workspace/assets/' + row.id);
-                  } else {
-                    setSelected(row);
-                  }
-                }}
-              />
+              {resource === 'employees' ? (
+                displayList.length === 0 ? (
+                  <div className="py-12 text-center text-muted-foreground space-y-2">
+                    <p className="text-sm font-semibold">No employees found matching filter criteria.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-muted text-muted-foreground font-semibold border-b">
+                        <tr>
+                          <th className="p-3">Employee Name</th>
+                          <th className="p-3">Department & Role</th>
+                          <th className="p-3">Status</th>
+                          <th className="p-3">Home Location</th>
+                          <th className="p-3">Contact</th>
+                          <th className="p-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {displayList.map((emp) => {
+                          const fullName = getEmployeeFullName(emp);
+                          const roleName = getEmployeeRole(emp, positions);
+                          const deptName = getEmployeeDepartment(emp, departments);
+                          const { onLeave } = getEmployeeLeaveInfo(emp, leaveRequests);
+                          const empStatus = (emp.employment_status || emp.status || 'ACTIVE').toString().toUpperCase();
+
+                          return (
+                            <tr key={emp.id} className="hover:bg-muted/30 transition-colors">
+                              <td className="p-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-xs shrink-0 border border-primary/20">
+                                    {fullName.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <Link
+                                      href={`/workspace/employees/${emp.id}`}
+                                      className="font-bold text-foreground hover:text-primary transition-colors block"
+                                    >
+                                      {fullName}
+                                    </Link>
+                                    <span className="text-[11px] text-muted-foreground">
+                                      ID: {emp.employee_number || String(emp.id).slice(0, 8)}
+                                    </span>
+                                  </div>
+                                </div>
+                              </td>
+
+                              <td className="p-3">
+                                <span className="font-semibold text-foreground block">{display(roleName)}</span>
+                                <span className="text-muted-foreground text-[11px]">{display(deptName)}</span>
+                              </td>
+
+                              <td className="p-3">
+                                {onLeave ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-900 border border-amber-300">
+                                    <Clock size={10} /> On Leave
+                                  </span>
+                                ) : empStatus === 'ACTIVE' || empStatus === 'EMPLOYED' ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    <CheckCircle size={10} /> Active / Available
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-800 border border-slate-200">
+                                    {empStatus.replace(/_/g, ' ')}
+                                  </span>
+                                )}
+                              </td>
+
+                              <td className="p-3 text-muted-foreground">
+                                <span className="flex items-center gap-1 text-xs text-foreground">
+                                  <MapPin size={12} className="text-muted-foreground" />
+                                  {display(
+                                    emp.work_location ||
+                                      emp.home_location ||
+                                      emp.location_name ||
+                                      emp.location?.name ||
+                                      'Headquarters'
+                                  )}
+                                </span>
+                              </td>
+
+                              <td className="p-3 text-muted-foreground">
+                                <span className="block text-[11px] text-foreground">{emp.email || '—'}</span>
+                                <span className="block text-[11px]">{emp.phone || '—'}</span>
+                              </td>
+
+                              <td className="p-3 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <Link
+                                    href={`/workspace/employees/${emp.id}`}
+                                    className="btn-secondary py-1 px-2.5 text-[11px] flex items-center gap-1"
+                                  >
+                                    <Eye size={12} /> Profile
+                                  </Link>
+                                  {allowed(update) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelected(emp);
+                                        setEditing(true);
+                                      }}
+                                      className="btn-secondary py-1 px-2.5 text-[11px]"
+                                    >
+                                      Edit
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              ) : resource === 'assets' ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-muted text-muted-foreground font-semibold border-b">
+                      <tr>
+                        <th className="p-3">Asset Photo</th>
+                        <th className="p-3">Asset Name & Tag</th>
+                        <th className="p-3">Manufacturer & Model</th>
+                        <th className="p-3">Status</th>
+                        <th className="p-3">Created At</th>
+                        <th className="p-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {displayList.map((asset) => {
+                        const imgUrl = asset.photo_url || asset.profile_photo_url || asset.image_url;
+                        const createdDateStr = asset.created_at
+                          ? new Date(asset.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                          : '—';
+                        const status = (asset.status || 'AVAILABLE').toString().toUpperCase();
+
+                        return (
+                          <tr key={asset.id} className="hover:bg-muted/30 transition-colors">
+                            <td className="p-3">
+                              {imgUrl ? (
+                                <img
+                                  src={imgUrl}
+                                  alt={asset.name || 'Asset'}
+                                  className="w-10 h-10 rounded-lg object-cover border border-border shadow-xs"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary font-bold flex items-center justify-center text-xs shrink-0 border border-primary/20">
+                                  <Truck size={18} />
+                                </div>
+                              )}
+                            </td>
+
+                            <td className="p-3">
+                              <Link
+                                href={`/workspace/assets/${asset.id}`}
+                                className="font-bold text-foreground hover:text-primary transition-colors block text-sm"
+                              >
+                                {asset.name}
+                              </Link>
+                              <span className="text-[11px] text-muted-foreground font-mono">
+                                Tag: {asset.asset_number || asset.serial_number || '—'}
+                              </span>
+                            </td>
+
+                            <td className="p-3">
+                              <span className="font-semibold text-foreground block">
+                                {asset.manufacturer || '—'}
+                              </span>
+                              <span className="text-muted-foreground text-[11px]">
+                                {asset.model ? `Model: ${asset.model}` : '—'}
+                              </span>
+                            </td>
+
+                            <td className="p-3">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                <CheckCircle size={10} /> {status.replace(/_/g, ' ')}
+                              </span>
+                            </td>
+
+                            <td className="p-3 font-medium text-foreground">
+                              {createdDateStr}
+                            </td>
+
+                            <td className="p-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Link
+                                  href={`/workspace/assets/${asset.id}`}
+                                  className="btn-secondary py-1 px-2.5 text-[11px] flex items-center gap-1"
+                                >
+                                  <Eye size={12} /> Open
+                                </Link>
+                                {allowed(update) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelected(asset);
+                                      setEditing(true);
+                                    }}
+                                    className="btn-secondary py-1 px-2.5 text-[11px]"
+                                  >
+                                    Edit
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <Table
+                  data={displayList}
+                  onSelect={(row) => {
+                    if (resource === 'inventory/stores' || resource === 'stores') {
+                      router.push('/workspace/inventory/stores/' + row.id);
+                    } else if (resource === 'hr/salaries' && row.employee_id) {
+                      router.push('/workspace/employees/' + row.employee_id);
+                    } else if (resource === 'employees') {
+                      router.push('/workspace/employees/' + row.id);
+                    } else if (resource === 'assets') {
+                      router.push('/workspace/assets/' + row.id);
+                    } else {
+                      setSelected(row);
+                    }
+                  }}
+                />
+              )}
               {pages > 1 && (
                 <div className="flex items-center justify-between border-t p-3 text-xs text-muted-foreground">
                   <span>
-                    Showing {list.length} of {total} records
+                    Showing {displayList.length} of {total} records
                   </span>
                   <div className="flex gap-2">
                     <button

@@ -3,7 +3,38 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Edit, Upload, Archive, UserCheck, Phone, FileText, GraduationCap, Award, Shield, Briefcase, Clock, Calendar, Activity, Plus, CheckCircle, Download, ExternalLink, Trash2, User, Key, Mail, FileCheck, Filter, Check, Eye } from 'lucide-react';
+import {
+  ArrowLeft,
+  Edit,
+  Upload,
+  Archive,
+  UserCheck,
+  Phone,
+  FileText,
+  GraduationCap,
+  Award,
+  Shield,
+  Briefcase,
+  Clock,
+  Calendar,
+  Activity,
+  Plus,
+  CheckCircle,
+  Download,
+  ExternalLink,
+  Trash2,
+  User,
+  Key,
+  Mail,
+  FileCheck,
+  Filter,
+  Check,
+  Eye,
+  AlertCircle,
+  AlertTriangle,
+  X,
+} from 'lucide-react';
+import { toast } from 'sonner';
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import { Row, display, title, Modal } from './DataUI';
 import RecordForm from './RecordForm';
@@ -15,12 +46,16 @@ import { useAuth } from './AuthProvider';
 import contract from '@/lib/contract.json';
 import Icon from '@/components/ui/AppIcon';
 
-
 const routes: Row = contract.routes;
 
 export function formatAuditActivity(act: Row) {
   const rawAction = String(act.action || act.summary || 'employee.updated').toLowerCase();
-  const summary = typeof act.summary === 'string' ? act.summary : typeof act.description === 'string' ? act.description : '';
+  const summary =
+    typeof act.summary === 'string'
+      ? act.summary
+      : typeof act.description === 'string'
+        ? act.description
+        : '';
   const timestamp = act.occurred_at || act.created_at || act.timestamp;
 
   let titleStr = 'Employee Record Updated';
@@ -28,12 +63,39 @@ export function formatAuditActivity(act: Row) {
   let IconNode: React.ComponentType<{ size?: number; className?: string }> = Edit;
   let badgeColor = 'bg-blue-100 text-blue-800 border-blue-200';
 
-  if (rawAction.includes('employee.created') || rawAction.includes('employee_created') || rawAction === 'created') {
+  if (
+    rawAction.includes('employee.created') ||
+    rawAction.includes('employee_created') ||
+    rawAction === 'created'
+  ) {
     titleStr = 'Employee Profile Created';
     descStr = summary || 'New employee profile onboarded into system';
     IconNode = Plus;
     badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-200';
-  } else if (rawAction.includes('document_added') || rawAction.includes('document.added') || rawAction.includes('document_upload')) {
+  } else if (
+    rawAction.includes('account_linked') ||
+    rawAction.includes('account.linked') ||
+    rawAction.includes('user_linked')
+  ) {
+    titleStr = 'User Account Linked';
+    descStr = summary || 'System user account linked to employee profile';
+    IconNode = UserCheck;
+    badgeColor = 'bg-indigo-100 text-indigo-800 border-indigo-200';
+  } else if (
+    rawAction.includes('resume') ||
+    rawAction.includes('resume_uploaded') ||
+    rawAction.includes('resume.uploaded')
+  ) {
+    titleStr = 'Resume / CV Uploaded';
+    descStr = summary ? `Uploaded resume: ${summary}` : 'Uploaded resume document to profile';
+    IconNode = FileText;
+    badgeColor = 'bg-purple-100 text-purple-800 border-purple-200';
+  } else if (
+    rawAction.includes('document_added') ||
+    rawAction.includes('document.added') ||
+    rawAction.includes('document_upload') ||
+    rawAction.includes('document')
+  ) {
     titleStr = 'Document Uploaded';
     descStr = summary ? `Uploaded document: ${summary}` : 'Uploaded supporting document to profile';
     IconNode = FileText;
@@ -53,7 +115,11 @@ export function formatAuditActivity(act: Row) {
     descStr = summary || 'Assigned to operational project or role updated';
     IconNode = Briefcase;
     badgeColor = 'bg-cyan-100 text-cyan-800 border-cyan-200';
-  } else if (rawAction.includes('license') || rawAction.includes('qualification') || rawAction.includes('skill')) {
+  } else if (
+    rawAction.includes('license') ||
+    rawAction.includes('qualification') ||
+    rawAction.includes('skill')
+  ) {
     titleStr = 'Qualification / Licence Added';
     descStr = summary || 'Added operational licence or skill qualification';
     IconNode = Award;
@@ -83,7 +149,11 @@ export function formatAuditActivity(act: Row) {
     descStr = summary || 'Restored archived profile to active status';
     IconNode = CheckCircle;
     badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-200';
-  } else if (rawAction.includes('employee.updated') || rawAction.includes('employee_updated') || rawAction === 'updated') {
+  } else if (
+    rawAction.includes('employee.updated') ||
+    rawAction.includes('employee_updated') ||
+    rawAction === 'updated'
+  ) {
     titleStr = 'Profile Information Updated';
     descStr = summary || 'Updated personal, contact, or employment profile details';
     IconNode = Edit;
@@ -119,13 +189,26 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
   const [overview, setOverview] = useState<Row | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const canManageContracts = auth.can('employees.contracts.manage') || auth.can('employees.documents.manage') || auth.can('employees.write') || auth.access?.is_superuser;
+  const canManageContracts =
+    auth.can('employees.contracts.manage') ||
+    auth.can('employees.documents.manage') ||
+    auth.can('employees.write') ||
+    auth.access?.is_superuser;
   const canDownloadDocs = auth.can('documents.download') || auth.access?.is_superuser;
 
   // Active tab state
   const [activeTab, setActiveTab] = useState<
-    'profile' | 'salaries' | 'contracts' | 'documents' | 'family' |
-    'skills' | 'training' | 'assignments' | 'authorizations' | 'time' | 'activity'
+    | 'profile'
+    | 'salaries'
+    | 'contracts'
+    | 'documents'
+    | 'family'
+    | 'skills'
+    | 'training'
+    | 'assignments'
+    | 'authorizations'
+    | 'time'
+    | 'activity'
   >('profile');
 
   // Tab Data States
@@ -152,6 +235,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
   const [editingEmployee, setEditingEmployee] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
+  const [securityAlert, setSecurityAlert] = useState<{ type: 'success' | 'error' | 'warning'; message: string } | null>(null);
 
   // Custom Feature Modals
   const [showContractModal, setShowContractModal] = useState(false);
@@ -160,12 +244,21 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
   const [showTimeLogModal, setShowTimeLogModal] = useState(false);
 
   // Edit states
-  const [editingItem, setEditingItem] = useState<{ kind: 'time' | 'leave' | 'contract' | 'doc'; row: Row } | null>(null);
+  const [editingItem, setEditingItem] = useState<{
+    kind: 'time' | 'leave' | 'contract' | 'doc';
+    row: Row;
+  } | null>(null);
 
   const [viewingAssignment, setViewingAssignment] = useState<Row | null>(null);
   const [viewingAuthorization, setViewingAuthorization] = useState<Row | null>(null);
   const [assetMap, setAssetMap] = useState<Record<string, string>>({});
-  const [activeSubModal, setActiveSubModal] = useState<{ name: string; schemaName: string; path: string; method?: string; initial?: Row } | null>(null);
+  const [activeSubModal, setActiveSubModal] = useState<{
+    name: string;
+    schemaName: string;
+    path: string;
+    method?: string;
+    initial?: Row;
+  } | null>(null);
   const [actionError, setActionError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -173,11 +266,12 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   // Helper to ensure data arrays
-  const toArray = (d: any): Row[] => Array.isArray(d) ? d : Array.isArray(d?.items) ? d.items : [];
+  const toArray = (d: any): Row[] =>
+    Array.isArray(d) ? d : Array.isArray(d?.items) ? d.items : [];
 
   // Reload trigger
   const [version, setVersion] = useState(0);
-  const reloadAll = () => setVersion(v => v + 1);
+  const reloadAll = () => setVersion((v) => v + 1);
 
   // Fetch Main Employee Profile & Overview and Core Sub-data for Overview Grid
   useEffect(() => {
@@ -207,16 +301,20 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
       const root = `/api/v1/employees/${targetId}`;
 
       try {
-        const [empData, overData, famData, emData, assignData, actData, docData, resData] = await Promise.all([
-          apiFetch<Row>(root).catch(e => { if (active) setError(e.message); return null; }),
-          apiFetch<Row>(`${root}/overview`).catch(() => null),
-          apiFetch<any>(`${root}/family`).catch(() => []),
-          apiFetch<any>(`${root}/emergency-contacts`).catch(() => []),
-          apiFetch<any>(`${root}/assignments`).catch(() => []),
-          apiFetch<any>(`${root}/activity`).catch(() => []),
-          apiFetch<any>(`${root}/documents`).catch(() => []),
-          apiFetch<any>(`${root}/resumes`).catch(() => []),
-        ]);
+        const [empData, overData, famData, emData, assignData, actData, docData, resData] =
+          await Promise.all([
+            apiFetch<Row>(root).catch((e) => {
+              if (active) setError(e.message);
+              return null;
+            }),
+            apiFetch<Row>(`${root}/overview`).catch(() => null),
+            apiFetch<any>(`${root}/family`).catch(() => []),
+            apiFetch<any>(`${root}/emergency-contacts`).catch(() => []),
+            apiFetch<any>(`${root}/assignments`).catch(() => []),
+            apiFetch<any>(`${root}/activity`).catch(() => []),
+            apiFetch<any>(`${root}/documents`).catch(() => []),
+            apiFetch<any>(`${root}/resumes`).catch(() => []),
+          ]);
 
         if (!active) return;
         if (empData) setEmployee(empData);
@@ -234,7 +332,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
 
     loadData();
 
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [employeeId, version]);
 
   // Fetch photo blob if present
@@ -253,7 +353,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
     }
 
     apiFetchBlob(url)
-      .then(blob => {
+      .then((blob) => {
         if (active && blob && blob.size > 0) {
           createdUrl = URL.createObjectURL(blob);
           setPhotoUrl(createdUrl);
@@ -275,24 +375,48 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
     const root = `/api/v1/employees/${employeeId}`;
 
     if (activeTab === 'salaries') {
-      apiFetch<any>(`/api/v1/hr/employees/${employeeId}/salaries`).then(d => setSalaries(toArray(d))).catch(() => setSalaries([]));
+      apiFetch<any>(`/api/v1/hr/employees/${employeeId}/salaries`)
+        .then((d) => setSalaries(toArray(d)))
+        .catch(() => setSalaries([]));
     } else if (activeTab === 'contracts' || activeTab === 'documents') {
-      apiFetch<any>(`${root}/documents`).then(d => setDocuments(toArray(d))).catch(() => setDocuments([]));
-      apiFetch<any>(`${root}/resumes`).then(r => setResumes(toArray(r))).catch(() => setResumes([]));
+      apiFetch<any>(`${root}/documents`)
+        .then((d) => setDocuments(toArray(d)))
+        .catch(() => setDocuments([]));
+      apiFetch<any>(`${root}/resumes`)
+        .then((r) => setResumes(toArray(r)))
+        .catch(() => setResumes([]));
     } else if (activeTab === 'family') {
-      apiFetch<any>(`${root}/family`).then(d => setFamily(toArray(d))).catch(() => setFamily([]));
-      apiFetch<any>(`${root}/emergency-contacts`).then(d => setEmergency(toArray(d))).catch(() => setEmergency([]));
+      apiFetch<any>(`${root}/family`)
+        .then((d) => setFamily(toArray(d)))
+        .catch(() => setFamily([]));
+      apiFetch<any>(`${root}/emergency-contacts`)
+        .then((d) => setEmergency(toArray(d)))
+        .catch(() => setEmergency([]));
     } else if (activeTab === 'skills') {
-      apiFetch<any>(`${root}/qualifications`).then(d => setQualifications(toArray(d))).catch(() => setQualifications([]));
-      apiFetch<any>(`${root}/skills`).then(d => setSkills(toArray(d))).catch(() => setSkills([]));
+      apiFetch<any>(`${root}/qualifications`)
+        .then((d) => setQualifications(toArray(d)))
+        .catch(() => setQualifications([]));
+      apiFetch<any>(`${root}/skills`)
+        .then((d) => setSkills(toArray(d)))
+        .catch(() => setSkills([]));
     } else if (activeTab === 'training') {
-      apiFetch<any>(`${root}/training`).then(d => setTraining(toArray(d))).catch(() => setTraining([]));
-      apiFetch<any>(`${root}/licenses`).then(d => setLicenses(toArray(d))).catch(() => setLicenses([]));
+      apiFetch<any>(`${root}/training`)
+        .then((d) => setTraining(toArray(d)))
+        .catch(() => setTraining([]));
+      apiFetch<any>(`${root}/licenses`)
+        .then((d) => setLicenses(toArray(d)))
+        .catch(() => setLicenses([]));
     } else if (activeTab === 'assignments') {
-      apiFetch<any>(`${root}/assignments`).then(d => setAssignments(toArray(d))).catch(() => setAssignments([]));
-      apiFetch<any>(`${root}/rotations`).then(d => setRotations(toArray(d))).catch(() => setRotations([]));
+      apiFetch<any>(`${root}/assignments`)
+        .then((d) => setAssignments(toArray(d)))
+        .catch(() => setAssignments([]));
+      apiFetch<any>(`${root}/rotations`)
+        .then((d) => setRotations(toArray(d)))
+        .catch(() => setRotations([]));
     } else if (activeTab === 'authorizations') {
-      apiFetch<any>(`${root}/asset-authorizations`).then(d => setAuthorizations(toArray(d))).catch(() => setAuthorizations([]));
+      apiFetch<any>(`${root}/asset-authorizations`)
+        .then((d) => setAuthorizations(toArray(d)))
+        .catch(() => setAuthorizations([]));
       Promise.all([
         apiFetch<any>('/api/v1/assets?page_size=100').catch(() => null),
         apiFetch<any>('/api/v1/asset-categories?page_size=100').catch(() => null),
@@ -309,10 +433,16 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
         setAssetMap(map);
       });
     } else if (activeTab === 'time') {
-      apiFetch<any>(`${root}/time-logs`).then(d => setTimeLogs(toArray(d))).catch(() => setTimeLogs([]));
-      apiFetch<any>(`${root}/leave-requests`).then(d => setLeaveRequests(toArray(d))).catch(() => setLeaveRequests([]));
+      apiFetch<any>(`${root}/time-logs`)
+        .then((d) => setTimeLogs(toArray(d)))
+        .catch(() => setTimeLogs([]));
+      apiFetch<any>(`${root}/leave-requests`)
+        .then((d) => setLeaveRequests(toArray(d)))
+        .catch(() => setLeaveRequests([]));
     } else if (activeTab === 'activity') {
-      apiFetch<any>(`${root}/activity`).then(d => setActivities(toArray(d))).catch(() => setActivities([]));
+      apiFetch<any>(`${root}/activity`)
+        .then((d) => setActivities(toArray(d)))
+        .catch(() => setActivities([]));
     }
   }, [employeeId, activeTab, version]);
 
@@ -371,7 +501,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
     setBusy(true);
     setActionError('');
     try {
-      const blob = await apiFetchBlob(`/api/v1/employees/${employeeId}/documents/${docId}/download`);
+      const blob = await apiFetchBlob(
+        `/api/v1/employees/${employeeId}/documents/${docId}/download`
+      );
       downloadBlob(blob, titleStr || 'document');
     } catch (err: any) {
       setActionError(err?.message || 'Failed to download document.');
@@ -384,7 +516,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
     setBusy(true);
     setActionError('');
     try {
-      const blob = await apiFetchBlob(`/api/v1/employees/${employeeId}/documents/${docId}/download`);
+      const blob = await apiFetchBlob(
+        `/api/v1/employees/${employeeId}/documents/${docId}/download`
+      );
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch (err: any) {
@@ -417,7 +551,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
     setBusy(true);
     setActionError('');
     try {
-      const blob = await apiFetchBlob(`/api/v1/employees/${employeeId}/resumes/${resumeId}/download`);
+      const blob = await apiFetchBlob(
+        `/api/v1/employees/${employeeId}/resumes/${resumeId}/download`
+      );
       downloadBlob(blob, titleStr || 'resume');
     } catch (err: any) {
       setActionError(err?.message || 'Failed to download resume.');
@@ -430,7 +566,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
     setBusy(true);
     setActionError('');
     try {
-      const blob = await apiFetchBlob(`/api/v1/employees/${employeeId}/resumes/${resumeId}/download`);
+      const blob = await apiFetchBlob(
+        `/api/v1/employees/${employeeId}/resumes/${resumeId}/download`
+      );
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch (err: any) {
@@ -459,7 +597,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
     setBusy(true);
     setActionError('');
     try {
-      await apiFetch(`/api/v1/employee-emergency-contacts/${contactId}/archive`, { method: 'POST' });
+      await apiFetch(`/api/v1/employee-emergency-contacts/${contactId}/archive`, {
+        method: 'POST',
+      });
       reloadAll();
     } catch (err: any) {
       setActionError(err?.message || 'Failed to delete emergency contact.');
@@ -494,35 +634,44 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
     return (
       <div className="card border-red-200 p-6 space-y-4">
         <p className="text-red-700 font-semibold">{error || 'Employee record not found.'}</p>
-        <Link href="/workspace/employees?view=all" className="btn-secondary">
+        <Link href="/workspace/employees" className="btn-secondary">
           <ArrowLeft size={14} /> View Employee Directory
         </Link>
       </div>
     );
   }
 
-  const fullName = [employee.first_name, employee.middle_name, employee.last_name].filter(Boolean).join(' ');
+  const fullName = [employee.first_name, employee.middle_name, employee.last_name]
+    .filter(Boolean)
+    .join(' ');
 
   const autoContractRef = employee?.employee_number
     ? `CTR-${employee.employee_number}-${new Date().getFullYear()}`
     : `CTR-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
 
   const tabs = [
+    /* { id: 'family', label: 'Family & Emergency', icon: Phone },*/
     { id: 'profile', label: 'Personal & Role', icon: UserCheck },
-    { id: 'salaries', label: 'Salaries & Compensation', icon: FileCheck },
-    { id: 'contracts', label: 'Contracts', icon: FileCheck },
-    { id: 'documents', label: 'Resumes, Docs & Notes', icon: FileText },
-    { id: 'family', label: 'Family & Emergency', icon: Phone },
-    { id: 'skills', label: 'Skills & Edu', icon: GraduationCap },
-    { id: 'training', label: 'Training & Licences', icon: Award },
     { id: 'assignments', label: 'Assignments & Rotations', icon: Briefcase },
+
     { id: 'authorizations', label: 'Equipment Rights', icon: Shield },
     { id: 'time', label: 'Time & Leave', icon: Clock },
+    { id: 'contracts', label: 'Contracts', icon: FileCheck },
+    { id: 'training', label: 'Training & Licences', icon: Award },
+    { id: 'salaries', label: 'Salaries & Compensation', icon: FileCheck },
+    { id: 'skills', label: 'Skills & Education', icon: GraduationCap },
+    { id: 'documents', label: 'Resumes, Docs & Notes', icon: FileText },
     { id: 'activity', label: 'Activity Log', icon: Activity },
   ];
 
   // Contracts list
-  const contractDocs = documents.filter(d => d.document_type === 'EMPLOYMENT_CONTRACT' || String(d.title || '').toLowerCase().includes('contract'));
+  const contractDocs = documents.filter(
+    (d) =>
+      d.document_type === 'EMPLOYMENT_CONTRACT' ||
+      String(d.title || '')
+        .toLowerCase()
+        .includes('contract')
+  );
 
   // Categorized Notes & Records
   const categoryOptions = [
@@ -536,7 +685,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
     { id: 'OTHER', label: 'General HR Notes' },
   ];
 
-  const filteredNotesRecords = documents.filter(d => {
+  const filteredNotesRecords = documents.filter((d) => {
     if (d.document_type === 'EMPLOYMENT_CONTRACT') return false; // shown in contracts
     if (notesCategoryFilter === 'ALL') return true;
     return d.document_type === notesCategoryFilter;
@@ -547,16 +696,21 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
       {/* Header Bar */}
       <div className="flex flex-wrap justify-between items-start gap-4 border-b pb-5">
         <div>
-          <Link href="/workspace/employees?view=all" className="text-xs text-primary flex gap-1 items-center mb-2 hover:underline">
+          <Link
+            href="/workspace/employees"
+            className="text-xs text-primary flex gap-1 items-center mb-2 hover:underline"
+          >
             <ArrowLeft size={14} /> Employee Directory
           </Link>
           <div className="flex items-center gap-3">
             <span className="text-xs font-mono font-bold bg-secondary px-2.5 py-1 rounded text-primary border">
               {employee.employee_number || 'EMP-PROFILE'}
             </span>
-            <span className={`text-xs px-2.5 py-1 rounded font-semibold ${
-              employee.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-red-800'
-            }`}>
+            <span
+              className={`text-xs px-2.5 py-1 rounded font-semibold ${
+                employee.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-red-800'
+              }`}
+            >
               {employee.is_active ? display(employee.employment_status || 'ACTIVE') : 'ARCHIVED'}
             </span>
             {employee.availability_status && (
@@ -582,10 +736,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
           </button>
 
           {/* Admin Account Security & Password Reset Modal Opener */}
-          <button
-            className="btn-secondary text-xs"
-            onClick={() => setShowAccountModal(true)}
-          >
+          <button className="btn-secondary text-xs" onClick={() => setShowAccountModal(true)}>
             <Key size={14} /> Account & Security
           </button>
 
@@ -612,10 +763,12 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
       {/* Tabs Navigation Bar with custom scrollbar and scroll wheel support */}
       <div
         className="border-b overflow-x-auto scrollbar-thin py-1 cursor-grab"
-        onWheel={(e) => { if (e.deltaY !== 0) e.currentTarget.scrollLeft += e.deltaY; }}
+        onWheel={(e) => {
+          if (e.deltaY !== 0) e.currentTarget.scrollLeft += e.deltaY;
+        }}
       >
         <nav className="flex gap-2 min-w-max">
-          {tabs.map(t => {
+          {tabs.map((t) => {
             const Icon = t.icon;
             const isActive = activeTab === t.id;
             return (
@@ -656,7 +809,10 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                     <span className="text-[10px] mt-1 font-semibold">No Photo</span>
                   </div>
                 )}
-                <label className="absolute bottom-1 right-1 bg-primary text-white p-1.5 rounded-full shadow cursor-pointer hover:bg-primary/90 transition-all" title="Upload profile photo">
+                <label
+                  className="absolute bottom-1 right-1 bg-primary text-white p-1.5 rounded-full shadow cursor-pointer hover:bg-primary/90 transition-all"
+                  title="Upload profile photo"
+                >
                   <Upload size={12} />
                   <input
                     type="file"
@@ -677,23 +833,33 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   </div>
                   <div>
                     <dt className="text-muted-foreground">Preferred Name</dt>
-                    <dd className="font-semibold text-foreground text-sm mt-0.5">{display(employee.preferred_name)}</dd>
+                    <dd className="font-semibold text-foreground text-sm mt-0.5">
+                      {display(employee.preferred_name)}
+                    </dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground">Gender</dt>
-                    <dd className="font-semibold text-foreground text-sm mt-0.5">{display(employee.gender)}</dd>
+                    <dd className="font-semibold text-foreground text-sm mt-0.5">
+                      {display(employee.gender)}
+                    </dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground">Date of Birth</dt>
-                    <dd className="font-semibold text-foreground text-sm mt-0.5">{display(employee.date_of_birth)}</dd>
+                    <dd className="font-semibold text-foreground text-sm mt-0.5">
+                      {display(employee.date_of_birth)}
+                    </dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground">Nationality</dt>
-                    <dd className="font-semibold text-foreground text-sm mt-0.5">{display(employee.nationality)}</dd>
+                    <dd className="font-semibold text-foreground text-sm mt-0.5">
+                      {display(employee.nationality)}
+                    </dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground">Marital Status</dt>
-                    <dd className="font-semibold text-foreground text-sm mt-0.5">{display(employee.marital_status)}</dd>
+                    <dd className="font-semibold text-foreground text-sm mt-0.5">
+                      {display(employee.marital_status)}
+                    </dd>
                   </div>
                 </dl>
               </div>
@@ -707,23 +873,33 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div>
                   <dt className="text-muted-foreground">Personal Email</dt>
-                  <dd className="font-semibold text-foreground text-sm mt-0.5">{display(employee.personal_email)}</dd>
+                  <dd className="font-semibold text-foreground text-sm mt-0.5">
+                    {display(employee.personal_email)}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Work Email</dt>
-                  <dd className="font-semibold text-foreground text-sm mt-0.5">{display(employee.work_email)}</dd>
+                  <dd className="font-semibold text-foreground text-sm mt-0.5">
+                    {display(employee.work_email)}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Primary Phone</dt>
-                  <dd className="font-semibold text-foreground text-sm mt-0.5">{display(employee.primary_phone)}</dd>
+                  <dd className="font-semibold text-foreground text-sm mt-0.5">
+                    {display(employee.primary_phone)}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Secondary Phone</dt>
-                  <dd className="font-semibold text-foreground text-sm mt-0.5">{display(employee.secondary_phone)}</dd>
+                  <dd className="font-semibold text-foreground text-sm mt-0.5">
+                    {display(employee.secondary_phone)}
+                  </dd>
                 </div>
                 <div className="sm:col-span-2">
                   <dt className="text-muted-foreground">Residential Address</dt>
-                  <dd className="font-semibold text-foreground text-sm mt-0.5">{display(employee.residential_address)}</dd>
+                  <dd className="font-semibold text-foreground text-sm mt-0.5">
+                    {display(employee.residential_address)}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">City / Region</dt>
@@ -733,7 +909,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Country</dt>
-                  <dd className="font-semibold text-foreground text-sm mt-0.5">{display(employee.country)}</dd>
+                  <dd className="font-semibold text-foreground text-sm mt-0.5">
+                    {display(employee.country)}
+                  </dd>
                 </div>
               </dl>
             </div>
@@ -751,23 +929,33 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               <dl className="space-y-3 text-xs">
                 <div className="flex justify-between border-b pb-1.5">
                   <dt className="text-muted-foreground">Department:</dt>
-                  <dd className="font-semibold text-foreground">{display(overview.department?.name)}</dd>
+                  <dd className="font-semibold text-foreground">
+                    {display(overview.department?.name)}
+                  </dd>
                 </div>
                 <div className="flex justify-between border-b pb-1.5">
                   <dt className="text-muted-foreground">Position:</dt>
-                  <dd className="font-semibold text-foreground">{display(overview.position?.title)}</dd>
+                  <dd className="font-semibold text-foreground">
+                    {display(overview.position?.title)}
+                  </dd>
                 </div>
                 <div className="flex justify-between border-b pb-1.5">
                   <dt className="text-muted-foreground">Current Project:</dt>
-                  <dd className="font-semibold text-foreground">{display(overview.current_project_name)}</dd>
+                  <dd className="font-semibold text-foreground">
+                    {display(overview.current_project_name)}
+                  </dd>
                 </div>
                 <div className="flex justify-between border-b pb-1.5">
                   <dt className="text-muted-foreground">Current Location:</dt>
-                  <dd className="font-semibold text-foreground">{display(overview.current_location_name)}</dd>
+                  <dd className="font-semibold text-foreground">
+                    {display(overview.current_location_name)}
+                  </dd>
                 </div>
                 <div className="flex justify-between border-b pb-1.5">
                   <dt className="text-muted-foreground">Availability:</dt>
-                  <dd className="font-semibold text-blue-700">{display(overview.availability_status || employee.availability_status)}</dd>
+                  <dd className="font-semibold text-blue-700">
+                    {display(overview.availability_status || employee.availability_status)}
+                  </dd>
                 </div>
               </dl>
             ) : (
@@ -776,7 +964,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
 
             {overview?.compliance?.issues?.length ? (
               <div className="space-y-1.5 pt-2">
-                <span className="text-[11px] font-bold text-amber-800 block">Readiness Warnings:</span>
+                <span className="text-[11px] font-bold text-amber-800 block">
+                  Readiness Warnings:
+                </span>
                 <ul className="text-xs space-y-1 bg-amber-50 p-2.5 rounded border border-amber-200">
                   {overview.compliance.issues.map((iss: any, idx: number) => (
                     <li key={idx} className="text-amber-900 flex items-start gap-1.5">
@@ -789,8 +979,6 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
             ) : null}
           </div>
 
-        
-
           {/* Card 4: Emergency Contacts (Max Height Collapsible Container) */}
           <div className="card p-5 space-y-3">
             <div className="flex justify-between items-center border-b pb-2">
@@ -799,11 +987,13 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               </h2>
               <button
                 className="btn-secondary text-[11px] py-1 px-2"
-                onClick={() => setActiveSubModal({
-                  name: 'Add Emergency Contact',
-                  schemaName: 'EmergencyContactCreate',
-                  path: `/api/v1/employees/${employeeId}/emergency-contacts`,
-                })}
+                onClick={() =>
+                  setActiveSubModal({
+                    name: 'Add Emergency Contact',
+                    schemaName: 'EmergencyContactCreate',
+                    path: `/api/v1/employees/${employeeId}/emergency-contacts`,
+                  })
+                }
               >
                 <Plus size={12} /> Add
               </button>
@@ -811,13 +1001,23 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
 
             <div className="max-h-64 overflow-y-auto scrollbar-thin pr-1 space-y-2">
               {emergency.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">No emergency contacts recorded.</p>
+                <p className="text-xs text-muted-foreground py-4 text-center">
+                  No emergency contacts recorded.
+                </p>
               ) : (
                 emergency.map((item, idx) => (
-                  <div key={item.id || idx} className="p-2.5 bg-muted/30 border rounded text-xs flex items-center justify-between gap-2">
+                  <div
+                    key={item.id || idx}
+                    className="p-2.5 bg-muted/30 border rounded text-xs flex items-center justify-between gap-2"
+                  >
                     <div>
-                      <p className="font-bold text-foreground">{item.full_name} ({item.relationship})</p>
-                      <p className="text-muted-foreground text-[11px]">{item.primary_phone}{item.address ? ` • ${item.address}` : ''}</p>
+                      <p className="font-bold text-foreground">
+                        {item.full_name} ({item.relationship})
+                      </p>
+                      <p className="text-muted-foreground text-[11px]">
+                        {item.primary_phone}
+                        {item.address ? ` • ${item.address}` : ''}
+                      </p>
                     </div>
                     <button
                       type="button"
@@ -833,33 +1033,47 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
             </div>
           </div>
 
-            {/* Card 3: Merged Employment & Role Details */}
+          {/* Card 3: Merged Employment & Role Details */}
           <div className="card p-6 space-y-4">
-            <h2 className="text-base font-bold text-foreground border-b pb-2">Employment & Role Details</h2>
+            <h2 className="text-base font-bold text-foreground border-b pb-2">
+              Employment & Role Details
+            </h2>
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div>
                 <dt className="text-muted-foreground">Employee Number</dt>
-                <dd className="font-semibold text-foreground text-sm mt-0.5">{display(employee.employee_number)}</dd>
+                <dd className="font-semibold text-foreground text-sm mt-0.5">
+                  {display(employee.employee_number)}
+                </dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Job Title</dt>
-                <dd className="font-semibold text-foreground text-sm mt-0.5">{display(employee.job_title)}</dd>
+                <dd className="font-semibold text-foreground text-sm mt-0.5">
+                  {display(employee.job_title)}
+                </dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Employment Type</dt>
-                <dd className="font-semibold text-foreground text-sm mt-0.5">{display(employee.employment_type)}</dd>
+                <dd className="font-semibold text-foreground text-sm mt-0.5">
+                  {display(employee.employment_type)}
+                </dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Employment Status</dt>
-                <dd className="font-semibold text-foreground text-sm mt-0.5">{display(employee.employment_status)}</dd>
+                <dd className="font-semibold text-foreground text-sm mt-0.5">
+                  {display(employee.employment_status)}
+                </dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Hire Date</dt>
-                <dd className="font-semibold text-foreground text-sm mt-0.5">{display(employee.hire_date)}</dd>
+                <dd className="font-semibold text-foreground text-sm mt-0.5">
+                  {display(employee.hire_date)}
+                </dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Contract End Date</dt>
-                <dd className="font-semibold text-foreground text-sm mt-0.5">{display(employee.contract_end_date)}</dd>
+                <dd className="font-semibold text-foreground text-sm mt-0.5">
+                  {display(employee.contract_end_date)}
+                </dd>
               </div>
             </dl>
           </div>
@@ -872,11 +1086,13 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               </h2>
               <button
                 className="btn-secondary text-[11px] py-1 px-2"
-                onClick={() => setActiveSubModal({
-                  name: 'Add Family Member',
-                  schemaName: 'EmployeeFamilyCreate',
-                  path: `/api/v1/employees/${employeeId}/family`,
-                })}
+                onClick={() =>
+                  setActiveSubModal({
+                    name: 'Add Family Member',
+                    schemaName: 'EmployeeFamilyCreate',
+                    path: `/api/v1/employees/${employeeId}/family`,
+                  })
+                }
               >
                 <Plus size={12} /> Add
               </button>
@@ -884,10 +1100,15 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
 
             <div className="max-h-64 overflow-y-auto scrollbar-thin pr-1 space-y-2">
               {family.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">No family members recorded.</p>
+                <p className="text-xs text-muted-foreground py-4 text-center">
+                  No family members recorded.
+                </p>
               ) : (
                 family.map((item, idx) => (
-                  <div key={item.id || idx} className="p-2.5 bg-muted/30 border rounded text-xs flex items-center justify-between gap-2">
+                  <div
+                    key={item.id || idx}
+                    className="p-2.5 bg-muted/30 border rounded text-xs flex items-center justify-between gap-2"
+                  >
                     <div>
                       <p className="font-bold text-foreground">{item.full_name}</p>
                       <p className="text-muted-foreground text-[11px]">{item.relationship_type}</p>
@@ -914,11 +1135,13 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               </h2>
               <button
                 className="btn-secondary text-[11px] py-1 px-2"
-                onClick={() => setActiveSubModal({
-                  name: 'New Project Assignment',
-                  schemaName: 'EmployeeAssignmentCreate',
-                  path: `/api/v1/employees/${employeeId}/assignments`,
-                })}
+                onClick={() =>
+                  setActiveSubModal({
+                    name: 'New Project Assignment',
+                    schemaName: 'EmployeeAssignmentCreate',
+                    path: `/api/v1/employees/${employeeId}/assignments`,
+                  })
+                }
               >
                 <Plus size={12} /> Assign
               </button>
@@ -926,10 +1149,15 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
 
             <div className="max-h-64 overflow-y-auto scrollbar-thin pr-1 space-y-2">
               {assignments.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">No active project assignments.</p>
+                <p className="text-xs text-muted-foreground py-4 text-center">
+                  No active project assignments.
+                </p>
               ) : (
                 assignments.map((item, idx) => (
-                  <div key={item.id || idx} className="p-2.5 bg-muted/30 hover:bg-muted/50 border rounded text-xs space-y-1 transition-all">
+                  <div
+                    key={item.id || idx}
+                    className="p-2.5 bg-muted/30 hover:bg-muted/50 border rounded text-xs space-y-1 transition-all"
+                  >
                     <div className="flex justify-between font-bold text-foreground">
                       <span
                         className="cursor-pointer hover:text-primary transition-colors flex items-center gap-1.5"
@@ -950,12 +1178,14 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                           <button
                             type="button"
                             className="text-xs text-primary font-600 hover:underline inline-flex items-center gap-0.5"
-                            onClick={() => setActiveSubModal({
-                              name: 'Update Project Assignment',
-                              schemaName: 'EmployeeAssignmentUpdate',
-                              path: `/api/v1/employees/${employeeId}/assignments/${item.id}`,
-                              initial: item,
-                            })}
+                            onClick={() =>
+                              setActiveSubModal({
+                                name: 'Update Project Assignment',
+                                schemaName: 'EmployeeAssignmentUpdate',
+                                path: `/api/v1/employees/${employeeId}/assignments/${item.id}`,
+                                initial: item,
+                              })
+                            }
                           >
                             <Edit size={11} /> Edit
                           </button>
@@ -963,7 +1193,8 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                       </div>
                     </div>
                     <p className="text-muted-foreground text-[11px]">
-                      Role: {display(item.role_on_project || 'Member')} · Start: {display(item.start_date)}
+                      Role: {display(item.role_on_project || 'Member')} · Start:{' '}
+                      {display(item.start_date)}
                     </p>
                   </div>
                 ))
@@ -981,22 +1212,34 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
 
             <div className="max-h-72 overflow-y-auto scrollbar-thin pr-1 space-y-2">
               {activities.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">No recent activity events recorded.</p>
+                <p className="text-xs text-muted-foreground py-4 text-center">
+                  No recent activity events recorded.
+                </p>
               ) : (
                 activities.slice(0, 10).map((act, idx) => {
-                  const { titleStr, descStr, formattedDate, IconNode, badgeColor } = formatAuditActivity(act);
+                  const { titleStr, descStr, formattedDate, IconNode, badgeColor } =
+                    formatAuditActivity(act);
                   return (
-                    <div key={act.id || idx} className="p-2.5 bg-muted/20 border rounded text-xs space-y-1 hover:bg-muted/40 transition-colors">
+                    <div
+                      key={act.id || idx}
+                      className="p-2.5 bg-muted/20 border rounded text-xs space-y-1 hover:bg-muted/40 transition-colors"
+                    >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <span className={`p-1 rounded-full border text-[10px] shrink-0 ${badgeColor}`}>
+                          <span
+                            className={`p-1 rounded-full border text-[10px] shrink-0 ${badgeColor}`}
+                          >
                             <IconNode size={11} />
                           </span>
                           <span className="font-bold text-foreground truncate">{titleStr}</span>
                         </div>
-                        <span className="text-[10px] font-medium text-muted-foreground shrink-0">{formattedDate}</span>
+                        <span className="text-[10px] font-medium text-muted-foreground shrink-0">
+                          {formattedDate}
+                        </span>
                       </div>
-                      <p className="text-[11px] text-muted-foreground pl-5 leading-snug">{descStr}</p>
+                      <p className="text-[11px] text-muted-foreground pl-5 leading-snug">
+                        {descStr}
+                      </p>
                     </div>
                   );
                 })
@@ -1015,9 +1258,17 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               <span className="text-xs font-bold text-emerald-900 block uppercase tracking-wider">
                 Active Salary & Compensation Status
               </span>
-              {salaries.find(s => !s.end_date) ? (
+              {salaries.find((s) => !s.end_date) ? (
                 <p className="text-xs text-emerald-800 mt-1">
-                  Current Active Salary: <strong>{salaries.find(s => !s.end_date)?.currency} {Number(salaries.find(s => !s.end_date)?.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</strong> / {salaries.find(s => !s.end_date)?.pay_period} (Effective since: {display(salaries.find(s => !s.end_date)?.start_date)})
+                  Current Active Salary:{' '}
+                  <strong>
+                    {salaries.find((s) => !s.end_date)?.currency}{' '}
+                    {Number(salaries.find((s) => !s.end_date)?.amount).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                    })}
+                  </strong>{' '}
+                  / {salaries.find((s) => !s.end_date)?.pay_period} (Effective since:{' '}
+                  {display(salaries.find((s) => !s.end_date)?.start_date)})
                 </p>
               ) : (
                 <p className="text-xs text-emerald-800 mt-1">
@@ -1027,11 +1278,13 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
             </div>
             <button
               className="btn-primary text-xs bg-emerald-700 hover:bg-emerald-800"
-              onClick={() => setActiveSubModal({
-                name: 'Record Employee Salary',
-                schemaName: 'SalaryCreate',
-                path: `/api/v1/hr/employees/${employeeId}/salaries`,
-              })}
+              onClick={() =>
+                setActiveSubModal({
+                  name: 'Record Employee Salary',
+                  schemaName: 'SalaryCreate',
+                  path: `/api/v1/hr/employees/${employeeId}/salaries`,
+                })
+              }
             >
               <Plus size={14} /> Record New Salary
             </button>
@@ -1047,8 +1300,12 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
             {salaries.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground space-y-2">
                 <FileCheck size={32} className="mx-auto opacity-40 text-emerald-700" />
-                <p className="text-sm font-semibold text-foreground">No salary history recorded yet</p>
-                <p className="text-xs">Click "Record New Salary" to add compensation details for this employee.</p>
+                <p className="text-sm font-semibold text-foreground">
+                  No salary history recorded yet
+                </p>
+                <p className="text-xs">
+                  Click "Record New Salary" to add compensation details for this employee.
+                </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -1069,14 +1326,18 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                     {salaries.map((item, idx) => (
                       <tr key={item.id || idx} className="border-t hover:bg-muted/30">
                         <td className="p-2.5 font-bold text-foreground">
-                          {Number(item.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                          {Number(item.amount).toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                          })}
                         </td>
                         <td className="p-2.5 font-semibold">{item.currency}</td>
                         <td className="p-2.5">{display(item.pay_period)}</td>
                         <td className="p-2.5">{display(item.start_date)}</td>
                         <td className="p-2.5">{display(item.end_date || 'Present')}</td>
                         <td className="p-2.5">
-                          <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${!item.end_date ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-700'}`}>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[11px] font-semibold ${!item.end_date ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-700'}`}
+                          >
                             {!item.end_date ? 'ACTIVE' : 'CLOSED'}
                           </span>
                         </td>
@@ -1086,11 +1347,13 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                             <button
                               type="button"
                               className="btn-secondary text-[11px] py-1 px-2 text-rose-700 hover:bg-rose-50"
-                              onClick={() => setActiveSubModal({
-                                name: 'Close Active Salary Period',
-                                schemaName: 'SalaryEnd',
-                                path: `/api/v1/hr/salaries/${item.id}/end`,
-                              })}
+                              onClick={() =>
+                                setActiveSubModal({
+                                  name: 'Close Active Salary Period',
+                                  schemaName: 'SalaryEnd',
+                                  path: `/api/v1/hr/salaries/${item.id}/end`,
+                                })
+                              }
                             >
                               End Salary
                             </button>
@@ -1116,7 +1379,8 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                 Contract Expiration & Reminders Status
               </span>
               <p className="text-xs text-indigo-800 mt-1">
-                Contract end date: <strong>{display(employee.contract_end_date)}</strong>. Cestos automated alert rules notify management before contract expiration.
+                Contract end date: <strong>{display(employee.contract_end_date)}</strong>. Cestos
+                automated alert rules notify management before contract expiration.
               </p>
             </div>
             {canManageContracts && (
@@ -1139,8 +1403,12 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
             {contractDocs.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground space-y-2">
                 <FileCheck size={32} className="mx-auto opacity-40" />
-                <p className="text-sm font-semibold text-foreground">No contract documents uploaded yet</p>
-                <p className="text-xs">Click "Upload New Contract Document" to attach an employment contract.</p>
+                <p className="text-sm font-semibold text-foreground">
+                  No contract documents uploaded yet
+                </p>
+                <p className="text-xs">
+                  Click "Upload New Contract Document" to attach an employment contract.
+                </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -1160,7 +1428,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                         <td className="p-2.5 font-semibold text-foreground">{item.title}</td>
                         <td className="p-2.5">{display(item.document_number)}</td>
                         <td className="p-2.5">{display(item.issue_date)}</td>
-                        <td className="p-2.5 font-semibold text-indigo-800">{display(item.expiry_date)}</td>
+                        <td className="p-2.5 font-semibold text-indigo-800">
+                          {display(item.expiry_date)}
+                        </td>
                         <td className="p-2.5 text-right space-x-2">
                           <button
                             type="button"
@@ -1206,18 +1476,22 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               <h2 className="text-base font-bold text-foreground">Emergency Contacts</h2>
               <button
                 className="btn-primary text-xs"
-                onClick={() => setActiveSubModal({
-                  name: 'Add Emergency Contact',
-                  schemaName: 'EmergencyContactCreate',
-                  path: `/api/v1/employees/${employeeId}/emergency-contacts`,
-                })}
+                onClick={() =>
+                  setActiveSubModal({
+                    name: 'Add Emergency Contact',
+                    schemaName: 'EmergencyContactCreate',
+                    path: `/api/v1/employees/${employeeId}/emergency-contacts`,
+                  })
+                }
               >
                 <Plus size={14} /> Add Emergency Contact
               </button>
             </div>
 
             {emergency.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-4 text-center">No emergency contacts recorded.</p>
+              <p className="text-xs text-muted-foreground py-4 text-center">
+                No emergency contacts recorded.
+              </p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
@@ -1262,18 +1536,22 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               <h2 className="text-base font-bold text-foreground">Family Members</h2>
               <button
                 className="btn-primary text-xs"
-                onClick={() => setActiveSubModal({
-                  name: 'Add Family Member',
-                  schemaName: 'EmployeeFamilyCreate',
-                  path: `/api/v1/employees/${employeeId}/family`,
-                })}
+                onClick={() =>
+                  setActiveSubModal({
+                    name: 'Add Family Member',
+                    schemaName: 'EmployeeFamilyCreate',
+                    path: `/api/v1/employees/${employeeId}/family`,
+                  })
+                }
               >
                 <Plus size={14} /> Add Family Member
               </button>
             </div>
 
             {family.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-4 text-center">No family members recorded.</p>
+              <p className="text-xs text-muted-foreground py-4 text-center">
+                No family members recorded.
+              </p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
@@ -1317,18 +1595,19 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
       {/* TAB 3: Resumes & Documents */}
       {activeTab === 'documents' && (
         <div className="space-y-6 fade-in">
-
-             {/* Resumes Card */}
+          {/* Resumes Card */}
           <div className="card p-5 space-y-4">
             <div className="flex justify-between items-center border-b pb-3">
               <h2 className="text-base font-bold text-foreground">Resumes / CVs</h2>
               <button
                 className="btn-primary text-xs"
-                onClick={() => setActiveSubModal({
-                  name: 'Upload Resume',
-                  schemaName: 'EmployeeResumeCreate',
-                  path: `/api/v1/employees/${employeeId}/resumes/upload`,
-                })}
+                onClick={() =>
+                  setActiveSubModal({
+                    name: 'Upload Resume',
+                    schemaName: 'EmployeeResumeCreate',
+                    path: `/api/v1/employees/${employeeId}/resumes/upload`,
+                  })
+                }
               >
                 <Plus size={14} /> Upload Resume
               </button>
@@ -1389,25 +1668,29 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               </div>
             )}
           </div>
-          
+
           {/* Documents Card */}
           <div className="card p-5 space-y-4">
             <div className="flex justify-between items-center border-b pb-3">
               <h2 className="text-base font-bold text-foreground">Supporting Documents</h2>
               <button
                 className="btn-primary text-xs"
-                onClick={() => setActiveSubModal({
-                  name: 'Upload Document',
-                  schemaName: 'EmployeeDocumentCreate',
-                  path: `/api/v1/employees/${employeeId}/documents/upload`,
-                })}
+                onClick={() =>
+                  setActiveSubModal({
+                    name: 'Upload Document',
+                    schemaName: 'EmployeeDocumentCreate',
+                    path: `/api/v1/employees/${employeeId}/documents/upload`,
+                  })
+                }
               >
                 <Plus size={14} /> Upload Document
               </button>
             </div>
 
             {documents.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-4 text-center">No supporting documents uploaded.</p>
+              <p className="text-xs text-muted-foreground py-4 text-center">
+                No supporting documents uploaded.
+              </p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
@@ -1464,28 +1747,26 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
             )}
           </div>
 
-       
-
           {/* Categorized HR Notes & Records Card */}
           <div className="card p-5 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3">
               <div>
-                <h2 className="text-base font-bold text-foreground">HR Notes, Medical Records & Categorized Files</h2>
+                <h2 className="text-base font-bold text-foreground">
+                  HR Notes, Medical Records & Categorized Files
+                </h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Record medical certificates, background checks, IDs, visas, and general HR observations.
+                  Record medical certificates, background checks, IDs, visas, and general HR
+                  observations.
                 </p>
               </div>
-              <button
-                className="btn-primary text-xs"
-                onClick={() => setShowNoteRecordModal(true)}
-              >
+              <button className="btn-primary text-xs" onClick={() => setShowNoteRecordModal(true)}>
                 <Plus size={14} /> Write Note & Upload Record
               </button>
             </div>
 
             {/* Category Filter Pills */}
             <div className="flex items-center gap-2 overflow-x-auto scrollbar-thin pb-2">
-              {categoryOptions.map(cat => {
+              {categoryOptions.map((cat) => {
                 const isActive = notesCategoryFilter === cat.id;
                 return (
                   <button
@@ -1511,7 +1792,10 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
             ) : (
               <div className="space-y-3">
                 {filteredNotesRecords.map((item, idx) => (
-                  <div key={item.id || idx} className="p-4 border rounded bg-card space-y-2 hover:border-primary/40 transition-all">
+                  <div
+                    key={item.id || idx}
+                    className="p-4 border rounded bg-card space-y-2 hover:border-primary/40 transition-all"
+                  >
                     <div className="flex flex-wrap justify-between items-center gap-2">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-foreground">{item.title}</span>
@@ -1520,7 +1804,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] text-muted-foreground">{display(item.created_at)}</span>
+                        <span className="text-[11px] text-muted-foreground">
+                          {display(item.created_at)}
+                        </span>
                         <button
                           type="button"
                           className="btn-secondary text-[11px] py-1 px-2"
@@ -1569,18 +1855,22 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               <h2 className="text-base font-bold text-foreground">Qualifications & Degrees</h2>
               <button
                 className="btn-primary text-xs"
-                onClick={() => setActiveSubModal({
-                  name: 'Add Qualification',
-                  schemaName: 'QualificationCreate',
-                  path: `/api/v1/employees/${employeeId}/qualifications`,
-                })}
+                onClick={() =>
+                  setActiveSubModal({
+                    name: 'Add Qualification',
+                    schemaName: 'QualificationCreate',
+                    path: `/api/v1/employees/${employeeId}/qualifications`,
+                  })
+                }
               >
                 <Plus size={14} /> Add Qualification
               </button>
             </div>
 
             {qualifications.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-4 text-center">No qualifications recorded.</p>
+              <p className="text-xs text-muted-foreground py-4 text-center">
+                No qualifications recorded.
+              </p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
@@ -1595,7 +1885,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   <tbody>
                     {qualifications.map((item, idx) => (
                       <tr key={item.id || idx} className="border-t hover:bg-muted/30">
-                        <td className="p-2.5 font-semibold text-foreground">{item.qualification_name}</td>
+                        <td className="p-2.5 font-semibold text-foreground">
+                          {item.qualification_name}
+                        </td>
                         <td className="p-2.5">{item.qualification_type}</td>
                         <td className="p-2.5">{item.institution}</td>
                         <td className="p-2.5">{display(item.completion_date)}</td>
@@ -1613,11 +1905,13 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               <h2 className="text-base font-bold text-foreground">Skills & Competencies</h2>
               <button
                 className="btn-primary text-xs"
-                onClick={() => setActiveSubModal({
-                  name: 'Add Skill',
-                  schemaName: 'EmployeeSkillCreate',
-                  path: `/api/v1/employees/${employeeId}/skills`,
-                })}
+                onClick={() =>
+                  setActiveSubModal({
+                    name: 'Add Skill',
+                    schemaName: 'EmployeeSkillCreate',
+                    path: `/api/v1/employees/${employeeId}/skills`,
+                  })
+                }
               >
                 <Plus size={14} /> Add Skill
               </button>
@@ -1638,7 +1932,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   <tbody>
                     {skills.map((item, idx) => (
                       <tr key={item.id || idx} className="border-t hover:bg-muted/30">
-                        <td className="p-2.5 font-semibold text-foreground">{item.skill_name || display(item.skill_id)}</td>
+                        <td className="p-2.5 font-semibold text-foreground">
+                          {item.skill_name || display(item.skill_id)}
+                        </td>
                         <td className="p-2.5">{display(item.proficiency_level)}</td>
                         <td className="p-2.5">{display(item.years_experience)}</td>
                       </tr>
@@ -1660,18 +1956,22 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               <h2 className="text-base font-bold text-foreground">Licences & Certifications</h2>
               <button
                 className="btn-primary text-xs"
-                onClick={() => setActiveSubModal({
-                  name: 'Add License',
-                  schemaName: 'LicenseCreate',
-                  path: `/api/v1/employees/${employeeId}/licenses`,
-                })}
+                onClick={() =>
+                  setActiveSubModal({
+                    name: 'Add License',
+                    schemaName: 'LicenseCreate',
+                    path: `/api/v1/employees/${employeeId}/licenses`,
+                  })
+                }
               >
                 <Plus size={14} /> Add License
               </button>
             </div>
 
             {licenses.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-4 text-center">No licenses recorded.</p>
+              <p className="text-xs text-muted-foreground py-4 text-center">
+                No licenses recorded.
+              </p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
@@ -1686,7 +1986,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   <tbody>
                     {licenses.map((item, idx) => (
                       <tr key={item.id || idx} className="border-t hover:bg-muted/30">
-                        <td className="p-2.5 font-semibold text-foreground">{item.license_number}</td>
+                        <td className="p-2.5 font-semibold text-foreground">
+                          {item.license_number}
+                        </td>
                         <td className="p-2.5">{display(item.license_type)}</td>
                         <td className="p-2.5">{display(item.expiry_date)}</td>
                         <td className="p-2.5">{display(item.status || 'ACTIVE')}</td>
@@ -1704,18 +2006,22 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               <h2 className="text-base font-bold text-foreground">Training History</h2>
               <button
                 className="btn-primary text-xs"
-                onClick={() => setActiveSubModal({
-                  name: 'Add Training',
-                  schemaName: 'TrainingCreate',
-                  path: `/api/v1/employees/${employeeId}/training`,
-                })}
+                onClick={() =>
+                  setActiveSubModal({
+                    name: 'Add Training',
+                    schemaName: 'TrainingCreate',
+                    path: `/api/v1/employees/${employeeId}/training`,
+                  })
+                }
               >
                 <Plus size={14} /> Add Training
               </button>
             </div>
 
             {training.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-4 text-center">No training records found.</p>
+              <p className="text-xs text-muted-foreground py-4 text-center">
+                No training records found.
+              </p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
@@ -1730,7 +2036,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   <tbody>
                     {training.map((item, idx) => (
                       <tr key={item.id || idx} className="border-t hover:bg-muted/30">
-                        <td className="p-2.5 font-semibold text-foreground">{item.training_name}</td>
+                        <td className="p-2.5 font-semibold text-foreground">
+                          {item.training_name}
+                        </td>
                         <td className="p-2.5">{item.provider}</td>
                         <td className="p-2.5">{display(item.completion_date)}</td>
                         <td className="p-2.5">{display(item.expiry_date)}</td>
@@ -1753,18 +2061,22 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               <h2 className="text-base font-bold text-foreground">Project Assignments</h2>
               <button
                 className="btn-primary text-xs"
-                onClick={() => setActiveSubModal({
-                  name: 'New Project Assignment',
-                  schemaName: 'EmployeeAssignmentCreate',
-                  path: `/api/v1/employees/${employeeId}/assignments`,
-                })}
+                onClick={() =>
+                  setActiveSubModal({
+                    name: 'New Project Assignment',
+                    schemaName: 'EmployeeAssignmentCreate',
+                    path: `/api/v1/employees/${employeeId}/assignments`,
+                  })
+                }
               >
                 <Plus size={14} /> New Assignment
               </button>
             </div>
 
             {assignments.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-4 text-center">No project assignments recorded.</p>
+              <p className="text-xs text-muted-foreground py-4 text-center">
+                No project assignments recorded.
+              </p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
@@ -1804,12 +2116,14 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                             <button
                               type="button"
                               className="text-xs text-primary font-600 hover:underline inline-flex items-center gap-1"
-                              onClick={() => setActiveSubModal({
-                                name: 'Update Project Assignment',
-                                schemaName: 'EmployeeAssignmentUpdate',
-                                path: `/api/v1/employees/${employeeId}/assignments/${item.id}`,
-                                initial: item,
-                              })}
+                              onClick={() =>
+                                setActiveSubModal({
+                                  name: 'Update Project Assignment',
+                                  schemaName: 'EmployeeAssignmentUpdate',
+                                  path: `/api/v1/employees/${employeeId}/assignments/${item.id}`,
+                                  initial: item,
+                                })
+                              }
                             >
                               <Edit size={12} /> Edit
                             </button>
@@ -1829,21 +2143,27 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
       {activeTab === 'authorizations' && (
         <div className="card p-5 space-y-4 fade-in">
           <div className="flex justify-between items-center border-b pb-3">
-            <h2 className="text-base font-bold text-foreground">Equipment & Asset Authorizations</h2>
+            <h2 className="text-base font-bold text-foreground">
+              Equipment & Asset Authorizations
+            </h2>
             <button
               className="btn-primary text-xs flex items-center gap-1.5"
-              onClick={() => setActiveSubModal({
-                name: 'Add Authorization',
-                schemaName: 'AssetAuthorizationCreate',
-                path: `/api/v1/employees/${employeeId}/asset-authorizations`,
-              })}
+              onClick={() =>
+                setActiveSubModal({
+                  name: 'Add Authorization',
+                  schemaName: 'AssetAuthorizationCreate',
+                  path: `/api/v1/employees/${employeeId}/asset-authorizations`,
+                })
+              }
             >
               <Plus size={14} /> Add Authorization
             </button>
           </div>
 
           {authorizations.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-4 text-center">No asset authorizations recorded.</p>
+            <p className="text-xs text-muted-foreground py-4 text-center">
+              No asset authorizations recorded.
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
@@ -1868,16 +2188,23 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                       item.asset_category_id ||
                       '—';
                     const statusColor =
-                      item.status === 'ACTIVE' ?'bg-emerald-100 text-emerald-800 border-emerald-200'
-                        : item.status === 'REVOKED'|| item.status === 'EXPIRED' ?'bg-rose-100 text-rose-800 border-rose-200' :'bg-amber-100 text-amber-800 border-amber-200';
+                      item.status === 'ACTIVE'
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                        : item.status === 'REVOKED' || item.status === 'EXPIRED'
+                          ? 'bg-rose-100 text-rose-800 border-rose-200'
+                          : 'bg-amber-100 text-amber-800 border-amber-200';
                     return (
                       <tr key={item.id || idx} className="border-t hover:bg-muted/30">
-                        <td className="p-2.5 font-semibold text-foreground">{display(targetName)}</td>
+                        <td className="p-2.5 font-semibold text-foreground">
+                          {display(targetName)}
+                        </td>
                         <td className="p-2.5">{display(item.authorization_type)}</td>
                         <td className="p-2.5">{display(item.valid_from)}</td>
                         <td className="p-2.5">{display(item.valid_until)}</td>
                         <td className="p-2.5">
-                          <span className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${statusColor}`}>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${statusColor}`}
+                          >
                             {display(item.status || 'ACTIVE')}
                           </span>
                         </td>
@@ -1895,13 +2222,15 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                               type="button"
                               className="btn-secondary py-1 px-2 text-[11px] flex items-center gap-1"
                               title="Edit Authorization"
-                              onClick={() => setActiveSubModal({
-                                name: 'Edit Authorization',
-                                schemaName: 'AssetAuthorizationUpdate',
-                                path: `/api/v1/employees/${employeeId}/asset-authorizations/${item.id}`,
-                                method: 'PATCH',
-                                initial: item,
-                              })}
+                              onClick={() =>
+                                setActiveSubModal({
+                                  name: 'Edit Authorization',
+                                  schemaName: 'AssetAuthorizationUpdate',
+                                  path: `/api/v1/employees/${employeeId}/asset-authorizations/${item.id}`,
+                                  method: 'PATCH',
+                                  initial: item,
+                                })
+                              }
                             >
                               <Edit size={12} /> Edit
                             </button>
@@ -1923,16 +2252,15 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
           {/* Header Action Bar for Time & Leave */}
           <div className="flex flex-wrap justify-between items-center gap-3 border-b pb-4">
             <div>
-              <h2 className="text-base font-bold text-foreground">Time Tracking & Leave Requests</h2>
+              <h2 className="text-base font-bold text-foreground">
+                Time Tracking & Leave Requests
+              </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Log working time (single day or date ranges) and book leave requests.
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                className="btn-primary text-xs"
-                onClick={() => setShowTimeLogModal(true)}
-              >
+              <button className="btn-primary text-xs" onClick={() => setShowTimeLogModal(true)}>
                 <Clock size={14} /> Log Working Time
               </button>
               <button
@@ -1951,7 +2279,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
             </h3>
 
             {timeLogs.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-4 text-center">No time logs recorded.</p>
+              <p className="text-xs text-muted-foreground py-4 text-center">
+                No time logs recorded.
+              </p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
@@ -1968,7 +2298,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   <tbody>
                     {timeLogs.map((item, idx) => (
                       <tr key={item.id || idx} className="border-t hover:bg-muted/30">
-                        <td className="p-2.5 font-semibold text-foreground">{display(item.date)}</td>
+                        <td className="p-2.5 font-semibold text-foreground">
+                          {display(item.date)}
+                        </td>
                         <td className="p-2.5">{display(item.check_in)}</td>
                         <td className="p-2.5">{display(item.check_out)}</td>
                         <td className="p-2.5 font-semibold">{item.hours_worked ?? '—'} hrs</td>
@@ -1988,9 +2320,14 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                               if (!window.confirm('Delete this time log entry?')) return;
                               setBusy(true);
                               try {
-                                await apiFetch(`/api/v1/employees/${employeeId}/time-logs/${item.id}`, { method: 'DELETE' });
+                                await apiFetch(
+                                  `/api/v1/employees/${employeeId}/time-logs/${item.id}`,
+                                  { method: 'DELETE' }
+                                );
                               } catch {
-                                await apiFetch(`/api/v1/time-logs/${item.id}`, { method: 'DELETE' });
+                                await apiFetch(`/api/v1/time-logs/${item.id}`, {
+                                  method: 'DELETE',
+                                });
                               } finally {
                                 setBusy(false);
                                 reloadAll();
@@ -2023,7 +2360,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
             </div>
 
             {leaveRequests.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-4 text-center">No leave requests booked.</p>
+              <p className="text-xs text-muted-foreground py-4 text-center">
+                No leave requests booked.
+              </p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
@@ -2040,14 +2379,20 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   <tbody>
                     {leaveRequests.map((item, idx) => (
                       <tr key={item.id || idx} className="border-t hover:bg-muted/30">
-                        <td className="p-2.5 font-semibold text-foreground">{item.leave_type || 'Leave'}</td>
+                        <td className="p-2.5 font-semibold text-foreground">
+                          {item.leave_type || 'Leave'}
+                        </td>
                         <td className="p-2.5">{display(item.start_date)}</td>
                         <td className="p-2.5">{display(item.end_date)}</td>
                         <td className="p-2.5 max-w-xs truncate">{display(item.reason)}</td>
                         <td className="p-2.5">
-                          <span className={`px-2 py-0.5 rounded font-semibold text-[10px] ${
-                            item.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                          }`}>
+                          <span
+                            className={`px-2 py-0.5 rounded font-semibold text-[10px] ${
+                              item.status === 'APPROVED'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}
+                          >
                             {display(item.status || 'PENDING')}
                           </span>
                         </td>
@@ -2066,9 +2411,14 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                               if (!window.confirm('Cancel/delete this leave request?')) return;
                               setBusy(true);
                               try {
-                                await apiFetch(`/api/v1/employees/${employeeId}/leave-requests/${item.id}`, { method: 'DELETE' });
+                                await apiFetch(
+                                  `/api/v1/employees/${employeeId}/leave-requests/${item.id}`,
+                                  { method: 'DELETE' }
+                                );
                               } catch {
-                                await apiFetch(`/api/v1/leave-requests/${item.id}`, { method: 'DELETE' });
+                                await apiFetch(`/api/v1/leave-requests/${item.id}`, {
+                                  method: 'DELETE',
+                                });
                               } finally {
                                 setBusy(false);
                                 reloadAll();
@@ -2091,16 +2441,24 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
       {/* TAB 9: Formatted Human-Readable Activity Log */}
       {activeTab === 'activity' && (
         <div className="card p-5 space-y-4 fade-in">
-          <h2 className="text-base font-bold text-foreground border-b pb-3">Activity & Audit Trail</h2>
+          <h2 className="text-base font-bold text-foreground border-b pb-3">
+            Activity & Audit Trail
+          </h2>
           {activities.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-4 text-center">No recent activity logged for this employee.</p>
+            <p className="text-xs text-muted-foreground py-4 text-center">
+              No recent activity logged for this employee.
+            </p>
           ) : (
             <div className="space-y-3">
               {activities.map((act, idx) => {
-                const { titleStr, descStr, formattedDate, IconNode, badgeColor } = formatAuditActivity(act);
+                const { titleStr, descStr, formattedDate, IconNode, badgeColor } =
+                  formatAuditActivity(act);
 
                 return (
-                  <div key={act.id || idx} className="p-3 bg-muted/20 border rounded flex items-center justify-between gap-4 hover:bg-muted/40 transition-all">
+                  <div
+                    key={act.id || idx}
+                    className="p-3 bg-muted/20 border rounded flex items-center justify-between gap-4 hover:bg-muted/40 transition-all"
+                  >
                     <div className="flex items-center gap-3">
                       <span className={`p-2 rounded-full border ${badgeColor}`}>
                         <IconNode size={16} />
@@ -2123,13 +2481,17 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
 
       {/* CUSTOM MODAL: Upload Contract Document */}
       {showContractModal && (
-        <Modal name="Upload Employment Contract Document" onClose={() => setShowContractModal(false)}>
+        <Modal
+          name="Upload Employment Contract Document"
+          onClose={() => setShowContractModal(false)}
+        >
           <form
             className="space-y-4"
             onSubmit={async (e) => {
               e.preventDefault();
               const form = e.currentTarget;
-              const titleVal = (form.elements.namedItem('contract_title') as HTMLInputElement).value;
+              const titleVal = (form.elements.namedItem('contract_title') as HTMLInputElement)
+                .value;
               const refVal = (form.elements.namedItem('contract_ref') as HTMLInputElement).value;
               const startVal = (form.elements.namedItem('start_date') as HTMLInputElement).value;
               const endVal = (form.elements.namedItem('end_date') as HTMLInputElement).value;
@@ -2176,37 +2538,89 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
           >
             <div>
               <label className="block text-xs font-semibold mb-1">Contract Document Title *</label>
-              <input required name="contract_title" className="input-field" placeholder="e.g. 2026 Employment Contract" defaultValue="Full-Time Employment Agreement" />
+              <input
+                required
+                name="contract_title"
+                className="input-field"
+                placeholder="e.g. 2026 Employment Contract"
+                defaultValue="Full-Time Employment Agreement"
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-semibold mb-1">Document / Ref #</label>
-                <input name="contract_ref" className="input-field" placeholder="e.g. CTR-2026-88" defaultValue={autoContractRef} />
+                <input
+                  name="contract_ref"
+                  className="input-field"
+                  placeholder="e.g. CTR-2026-88"
+                  defaultValue={autoContractRef}
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1">Contract Start Date *</label>
-                <input required type="date" name="start_date" className="input-field" defaultValue={new Date().toISOString().slice(0, 10)} />
+                <input
+                  required
+                  type="date"
+                  name="start_date"
+                  className="input-field"
+                  defaultValue={new Date().toISOString().slice(0, 10)}
+                />
               </div>
               <div>
-                <label className="block text-xs font-semibold mb-1">Contract Expiration / End Date *</label>
-                <input required type="date" name="end_date" className="input-field" defaultValue={employee.contract_end_date ? String(employee.contract_end_date).slice(0, 10) : ''} />
+                <label className="block text-xs font-semibold mb-1">
+                  Contract Expiration / End Date *
+                </label>
+                <input
+                  required
+                  type="date"
+                  name="end_date"
+                  className="input-field"
+                  defaultValue={
+                    employee.contract_end_date
+                      ? String(employee.contract_end_date).slice(0, 10)
+                      : ''
+                  }
+                />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold mb-1">Select Contract File (.pdf, .doc, .docx, .png) *</label>
-              <input required type="file" name="contract_file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" className="input-field text-xs p-1" />
+              <label className="block text-xs font-semibold mb-1">
+                Select Contract File (.pdf, .doc, .docx, .png) *
+              </label>
+              <input
+                required
+                type="file"
+                name="contract_file"
+                accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                className="input-field text-xs p-1"
+              />
             </div>
 
             <div>
               <label className="block text-xs font-semibold mb-1">Terms / Notes</label>
-              <textarea name="notes" rows={2} className="input-field" placeholder="Key contract clauses or terms summary..." />
+              <textarea
+                name="notes"
+                rows={2}
+                className="input-field"
+                placeholder="Key contract clauses or terms summary..."
+              />
             </div>
 
             <div className="flex justify-end gap-2 border-t pt-3">
-              <button type="button" className="btn-secondary text-xs" onClick={() => setShowContractModal(false)}>Cancel</button>
-              <button disabled={busy} type="submit" className="btn-primary text-xs bg-indigo-700 hover:bg-indigo-800">
+              <button
+                type="button"
+                className="btn-secondary text-xs"
+                onClick={() => setShowContractModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                disabled={busy}
+                type="submit"
+                className="btn-primary text-xs bg-indigo-700 hover:bg-indigo-800"
+              >
                 {busy ? 'Uploading...' : 'Upload Contract'}
               </button>
             </div>
@@ -2216,7 +2630,10 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
 
       {/* CUSTOM MODAL: HR Note & Record Upload */}
       {showNoteRecordModal && (
-        <Modal name="Write Note & Upload Categorized Record" onClose={() => setShowNoteRecordModal(false)}>
+        <Modal
+          name="Write Note & Upload Categorized Record"
+          onClose={() => setShowNoteRecordModal(false)}
+        >
           <form
             className="space-y-4"
             onSubmit={async (e) => {
@@ -2267,10 +2684,17 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold mb-1">Title *</label>
-                <input required name="doc_title" className="input-field" placeholder="e.g. Annual Medical Checkup Certificate" />
+                <input
+                  required
+                  name="doc_title"
+                  className="input-field"
+                  placeholder="e.g. Annual Medical Checkup Certificate"
+                />
               </div>
               <div>
-                <label className="block text-xs font-semibold mb-1">Category / Document Type *</label>
+                <label className="block text-xs font-semibold mb-1">
+                  Category / Document Type *
+                </label>
                 <select name="doc_cat" className="input-field" defaultValue="MEDICAL_CERTIFICATE">
                   <option value="MEDICAL_CERTIFICATE">Medical Records & Health</option>
                   <option value="POLICE_CLEARANCE">Background Checks & Police Clearance</option>
@@ -2284,22 +2708,45 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
             </div>
 
             <div>
-              <label className="block text-xs font-semibold mb-1">Expiration / Review Date (Optional)</label>
+              <label className="block text-xs font-semibold mb-1">
+                Expiration / Review Date (Optional)
+              </label>
               <input type="date" name="doc_expiry" className="input-field max-w-xs" />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold mb-1">Detailed HR Note / Comments *</label>
-              <textarea required name="doc_notes" rows={3} className="input-field" placeholder="Write internal HR observations or notes regarding this record..." />
+              <label className="block text-xs font-semibold mb-1">
+                Detailed HR Note / Comments *
+              </label>
+              <textarea
+                required
+                name="doc_notes"
+                rows={3}
+                className="input-field"
+                placeholder="Write internal HR observations or notes regarding this record..."
+              />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold mb-1">Attach File (Optional: .pdf, .doc, .jpg)</label>
-              <input type="file" name="doc_file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" className="input-field text-xs p-1" />
+              <label className="block text-xs font-semibold mb-1">
+                Attach File (Optional: .pdf, .doc, .jpg)
+              </label>
+              <input
+                type="file"
+                name="doc_file"
+                accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                className="input-field text-xs p-1"
+              />
             </div>
 
             <div className="flex justify-end gap-2 border-t pt-3">
-              <button type="button" className="btn-secondary text-xs" onClick={() => setShowNoteRecordModal(false)}>Cancel</button>
+              <button
+                type="button"
+                className="btn-secondary text-xs"
+                onClick={() => setShowNoteRecordModal(false)}
+              >
+                Cancel
+              </button>
               <button disabled={busy} type="submit" className="btn-primary text-xs">
                 {busy ? 'Saving...' : 'Save Record & Note'}
               </button>
@@ -2319,27 +2766,34 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               const typeVal = (form.elements.namedItem('leave_type') as HTMLSelectElement).value;
               const startVal = (form.elements.namedItem('leave_start') as HTMLInputElement).value;
               const endVal = (form.elements.namedItem('leave_end') as HTMLInputElement).value;
-              const reasonVal = (form.elements.namedItem('leave_reason') as HTMLTextAreaElement).value;
+              const reasonVal = (form.elements.namedItem('leave_reason') as HTMLTextAreaElement)
+                .value;
               const fileInput = form.elements.namedItem('leave_file') as HTMLInputElement;
               const file = fileInput?.files?.[0];
 
               setBusy(true);
               try {
-                const leaveRes = await apiFetch<Row>(`/api/v1/employees/${employeeId}/leave-requests`, {
-                  method: 'POST',
-                  body: JSON.stringify({
-                    leave_type: typeVal,
-                    start_date: startVal,
-                    end_date: endVal,
-                    reason: reasonVal,
-                  }),
-                });
+                const leaveRes = await apiFetch<Row>(
+                  `/api/v1/employees/${employeeId}/leave-requests`,
+                  {
+                    method: 'POST',
+                    body: JSON.stringify({
+                      leave_type: typeVal,
+                      start_date: startVal,
+                      end_date: endVal,
+                      reason: reasonVal,
+                    }),
+                  }
+                );
 
                 if (file && employeeId) {
                   try {
                     const formData = new FormData();
                     formData.append('file', file);
-                    formData.append('title', `Leave Supporting Document (${typeVal}) - ${startVal} to ${endVal}`);
+                    formData.append(
+                      'title',
+                      `Leave Supporting Document (${typeVal}) - ${startVal} to ${endVal}`
+                    );
                     formData.append('document_type', 'OTHER');
                     await apiFetch(`/api/v1/employees/${employeeId}/documents/upload`, {
                       method: 'POST',
@@ -2376,23 +2830,43 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold mb-1">Start Date *</label>
-                <input required type="date" name="leave_start" className="input-field" defaultValue={new Date().toISOString().slice(0, 10)} />
+                <input
+                  required
+                  type="date"
+                  name="leave_start"
+                  className="input-field"
+                  defaultValue={new Date().toISOString().slice(0, 10)}
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1">End Date *</label>
-                <input required type="date" name="leave_end" className="input-field" defaultValue={new Date().toISOString().slice(0, 10)} />
+                <input
+                  required
+                  type="date"
+                  name="leave_end"
+                  className="input-field"
+                  defaultValue={new Date().toISOString().slice(0, 10)}
+                />
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold mb-1">Reason / Notes *</label>
-              <textarea required name="leave_reason" rows={2} className="input-field" placeholder="Provide reason for leave booking..." />
+              <textarea
+                required
+                name="leave_reason"
+                rows={2}
+                className="input-field"
+                placeholder="Provide reason for leave booking..."
+              />
             </div>
 
             <div>
               <label className="block text-xs font-semibold mb-1 flex items-center justify-between">
                 <span>Attach Supporting File / Certificate</span>
-                <span className="text-[10px] text-muted-foreground font-normal">(Optional — Medical certificate, letter, etc.)</span>
+                <span className="text-[10px] text-muted-foreground font-normal">
+                  (Optional — Medical certificate, letter, etc.)
+                </span>
               </label>
               <input
                 type="file"
@@ -2403,8 +2877,18 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
             </div>
 
             <div className="flex justify-end gap-2 border-t pt-3">
-              <button type="button" className="btn-secondary text-xs" onClick={() => setShowLeaveModal(false)}>Cancel</button>
-              <button disabled={busy} type="submit" className="btn-primary text-xs bg-emerald-700 hover:bg-emerald-800">
+              <button
+                type="button"
+                className="btn-secondary text-xs"
+                onClick={() => setShowLeaveModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                disabled={busy}
+                type="submit"
+                className="btn-primary text-xs bg-emerald-700 hover:bg-emerald-800"
+              >
                 {busy ? 'Submitting...' : 'Book Leave'}
               </button>
             </div>
@@ -2414,18 +2898,24 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
 
       {/* CUSTOM MODAL: Log Time (Single Day or Date Range Period) */}
       {showTimeLogModal && (
-        <Modal name="Log Working Time (Single Day or Date Range Period)" onClose={() => setShowTimeLogModal(false)}>
+        <Modal
+          name="Log Working Time (Single Day or Date Range Period)"
+          onClose={() => setShowTimeLogModal(false)}
+        >
           <form
             className="space-y-4"
             onSubmit={async (e) => {
               e.preventDefault();
               const form = e.currentTarget;
-              const isPeriod = (form.elements.namedItem('log_mode') as HTMLSelectElement).value === 'PERIOD';
+              const isPeriod =
+                (form.elements.namedItem('log_mode') as HTMLSelectElement).value === 'PERIOD';
               const startVal = (form.elements.namedItem('log_start') as HTMLInputElement).value;
               const endVal = (form.elements.namedItem('log_end') as HTMLInputElement).value;
               const checkInVal = (form.elements.namedItem('log_checkin') as HTMLInputElement).value;
-              const checkOutVal = (form.elements.namedItem('log_checkout') as HTMLInputElement).value;
-              const hoursVal = Number((form.elements.namedItem('log_hours') as HTMLInputElement).value) || 8;
+              const checkOutVal = (form.elements.namedItem('log_checkout') as HTMLInputElement)
+                .value;
+              const hoursVal =
+                Number((form.elements.namedItem('log_hours') as HTMLInputElement).value) || 8;
               const notesVal = (form.elements.namedItem('log_notes') as HTMLTextAreaElement).value;
 
               const buildIsoTime = (d: string, t?: string) => {
@@ -2451,7 +2941,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                     if (cur.getDay() !== 0 && cur.getDay() !== 6) {
                       const payload: Row = {
                         date: dateStr,
-                        notes: notesVal ? `${notesVal} (${hoursVal}h/day)` : `Period booking (${startVal} to ${endVal})`,
+                        notes: notesVal
+                          ? `${notesVal} (${hoursVal}h/day)`
+                          : `Period booking (${startVal} to ${endVal})`,
                       };
 
                       const checkInIso = buildIsoTime(dateStr, checkInVal || '08:00');
@@ -2506,36 +2998,80 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold mb-1">Start Date *</label>
-                <input required type="date" name="log_start" className="input-field" defaultValue={new Date().toISOString().slice(0, 10)} />
+                <input
+                  required
+                  type="date"
+                  name="log_start"
+                  className="input-field"
+                  defaultValue={new Date().toISOString().slice(0, 10)}
+                />
               </div>
               <div>
-                <label className="block text-xs font-semibold mb-1">End Date (For Period Mode)</label>
-                <input type="date" name="log_end" className="input-field" defaultValue={new Date().toISOString().slice(0, 10)} />
+                <label className="block text-xs font-semibold mb-1">
+                  End Date (For Period Mode)
+                </label>
+                <input
+                  type="date"
+                  name="log_end"
+                  className="input-field"
+                  defaultValue={new Date().toISOString().slice(0, 10)}
+                />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-semibold mb-1">Check In Time</label>
-                <input type="time" name="log_checkin" className="input-field" defaultValue="08:00" />
+                <input
+                  type="time"
+                  name="log_checkin"
+                  className="input-field"
+                  defaultValue="08:00"
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1">Check Out Time</label>
-                <input type="time" name="log_checkout" className="input-field" defaultValue="17:00" />
+                <input
+                  type="time"
+                  name="log_checkout"
+                  className="input-field"
+                  defaultValue="17:00"
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1">Hours Per Day *</label>
-                <input required type="number" step="0.5" name="log_hours" className="input-field" defaultValue={8} />
+                <input
+                  required
+                  type="number"
+                  step="0.5"
+                  name="log_hours"
+                  className="input-field"
+                  defaultValue={8}
+                />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold mb-1">Work Summary / Task Description *</label>
-              <textarea required name="log_notes" rows={2} className="input-field" placeholder="e.g. Website development & IT infrastructure upgrade..." />
+              <label className="block text-xs font-semibold mb-1">
+                Work Summary / Task Description *
+              </label>
+              <textarea
+                required
+                name="log_notes"
+                rows={2}
+                className="input-field"
+                placeholder="e.g. Website development & IT infrastructure upgrade..."
+              />
             </div>
 
             <div className="flex justify-end gap-2 border-t pt-3">
-              <button type="button" className="btn-secondary text-xs" onClick={() => setShowTimeLogModal(false)}>Cancel</button>
+              <button
+                type="button"
+                className="btn-secondary text-xs"
+                onClick={() => setShowTimeLogModal(false)}
+              >
+                Cancel
+              </button>
               <button disabled={busy} type="submit" className="btn-primary text-xs">
                 {busy ? 'Logging...' : 'Log Time'}
               </button>
@@ -2546,13 +3082,56 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
 
       {/* CUSTOM MODAL: Admin Account Security & Password Reset */}
       {showAccountModal && (
-        <Modal name={`Account Security & Password Reset — ${fullName}`} onClose={() => setShowAccountModal(false)}>
+        <Modal
+          name={`Account Security & Password Reset — ${fullName}`}
+          onClose={() => {
+            setShowAccountModal(false);
+            setSecurityAlert(null);
+          }}
+        >
           <div className="space-y-5">
+            {/* Inline Alert Component Banner */}
+            {securityAlert && (
+              <div
+                className={`p-3 rounded-lg border text-xs flex items-center justify-between gap-2 transition-all ${
+                  securityAlert.type === 'success'
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    : securityAlert.type === 'warning'
+                    ? 'bg-amber-50 border-amber-200 text-amber-800'
+                    : 'bg-rose-50 border-rose-200 text-rose-800'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {securityAlert.type === 'success' ? (
+                    <CheckCircle size={16} className="text-emerald-600 shrink-0" />
+                  ) : securityAlert.type === 'warning' ? (
+                    <AlertTriangle size={16} className="text-amber-600 shrink-0" />
+                  ) : (
+                    <AlertCircle size={16} className="text-rose-600 shrink-0" />
+                  )}
+                  <span className="font-600">{securityAlert.message}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSecurityAlert(null)}
+                  className="text-muted-foreground hover:text-foreground text-xs p-0.5 rounded"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+
             <div className="p-3 bg-muted/30 border rounded text-xs space-y-1">
               <p className="font-semibold text-foreground">Linked Account Details</p>
-              <p className="text-muted-foreground">Work Email: <strong>{display(employee.work_email)}</strong></p>
-              <p className="text-muted-foreground">Personal Email: <strong>{display(employee.personal_email)}</strong></p>
-              <p className="text-muted-foreground">Employee #: <strong>{display(employee.employee_number)}</strong></p>
+              <p className="text-muted-foreground">
+                Work Email: <strong>{display(employee.work_email)}</strong>
+              </p>
+              <p className="text-muted-foreground">
+                Personal Email: <strong>{display(employee.personal_email)}</strong>
+              </p>
+              <p className="text-muted-foreground">
+                Employee #: <strong>{display(employee.employee_number)}</strong>
+              </p>
             </div>
 
             {/* Email Change Form */}
@@ -2564,21 +3143,28 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                 const emailVal = (form.elements.namedItem('acc_email') as HTMLInputElement).value;
 
                 setBusy(true);
+                setSecurityAlert(null);
                 try {
                   await apiFetch(`/api/v1/employees/${employeeId}`, {
                     method: 'PATCH',
                     body: JSON.stringify({ work_email: emailVal }),
                   });
                   reloadAll();
-                  alert('Account work email updated successfully.');
+                  const successMsg = `Account work email updated to ${emailVal}.`;
+                  toast.success(successMsg);
+                  setSecurityAlert({ type: 'success', message: successMsg });
                 } catch (err: any) {
-                  setActionError(err?.message || 'Failed to update email.');
+                  const errorMsg = err?.message || 'Failed to update email.';
+                  toast.error(errorMsg);
+                  setSecurityAlert({ type: 'error', message: errorMsg });
                 } finally {
                   setBusy(false);
                 }
               }}
             >
-              <h4 className="text-xs font-bold uppercase text-primary tracking-wider">Update Account Email</h4>
+              <h4 className="text-xs font-bold uppercase text-primary tracking-wider">
+                Update Account Email
+              </h4>
               <div className="flex gap-2 items-center">
                 <input
                   required
@@ -2596,28 +3182,39 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
 
             {/* Send Password Reset Request Button */}
             <div className="border-t pt-4 space-y-2">
-              <h4 className="text-xs font-bold uppercase text-primary tracking-wider">Password Reset Email</h4>
+              <h4 className="text-xs font-bold uppercase text-primary tracking-wider">
+                Password Reset Email
+              </h4>
               <p className="text-xs text-muted-foreground">
-                Trigger a secure password reset email to this employee's work email address ({employee.work_email || 'Not set'}).
+                Trigger a secure password reset email to this employee's work email address (
+                {employee.work_email || 'Not set'}).
               </p>
               <button
                 disabled={busy}
+                type="button"
                 className="btn-primary text-xs bg-indigo-700 hover:bg-indigo-800"
                 onClick={async () => {
                   const targetEmail = employee.work_email || employee.personal_email;
                   if (!targetEmail) {
-                    alert('Please set a work email for this employee first.');
+                    const warnMsg = 'Please set a work email for this employee first.';
+                    toast.warning(warnMsg);
+                    setSecurityAlert({ type: 'warning', message: warnMsg });
                     return;
                   }
                   setBusy(true);
+                  setSecurityAlert(null);
                   try {
                     await apiFetch(`/api/v1/hr/password-reset`, {
                       method: 'POST',
                       body: JSON.stringify({ email: targetEmail }),
                     });
-                    alert(`Password reset link sent to ${targetEmail}.`);
+                    const successMsg = `Password reset email sent to ${targetEmail}.`;
+                    toast.success(successMsg);
+                    setSecurityAlert({ type: 'success', message: successMsg });
                   } catch (err: any) {
-                    alert(`Password reset notice: ${err?.message || 'Email request triggered.'}`);
+                    const noticeMsg = err?.message || `Password reset email sent to ${targetEmail}.`;
+                    toast.info(noticeMsg);
+                    setSecurityAlert({ type: 'success', message: noticeMsg });
                   } finally {
                     setBusy(false);
                   }
@@ -2683,9 +3280,12 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               try {
                 if (editingItem.kind === 'time') {
                   const dateVal = (form.elements.namedItem('edit_date') as HTMLInputElement).value;
-                  const checkInVal = (form.elements.namedItem('edit_checkin') as HTMLInputElement).value;
-                  const checkOutVal = (form.elements.namedItem('edit_checkout') as HTMLInputElement).value;
-                  const notesVal = (form.elements.namedItem('edit_notes') as HTMLTextAreaElement).value;
+                  const checkInVal = (form.elements.namedItem('edit_checkin') as HTMLInputElement)
+                    .value;
+                  const checkOutVal = (form.elements.namedItem('edit_checkout') as HTMLInputElement)
+                    .value;
+                  const notesVal = (form.elements.namedItem('edit_notes') as HTMLTextAreaElement)
+                    .value;
 
                   const buildIsoTime = (d: string, t?: string) => {
                     if (!d || !t || !t.trim()) return null;
@@ -2705,33 +3305,45 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   if (inTime) body.check_in = inTime;
                   if (outTime) body.check_out = outTime;
 
-                  await apiFetch(`/api/v1/employees/${employeeId}/time-logs/${editingItem.row.id}`, {
-                    method: 'PATCH',
-                    body: JSON.stringify(body),
-                  });
+                  await apiFetch(
+                    `/api/v1/employees/${employeeId}/time-logs/${editingItem.row.id}`,
+                    {
+                      method: 'PATCH',
+                      body: JSON.stringify(body),
+                    }
+                  );
                 } else if (editingItem.kind === 'leave') {
-                  const typeVal = (form.elements.namedItem('edit_leave_type') as HTMLSelectElement).value;
-                  const startVal = (form.elements.namedItem('edit_start') as HTMLInputElement).value;
+                  const typeVal = (form.elements.namedItem('edit_leave_type') as HTMLSelectElement)
+                    .value;
+                  const startVal = (form.elements.namedItem('edit_start') as HTMLInputElement)
+                    .value;
                   const endVal = (form.elements.namedItem('edit_end') as HTMLInputElement).value;
-                  const reasonVal = (form.elements.namedItem('edit_reason') as HTMLTextAreaElement).value;
+                  const reasonVal = (form.elements.namedItem('edit_reason') as HTMLTextAreaElement)
+                    .value;
                   const fileInput = form.elements.namedItem('edit_leave_file') as HTMLInputElement;
                   const file = fileInput?.files?.[0];
 
-                  await apiFetch(`/api/v1/employees/${employeeId}/leave-requests/${editingItem.row.id}`, {
-                    method: 'PATCH',
-                    body: JSON.stringify({
-                      leave_type: typeVal,
-                      start_date: startVal,
-                      end_date: endVal,
-                      reason: reasonVal,
-                    }),
-                  });
+                  await apiFetch(
+                    `/api/v1/employees/${employeeId}/leave-requests/${editingItem.row.id}`,
+                    {
+                      method: 'PATCH',
+                      body: JSON.stringify({
+                        leave_type: typeVal,
+                        start_date: startVal,
+                        end_date: endVal,
+                        reason: reasonVal,
+                      }),
+                    }
+                  );
 
                   if (file && employeeId) {
                     try {
                       const formData = new FormData();
                       formData.append('file', file);
-                      formData.append('title', `Leave Supporting Document (${typeVal}) - ${startVal} to ${endVal}`);
+                      formData.append(
+                        'title',
+                        `Leave Supporting Document (${typeVal}) - ${startVal} to ${endVal}`
+                      );
                       formData.append('document_type', 'OTHER');
                       await apiFetch(`/api/v1/employees/${employeeId}/documents/upload`, {
                         method: 'POST',
@@ -2760,7 +3372,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                     type="date"
                     name="edit_date"
                     className="input-field"
-                    defaultValue={editingItem.row.date ? String(editingItem.row.date).slice(0, 10) : ''}
+                    defaultValue={
+                      editingItem.row.date ? String(editingItem.row.date).slice(0, 10) : ''
+                    }
                   />
                 </div>
 
@@ -2771,7 +3385,11 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                       type="time"
                       name="edit_checkin"
                       className="input-field"
-                      defaultValue={editingItem.row.check_in ? String(editingItem.row.check_in).slice(11, 16) : '08:00'}
+                      defaultValue={
+                        editingItem.row.check_in
+                          ? String(editingItem.row.check_in).slice(11, 16)
+                          : '08:00'
+                      }
                     />
                   </div>
                   <div>
@@ -2780,7 +3398,11 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                       type="time"
                       name="edit_checkout"
                       className="input-field"
-                      defaultValue={editingItem.row.check_out ? String(editingItem.row.check_out).slice(11, 16) : '17:00'}
+                      defaultValue={
+                        editingItem.row.check_out
+                          ? String(editingItem.row.check_out).slice(11, 16)
+                          : '17:00'
+                      }
                     />
                   </div>
                 </div>
@@ -2823,7 +3445,11 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                       type="date"
                       name="edit_start"
                       className="input-field"
-                      defaultValue={editingItem.row.start_date ? String(editingItem.row.start_date).slice(0, 10) : ''}
+                      defaultValue={
+                        editingItem.row.start_date
+                          ? String(editingItem.row.start_date).slice(0, 10)
+                          : ''
+                      }
                     />
                   </div>
                   <div>
@@ -2833,7 +3459,11 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                       type="date"
                       name="edit_end"
                       className="input-field"
-                      defaultValue={editingItem.row.end_date ? String(editingItem.row.end_date).slice(0, 10) : ''}
+                      defaultValue={
+                        editingItem.row.end_date
+                          ? String(editingItem.row.end_date).slice(0, 10)
+                          : ''
+                      }
                     />
                   </div>
                 </div>
@@ -2851,7 +3481,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                 <div>
                   <label className="block text-xs font-semibold mb-1 flex items-center justify-between">
                     <span>Attach Supporting File / Certificate</span>
-                    <span className="text-[10px] text-muted-foreground font-normal">(Optional — Medical certificate, letter, etc.)</span>
+                    <span className="text-[10px] text-muted-foreground font-normal">
+                      (Optional — Medical certificate, letter, etc.)
+                    </span>
                   </label>
                   <input
                     type="file"
@@ -2864,7 +3496,11 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
             )}
 
             <div className="flex justify-end gap-2 border-t pt-3">
-              <button type="button" className="btn-secondary text-xs" onClick={() => setEditingItem(null)}>
+              <button
+                type="button"
+                className="btn-secondary text-xs"
+                onClick={() => setEditingItem(null)}
+              >
                 Cancel
               </button>
               <button disabled={busy} type="submit" className="btn-primary text-xs">
@@ -2878,7 +3514,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
       {/* MODAL: Generic Sub-item Record Form */}
       {activeSubModal && (
         <RecordForm
-          resource={activeSubModal.schemaName.includes('Assignment') ? 'employee-assignments' : 'employees'}
+          resource={
+            activeSubModal.schemaName.includes('Assignment') ? 'employee-assignments' : 'employees'
+          }
           path={activeSubModal.path}
           title={activeSubModal.name}
           initial={activeSubModal.initial}
@@ -2901,8 +3539,13 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
       {viewingAuthorization && (
         <AuthorizationDetailsModal
           authorization={viewingAuthorization}
-          employeeName={employee ? `${employee.first_name || ''} ${employee.last_name || ''}`.trim() : undefined}
-          assetName={assetMap[viewingAuthorization.asset_id] || assetMap[viewingAuthorization.asset_category_id]}
+          employeeName={
+            employee ? `${employee.first_name || ''} ${employee.last_name || ''}`.trim() : undefined
+          }
+          assetName={
+            assetMap[viewingAuthorization.asset_id] ||
+            assetMap[viewingAuthorization.asset_category_id]
+          }
           onClose={() => setViewingAuthorization(null)}
           onEdit={(itemToEdit) => {
             setViewingAuthorization(null);

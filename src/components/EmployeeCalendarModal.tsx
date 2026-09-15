@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api';
 import { Row, display, title, Modal } from './DataUI';
 import AssignmentDetailsModal from './AssignmentDetailsModal';
 import RecordForm from './RecordForm';
+import { formatAuditActivity } from './EmployeeDetailView';
 
 interface EmployeeCalendarModalProps {
   employeeId: string;
@@ -451,12 +452,29 @@ export default function EmployeeCalendarModal({
                     <Activity size={14} className="text-amber-600" /> Audit & Activity Logs
                   </h5>
                   {selectedEvents.activities.length > 0 ? (
-                    selectedEvents.activities.map((a, i) => (
-                      <div key={i} className="p-2.5 bg-amber-50/50 border border-amber-200 rounded text-xs space-y-1">
-                        <p className="font-semibold text-amber-900">{a.action || a.summary}</p>
-                        <p className="text-[10px] text-amber-700">{display(a.occurred_at || a.created_at)}</p>
-                      </div>
-                    ))
+                    selectedEvents.activities.map((a, i) => {
+                      const { titleStr, descStr, formattedDate, IconNode, badgeColor } =
+                        formatAuditActivity(a);
+                      return (
+                        <div
+                          key={i}
+                          className="p-2.5 bg-muted/20 border rounded flex items-center justify-between gap-3 text-xs"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className={`p-1.5 rounded-full border shrink-0 ${badgeColor}`}>
+                              <IconNode size={14} />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="font-bold text-foreground truncate">{titleStr}</p>
+                              <p className="text-[11px] text-muted-foreground truncate">{descStr}</p>
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-mono text-muted-foreground whitespace-nowrap shrink-0">
+                            {formattedDate}
+                          </span>
+                        </div>
+                      );
+                    })
                   ) : (
                     <p className="text-xs text-muted-foreground italic pl-2">No system activity logged on this date.</p>
                   )}
