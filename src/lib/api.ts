@@ -1,4 +1,4 @@
-// Browser calls stay on this origin; Next.js proxies to the local backend.
+// Browser calls stay on this origin; Next.js proxies to the configured backend.
 import {getAccessToken, getRefreshToken, setTokens, clearTokens, refreshSession} from './session';
 export {getAccessToken, getRefreshToken, setTokens, clearTokens} from './session';
 export const BASE_URL = '';
@@ -48,7 +48,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, authe
   if (token) headers.set('Authorization', `Bearer ${token}`);
   let response: Response;
   try { response = await fetch(`${BASE_URL}${path}`, {...options, headers, cache:'no-store'}); }
-  catch { throw new ApiError(0, 'Cannot reach the local backend. Check that Cestos is running on port 8000, then retry.'); }
+  catch { throw new ApiError(0, 'Cannot reach the server. Check your connection and try again.'); }
   if (response.status === 401 && authenticated) {
     if (await refreshSession(BASE_URL, token)) {
       headers.set('Authorization', `Bearer ${getAccessToken()}`);
@@ -68,7 +68,7 @@ export async function apiFetchBlob(path: string, options: RequestInit = {}, auth
   if (token) headers.set('Authorization', `Bearer ${token}`);
   let response: Response;
   try { response = await fetch(`${BASE_URL}${path}`, {...options, headers, cache:'no-store'}); }
-  catch { throw new ApiError(0, 'Cannot reach the local backend. Check that Cestos is running on port 8000, then retry.'); }
+  catch { throw new ApiError(0, 'Cannot reach the server. Check your connection and try again.'); }
   if (response.status === 401 && authenticated) {
     if (await refreshSession(BASE_URL, token)) {
       headers.set('Authorization', `Bearer ${getAccessToken()}`);

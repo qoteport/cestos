@@ -1,6 +1,5 @@
 # Node modules
 node_modules/
-package-lock.json
 
 # Next.js build output
 .next*/
@@ -39,3 +38,8 @@ turbo/
 .env
 .env.*
 !.env.example
+
+# Cloudflare build output and local bindings
+.open-next/
+.wrangler/
+.dev.vars*

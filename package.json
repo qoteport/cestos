@@ -47,9 +47,10 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css,md,json}\"",
     "serve": "next start",
     "type-check": "tsc --noEmit",
-    "build:cf": "opennextjs-cloudflare build",
-    "preview:cf": "opennextjs-cloudflare preview",
-    "deploy:cf": "opennextjs-cloudflare deploy"
+    "build:cf": "node scripts/build-cloudflare.mjs",
+    "preview:cf": "npm run build:cf && opennextjs-cloudflare preview",
+    "deploy:cf": "npm run build:cf && opennextjs-cloudflare deploy",
+    "check:cf": "npm run build:cf && wrangler deploy --dry-run"
   },
   "dependencies": {
     "@dhiwise/component-tagger": "^1.0.16",
@@ -57,7 +58,7 @@
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.16",
     "lucide-react": "^1.7.0",
-    "next": "15.5.18",
+    "next": "15.5.24",
     "react": "19.0.3",
     "react-dom": "19.0.3",
     "react-hook-form": "^7.87.0",
@@ -67,12 +68,14 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@netlify/plugin-nextjs": "^5.11.1",
-    "@types/node": "^20",
+    "@opennextjs/cloudflare": "^1.20.6",
+    "@types/node": "^24",
     "@types/react": "19.0.3",
     "@types/react-dom": "19.0.3",
     "@typescript-eslint/eslint-plugin": "^8.29.0",
     "@typescript-eslint/parser": "^8.29.0",
     "autoprefixer": "10.4.2",
+    "esbuild": "^0.28.2",
     "eslint": "^9",
     "eslint-config-next": "^15.2.4",
     "eslint-config-prettier": "^10.1.1",
@@ -82,7 +85,6 @@
     "tailwindcss": "3.4.6",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5",
-    "@opennextjs/cloudflare": "^1.0.0",
-    "wrangler": "^3.114.0"
+    "wrangler": "^4.0.0"
   }
 }

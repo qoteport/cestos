@@ -29,18 +29,18 @@
     }
   },
   "include": [
+    "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next-asset-build/types/**/*.ts",
-    ".next-asset-preview/types/**/*.ts",
-    ".next-build/types/**/*.ts",
-    ".next/next-build/types/**/*.ts",
-    ".next/types/**/*.ts",
-    "next-env.d.ts",
-    "types/**/*.d.ts",
-    ".next-document-verification/types/**/*.ts"
+    ".next/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    ".open-next",
+    ".wrangler",
+    ".next-asset-build",
+    ".next-asset-preview",
+    ".next-build",
+    ".next-document-verification"
   ]
 }

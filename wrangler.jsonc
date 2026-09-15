@@ -21,6 +21,6 @@
     }
   ],
   "vars": {
-    "CESTOS_API_BACKEND_URL": "http://127.0.0.1:8000"
+    "CESTOS_API_BACKEND_URL": "https://cestos-oversight.fly.dev"
   }
 }
