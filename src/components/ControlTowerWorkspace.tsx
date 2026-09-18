@@ -248,7 +248,7 @@ export default function ControlTowerWorkspace() {
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {(summary.project_summaries || []).map((p: any, idx: number) => (
+                      {(Array.isArray(summary?.project_summaries) ? summary.project_summaries : []).map((p: any, idx: number) => (
                         <tr key={idx} className="hover:bg-muted/30">
                           <td className="px-4 py-3 font-medium">{p.project_name}</td>
                           <td className="px-4 py-3">${p.revenue?.toLocaleString() || '0'}</td>
@@ -304,7 +304,7 @@ export default function ControlTowerWorkspace() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {scorecards.map((sc) => (
+                {(Array.isArray(scorecards) ? scorecards : []).map((sc) => (
                   <tr key={sc.id} className="hover:bg-muted/30">
                     <td className="px-4 py-3 font-mono font-medium text-xs">{sc.scorecard_number}</td>
                     <td className="px-4 py-3 font-medium">{sc.supervisor_id}</td>
@@ -348,7 +348,7 @@ export default function ControlTowerWorkspace() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {opportunities.map((opp) => (
+            {(Array.isArray(opportunities) ? opportunities : []).map((opp) => (
               <div key={opp.id} className="p-4 rounded-xl border bg-card space-y-3 shadow-sm hover:border-primary/50 transition">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-mono font-medium text-muted-foreground">{opp.opportunity_number}</span>
@@ -393,7 +393,7 @@ export default function ControlTowerWorkspace() {
                   className="w-full text-sm border rounded p-2 bg-background"
                 >
                   <option value="">Select Supervisor...</option>
-                  {employees.map((e) => (
+                  {(Array.isArray(employees) ? employees : []).map((e) => (
                     <option key={e.id} value={e.id}>{e.first_name} {e.last_name} ({e.job_title || 'Supervisor'})</option>
                   ))}
                 </select>
@@ -407,7 +407,7 @@ export default function ControlTowerWorkspace() {
                   className="w-full text-sm border rounded p-2 bg-background"
                 >
                   <option value="">Select Project...</option>
-                  {projects.map((p) => (
+                  {(Array.isArray(projects) ? projects : []).map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </select>
@@ -547,7 +547,7 @@ export default function ControlTowerWorkspace() {
                 className="w-full text-sm border rounded p-2 bg-background"
               >
                 <option value="">Select Client...</option>
-                {clients.map((c) => (
+                {(Array.isArray(clients) ? clients : []).map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>

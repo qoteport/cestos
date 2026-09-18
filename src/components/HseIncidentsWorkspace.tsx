@@ -130,7 +130,7 @@ export default function HseIncidentsWorkspace() {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {incidents.map((inc) => (
+            {(Array.isArray(incidents) ? incidents : []).map((inc) => (
               <tr key={inc.id} className="hover:bg-muted/30">
                 <td className="px-4 py-3 font-mono font-medium text-xs">{inc.incident_number}</td>
                 <td className="px-4 py-3 font-semibold text-xs">{inc.incident_type}</td>

@@ -158,7 +158,7 @@ export default function CommercialCostingWorkspace() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {contracts.map((c) => (
+            {(Array.isArray(contracts) ? contracts : []).map((c) => (
               <div key={c.id} className="p-4 rounded-xl border bg-card space-y-3 shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-mono font-medium text-muted-foreground">{c.contract_number}</span>
@@ -193,7 +193,7 @@ export default function CommercialCostingWorkspace() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {revenueEntries.map((r) => (
+              {(Array.isArray(revenueEntries) ? revenueEntries : []).map((r) => (
                 <tr key={r.id} className="hover:bg-muted/30">
                   <td className="px-4 py-3 font-medium">{r.category}</td>
                   <td className="px-4 py-3 font-bold text-emerald-600">${Number(r.total_revenue_base).toLocaleString()}</td>
@@ -226,7 +226,7 @@ export default function CommercialCostingWorkspace() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {costEntries.map((c) => (
+              {(Array.isArray(costEntries) ? costEntries : []).map((c) => (
                 <tr key={c.id} className="hover:bg-muted/30">
                   <td className="px-4 py-3 font-medium">{c.cost_category}</td>
                   <td className="px-4 py-3">{c.description}</td>
@@ -259,7 +259,7 @@ export default function CommercialCostingWorkspace() {
                 className="w-full text-sm border rounded p-2 bg-background"
               >
                 <option value="">Select Project...</option>
-                {projects.map((p) => (
+                {(Array.isArray(projects) ? projects : []).map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>

@@ -173,7 +173,7 @@ export default function DrillingWorkspace() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {shifts.map((s) => (
+                {(Array.isArray(shifts) ? shifts : []).map((s) => (
                   <tr key={s.id} className="hover:bg-muted/30">
                     <td className="px-4 py-3 font-mono font-medium text-xs">{s.shift_number}</td>
                     <td className="px-4 py-3 font-medium">
@@ -224,7 +224,7 @@ export default function DrillingWorkspace() {
             <h2 className="text-lg font-semibold">Drilling Programs</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {programs.map((p) => (
+            {(Array.isArray(programs) ? programs : []).map((p) => (
               <div key={p.id} className="p-4 rounded-xl border bg-card space-y-2 shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-muted-foreground">{p.drilling_type}</span>
@@ -263,7 +263,7 @@ export default function DrillingWorkspace() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {holes.map((h) => (
+                {(Array.isArray(holes) ? holes : []).map((h) => (
                   <tr key={h.id} className="hover:bg-muted/30">
                     <td className="px-4 py-3 font-mono font-medium">{h.hole_number}</td>
                     <td className="px-4 py-3">{h.target_depth_m} m</td>
@@ -298,7 +298,7 @@ export default function DrillingWorkspace() {
                   className="w-full text-sm border rounded p-2 bg-background"
                 >
                   <option value="">Select Rig...</option>
-                  {assets.map((a) => (
+                  {(Array.isArray(assets) ? assets : []).map((a) => (
                     <option key={a.id} value={a.id}>{a.name} ({a.asset_number || 'Rig'})</option>
                   ))}
                 </select>
@@ -313,7 +313,7 @@ export default function DrillingWorkspace() {
                   className="w-full text-sm border rounded p-2 bg-background"
                 >
                   <option value="">Select Project...</option>
-                  {projects.map((p) => (
+                  {(Array.isArray(projects) ? projects : []).map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </select>

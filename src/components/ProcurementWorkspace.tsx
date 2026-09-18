@@ -133,7 +133,7 @@ export default function ProcurementWorkspace() {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {orders.map((po) => (
+            {(Array.isArray(orders) ? orders : []).map((po) => (
               <tr key={po.id} className="hover:bg-muted/30">
                 <td className="px-4 py-3 font-mono font-medium">{po.po_number}</td>
                 <td className="px-4 py-3 text-xs text-muted-foreground">
@@ -185,7 +185,7 @@ export default function ProcurementWorkspace() {
                 className="w-full text-sm border rounded p-2 bg-background"
               >
                 <option value="">Select Supplier...</option>
-                {suppliers.map((s) => (
+                {(Array.isArray(suppliers) ? suppliers : []).map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
@@ -199,7 +199,7 @@ export default function ProcurementWorkspace() {
                 className="w-full text-sm border rounded p-2 bg-background"
               >
                 <option value="">Select Project...</option>
-                {projects.map((p) => (
+                {(Array.isArray(projects) ? projects : []).map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
@@ -275,7 +275,7 @@ export default function ProcurementWorkspace() {
           <form onSubmit={handleReceiveGoods} className="space-y-4">
             <p className="text-xs text-muted-foreground">Record quantities received from vendor against PO line items.</p>
             <div className="space-y-3">
-              {(receivingPo.items || []).map((item: any) => (
+              {(Array.isArray(receivingPo?.items) ? receivingPo.items : []).map((item: any) => (
                 <div key={item.id} className="p-3 border rounded-lg bg-card space-y-1">
                   <div className="flex items-center justify-between text-xs font-semibold">
                     <span>{item.description}</span>
