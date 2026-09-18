@@ -1055,7 +1055,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
               <div>
                 <dt className="text-muted-foreground">Work Location</dt>
                 <dd className="font-semibold text-foreground text-sm mt-0.5">
-                  {display(locations?.find(l => l.id === employee.home_location_id)?.name) || display(employee.home_location_id)}
+                  {display((Array.isArray(locations) ? locations : (locations as any)?.items || []).find((l: any) => l.id === employee.home_location_id)?.name) || display(employee.home_location_id)}
                 </dd>
               </div>
               <div>
