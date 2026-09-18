@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Building2, TrendingUp, Award, FileSpreadsheet, Eye, Plus, RefreshCw, 
-  Search, ShieldCheck, DollarSign, Activity, CheckCircle2, AlertTriangle, Layers, UserCheck, Paperclip, Upload, Download, X
+  Search, ShieldCheck, DollarSign, Activity, CheckCircle2, AlertTriangle, Layers, UserCheck, Paperclip, Upload, Download, X, Pencil
 } from 'lucide-react';
-import { apiFetch, CeoControlTowerSummary, SupervisorScorecardRead, CommercialOpportunityRead } from '@/lib/api';
+import { apiFetch, CeoControlTowerSummary, SupervisorScorecardRead, CommercialOpportunityRead, updateCommercialOpportunity } from '@/lib/api';
 import { Modal, rows } from './DataUI';
 
 export default function ControlTowerWorkspace({ subResource }: { subResource?: string }) {
@@ -51,6 +51,21 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
   const [showAddOpp, setShowAddOpp] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
   const [newOpp, setNewOpp] = useState({
+    client_id: '',
+    title: '',
+    tender_stage: 'PROPOSAL_SENT',
+    win_probability_pct: 70,
+    estimated_value: 250000,
+    currency: 'USD',
+    expected_close_date: '',
+    notes: '',
+    attachment_name: '',
+    attachment_url: '',
+  });
+
+  // Edit Opportunity Form State
+  const [editingOpp, setEditingOpp] = useState<CommercialOpportunityRead | null>(null);
+  const [editOppForm, setEditOppForm] = useState({
     client_id: '',
     title: '',
     tender_stage: 'PROPOSAL_SENT',
@@ -132,6 +147,52 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
       reload();
     } catch (err: any) {
       alert(err.message || 'Failed to create opportunity');
+    }
+  };
+
+  const handleOpenEditOpp = (opp: CommercialOpportunityRead) => {
+    setEditingOpp(opp);
+    setEditOppForm({
+      client_id: opp.client_id || '',
+      title: opp.title || '',
+      tender_stage: opp.tender_stage || 'PROPOSAL_SENT',
+      win_probability_pct: opp.win_probability_pct ?? 70,
+      estimated_value: opp.estimated_value ?? 0,
+      currency: opp.currency || 'USD',
+      expected_close_date: opp.expected_close_date || '',
+      notes: opp.notes || '',
+      attachment_name: opp.attachment_name || '',
+      attachment_url: opp.attachment_url || '',
+    });
+  };
+
+  const handleEditOppFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setEditOppForm((prev) => ({
+          ...prev,
+          attachment_name: file.name,
+          attachment_url: reader.result as string,
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUpdateOpp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingOpp) return;
+    try {
+      await updateCommercialOpportunity(editingOpp.id, editOppForm);
+      setEditingOpp(null);
+      if (selectedOpp?.id === editingOpp.id) {
+        setSelectedOpp(null);
+      }
+      reload();
+    } catch (err: any) {
+      alert(err.message || 'Failed to update opportunity');
     }
   };
 
@@ -456,9 +517,22 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-mono font-medium text-muted-foreground">{opp.opportunity_number}</span>
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
-                      {opp.tender_stage}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
+                        {opp.tender_stage}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenEditOpp(opp);
+                        }}
+                        className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-muted transition"
+                        title="Edit Tender Opportunity"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
                   <h3 className="font-semibold text-base leading-snug">{opp.title}</h3>
                   <div className="flex items-center justify-between text-sm">
@@ -731,6 +805,40 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium mb-1">Win Probability (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={newOpp.win_probability_pct}
+                  onChange={(e) => setNewOpp({ ...newOpp, win_probability_pct: Number(e.target.value) })}
+                  className="w-full text-sm border rounded p-2 bg-background"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1">Expected Close Date</label>
+                <input
+                  type="date"
+                  value={newOpp.expected_close_date}
+                  onChange={(e) => setNewOpp({ ...newOpp, expected_close_date: e.target.value })}
+                  className="w-full text-sm border rounded p-2 bg-background"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium mb-1">Commercial Notes</label>
+              <textarea
+                rows={2}
+                placeholder="Add notes, key terms, or evaluation criteria..."
+                value={newOpp.notes}
+                onChange={(e) => setNewOpp({ ...newOpp, notes: e.target.value })}
+                className="w-full text-sm border rounded p-2 bg-background"
+              />
+            </div>
+
             {/* File Attachment */}
             <div>
               <label className="block text-xs font-medium mb-1 flex items-center justify-between">
@@ -868,9 +976,23 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
                 <span className="text-xs font-mono text-muted-foreground">{selectedOpp.opportunity_number}</span>
                 <h3 className="font-bold text-base">{selectedOpp.title}</h3>
               </div>
-              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary">
-                {selectedOpp.tender_stage}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary">
+                  {selectedOpp.tender_stage}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = selectedOpp;
+                    setSelectedOpp(null);
+                    handleOpenEditOpp(target);
+                  }}
+                  className="px-2.5 py-1 border rounded text-xs font-medium flex items-center gap-1 hover:bg-muted text-foreground"
+                  title="Edit Tender"
+                >
+                  <Pencil className="h-3.5 w-3.5 text-primary" /> Edit
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4 text-xs">
@@ -916,6 +1038,159 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
               </div>
             )}
           </div>
+        </Modal>
+      )}
+
+      {/* EDIT TENDER MODAL */}
+      {editingOpp && (
+        <Modal title={`Edit Commercial Opportunity - ${editingOpp.opportunity_number}`} onClose={() => setEditingOpp(null)}>
+          <form onSubmit={handleUpdateOpp} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium mb-1">Client</label>
+              <select
+                required
+                value={editOppForm.client_id}
+                onChange={(e) => setEditOppForm({ ...editOppForm, client_id: e.target.value })}
+                className="w-full text-sm border rounded p-2 bg-background"
+              >
+                <option value="">Select Client...</option>
+                {(Array.isArray(clients) ? clients : []).map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium mb-1">Tender Title</label>
+              <input
+                type="text"
+                required
+                value={editOppForm.title}
+                onChange={(e) => setEditOppForm({ ...editOppForm, title: e.target.value })}
+                className="w-full text-sm border rounded p-2 bg-background"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium mb-1">Stage</label>
+                <select
+                  value={editOppForm.tender_stage}
+                  onChange={(e) => setEditOppForm({ ...editOppForm, tender_stage: e.target.value })}
+                  className="w-full text-sm border rounded p-2 bg-background"
+                >
+                  <option value="PROSPECT">PROSPECT</option>
+                  <option value="QUALIFIED">QUALIFIED</option>
+                  <option value="PROPOSAL_SENT">PROPOSAL_SENT</option>
+                  <option value="NEGOTIATION">NEGOTIATION</option>
+                  <option value="WON">WON</option>
+                  <option value="LOST">LOST</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium mb-1">Estimated Value ($)</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  value={editOppForm.estimated_value}
+                  onChange={(e) => setEditOppForm({ ...editOppForm, estimated_value: Number(e.target.value) })}
+                  className="w-full text-sm border rounded p-2 bg-background"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium mb-1">Win Probability (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={editOppForm.win_probability_pct}
+                  onChange={(e) => setEditOppForm({ ...editOppForm, win_probability_pct: Number(e.target.value) })}
+                  className="w-full text-sm border rounded p-2 bg-background"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1">Expected Close Date</label>
+                <input
+                  type="date"
+                  value={editOppForm.expected_close_date}
+                  onChange={(e) => setEditOppForm({ ...editOppForm, expected_close_date: e.target.value })}
+                  className="w-full text-sm border rounded p-2 bg-background"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium mb-1">Commercial Notes</label>
+              <textarea
+                rows={2}
+                placeholder="Add notes, key terms, or evaluation criteria..."
+                value={editOppForm.notes}
+                onChange={(e) => setEditOppForm({ ...editOppForm, notes: e.target.value })}
+                className="w-full text-sm border rounded p-2 bg-background"
+              />
+            </div>
+
+            {/* File Attachment */}
+            <div>
+              <label className="block text-xs font-medium mb-1 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Paperclip className="h-3.5 w-3.5 text-primary" />
+                  Tender File Attachment
+                </span>
+                <span className="text-[10px] text-muted-foreground">(PDF, DOCX, XLSX, max 10MB)</span>
+              </label>
+              
+              {editOppForm.attachment_name ? (
+                <div className="flex items-center justify-between p-2.5 border rounded-lg bg-primary/5 text-xs font-medium">
+                  <div className="flex items-center gap-2 truncate">
+                    <Paperclip className="h-4 w-4 text-primary shrink-0" />
+                    <span className="truncate">{editOppForm.attachment_name}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditOppForm({ ...editOppForm, attachment_name: '', attachment_url: '' })}
+                    className="p-1 rounded hover:bg-muted text-muted-foreground"
+                    title="Remove attachment"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="relative border border-dashed rounded-lg p-3 text-center hover:bg-muted/30 transition cursor-pointer">
+                  <input
+                    type="file"
+                    onChange={handleEditOppFileChange}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  />
+                  <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                    <Upload className="h-4 w-4 text-primary" />
+                    <span>Click to attach proposal or tender document</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setEditingOpp(null)}
+                className="px-4 py-2 text-sm border rounded hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded font-medium hover:bg-primary/90"
+              >
+                Update Opportunity
+              </button>
+            </div>
+          </form>
         </Modal>
       )}
     </div>

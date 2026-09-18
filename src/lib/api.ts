@@ -798,6 +798,13 @@ export async function createCommercialOpportunity(data: Record<string, any>): Pr
   });
 }
 
+export async function updateCommercialOpportunity(id: string, data: Record<string, any>): Promise<CommercialOpportunityRead> {
+  return apiFetch<CommercialOpportunityRead>(`/api/v1/control-tower/opportunities/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
 export async function grantClientProjectAccess(data: { client_id: string; project_id: string }): Promise<unknown> {
   return apiFetch('/api/v1/control-tower/client-grants', {
     method: 'POST',
