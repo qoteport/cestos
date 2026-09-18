@@ -93,6 +93,11 @@ import EquipmentWorkOrdersWorkspace from './EquipmentWorkOrdersWorkspace';
 import EquipmentDefectsWorkspace from './EquipmentDefectsWorkspace';
 import EquipmentInspectionsWorkspace from './EquipmentInspectionsWorkspace';
 import EquipmentFuelLogsWorkspace from './EquipmentFuelLogsWorkspace';
+import ControlTowerWorkspace from './ControlTowerWorkspace';
+import DrillingWorkspace from './DrillingWorkspace';
+import CommercialCostingWorkspace from './CommercialCostingWorkspace';
+import ProcurementWorkspace from './ProcurementWorkspace';
+import HseIncidentsWorkspace from './HseIncidentsWorkspace';
 
 const routes: Row = contract.routes;
 export function operation(path: string, method: string): Row | null {
@@ -139,6 +144,14 @@ function normalizeResource(res: string): string {
 export default function ResourceWorkspace({ resource }: { resource: string }) {
   const normResource = normalizeResource(resource);
   const searchParams = useSearchParams();
+
+  // Phase 1-6 Custom Workspaces
+  if (normResource.startsWith('control-tower')) return <ControlTowerWorkspace />;
+  if (normResource.startsWith('drilling')) return <DrillingWorkspace />;
+  if (normResource.startsWith('commercial')) return <CommercialCostingWorkspace />;
+  if (normResource.startsWith('procurement') || normResource === 'purchase-orders') return <ProcurementWorkspace />;
+  if (normResource.startsWith('hse') || normResource === 'capa') return <HseIncidentsWorkspace />;
+
   if (normResource === 'projects') return <ProjectRegister />;
   if (normResource === 'employees/available') return <EmployeeAvailabilityWorkspace />;
   if (normResource === 'rotations/current' || normResource === 'rotations/upcoming') return <RotationsWorkspace />;
@@ -148,7 +161,7 @@ export default function ResourceWorkspace({ resource }: { resource: string }) {
   if (normResource === 'hr/notifications' || normResource === 'notifications' || normResource === 'notification-schedules') return <NotificationWorkspace />;
   if (normResource === 'admin/leave' || normResource === 'leave-management' || normResource === 'hr/leave-requests' || normResource === 'employees/leave-requests' || normResource === 'leaves' || normResource === 'leave') return <LeaveManagementWorkspace />;
   if (normResource === 'admin' || normResource === 'users' || normResource === 'roles' || normResource === 'admin/users' || normResource === 'admin/roles') return <AdminWorkspace initialTab="users" />;
-  if (normResource === 'incidents' || normResource === 'hr/incidents' || normResource === 'safety/incidents' || normResource === 'incident-reports') return <IncidentReportingWorkspace />;
+  if (normResource === 'incidents' || normResource === 'hr/incidents' || normResource === 'safety/incidents' || normResource === 'incident-reports') return <HseIncidentsWorkspace />;
 
   // Standalone Equipment Workspaces
   if (normResource === 'components' || normResource === 'assets/components') return <EquipmentComponentsWorkspace />;

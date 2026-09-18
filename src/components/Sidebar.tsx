@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, FileText, FolderKanban, Users, Truck, Package, ChevronDown, PanelLeftClose, PanelLeftOpen, LogOut, User, Bell, ShieldCheck,  } from 'lucide-react';
+import { LayoutDashboard, FileText, FolderKanban, Users, Truck, Package, ChevronDown, PanelLeftClose, PanelLeftOpen, LogOut, User, Bell, ShieldCheck, Building2, Flame, DollarSign, ShoppingBag } from 'lucide-react';
 import AppLogo from './ui/AppLogo';
 import { useAuth, canAccessAdministration } from './AuthProvider';
 import { operation } from './ResourceWorkspace';
@@ -17,6 +17,54 @@ interface SidebarGroup {
 }
 
 const groups: SidebarGroup[] = [
+  {
+    name: 'Executive & Control Tower',
+    icon: Building2,
+    href: '/workspace/control-tower/summary',
+    permission: 'projects.read',
+    sections: [
+      {
+        title: 'CEO Oversight',
+        links: [
+          ['CEO Control Tower', 'control-tower/summary'],
+          ['Supervisor Scorecards', 'control-tower/scorecards'],
+          ['Tender Pipeline', 'control-tower/opportunities'],
+        ],
+      },
+    ],
+  },
+  {
+    name: 'Drilling Operations',
+    icon: Flame,
+    href: '/workspace/drilling/shifts',
+    permission: 'projects.read',
+    sections: [
+      {
+        title: 'Rig & Production',
+        links: [
+          ['Shift Production Reports', 'drilling/shifts'],
+          ['Drilling Programs', 'drilling/programs'],
+          ['Drill Holes', 'drilling/holes'],
+        ],
+      },
+    ],
+  },
+  {
+    name: 'Commercial & Costing',
+    icon: DollarSign,
+    href: '/workspace/commercial/contracts',
+    permission: 'projects.read',
+    sections: [
+      {
+        title: 'Contracts & Revenue',
+        links: [
+          ['Commercial Contracts', 'commercial/contracts'],
+          ['Cost Subledger', 'commercial/cost-entries'],
+          ['Revenue Subledger', 'commercial/revenue-entries'],
+        ],
+      },
+    ],
+  },
   {
     name: 'Projects',
     icon: FolderKanban,
@@ -55,7 +103,7 @@ const groups: SidebarGroup[] = [
         links: [
           ['Training compliance', 'training/compliance'],
           ['Expiring documents', 'employee-documents/expiring'],
-          ['Incident reports', 'incidents'],
+          ['Supervisor Scorecards', 'control-tower/scorecards'],
           ['Departments', 'departments'],
           ['Positions', 'positions'],
         ],
@@ -88,19 +136,27 @@ const groups: SidebarGroup[] = [
         ],
       },
       {
-        title: 'Compliance & Deadlines',
+        title: 'HSE & Compliance',
         links: [
+          ['HSE Incidents & Near-Misses', 'hse/incidents'],
           ['Expiring Licences & Compliance', 'assets/expiring-documents'],
         ],
       },
     ],
   },
   {
-    name: 'Inventory',
+    name: 'Inventory & Procurement',
     icon: Package,
     href: '/inventory-overview',
     permission: 'inventory.read',
     sections: [
+      {
+        title: 'Procurement & POs',
+        links: [
+          ['Purchase Orders', 'procurement/purchase-orders'],
+          ['Suppliers & Vendors', 'inventory/suppliers'],
+        ],
+      },
       {
         title: 'Stores & Facilities',
         links: [
@@ -138,7 +194,6 @@ const groups: SidebarGroup[] = [
           ['Reorder Recommendations', 'inventory/reorder-recommendations'],
           ['Demand Forecast', 'inventory/forecast'],
           ['Stock Policies', 'inventory/stock-policies'],
-          ['Suppliers & Vendors', 'inventory/suppliers'],
           ['Batches & Lots', 'inventory/lots'],
           ['Serial Numbers', 'inventory/serials'],
         ],

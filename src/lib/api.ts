@@ -424,4 +424,377 @@ export async function getLowStockItems(params?: Record<string, string>): Promise
 export async function getCriticalStockItems(params?: Record<string, string>): Promise<unknown[]> {
   const qs = params ? '?' + new URLSearchParams(params).toString() : '';
   return apiFetch<unknown[]>(`/api/v1/inventory/critical-stock${qs}`);
-}
+}
+
+// ─── Phase 1: Drilling Operations ───────────────────────────────────────────
+
+export interface DrillingProgramRead {
+  id: string;
+  organization_id: string;
+  project_id: string;
+  program_name: string;
+  drilling_type: string;
+  target_metres: number;
+  drilled_metres: number;
+  status: string;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+export interface DrillHoleRead {
+  id: string;
+  organization_id: string;
+  program_id: string;
+  hole_number: string;
+  target_depth_m: number;
+  final_depth_m: number;
+  status: string;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+export interface DrillingShiftReportRead {
+  id: string;
+  organization_id: string;
+  rig_id: string;
+  project_id: string;
+  hole_id?: string;
+  shift_date: string;
+  shift_type: string;
+  shift_number: string;
+  status: string;
+  total_metres_drilled: number;
+  core_recovery_pct: number;
+  productive_hours: number;
+  standby_hours: number;
+  maintenance_hours: number;
+  intervals?: any[];
+  time_segments?: any[];
+  crew_members?: any[];
+  created_at: string;
+  [key: string]: unknown;
+}
+
+export async function getDrillingPrograms(params?: Record<string, string>): Promise<DrillingProgramRead[]> {
+  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  return apiFetch<DrillingProgramRead[]>(`/api/v1/drilling/programs${qs}`);
+}
+
+export async function createDrillingProgram(data: Record<string, any>): Promise<DrillingProgramRead> {
+  return apiFetch<DrillingProgramRead>('/api/v1/drilling/programs', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getDrillHoles(params?: Record<string, string>): Promise<DrillHoleRead[]> {
+  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  return apiFetch<DrillHoleRead[]>(`/api/v1/drilling/holes${qs}`);
+}
+
+export async function createDrillHole(data: Record<string, any>): Promise<DrillHoleRead> {
+  return apiFetch<DrillHoleRead>('/api/v1/drilling/holes', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getDrillingShifts(params?: Record<string, string>): Promise<DrillingShiftReportRead[]> {
+  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  return apiFetch<DrillingShiftReportRead[]>(`/api/v1/drilling/shifts${qs}`);
+}
+
+export async function createDrillingShift(data: Record<string, any>): Promise<DrillingShiftReportRead> {
+  return apiFetch<DrillingShiftReportRead>('/api/v1/drilling/shifts', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function submitDrillingShift(shiftId: string): Promise<DrillingShiftReportRead> {
+  return apiFetch<DrillingShiftReportRead>(`/api/v1/drilling/shifts/${shiftId}/submit`, { method: 'POST' });
+}
+
+export async function approveDrillingShift(shiftId: string): Promise<DrillingShiftReportRead> {
+  return apiFetch<DrillingShiftReportRead>(`/api/v1/drilling/shifts/${shiftId}/approve`, { method: 'POST' });
+}
+
+// ─── Phase 2: Commercial Contracts & Subledgers ──────────────────────────────
+
+export interface ProjectContractRead {
+  id: string;
+  project_id: string;
+  contract_number: string;
+  title: string;
+  status: string;
+  currency: string;
+  rate_cards?: any[];
+  [key: string]: unknown;
+}
+
+export interface CostSubledgerRead {
+  id: string;
+  project_id?: string;
+  rig_id?: string;
+  cost_category: string;
+  description: string;
+  amount: number;
+  currency: string;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+export interface RevenueSubledgerRead {
+  id: string;
+  project_id?: string;
+  rig_id?: string;
+  category: string;
+  total_revenue_base: number;
+  currency: string;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+export async function getProjectContracts(params?: Record<string, string>): Promise<ProjectContractRead[]> {
+  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  return apiFetch<ProjectContractRead[]>(`/api/v1/commercial/contracts${qs}`);
+}
+
+export async function createProjectContract(data: Record<string, any>): Promise<ProjectContractRead> {
+  return apiFetch<ProjectContractRead>('/api/v1/commercial/contracts', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getProjectFinancials(projectId: string): Promise<unknown> {
+  return apiFetch(`/api/v1/commercial/projects/${projectId}/financials`);
+}
+
+export async function getRigPerformance(rigId: string): Promise<unknown> {
+  return apiFetch(`/api/v1/commercial/rigs/${rigId}/performance`);
+}
+
+// ─── Phase 3: Maintenance Reliability & HSE ─────────────────────────────────
+
+export interface MaintenanceWorkOrderRead {
+  id: string;
+  wo_number: string;
+  asset_id: string;
+  project_id?: string;
+  title: string;
+  description?: string;
+  work_type: string;
+  priority: string;
+  status: string;
+  failure_taxonomy?: string;
+  downtime_hours?: number;
+  estimated_lost_contribution?: number;
+  cost_lines?: any[];
+  created_at: string;
+  [key: string]: unknown;
+}
+
+export interface HseIncidentRead {
+  id: string;
+  incident_number: string;
+  incident_type: string;
+  severity: string;
+  project_id?: string;
+  asset_id?: string;
+  title: string;
+  description?: string;
+  status: string;
+  occurred_at: string;
+  actions?: any[];
+  [key: string]: unknown;
+}
+
+export interface HseActionRead {
+  id: string;
+  action_number: string;
+  incident_id: string;
+  assigned_to_id?: string;
+  title: string;
+  status: string;
+  due_date: string;
+  [key: string]: unknown;
+}
+
+export async function getMaintenanceWorkOrders(params?: Record<string, string>): Promise<MaintenanceWorkOrderRead[]> {
+  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  return apiFetch<MaintenanceWorkOrderRead[]>(`/api/v1/maintenance/work-orders${qs}`);
+}
+
+export async function createMaintenanceWorkOrder(data: Record<string, any>): Promise<MaintenanceWorkOrderRead> {
+  return apiFetch<MaintenanceWorkOrderRead>('/api/v1/maintenance/work-orders', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function completeMaintenanceWorkOrder(woId: string, data: Record<string, any>): Promise<MaintenanceWorkOrderRead> {
+  return apiFetch<MaintenanceWorkOrderRead>(`/api/v1/maintenance/work-orders/${woId}/complete`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getAssetReliability(assetId: string): Promise<unknown> {
+  return apiFetch(`/api/v1/maintenance/assets/${assetId}/reliability`);
+}
+
+export async function getHseIncidents(params?: Record<string, string>): Promise<HseIncidentRead[]> {
+  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  return apiFetch<HseIncidentRead[]>(`/api/v1/hse/incidents${qs}`);
+}
+
+export async function createHseIncident(data: Record<string, any>): Promise<HseIncidentRead> {
+  return apiFetch<HseIncidentRead>('/api/v1/hse/incidents', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function createHseAction(incidentId: string, data: Record<string, any>): Promise<HseActionRead> {
+  return apiFetch<HseActionRead>(`/api/v1/hse/incidents/${incidentId}/actions`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+// ─── Phase 4: Procurement & Purchase Orders ──────────────────────────────────
+
+export interface PurchaseOrderRead {
+  id: string;
+  po_number: string;
+  supplier_id: string;
+  project_id?: string;
+  status: string;
+  total_amount: number;
+  currency: string;
+  notes?: string;
+  items?: any[];
+  created_at: string;
+  [key: string]: unknown;
+}
+
+export async function getPurchaseOrders(params?: Record<string, string>): Promise<PurchaseOrderRead[]> {
+  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  return apiFetch<PurchaseOrderRead[]>(`/api/v1/procurement/purchase-orders${qs}`);
+}
+
+export async function createPurchaseOrder(data: Record<string, any>): Promise<PurchaseOrderRead> {
+  return apiFetch<PurchaseOrderRead>('/api/v1/procurement/purchase-orders', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function receivePurchaseOrderGoods(poId: string, itemReceipts: Record<string, number>): Promise<PurchaseOrderRead> {
+  return apiFetch<PurchaseOrderRead>(`/api/v1/procurement/purchase-orders/${poId}/receive`, {
+    method: 'POST',
+    body: JSON.stringify({ item_receipts: itemReceipts }),
+  });
+}
+
+// ─── Phases 5 & 6: CEO Control Tower, Scorecards & Client Portal ─────────────
+
+export interface CeoControlTowerSummary {
+  company_name: string;
+  total_projects: number;
+  active_rigs: number;
+  total_revenue: number;
+  total_direct_cost: number;
+  net_contribution: number;
+  contribution_margin_pct: number;
+  total_metres_drilled: number;
+  avg_asset_availability_pct: number;
+  active_work_orders: number;
+  open_hse_incidents: number;
+  project_summaries: any[];
+  [key: string]: unknown;
+}
+
+export interface SupervisorScorecardRead {
+  id: string;
+  scorecard_number: string;
+  supervisor_id: string;
+  project_id?: string;
+  period_start: string;
+  period_end: string;
+  production_score: number;
+  rig_condition_score: number;
+  downtime_score: number;
+  hse_score: number;
+  consumables_score: number;
+  crew_management_score: number;
+  reporting_score: number;
+  stewardship_score: number;
+  overall_weighted_score: number;
+  grade: string;
+  notes?: string;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+export interface CommercialOpportunityRead {
+  id: string;
+  opportunity_number: string;
+  client_id: string;
+  title: string;
+  tender_stage: string;
+  win_probability_pct: number;
+  estimated_value: number;
+  currency: string;
+  expected_close_date?: string;
+  notes?: string;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+export async function getCeoControlTowerSummary(): Promise<CeoControlTowerSummary> {
+  return apiFetch<CeoControlTowerSummary>('/api/v1/control-tower/summary');
+}
+
+export async function getSupervisorScorecards(params?: Record<string, string>): Promise<SupervisorScorecardRead[]> {
+  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  return apiFetch<SupervisorScorecardRead[]>(`/api/v1/control-tower/scorecards${qs}`);
+}
+
+export async function createSupervisorScorecard(data: Record<string, any>): Promise<SupervisorScorecardRead> {
+  return apiFetch<SupervisorScorecardRead>('/api/v1/control-tower/scorecards', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getCommercialOpportunities(params?: Record<string, string>): Promise<CommercialOpportunityRead[]> {
+  const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  return apiFetch<CommercialOpportunityRead[]>(`/api/v1/control-tower/opportunities${qs}`);
+}
+
+export async function createCommercialOpportunity(data: Record<string, any>): Promise<CommercialOpportunityRead> {
+  return apiFetch<CommercialOpportunityRead>('/api/v1/control-tower/opportunities', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function grantClientProjectAccess(data: { client_id: string; project_id: string }): Promise<unknown> {
+  return apiFetch('/api/v1/control-tower/client-grants', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function publishClientArtifact(data: Record<string, any>): Promise<unknown> {
+  return apiFetch('/api/v1/control-tower/publish', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getClientPortalOverview(clientId: string, projectId: string): Promise<unknown> {
+  return apiFetch(`/api/v1/control-tower/client-portal/${clientId}/${projectId}`);
+}
