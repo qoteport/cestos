@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Building2, TrendingUp, Award, FileSpreadsheet, Eye, Plus, RefreshCw, 
-  Search, ShieldCheck, DollarSign, Activity, CheckCircle2, AlertTriangle, Layers, UserCheck
+  Search, ShieldCheck, DollarSign, Activity, CheckCircle2, AlertTriangle, Layers, UserCheck, Paperclip, Upload, Download, X
 } from 'lucide-react';
 import { apiFetch, CeoControlTowerSummary, SupervisorScorecardRead, CommercialOpportunityRead } from '@/lib/api';
 import { Modal, rows } from './DataUI';
@@ -23,6 +23,9 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
   const [scorecards, setScorecards] = useState<SupervisorScorecardRead[]>([]);
   const [opportunities, setOpportunities] = useState<CommercialOpportunityRead[]>([]);
   const [version, setVersion] = useState(0);
+
+  // Supervisor Search State
+  const [supervisorSearch, setSupervisorSearch] = useState('');
 
   // New Scorecard Form State
   const [showAddScorecard, setShowAddScorecard] = useState(false);
@@ -56,7 +59,24 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
     currency: 'USD',
     expected_close_date: '',
     notes: '',
+    attachment_name: '',
+    attachment_url: '',
   });
+
+  const handleOppFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setNewOpp((prev) => ({
+          ...prev,
+          attachment_name: file.name,
+          attachment_url: reader.result as string,
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const reload = () => setVersion((v) => v + 1);
 
@@ -433,6 +453,12 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
                   {opp.expected_close_date && (
                     <p className="text-xs text-muted-foreground">Expected Close: {opp.expected_close_date}</p>
                   )}
+                  {(opp.attachment_name || opp.attachment_url) && (
+                    <div className="pt-2 border-t flex items-center gap-1.5 text-xs text-primary font-medium">
+                      <Paperclip className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{opp.attachment_name || 'Tender Document Attached'}</span>
+                    </div>
+                  )}
                 </div>
               ))}
             {opportunities.length === 0 && (
@@ -451,17 +477,43 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium mb-1">Supervisor</label>
-                <select
-                  required
-                  value={newScorecard.supervisor_id}
-                  onChange={(e) => setNewScorecard({ ...newScorecard, supervisor_id: e.target.value })}
-                  className="w-full text-sm border rounded p-2 bg-background"
-                >
-                  <option value="">Select Supervisor...</option>
-                  {(Array.isArray(employees) ? employees : []).map((e) => (
-                    <option key={e.id} value={e.id}>{e.first_name} {e.last_name} ({e.job_title || 'Supervisor'})</option>
-                  ))}
-                </select>
+                <div className="space-y-1">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Search supervisor by name..."
+                      value={supervisorSearch}
+                      onChange={(e) => setSupervisorSearch(e.target.value)}
+                      className="w-full text-xs border rounded pl-8 pr-2 py-1 bg-background"
+                    />
+                  </div>
+                  <select
+                    required
+                    value={newScorecard.supervisor_id}
+                    onChange={(e) => setNewScorecard({ ...newScorecard, supervisor_id: e.target.value })}
+                    className="w-full text-sm border rounded p-2 bg-background"
+                  >
+                    <option value="">Select Supervisor ({
+                      (Array.isArray(employees) ? employees : []).filter((e) => {
+                        if (!supervisorSearch.trim()) return true;
+                        const fullName = `${e.first_name || ''} ${e.last_name || ''}`.toLowerCase();
+                        const title = (e.job_title || '').toLowerCase();
+                        return fullName.includes(supervisorSearch.toLowerCase()) || title.includes(supervisorSearch.toLowerCase());
+                      }).length
+                    } matching)...</option>
+                    {(Array.isArray(employees) ? employees : [])
+                      .filter((e) => {
+                        if (!supervisorSearch.trim()) return true;
+                        const fullName = `${e.first_name || ''} ${e.last_name || ''}`.toLowerCase();
+                        const title = (e.job_title || '').toLowerCase();
+                        return fullName.includes(supervisorSearch.toLowerCase()) || title.includes(supervisorSearch.toLowerCase());
+                      })
+                      .map((e) => (
+                        <option key={e.id} value={e.id}>{e.first_name} {e.last_name} ({e.job_title || 'Supervisor'})</option>
+                      ))}
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -660,6 +712,46 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
               </div>
             </div>
 
+            {/* File Attachment */}
+            <div>
+              <label className="block text-xs font-medium mb-1 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Paperclip className="h-3.5 w-3.5 text-primary" />
+                  Tender File Attachment
+                </span>
+                <span className="text-[10px] text-muted-foreground">(PDF, DOCX, XLSX, max 10MB)</span>
+              </label>
+              
+              {newOpp.attachment_name ? (
+                <div className="flex items-center justify-between p-2.5 border rounded-lg bg-primary/5 text-xs font-medium">
+                  <div className="flex items-center gap-2 truncate">
+                    <Paperclip className="h-4 w-4 text-primary shrink-0" />
+                    <span className="truncate">{newOpp.attachment_name}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setNewOpp({ ...newOpp, attachment_name: '', attachment_url: '' })}
+                    className="p-1 rounded hover:bg-muted text-muted-foreground"
+                    title="Remove attachment"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="relative border border-dashed rounded-lg p-3 text-center hover:bg-muted/30 transition cursor-pointer">
+                  <input
+                    type="file"
+                    onChange={handleOppFileChange}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  />
+                  <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                    <Upload className="h-4 w-4 text-primary" />
+                    <span>Click to attach proposal or tender document</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
@@ -767,6 +859,27 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
 
             {selectedOpp.expected_close_date && (
               <p className="text-xs text-muted-foreground">Expected Close Date: {selectedOpp.expected_close_date}</p>
+            )}
+
+            {(selectedOpp.attachment_name || selectedOpp.attachment_url) && (
+              <div className="p-3 border rounded-lg bg-primary/5 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2 truncate pr-2">
+                  <Paperclip className="h-4 w-4 text-primary shrink-0" />
+                  <div>
+                    <span className="font-semibold block truncate">{selectedOpp.attachment_name || 'Tender_Specification.pdf'}</span>
+                    <span className="text-[10px] text-muted-foreground">Attached Tender Document</span>
+                  </div>
+                </div>
+                <a
+                  href={selectedOpp.attachment_url || '#'}
+                  download={selectedOpp.attachment_name || 'Tender_Specification.pdf'}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 bg-primary text-primary-foreground rounded text-xs font-semibold flex items-center gap-1.5 hover:bg-primary/90 shrink-0"
+                >
+                  <Download className="h-3.5 w-3.5" /> Download Attachment
+                </a>
+              </div>
             )}
 
             {selectedOpp.notes && (

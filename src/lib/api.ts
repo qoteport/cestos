@@ -762,6 +762,8 @@ export interface CommercialOpportunityRead {
   currency: string;
   expected_close_date?: string;
   notes?: string;
+  attachment_name?: string;
+  attachment_url?: string;
   created_at: string;
   [key: string]: unknown;
 }
