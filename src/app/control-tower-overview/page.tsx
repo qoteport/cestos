@@ -62,7 +62,7 @@ export default function ControlTowerOverviewPage() {
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <Building2 className="h-6 w-6 text-primary" />
-              Operations Command Center
+              Operations Insights
             </h1>
             <p className="text-sm text-muted-foreground">
               Global operational telemetry, contract profitability, field leadership performance, and tender pipeline

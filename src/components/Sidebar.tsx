@@ -18,7 +18,7 @@ interface SidebarGroup {
 
 const groups: SidebarGroup[] = [
   {
-    name: 'Operations Command Center',
+    name: 'Operations Insights',
     icon: Building2,
     href: '/control-tower-overview',
     permission: 'projects.read',
@@ -31,17 +31,10 @@ const groups: SidebarGroup[] = [
           ['Tender Pipeline', 'control-tower/opportunities'],
         ],
       },
-    ],
-  },
-  {
-    name: 'Commercial & Costing',
-    icon: DollarSign,
-    href: '/commercial-overview',
-    permission: 'projects.read',
-    sections: [
       {
-        title: 'Contracts & Revenue',
+        title: 'Commercial & Costing',
         links: [
+          ['Commercial Overview', '/commercial-overview'],
           ['Commercial Contracts', 'commercial/contracts'],
           ['Cost Subledger', 'commercial/cost-entries'],
           ['Revenue Subledger', 'commercial/revenue-entries'],

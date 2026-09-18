@@ -239,7 +239,7 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Building2 className="h-6 w-6 text-primary" />
-            Operations Command Center
+            Operations Insights
           </h1>
           <p className="text-sm text-muted-foreground">
             Operational oversight, field leadership scorecards, commercial tenders, and client governance
