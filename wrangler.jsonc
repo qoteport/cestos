@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "cestos-ops-insights",
+  "name": "cestos",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-09-14",
   "compatibility_flags": ["nodejs_compat"],
@@ -17,10 +17,11 @@
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "cestos-ops-insights"
+      "service": "cestos"
     }
   ],
   "vars": {
-    "CESTOS_API_BACKEND_URL": "https://cestos-oversight.fly.dev"
+    "CESTOS_API_BACKEND_URL": "https://cestos-oversight.fly.dev",
+    "CESTOS_API_URL": "https://cestos-oversight.fly.dev"
   }
 }

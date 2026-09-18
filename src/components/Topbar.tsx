@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Bell, Search, LogOut, Zap, Sparkles, X, User, Clock, Calendar, ShieldCheck } from 'lucide-react';
-import { useAuth } from './AuthProvider';
+import { useAuth, canAccessAdministration } from './AuthProvider';
 import { useData, rows } from './DataUI';
 
 export default function Topbar() {
@@ -207,7 +207,7 @@ export default function Topbar() {
                     <span>Notifications</span>
                   </Link>
 
-                  {(auth?.access?.is_superuser || auth?.can('users.manage')) && (
+                  {(auth && canAccessAdministration(auth)) && (
                     <Link
                       href="/workspace/admin"
                       onClick={() => setShow(false)}

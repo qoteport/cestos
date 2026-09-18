@@ -498,7 +498,7 @@ export default function EmployeeCalendarModal({
       {editingAssignment && (
         <RecordForm
           resource="employee-assignments"
-          path={`/api/v1/employees/${employeeId}/assignments/${editingAssignment.id}`}
+          path={`/api/v1/employee-assignments/${editingAssignment.id}`}
           title="Update Project Assignment"
           initial={editingAssignment}
           method="PATCH"

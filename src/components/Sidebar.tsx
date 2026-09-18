@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, FileText, FolderKanban, Users, Truck, Package, ChevronDown, PanelLeftClose, PanelLeftOpen, LogOut, User, Bell, ShieldCheck,  } from 'lucide-react';
 import AppLogo from './ui/AppLogo';
-import { useAuth } from './AuthProvider';
+import { useAuth, canAccessAdministration } from './AuthProvider';
 import { operation } from './ResourceWorkspace';
 
 interface SidebarGroup {
@@ -300,7 +300,7 @@ export default function Sidebar({
           ['My leave', 'hr/me/leave-requests'],
           ['Notifications', 'hr/notifications'],
           ['Administration', 'admin'],
-        ].map(([label, r]) => (
+        ].filter(([, r]) => r !== 'admin' || canAccessAdministration(auth)).map(([label, r]) => (
           <Link
             key={r}
             title={label}

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Search, Play, Zap, Users, FolderKanban, Wrench, Package, ShieldCheck, Building2, Lock, PlusCircle, Clock, ArrowRightLeft, Fuel, Gauge, Receipt, Truck, DollarSign, UserPlus, UserCheck, Briefcase, MapPin, CheckCircle2, MinusCircle, SlidersHorizontal, Boxes, Tag, ClipboardCheck, ClipboardList, ShieldAlert, AlertTriangle, RotateCcw, BookmarkPlus, Layers } from 'lucide-react';
+import { Search, Play, Zap, Users, FolderKanban, Wrench, Package, ShieldCheck, Building2, Lock, PlusCircle, Clock, ArrowRightLeft, Fuel, Gauge, Receipt, Truck, DollarSign, UserPlus, UserCheck, Briefcase, MapPin, CheckCircle2, MinusCircle, SlidersHorizontal, Boxes, Tag, ClipboardCheck, ClipboardList, ShieldAlert, AlertTriangle, RotateCcw, BookmarkPlus, Layers, Activity } from 'lucide-react';
+
 import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/components/AuthProvider';
 import RecordForm from '@/components/RecordForm';
@@ -148,6 +149,30 @@ const COMMAND_REGISTRY: CommandDef[] = [
     tags: ['project', 'new project', 'contract', 'site', 'operation', 'add project'],
   },
   {
+    id: 'update-project-progress',
+    title: 'Update Project Progress & Status',
+    description: 'Update project target metres, description, contract value, status, or expected completion date.',
+    category: 'PROJECTS',
+    categoryName: 'Projects & Sites',
+    permission: 'projects.update',
+    icon: Activity,
+    resource: 'projects',
+    path: '/api/v1/projects',
+    tags: ['update project', 'progress', 'target metres', 'status', 'contract value', 'edit project'],
+  },
+  {
+    id: 'submit-field-report',
+    title: 'Submit Daily Field & Drilling Update',
+    description: 'Record daily drilling activity meters, shift log, operational notes, and site status.',
+    category: 'PROJECTS',
+    categoryName: 'Projects & Sites',
+    permission: 'projects.update',
+    icon: ClipboardList,
+    resource: 'projects',
+    path: '/api/v1/projects',
+    tags: ['field report', 'drilling update', 'daily log', 'meters', 'shift update', 'activity'],
+  },
+  {
     id: 'create-client',
     title: 'Register Client Company',
     description: 'Add a client enterprise profile, commercial contacts, and tax details.',
@@ -171,6 +196,7 @@ const COMMAND_REGISTRY: CommandDef[] = [
     path: '/api/v1/locations',
     tags: ['location', 'site', 'depot', 'coordinates', 'address', 'camp', 'pit'],
   },
+
 
   // --- Fleet & Equipment ---
   {

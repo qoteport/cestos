@@ -3,11 +3,18 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Users, KeyRound, CalendarCheck, FileText, Plus, RefreshCw, Search, CheckCircle2, XCircle, Clock, UserCheck, UserX, Mail, UserPlus, ShieldAlert, Filter, BookOpen,  } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
-import { useAuth } from './AuthProvider';
+import { useAuth, canAccessAdministration } from './AuthProvider';
 import { useData, State, Row, rows, Modal, title } from './DataUI';
 import SystemManual from './SystemManual';
 
-export default function AdminWorkspace({
+export default function AdminWorkspace(props: { initialTab?: 'users' | 'roles' | 'leave' | 'audit' | 'manual' } = {}) {
+  const auth = useAuth();
+  if (auth.loading) return null;
+  if (!canAccessAdministration(auth)) return <div className="card p-6">Administration is not available for your account.</div>;
+  return <AdminWorkspaceContent {...props} />;
+}
+
+function AdminWorkspaceContent({
   initialTab = 'users',
 }: {
   initialTab?: 'users' | 'roles' | 'leave' | 'audit' | 'manual';
@@ -532,24 +539,37 @@ export default function AdminWorkspace({
                 Configure granular permissions across Projects, Workforce, Equipment, Inventory, HR, Financials, and File Downloads per role. Superadmins always bypass permission restrictions.
               </p>
             </div>
-            <button
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="search"
+                  aria-label="Search permissions"
+                  placeholder="Search permissions..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+              <button
               onClick={() => setCreateRoleOpen(true)}
               className="px-3.5 py-2 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition text-xs shadow-sm flex items-center gap-1.5 shrink-0"
             >
               <Plus className="w-4 h-4" /> Add Security Role
-            </button>
+              </button>
+            </div>
           </div>
 
           <State loading={rolesRes.loading || permissionsRes.loading} error={rolesRes.error || permissionsRes.error} retry={() => { rolesRes.reload(); permissionsRes.reload(); }}>
-            <div className="border rounded-xl bg-card overflow-x-auto shadow-sm scrollbar-thin">
+            <div role="region" aria-label="Security roles permissions matrix" tabIndex={0} className="max-h-[70dvh] overflow-auto border rounded-xl bg-card shadow-sm scrollbar-thin focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <table className="w-full text-xs text-left border-collapse min-w-[800px]">
-                <thead className="bg-muted/70 text-muted-foreground font-semibold border-b">
+                <thead className="sticky top-0 z-20 bg-muted text-muted-foreground font-semibold border-b shadow-sm">
                   <tr>
-                    <th className="p-3 w-72 sticky left-0 bg-muted/90 z-10 shadow-sm border-r">
+                    <th scope="col" className="p-3 w-72 sticky left-0 bg-muted z-30 shadow-sm border-r">
                       Permission Domain & Function
                     </th>
                     {roleList.map((r: any) => (
-                      <th key={String(r.id)} className="p-3 text-center min-w-[130px] border-r">
+                      <th scope="col" key={String(r.id)} className="p-3 text-center min-w-[130px] bg-muted border-r">
                         <div className="font-bold text-foreground">{r.name}</div>
                         {r.is_system_role && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-primary font-mono inline-block mt-0.5">
@@ -566,6 +586,7 @@ export default function AdminWorkspace({
                       category: 'Projects & Financials',
                       perms: [
                         { code: 'projects.read', name: 'Read Assigned Projects', desc: 'View basic project overview' },
+                        { code: 'projects.read_assigned', name: 'Read Assigned Projects Only', desc: 'Restrict project reads to assigned projects' },
                         { code: 'projects.read_all', name: 'Read All Projects', desc: 'View all projects across organization' },
                         { code: 'projects.financials.read', name: 'Read Project Financials', desc: 'View contract values and budget figures' },
                         { code: 'projects.create', name: 'Create Projects', desc: 'Onboard new project contracts' },
@@ -579,8 +600,10 @@ export default function AdminWorkspace({
                         { code: 'employees.read_basic', name: 'Read Employee Register', desc: 'View employee list & profiles' },
                         { code: 'employees.create', name: 'Onboard Employees', desc: 'Create new workforce profiles' },
                         { code: 'employees.write', name: 'Edit Employee Profiles', desc: 'Update personal & operational data' },
-                        { code: 'employees.contracts.manage', name: 'Manage Employment Contracts', desc: 'Upload, view, and edit employment contracts' },
+                        { code: 'employees.contracts.read', name: 'Read Employment Contracts', desc: 'View assigned or permitted employment contracts' },
+                        { code: 'employees.contracts.write', name: 'Write Employment Contracts', desc: 'Upload, update, or archive employment contracts' },
                         { code: 'employees.salary.read', name: 'Read Employee Salaries', desc: 'View salary records & compensation' },
+                        { code: 'employees.salary.write', name: 'Write Employee Salaries', desc: 'Create or close salary periods' },
                         { code: 'employees.salary.manage', name: 'Manage Salaries', desc: 'Record or end employee salary periods' },
                         { code: 'employees.alerts.manage', name: 'Contract Expiry Rules', desc: 'Configure reminder and alert rules' },
                         { code: 'departments.manage', name: 'Manage Departments', desc: 'Create and update organizational departments' },
@@ -591,6 +614,7 @@ export default function AdminWorkspace({
                       category: 'Equipment, Maintenance & Operations',
                       perms: [
                         { code: 'assets.read', name: 'Read Equipment Register', desc: 'View fleet assets & availability' },
+                        { code: 'assets.read_assigned', name: 'Read Assigned Equipment Only', desc: 'Restrict equipment reads to assigned assets' },
                         { code: 'assets.create', name: 'Add Equipment', desc: 'Register new machinery or vehicles' },
                         { code: 'assets.update', name: 'Update Equipment', desc: 'Edit specifications & status' },
                         { code: 'assets.assignments.manage', name: 'Manage Asset Assignments', desc: 'Assign equipment to sites/operators' },
@@ -603,6 +627,7 @@ export default function AdminWorkspace({
                       category: 'Inventory & Stock Control',
                       perms: [
                         { code: 'inventory.read', name: 'Read Inventory Catalog', desc: 'View items, stores, and stock levels' },
+                        { code: 'inventory.read_assigned', name: 'Read Assigned Stores Only', desc: 'Restrict stock reads to assigned stores or projects' },
                         { code: 'inventory.requests.create', name: 'Create Material Requests', desc: 'Submit stock issues requests' },
                         { code: 'inventory.requests.manage', name: 'Approve Material Requests', desc: 'Approve or reject stock requests' },
                         { code: 'inventory.write', name: 'Post Stock Transactions', desc: 'Record receipts, issues, and transfers' },
@@ -619,14 +644,14 @@ export default function AdminWorkspace({
                         { code: 'documents.download', name: 'Download Raw Document Files', desc: 'Download original attachments and files' },
                       ],
                     },
-                  ].map((group) => (
+                  ].filter((group) => !search.trim() || group.category.toLowerCase().includes(search.trim().toLowerCase()) || group.perms.some((p) => `${p.name} ${p.code} ${p.desc}`.toLowerCase().includes(search.trim().toLowerCase()))).map((group) => (
                     <React.Fragment key={group.category}>
                       <tr className="bg-muted/40 font-bold text-foreground">
                         <td colSpan={roleList.length + 1} className="p-2.5 uppercase tracking-wider text-[10px] text-primary">
                           {group.category}
                         </td>
                       </tr>
-                      {group.perms.map((p) => (
+                      {group.perms.filter((p) => !search.trim() || `${p.name} ${p.code} ${p.desc}`.toLowerCase().includes(search.trim().toLowerCase())).map((p) => (
                         <tr key={p.code} className="hover:bg-muted/20 transition">
                           <td className="p-3 sticky left-0 bg-card z-10 border-r shadow-sm">
                             <span className="font-semibold text-foreground block">{p.name}</span>

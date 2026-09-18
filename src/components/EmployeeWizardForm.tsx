@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
+import React, { useState, useEffect, ChangeEvent, FormEvent, useRef } from 'react';
 import { ArrowLeft, ArrowRight, Check, Upload, Plus, Trash2, User, Briefcase, FileText, Phone, ShieldCheck } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { Modal, Row } from './DataUI';
@@ -33,6 +33,22 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
   const [step, setStep] = useState(1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [reviewReady, setReviewReady] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (containerRef.current?.parentElement) {
+      containerRef.current.parentElement.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [step]);
+
+  useEffect(() => {
+    if (step === 5) {
+      setReviewReady(false);
+      const timer = setTimeout(() => setReviewReady(true), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
 
   // Step 1: Personal Details
   const [personal, setPersonal] = useState({
@@ -351,7 +367,7 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
 
   return (
     <Modal name={initial ? `Edit Employee Profile` : `New Employee Onboarding`} onClose={onClose}>
-      <div className="space-y-6">
+      <div className="space-y-6" ref={containerRef}>
         {/* Wizard Stepper Bar */}
         <div className="border-b pb-4">
           <div className="flex items-center justify-between gap-2 overflow-x-auto py-1">
@@ -1086,9 +1102,10 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                 </button>
               ) : (
                 <button
-                  type="submit"
-                  disabled={busy}
-                  className="btn-primary text-xs bg-emerald-700 hover:bg-emerald-800"
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={busy || !reviewReady}
+                  className={`btn-primary text-xs ${!reviewReady ? 'opacity-50 cursor-not-allowed' : 'bg-emerald-700 hover:bg-emerald-800'}`}
                 >
                   {busy ? 'Saving Employee...' : initial ? 'Save Changes' : 'Create Employee Profile'}
                 </button>

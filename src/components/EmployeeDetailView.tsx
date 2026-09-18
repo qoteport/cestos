@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
-import { Row, display, title, Modal } from './DataUI';
+import { Row, display, title, Modal, useData } from './DataUI';
 import RecordForm from './RecordForm';
 import EmployeeWizardForm from './EmployeeWizardForm';
 import EmployeeCalendarModal from './EmployeeCalendarModal';
@@ -189,6 +189,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
   const [overview, setOverview] = useState<Row | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { data: locations } = useData<Row[]>('/api/v1/locations');
   const canManageContracts =
     auth.can('employees.contracts.manage') ||
     auth.can('employees.documents.manage') ||
@@ -1049,6 +1050,12 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                 <dt className="text-muted-foreground">Job Title</dt>
                 <dd className="font-semibold text-foreground text-sm mt-0.5">
                   {display(employee.job_title)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Work Location</dt>
+                <dd className="font-semibold text-foreground text-sm mt-0.5">
+                  {display(locations?.find(l => l.id === employee.home_location_id)?.name) || display(employee.home_location_id)}
                 </dd>
               </div>
               <div>

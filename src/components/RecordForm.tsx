@@ -512,28 +512,9 @@ function Reference({
       try {
         let url = '/api/v1/' + route + '?page_size=100&search=' + encodeURIComponent(search);
 
-        if (field === 'location_id' && selectedProjectId) {
-          try {
-            const sitesData = await apiFetch('/api/v1/projects/' + selectedProjectId + '/sites');
-            const sitesArr = rows(sitesData);
-            if (active && sitesArr.length > 0) {
-              setOptions(sitesArr);
-              setError('');
-              return;
-            }
-          } catch {
-            // Fall back to locations endpoint
-          }
-          url = '/api/v1/locations?page_size=100&project_id=' + selectedProjectId + '&search=' + encodeURIComponent(search);
-        }
-
         const d = await apiFetch(url);
         if (active) {
           let fetchedRows = rows(d);
-          if (field === 'location_id' && selectedProjectId) {
-            const filtered = fetchedRows.filter(r => !r.project_id || String(r.project_id) === String(selectedProjectId));
-            if (filtered.length > 0) fetchedRows = filtered;
-          }
           if (field === 'parent_department_id' && (formData?.id || formData?.department_id)) {
             const selfId = formData?.id || formData?.department_id;
             fetchedRows = fetchedRows.filter(r => String(r.id) !== String(selfId));
@@ -993,6 +974,12 @@ export default function RecordForm({
     (resource === 'inventory/items' || resource === 'items') &&
     (path === '/api/v1/inventory/items' || /^\/api\/v1\/inventory\/items\/[0-9a-f-]{36}$/i.test(path));
   const schema = structuredClone(resolve(operation?.schema || {}));
+  if (resource === 'employee-assignments' && initial?.id && schema.properties) {
+    schema.properties.project_id = {
+      type: 'string',
+      title: 'Project',
+    };
+  }
   if (resource === 'projects' && schema.properties) {
     delete schema.properties.notes;
   }
@@ -1157,6 +1144,21 @@ export default function RecordForm({
   const [savedPhoto, setSavedPhoto] = useState<Row | null>(null);
   const [savedClient, setSavedClient] = useState<Row | null>(null);
   const [savedItem, setSavedItem] = useState<Row | null>(null);
+  const isAssignmentEdit = resource === 'employee-assignments' && !!initial?.id;
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const deleteAssignment = async () => {
+    if (!isAssignmentEdit || !window.confirm('Cancel this assignment? Its history will be preserved.')) return;
+    setDeleteBusy(true);
+    try {
+      const result = await apiFetch(path, { method: 'DELETE' });
+      onSaved?.(result as Row);
+
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not cancel assignment.');
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
   const modalName = customTitle || (initial ? 'Edit ' : 'New ') + title(resource.split('/').pop()!);
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -1522,13 +1524,20 @@ export default function RecordForm({
             {error}
           </p>
         )}
-        <div className="flex justify-end gap-3 border-t pt-4">
+        <div className="flex justify-between gap-3 border-t pt-4">
+          {isAssignmentEdit ? (
+            <button type="button" disabled={busy || deleteBusy} onClick={() => void deleteAssignment()} className="btn-secondary text-xs text-red-700 border-red-200">
+              {deleteBusy ? 'Cancelling…' : 'Delete Assignment'}
+            </button>
+          ) : <span />}
+          <div className="flex gap-3">
           <button type="button" className="btn-secondary text-xs" onClick={onClose}>
             Cancel
           </button>
           <button disabled={busy} className="btn-primary text-xs">
             {busy ? 'Saving…' : 'Save Record'}
           </button>
+          </div>
         </div>
       </form>
     </Modal>

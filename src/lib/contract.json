@@ -173,7 +173,8 @@
         "currency": {
           "type": "string",
           "title": "Currency",
-          "pattern": "^[A-Z]{3}$"
+          "pattern": "^[A-Z]{3}$",
+          "default": "USD"
         },
         "pay_period": {
           "type": "string",
