@@ -18,15 +18,16 @@ interface SidebarGroup {
 
 const groups: SidebarGroup[] = [
   {
-    name: 'Operations Insights',
+    name: 'Dashboard',
     icon: Building2,
-    href: '/control-tower-overview',
+    href: '/',
     permission: 'projects.read',
     sections: [
       {
         title: 'Operations Oversight',
         links: [
-          ['Operations Summary', 'control-tower/summary'],
+          ['Executive Overview', '/'],
+          ['Operations Control Tower', '/control-tower-overview'],
           ['Field Leadership Operations', 'control-tower/scorecards'],
           ['Tender Pipeline', 'control-tower/opportunities'],
         ],
@@ -216,8 +217,9 @@ export default function Sidebar({
       .filter(
         (g) =>
           path === g.href ||
-          (g.name === 'Projects' && path === '/project-command-center') ||
-          g.sections.some((s) => s.links.some(([, r]) => path === '/workspace/' + r))
+          (g.name === 'Dashboard' && (path === '/' || path === '/control-tower-overview' || path === '/commercial-overview')) ||
+          (g.name === 'Projects' && (path === '/project-command-center' || path === '/drilling-overview')) ||
+          g.sections.some((s) => s.links.some(([, r]) => path === (r.startsWith('/') ? r : '/workspace/' + r)))
       )
       .map((g) => g.name)
   );
@@ -225,7 +227,7 @@ export default function Sidebar({
   const name = [auth.user?.first_name, auth.user?.last_name].filter(Boolean).join(' ');
 
   const active = (href: string) =>
-    path === href || (href === '/projects-overview' && path === '/project-command-center')
+    path === href || (href === '/' && path === '/control-tower-overview') || (href === '/projects-overview' && path === '/project-command-center')
       ? 'bg-secondary text-primary font-semibold' :'text-muted-foreground hover:bg-muted hover:text-foreground';
 
   return (
@@ -250,16 +252,6 @@ export default function Sidebar({
         className="flex-1 overflow-y-auto py-3 px-2 space-y-1 scrollbar-thin"
         aria-label="Main navigation"
       >
-        {/* Dashboard */}
-        <Link
-          className={'flex gap-3 items-center p-2.5 rounded text-sm ' + active('/')}
-          href="/"
-          title="Dashboard"
-        >
-          <LayoutDashboard size={18} />
-          {!collapsed && 'Dashboard'}
-        </Link>
-
         {/* Module groups */}
         {groups
           .filter((g) => auth.can(g.permission))
