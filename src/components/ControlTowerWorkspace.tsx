@@ -239,10 +239,10 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Building2 className="h-6 w-6 text-primary" />
-            CEO Control Tower & Scorecards
+            Executive Command Center
           </h1>
           <p className="text-sm text-muted-foreground">
-            Executive oversight, 8-pillar supervisor scorecards, commercial tenders, and client governance
+            Executive oversight, field operational scorecards, commercial tenders, and client governance
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -278,7 +278,7 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
           }`}
         >
           <Award className="h-4 w-4" />
-          Supervisor Scorecards ({scorecards.length})
+          Field Leadership Operations ({scorecards.length})
         </button>
         <button
           onClick={() => setActiveTab('OPPORTUNITIES')}
@@ -392,11 +392,11 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
         </div>
       )}
 
-      {/* TAB 2: SUPERVISOR SCORECARDS */}
+      {/* TAB 2: FIELD LEADERSHIP OPERATIONS */}
       {activeTab === 'SCORECARDS' && (
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <h2 className="text-lg font-semibold">8-Pillar Weighted Supervisor Scorecards</h2>
+            <h2 className="text-lg font-semibold">Site Operations Leadership & Field Performance Scorecards</h2>
             <div className="flex items-center gap-2">
               <div className="relative w-64">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -413,7 +413,7 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
                 className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded text-sm font-medium hover:bg-primary/90 shrink-0"
               >
                 <Plus className="h-4 w-4" />
-                New Scorecard
+                New Operational Scorecard
               </button>
             </div>
           </div>
@@ -423,11 +423,11 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
               <thead className="bg-muted/50 text-xs font-semibold uppercase text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3">Scorecard #</th>
-                  <th className="px-4 py-3">Supervisor</th>
-                  <th className="px-4 py-3">Period</th>
+                  <th className="px-4 py-3">Field Lead / Supervisor</th>
+                  <th className="px-4 py-3">Audit Period</th>
                   <th className="px-4 py-3">Sub-Scores (Prod/Rig/HSE/etc)</th>
                   <th className="px-4 py-3">Overall Weighted</th>
-                  <th className="px-4 py-3">Grade</th>
+                  <th className="px-4 py-3">Rating</th>
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
@@ -462,7 +462,7 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
                 {scorecards.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                      No supervisor scorecards recorded yet. Click "New Scorecard" to evaluate rig supervisors.
+                      No field leadership scorecards recorded yet. Click "New Operational Scorecard" to rate site supervisors.
                     </td>
                   </tr>
                 )}
@@ -565,7 +565,7 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
 
       {/* CREATE SCORECARD MODAL */}
       {showAddScorecard && (
-        <Modal title="Create 8-Pillar Supervisor Scorecard" onClose={() => setShowAddScorecard(false)}>
+        <Modal title="New Field Leadership Operational Scorecard" onClose={() => setShowAddScorecard(false)}>
           <form onSubmit={handleCreateScorecard} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -900,11 +900,11 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
 
       {/* VIEW SCORECARD DETAILS MODAL */}
       {selectedScorecard && (
-        <Modal title={`Supervisor Scorecard ${selectedScorecard.scorecard_number}`} onClose={() => setSelectedScorecard(null)}>
+        <Modal title={`Site Operations Scorecard ${selectedScorecard.scorecard_number}`} onClose={() => setSelectedScorecard(null)}>
           <div className="space-y-4">
             <div className="p-3 border rounded-lg bg-primary/5 flex items-center justify-between">
               <div>
-                <span className="text-[10px] uppercase font-bold text-muted-foreground block">Supervisor</span>
+                <span className="text-[10px] uppercase font-bold text-muted-foreground block">Field Lead / Supervisor</span>
                 <span className="text-base font-bold text-primary">{getSupervisorName(selectedScorecard)}</span>
               </div>
               <span className="text-xs font-mono text-muted-foreground">{selectedScorecard.supervisor_id}</span>
@@ -912,12 +912,12 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
 
             <div className="flex items-center justify-between border-b pb-3">
               <div>
-                <span className="text-xs text-muted-foreground">Evaluation Period</span>
+                <span className="text-xs text-muted-foreground">Audit Period</span>
                 <p className="font-semibold text-sm">{selectedScorecard.period_start} to {selectedScorecard.period_end}</p>
               </div>
               <div className="text-right">
                 <span className={`px-3 py-1 rounded border text-sm font-bold ${getGradeColor(selectedScorecard.grade)}`}>
-                  Grade {selectedScorecard.grade} ({Number(selectedScorecard.overall_weighted_score).toFixed(1)} / 100)
+                  Rating {selectedScorecard.grade} ({Number(selectedScorecard.overall_weighted_score).toFixed(1)} / 100)
                 </span>
               </div>
             </div>
@@ -959,7 +959,7 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
 
             {selectedScorecard.notes && (
               <div className="p-3 border rounded-lg bg-muted/20 text-xs space-y-1">
-                <span className="font-semibold text-muted-foreground uppercase block">Supervisor Evaluation Notes</span>
+                <span className="font-semibold text-muted-foreground uppercase block">Field Performance Audit Notes</span>
                 <p>{selectedScorecard.notes}</p>
               </div>
             )}

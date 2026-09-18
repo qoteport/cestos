@@ -18,16 +18,16 @@ interface SidebarGroup {
 
 const groups: SidebarGroup[] = [
   {
-    name: 'Executive & Control Tower',
+    name: 'Executive Command Center',
     icon: Building2,
     href: '/control-tower-overview',
     permission: 'projects.read',
     sections: [
       {
-        title: 'CEO Oversight',
+        title: 'Executive Oversight',
         links: [
-          ['CEO Control Tower', 'control-tower/summary'],
-          ['Supervisor Scorecards', 'control-tower/scorecards'],
+          ['Executive Summary', 'control-tower/summary'],
+          ['Field Leadership Operations', 'control-tower/scorecards'],
           ['Tender Pipeline', 'control-tower/opportunities'],
         ],
       },
@@ -103,7 +103,6 @@ const groups: SidebarGroup[] = [
         links: [
           ['Training compliance', 'training/compliance'],
           ['Expiring documents', 'employee-documents/expiring'],
-          ['Supervisor Scorecards', 'control-tower/scorecards'],
           ['Departments', 'departments'],
           ['Positions', 'positions'],
         ],

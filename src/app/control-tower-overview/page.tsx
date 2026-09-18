@@ -62,10 +62,10 @@ export default function ControlTowerOverviewPage() {
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <Building2 className="h-6 w-6 text-primary" />
-              Executive & CEO Control Tower
+              Executive Command Center
             </h1>
             <p className="text-sm text-muted-foreground">
-              High-level operational overview, contract profitability, supervisor performance, and tender pipeline
+              Global operational telemetry, contract profitability, field leadership performance, and tender pipeline
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -212,12 +212,12 @@ export default function ControlTowerOverviewPage() {
 
         {/* Bottom Section: Scorecards & Tender Pipeline */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* Supervisor Scorecard Overview */}
+          {/* Field Leadership Operations Overview */}
           <div className="border rounded-xl bg-card p-5 space-y-4 shadow-sm">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold flex items-center gap-2">
                 <Award className="h-5 w-5 text-amber-500" />
-                Supervisor Performance Ratings
+                Field Leadership Operational Ratings
               </h2>
               <button
                 onClick={() => router.push('/workspace/control-tower/scorecards')}
@@ -240,13 +240,13 @@ export default function ControlTowerOverviewPage() {
                       sc.grade === 'A' ? 'bg-emerald-500 text-white' :
                       sc.grade === 'B' ? 'bg-blue-500 text-white' : 'bg-amber-500 text-white'
                     }`}>
-                      Grade {sc.grade}
+                      Rating {sc.grade}
                     </span>
                   </div>
                 </div>
               ))}
               {scorecards.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-6">No supervisor scorecards filed yet.</p>
+                <p className="text-xs text-muted-foreground text-center py-6">No field leadership scorecards filed yet.</p>
               )}
             </div>
           </div>
