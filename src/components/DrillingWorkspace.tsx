@@ -7,7 +7,7 @@ import {
 import { 
   apiFetch, DrillingProgramRead, DrillHoleRead, DrillingShiftReportRead 
 } from '@/lib/api';
-import { Modal } from './DataUI';
+import { Modal, rows } from './DataUI';
 
 export default function DrillingWorkspace() {
   const [activeTab, setActiveTab] = useState<'PROGRAMS' | 'HOLES' | 'SHIFTS'>('SHIFTS');
@@ -48,11 +48,11 @@ export default function DrillingWorkspace() {
       apiFetch<any>('/api/v1/assets?page_size=100').catch(() => ({ items: [] })),
     ]).then(([progRes, holeRes, shiftRes, projRes, assetRes]) => {
       if (!active) return;
-      setPrograms(Array.isArray(progRes) ? progRes : []);
-      setHoles(Array.isArray(holeRes) ? holeRes : []);
-      setShifts(Array.isArray(shiftRes) ? shiftRes : []);
-      setProjects(projRes?.items || Array.isArray(projRes) ? projRes : []);
-      setAssets(assetRes?.items || Array.isArray(assetRes) ? assetRes : []);
+      setPrograms(rows(progRes) as DrillingProgramRead[]);
+      setHoles(rows(holeRes) as DrillHoleRead[]);
+      setShifts(rows(shiftRes) as DrillingShiftReportRead[]);
+      setProjects(rows(projRes));
+      setAssets(rows(assetRes));
       setLoading(false);
     });
 

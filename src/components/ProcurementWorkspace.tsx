@@ -5,7 +5,7 @@ import {
   ShoppingBag, Plus, RefreshCw, CheckCircle2, Clock, Truck, PackageCheck, AlertCircle, FileText
 } from 'lucide-react';
 import { apiFetch, PurchaseOrderRead, receivePurchaseOrderGoods } from '@/lib/api';
-import { Modal } from './DataUI';
+import { Modal, rows } from './DataUI';
 
 export default function ProcurementWorkspace() {
   const [loading, setLoading] = useState(true);
@@ -43,9 +43,9 @@ export default function ProcurementWorkspace() {
       apiFetch<any>('/api/v1/projects?page_size=100').catch(() => ({ items: [] })),
     ]).then(([poRes, suppRes, projRes]) => {
       if (!active) return;
-      setOrders(Array.isArray(poRes) ? poRes : []);
-      setSuppliers(Array.isArray(suppRes) ? suppRes : []);
-      setProjects(projRes?.items || Array.isArray(projRes) ? projRes : []);
+      setOrders(rows(poRes) as PurchaseOrderRead[]);
+      setSuppliers(rows(suppRes));
+      setProjects(rows(projRes));
       setLoading(false);
     });
 

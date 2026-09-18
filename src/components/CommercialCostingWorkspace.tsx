@@ -5,7 +5,7 @@ import {
   DollarSign, FileText, TrendingUp, Plus, RefreshCw, Layers, Calculator, ShieldCheck
 } from 'lucide-react';
 import { apiFetch, ProjectContractRead, CostSubledgerRead, RevenueSubledgerRead } from '@/lib/api';
-import { Modal } from './DataUI';
+import { Modal, rows } from './DataUI';
 
 export default function CommercialCostingWorkspace() {
   const [activeTab, setActiveTab] = useState<'CONTRACTS' | 'REVENUE' | 'COSTS'>('CONTRACTS');
@@ -37,10 +37,10 @@ export default function CommercialCostingWorkspace() {
       apiFetch<any>('/api/v1/projects?page_size=100').catch(() => ({ items: [] })),
     ]).then(([contractRes, costRes, revRes, projRes]) => {
       if (!active) return;
-      setContracts(Array.isArray(contractRes) ? contractRes : []);
-      setCostEntries(Array.isArray(costRes) ? costRes : []);
-      setRevenueEntries(Array.isArray(revRes) ? revRes : []);
-      setProjects(projRes?.items || Array.isArray(projRes) ? projRes : []);
+      setContracts(rows(contractRes) as ProjectContractRead[]);
+      setCostEntries(rows(costRes) as CostSubledgerRead[]);
+      setRevenueEntries(rows(revRes) as RevenueSubledgerRead[]);
+      setProjects(rows(projRes));
       setLoading(false);
     });
 

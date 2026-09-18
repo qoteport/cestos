@@ -6,7 +6,7 @@ import {
   Search, ShieldCheck, DollarSign, Activity, CheckCircle2, AlertTriangle, Layers, UserCheck
 } from 'lucide-react';
 import { apiFetch, CeoControlTowerSummary, SupervisorScorecardRead, CommercialOpportunityRead } from '@/lib/api';
-import { Modal } from './DataUI';
+import { Modal, rows } from './DataUI';
 
 export default function ControlTowerWorkspace() {
   const [activeTab, setActiveTab] = useState<'SUMMARY' | 'SCORECARDS' | 'OPPORTUNITIES' | 'CLIENT_PORTAL'>('SUMMARY');
@@ -66,11 +66,11 @@ export default function ControlTowerWorkspace() {
     ]).then(([summaryRes, scRes, oppRes, empRes, projRes, clientRes]) => {
       if (!active) return;
       if (summaryRes) setSummary(summaryRes);
-      setScorecards(Array.isArray(scRes) ? scRes : []);
-      setOpportunities(Array.isArray(oppRes) ? oppRes : []);
-      setEmployees(empRes?.items || Array.isArray(empRes) ? empRes : []);
-      setProjects(projRes?.items || Array.isArray(projRes) ? projRes : []);
-      setClients(clientRes?.items || Array.isArray(clientRes) ? clientRes : []);
+      setScorecards(rows(scRes) as SupervisorScorecardRead[]);
+      setOpportunities(rows(oppRes) as CommercialOpportunityRead[]);
+      setEmployees(rows(empRes));
+      setProjects(rows(projRes));
+      setClients(rows(clientRes));
       setLoading(false);
     });
 
