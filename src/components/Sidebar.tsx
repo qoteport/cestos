@@ -28,8 +28,6 @@ const groups: SidebarGroup[] = [
         links: [
           ['Executive Overview', '/'],
           ['Operations Control Tower', '/control-tower-overview'],
-          ['Field Leadership Operations', 'control-tower/scorecards'],
-          ['Tender Pipeline', 'control-tower/opportunities'],
         ],
       },
       {
@@ -58,6 +56,13 @@ const groups: SidebarGroup[] = [
         ],
       },
       {
+        title: 'Commercial Tenders',
+        links: [
+          ['Tender Pipeline', '/tenders-overview'],
+          ['Tender Opportunities Data', 'control-tower/opportunities'],
+        ],
+      },
+      {
         title: 'Drilling Operations',
         links: [
           ['Drilling Overview', '/drilling-overview'],
@@ -83,6 +88,13 @@ const groups: SidebarGroup[] = [
           ['Upcoming rotations', 'rotations/upcoming'],          
           ['Salaries & Compensation', 'hr/salaries'],
           ['Leave management', 'leave-management'],
+        ],
+      },
+      {
+        title: 'Field Leadership & Performance',
+        links: [
+          ['Field Leadership Scorecards', '/field-leadership-overview'],
+          ['Supervisor Scorecards Data', 'control-tower/scorecards'],
         ],
       },
       {
@@ -218,7 +230,8 @@ export default function Sidebar({
         (g) =>
           path === g.href ||
           (g.name === 'Dashboard' && (path === '/' || path === '/control-tower-overview' || path === '/commercial-overview')) ||
-          (g.name === 'Projects' && (path === '/project-command-center' || path === '/drilling-overview')) ||
+          (g.name === 'Projects' && (path === '/project-command-center' || path === '/drilling-overview' || path === '/tenders-overview')) ||
+          (g.name === 'Workforce' && (path === '/field-leadership-overview' || path === '/workforce-overview')) ||
           g.sections.some((s) => s.links.some(([, r]) => path === (r.startsWith('/') ? r : '/workspace/' + r)))
       )
       .map((g) => g.name)
