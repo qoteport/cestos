@@ -537,7 +537,9 @@ export interface ProjectContractRead {
   currency: string;
   start_date?: string;
   end_date?: string;
+  notes?: string;
   total_contract_value?: number;
+  attachments?: { name: string; url: string }[];
   rate_cards?: any[];
   [key: string]: unknown;
 }
@@ -576,6 +578,13 @@ export async function getProjectContracts(params?: Record<string, string>): Prom
 export async function createProjectContract(data: Record<string, any>): Promise<ProjectContractRead> {
   return apiFetch<ProjectContractRead>('/api/v1/commercial/contracts', {
     method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateProjectContract(id: string, data: Record<string, any>): Promise<ProjectContractRead> {
+  return apiFetch<ProjectContractRead>(`/api/v1/commercial/contracts/${id}`, {
+    method: 'PATCH',
     body: JSON.stringify(data),
   });
 }
