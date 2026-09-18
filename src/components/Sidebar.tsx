@@ -34,22 +34,6 @@ const groups: SidebarGroup[] = [
     ],
   },
   {
-    name: 'Drilling Operations',
-    icon: Flame,
-    href: '/drilling-overview',
-    permission: 'projects.read',
-    sections: [
-      {
-        title: 'Rig & Production',
-        links: [
-          ['Shift Production Reports', 'drilling/shifts'],
-          ['Drilling Programs', 'drilling/programs'],
-          ['Drill Holes', 'drilling/holes'],
-        ],
-      },
-    ],
-  },
-  {
     name: 'Commercial & Costing',
     icon: DollarSign,
     href: '/commercial-overview',
@@ -77,6 +61,15 @@ const groups: SidebarGroup[] = [
           ['All projects', 'projects'],
           ['Clients', 'clients'],
           ['Locations', 'locations'],
+        ],
+      },
+      {
+        title: 'Drilling Operations',
+        links: [
+          ['Drilling Overview', '/drilling-overview'],
+          ['Shift Production Reports', 'drilling/shifts'],
+          ['Drilling Programs', 'drilling/programs'],
+          ['Drill Holes', 'drilling/holes'],
         ],
       },
     ],
@@ -314,6 +307,7 @@ export default function Sidebar({
                   <div className="ml-4 pl-3 border-l my-1 space-y-2">
                     {g.sections.map((sec, sIdx) => {
                       const visibleLinks = sec.links.filter(([, r]) => {
+                        if (r.startsWith('/')) return true;
                         const op = operation('/api/v1/' + r, 'GET');
                         if (!op) return true;
                         return (op.permissions || []).every((p: string) => auth.can(p));
@@ -326,17 +320,20 @@ export default function Sidebar({
                               {sec.title}
                             </p>
                           )}
-                          {visibleLinks.map(([label, resource]) => (
-                            <Link
-                              className={
-                                'block px-2 py-1.5 rounded text-xs transition-colors ' + active('/workspace/' + resource)
-                              }
-                              href={'/workspace/' + resource}
-                              key={resource}
-                            >
-                              {label}
-                            </Link>
-                          ))}
+                          {visibleLinks.map(([label, resource]) => {
+                            const targetHref = resource.startsWith('/') ? resource : '/workspace/' + resource;
+                            return (
+                              <Link
+                                className={
+                                  'block px-2 py-1.5 rounded text-xs transition-colors ' + active(targetHref)
+                                }
+                                href={targetHref}
+                                key={resource}
+                              >
+                                {label}
+                              </Link>
+                            );
+                          })}
                         </div>
                       );
                     })}
