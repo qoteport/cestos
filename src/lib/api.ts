@@ -433,6 +433,8 @@ export interface DrillingProgramRead {
   organization_id: string;
   project_id: string;
   program_name: string;
+  name?: string;
+  program_code?: string;
   drilling_type: string;
   target_metres: number;
   drilled_metres: number;
@@ -448,6 +450,8 @@ export interface DrillHoleRead {
   hole_number: string;
   target_depth_m: number;
   final_depth_m: number;
+  dip_deg?: number;
+  azimuth_deg?: number;
   status: string;
   created_at: string;
   [key: string]: unknown;
@@ -463,6 +467,9 @@ export interface DrillingShiftReportRead {
   shift_type: string;
   shift_number: string;
   status: string;
+  start_depth_m?: number;
+  end_depth_m?: number;
+  metres_drilled?: number;
   total_metres_drilled: number;
   core_recovery_pct: number;
   productive_hours: number;
@@ -528,6 +535,9 @@ export interface ProjectContractRead {
   title: string;
   status: string;
   currency: string;
+  start_date?: string;
+  end_date?: string;
+  total_contract_value?: number;
   rate_cards?: any[];
   [key: string]: unknown;
 }
@@ -550,7 +560,10 @@ export interface RevenueSubledgerRead {
   rig_id?: string;
   category: string;
   total_revenue_base: number;
+  amount?: number;
   currency: string;
+  description?: string;
+  entry_date?: string;
   created_at: string;
   [key: string]: unknown;
 }

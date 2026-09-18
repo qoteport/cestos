@@ -2,16 +2,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  ShieldCheck, AlertTriangle, Plus, RefreshCw, CheckCircle2, Clock, FileText, Layers, CheckSquare
+  ShieldCheck, AlertTriangle, Plus, RefreshCw, CheckCircle2, Clock, FileText, Layers, CheckSquare, Search, Eye
 } from 'lucide-react';
 import { apiFetch, HseIncidentRead, HseActionRead } from '@/lib/api';
 import { Modal } from './DataUI';
 
-export default function HseIncidentsWorkspace() {
+export default function HseIncidentsWorkspace({ subResource }: { subResource?: string }) {
   const [activeTab, setActiveTab] = useState<'INCIDENTS' | 'CAPA'>('INCIDENTS');
   const [loading, setLoading] = useState(true);
   const [incidents, setIncidents] = useState<HseIncidentRead[]>([]);
   const [version, setVersion] = useState(0);
+  const [search, setSearch] = useState('');
+  const [selectedIncident, setSelectedIncident] = useState<HseIncidentRead | null>(null);
 
   // New Incident Form State
   const [showAddIncident, setShowAddIncident] = useState(false);
@@ -70,6 +72,10 @@ export default function HseIncidentsWorkspace() {
     }
   };
 
+  const filteredIncidents = (Array.isArray(incidents) ? incidents : []).filter((inc) =>
+    !search || (inc.title || '').toLowerCase().includes(search.toLowerCase()) || (inc.incident_number || '').toLowerCase().includes(search.toLowerCase()) || (inc.incident_type || '').toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -84,6 +90,16 @@ export default function HseIncidentsWorkspace() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <div className="relative w-48 sm:w-64">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search HSE incidents..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 text-sm border rounded-lg bg-background"
+            />
+          </div>
           <button
             onClick={reload}
             className="flex items-center gap-2 px-3 py-1.5 rounded border text-sm font-medium hover:bg-muted"
@@ -127,10 +143,11 @@ export default function HseIncidentsWorkspace() {
               <th className="px-4 py-3">Title & Description</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Date</th>
+              <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
-            {(Array.isArray(incidents) ? incidents : []).map((inc) => (
+            {filteredIncidents.map((inc) => (
               <tr key={inc.id} className="hover:bg-muted/30">
                 <td className="px-4 py-3 font-mono font-medium text-xs">{inc.incident_number}</td>
                 <td className="px-4 py-3 font-semibold text-xs">{inc.incident_type}</td>
@@ -149,18 +166,74 @@ export default function HseIncidentsWorkspace() {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-xs text-muted-foreground">{inc.occurred_at?.slice(0, 10)}</td>
+                <td className="px-4 py-3 text-right">
+                  <button
+                    onClick={() => setSelectedIncident(inc)}
+                    className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                    title="View Details"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </button>
+                </td>
               </tr>
             ))}
-            {incidents.length === 0 && (
+            {filteredIncidents.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                  No HSE incidents recorded. Click "Report HSE Incident" to file near-misses or safety logs.
+                <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                  No HSE incidents found.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
+
+      {/* VIEW INCIDENT DETAILS MODAL */}
+      {selectedIncident && (
+        <Modal title={`HSE Incident - ${selectedIncident.incident_number}`} onClose={() => setSelectedIncident(null)}>
+          <div className="space-y-4 text-sm">
+            <div className="grid grid-cols-2 gap-4 border-b pb-3">
+              <div>
+                <span className="text-xs text-muted-foreground block">Incident Type</span>
+                <span className="font-semibold">{selectedIncident.incident_type}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">Severity</span>
+                <span className={`px-2 py-0.5 rounded border text-xs font-semibold ${getSeverityBadge(selectedIncident.severity)}`}>
+                  {selectedIncident.severity}
+                </span>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">Status</span>
+                <span className="font-semibold text-primary">{selectedIncident.status}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">Occurred At</span>
+                <span className="font-mono text-xs">{selectedIncident.occurred_at}</span>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-bold uppercase text-muted-foreground mb-1">Title</h4>
+              <p className="font-semibold text-base">{selectedIncident.title}</p>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-bold uppercase text-muted-foreground mb-1">Description & Immediate Actions</h4>
+              <p className="text-xs text-muted-foreground p-3 border rounded-lg bg-muted/20 whitespace-pre-wrap">{selectedIncident.description}</p>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setSelectedIncident(null)}
+                className="px-4 py-2 text-sm bg-secondary text-secondary-foreground rounded hover:bg-muted"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* NEW INCIDENT MODAL */}
       {showAddIncident && (

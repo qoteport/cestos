@@ -145,12 +145,14 @@ export default function ResourceWorkspace({ resource }: { resource: string }) {
   const normResource = normalizeResource(resource);
   const searchParams = useSearchParams();
 
+  const subResource = normResource.includes('/') ? normResource.split('/')[1] : normResource;
+
   // Phase 1-6 Custom Workspaces
-  if (normResource.startsWith('control-tower')) return <ControlTowerWorkspace />;
-  if (normResource.startsWith('drilling')) return <DrillingWorkspace />;
-  if (normResource.startsWith('commercial')) return <CommercialCostingWorkspace />;
-  if (normResource.startsWith('procurement') || normResource === 'purchase-orders') return <ProcurementWorkspace />;
-  if (normResource.startsWith('hse') || normResource === 'capa') return <HseIncidentsWorkspace />;
+  if (normResource.startsWith('control-tower')) return <ControlTowerWorkspace subResource={subResource} />;
+  if (normResource.startsWith('drilling')) return <DrillingWorkspace subResource={subResource} />;
+  if (normResource.startsWith('commercial')) return <CommercialCostingWorkspace subResource={subResource} />;
+  if (normResource.startsWith('procurement') || normResource === 'purchase-orders') return <ProcurementWorkspace subResource={subResource} />;
+  if (normResource.startsWith('hse') || normResource === 'capa') return <HseIncidentsWorkspace subResource={subResource} />;
 
   if (normResource === 'projects') return <ProjectRegister />;
   if (normResource === 'employees/available') return <EmployeeAvailabilityWorkspace />;

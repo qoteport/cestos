@@ -20,7 +20,7 @@ const groups: SidebarGroup[] = [
   {
     name: 'Executive & Control Tower',
     icon: Building2,
-    href: '/workspace/control-tower/summary',
+    href: '/control-tower-overview',
     permission: 'projects.read',
     sections: [
       {
@@ -36,7 +36,7 @@ const groups: SidebarGroup[] = [
   {
     name: 'Drilling Operations',
     icon: Flame,
-    href: '/workspace/drilling/shifts',
+    href: '/drilling-overview',
     permission: 'projects.read',
     sections: [
       {
@@ -52,7 +52,7 @@ const groups: SidebarGroup[] = [
   {
     name: 'Commercial & Costing',
     icon: DollarSign,
-    href: '/workspace/commercial/contracts',
+    href: '/commercial-overview',
     permission: 'projects.read',
     sections: [
       {

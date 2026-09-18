@@ -2,15 +2,45 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Flame, Plus, RefreshCw, Layers, Compass, CheckCircle2, AlertCircle, Clock, Users, ArrowRight
+  Flame, Plus, RefreshCw, Layers, Compass, CheckCircle2, AlertCircle, Clock, Users, ArrowRight, Search, Eye 
 } from 'lucide-react';
 import { 
   apiFetch, DrillingProgramRead, DrillHoleRead, DrillingShiftReportRead 
 } from '@/lib/api';
 import { Modal, rows } from './DataUI';
 
-export default function DrillingWorkspace() {
+export default function DrillingWorkspace({ subResource }: { subResource?: string }) {
   const [activeTab, setActiveTab] = useState<'PROGRAMS' | 'HOLES' | 'SHIFTS'>('SHIFTS');
+  const [search, setSearch] = useState('');
+  const [selectedShift, setSelectedShift] = useState<DrillingShiftReportRead | null>(null);
+  const [selectedProgram, setSelectedProgram] = useState<DrillingProgramRead | null>(null);
+  const [selectedHole, setSelectedHole] = useState<DrillHoleRead | null>(null);
+
+  // New Program Modal
+  const [showAddProgram, setShowAddProgram] = useState(false);
+  const [newProgram, setNewProgram] = useState({
+    project_id: '',
+    program_name: '',
+    drilling_type: 'RC',
+    target_metres: 5000,
+    status: 'ACTIVE',
+  });
+
+  // New Hole Modal
+  const [showAddHole, setShowAddHole] = useState(false);
+  const [newHole, setNewHole] = useState({
+    project_id: '',
+    hole_number: 'HOLE-RC-001',
+    drilling_type: 'RC',
+    target_depth_m: 250,
+    status: 'IN_PROGRESS',
+  });
+
+  useEffect(() => {
+    if (subResource === 'programs') setActiveTab('PROGRAMS');
+    else if (subResource === 'holes') setActiveTab('HOLES');
+    else if (subResource === 'shifts') setActiveTab('SHIFTS');
+  }, [subResource]);
   const [loading, setLoading] = useState(true);
   const [programs, setPrograms] = useState<DrillingProgramRead[]>([]);
   const [holes, setHoles] = useState<DrillHoleRead[]>([]);
@@ -72,6 +102,34 @@ export default function DrillingWorkspace() {
       reload();
     } catch (err: any) {
       alert(err.message || 'Failed to create shift production report');
+    }
+  };
+
+  const handleCreateProgram = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await apiFetch('/api/v1/drilling/programs', {
+        method: 'POST',
+        body: JSON.stringify(newProgram),
+      });
+      setShowAddProgram(false);
+      reload();
+    } catch (err: any) {
+      alert(err.message || 'Failed to create drilling program');
+    }
+  };
+
+  const handleCreateHole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await apiFetch('/api/v1/drilling/holes', {
+        method: 'POST',
+        body: JSON.stringify(newHole),
+      });
+      setShowAddHole(false);
+      reload();
+    } catch (err: any) {
+      alert(err.message || 'Failed to create drill hole');
     }
   };
 
@@ -148,15 +206,27 @@ export default function DrillingWorkspace() {
       {/* SHIFTS TAB */}
       {activeTab === 'SHIFTS' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h2 className="text-lg font-semibold">Daily Shift Production Reports</h2>
-            <button
-              onClick={() => setShowAddShift(true)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded text-sm font-medium hover:bg-primary/90"
-            >
-              <Plus className="h-4 w-4" />
-              New Shift Report
-            </button>
+            <div className="flex items-center gap-2">
+              <div className="relative w-64">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search shift reports..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full text-sm border rounded-lg pl-9 pr-3 py-1.5 bg-background"
+                />
+              </div>
+              <button
+                onClick={() => setShowAddShift(true)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded text-sm font-medium hover:bg-primary/90 shrink-0"
+              >
+                <Plus className="h-4 w-4" />
+                New Shift Report
+              </button>
+            </div>
           </div>
 
           <div className="border rounded-xl bg-card overflow-hidden">
@@ -173,37 +243,53 @@ export default function DrillingWorkspace() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {(Array.isArray(shifts) ? shifts : []).map((s) => (
-                  <tr key={s.id} className="hover:bg-muted/30">
-                    <td className="px-4 py-3 font-mono font-medium text-xs">{s.shift_number}</td>
-                    <td className="px-4 py-3 font-medium">
-                      {s.shift_date} <span className="text-xs text-muted-foreground">({s.shift_type})</span>
-                    </td>
-                    <td className="px-4 py-3 font-bold text-emerald-600">{s.total_metres_drilled} m</td>
-                    <td className="px-4 py-3 font-semibold">{s.core_recovery_pct}%</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {s.productive_hours}h / {s.standby_hours}h / {s.maintenance_hours}h
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                        s.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-600' :
-                        s.status === 'SUBMITTED' ? 'bg-blue-500/10 text-blue-600' : 'bg-amber-500/10 text-amber-600'
-                      }`}>
-                        {s.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {s.status !== 'APPROVED' && (
+                {(Array.isArray(shifts) ? shifts : [])
+                  .filter((s) => {
+                    if (!search.trim()) return true;
+                    const q = search.toLowerCase();
+                    return (
+                      s.shift_number?.toLowerCase().includes(q) ||
+                      s.shift_date?.toLowerCase().includes(q) ||
+                      s.status?.toLowerCase().includes(q)
+                    );
+                  })
+                  .map((s) => (
+                    <tr key={s.id} className="hover:bg-muted/30">
+                      <td className="px-4 py-3 font-mono font-medium text-xs">{s.shift_number}</td>
+                      <td className="px-4 py-3 font-medium">
+                        {s.shift_date} <span className="text-xs text-muted-foreground">({s.shift_type})</span>
+                      </td>
+                      <td className="px-4 py-3 font-bold text-emerald-600">{s.total_metres_drilled} m</td>
+                      <td className="px-4 py-3 font-semibold">{s.core_recovery_pct}%</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {s.productive_hours}h / {s.standby_hours}h / {s.maintenance_hours}h
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          s.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-600' :
+                          s.status === 'SUBMITTED' ? 'bg-blue-500/10 text-blue-600' : 'bg-amber-500/10 text-amber-600'
+                        }`}>
+                          {s.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right flex items-center justify-end gap-1">
                         <button
-                          onClick={() => handleApproveShift(s.id)}
-                          className="px-2 py-1 text-xs bg-emerald-600 text-white rounded font-medium hover:bg-emerald-700"
+                          onClick={() => setSelectedShift(s)}
+                          className="px-2 py-1 text-xs border rounded font-medium hover:bg-muted inline-flex items-center gap-1"
                         >
-                          Approve & Auto-Post Revenue
+                          <Eye className="h-3 w-3" /> Details
                         </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                        {s.status !== 'APPROVED' && (
+                          <button
+                            onClick={() => handleApproveShift(s.id)}
+                            className="px-2 py-1 text-xs bg-emerald-600 text-white rounded font-medium hover:bg-emerald-700"
+                          >
+                            Approve
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
                 {shifts.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
@@ -220,23 +306,57 @@ export default function DrillingWorkspace() {
       {/* PROGRAMS TAB */}
       {activeTab === 'PROGRAMS' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h2 className="text-lg font-semibold">Drilling Programs</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {(Array.isArray(programs) ? programs : []).map((p) => (
-              <div key={p.id} className="p-4 rounded-xl border bg-card space-y-2 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-muted-foreground">{p.drilling_type}</span>
-                  <span className="px-2 py-0.5 rounded text-xs bg-secondary">{p.status}</span>
-                </div>
-                <h3 className="font-bold text-base">{p.program_name}</h3>
-                <div className="flex items-center justify-between text-sm pt-2">
-                  <span className="text-muted-foreground">Progress:</span>
-                  <span className="font-bold">{p.drilled_metres || 0} / {p.target_metres} m</span>
-                </div>
+            <div className="flex items-center gap-2">
+              <div className="relative w-64">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search programs..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full text-sm border rounded-lg pl-9 pr-3 py-1.5 bg-background"
+                />
               </div>
-            ))}
+              <button
+                onClick={() => setShowAddProgram(true)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded text-sm font-medium hover:bg-primary/90 shrink-0"
+              >
+                <Plus className="h-4 w-4" />
+                New Program
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {(Array.isArray(programs) ? programs : [])
+              .filter((p) => {
+                if (!search.trim()) return true;
+                const q = search.toLowerCase();
+                return (
+                  p.program_name?.toLowerCase().includes(q) ||
+                  p.drilling_type?.toLowerCase().includes(q) ||
+                  p.status?.toLowerCase().includes(q)
+                );
+              })
+              .map((p) => (
+                <div
+                  key={p.id}
+                  onClick={() => setSelectedProgram(p)}
+                  className="p-4 rounded-xl border bg-card space-y-2 shadow-sm hover:border-primary/50 cursor-pointer transition"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-muted-foreground">{p.drilling_type}</span>
+                    <span className="px-2 py-0.5 rounded text-xs bg-secondary">{p.status}</span>
+                  </div>
+                  <h3 className="font-bold text-base">{p.program_name}</h3>
+                  <div className="flex items-center justify-between text-sm pt-2">
+                    <span className="text-muted-foreground">Progress:</span>
+                    <span className="font-bold">{p.drilled_metres || 0} / {p.target_metres} m</span>
+                  </div>
+                </div>
+              ))}
             {programs.length === 0 && (
               <div className="col-span-full p-8 text-center border rounded-xl bg-card text-muted-foreground">
                 No active drilling programs found.
@@ -249,9 +369,29 @@ export default function DrillingWorkspace() {
       {/* HOLES TAB */}
       {activeTab === 'HOLES' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h2 className="text-lg font-semibold">Drill Holes</h2>
+            <div className="flex items-center gap-2">
+              <div className="relative w-64">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search drill holes..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full text-sm border rounded-lg pl-9 pr-3 py-1.5 bg-background"
+                />
+              </div>
+              <button
+                onClick={() => setShowAddHole(true)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded text-sm font-medium hover:bg-primary/90 shrink-0"
+              >
+                <Plus className="h-4 w-4" />
+                New Drill Hole
+              </button>
+            </div>
           </div>
+
           <div className="border rounded-xl bg-card overflow-hidden">
             <table className="w-full text-sm text-left">
               <thead className="bg-muted/50 text-xs font-semibold uppercase text-muted-foreground">
@@ -260,20 +400,38 @@ export default function DrillingWorkspace() {
                   <th className="px-4 py-3">Target Depth</th>
                   <th className="px-4 py-3">Final Depth</th>
                   <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {(Array.isArray(holes) ? holes : []).map((h) => (
-                  <tr key={h.id} className="hover:bg-muted/30">
-                    <td className="px-4 py-3 font-mono font-medium">{h.hole_number}</td>
-                    <td className="px-4 py-3">{h.target_depth_m} m</td>
-                    <td className="px-4 py-3 font-bold">{h.final_depth_m} m</td>
-                    <td className="px-4 py-3"><span className="px-2 py-0.5 rounded text-xs bg-secondary">{h.status}</span></td>
-                  </tr>
-                ))}
+                {(Array.isArray(holes) ? holes : [])
+                  .filter((h) => {
+                    if (!search.trim()) return true;
+                    const q = search.toLowerCase();
+                    return (
+                      h.hole_number?.toLowerCase().includes(q) ||
+                      h.status?.toLowerCase().includes(q)
+                    );
+                  })
+                  .map((h) => (
+                    <tr key={h.id} className="hover:bg-muted/30">
+                      <td className="px-4 py-3 font-mono font-medium">{h.hole_number}</td>
+                      <td className="px-4 py-3">{h.target_depth_m} m</td>
+                      <td className="px-4 py-3 font-bold">{h.final_depth_m} m</td>
+                      <td className="px-4 py-3"><span className="px-2 py-0.5 rounded text-xs bg-secondary">{h.status}</span></td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => setSelectedHole(h)}
+                          className="px-2 py-1 text-xs border rounded font-medium hover:bg-muted inline-flex items-center gap-1"
+                        >
+                          <Eye className="h-3 w-3" /> Details
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
                 {holes.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
                       No drill holes recorded.
                     </td>
                   </tr>
@@ -383,6 +541,250 @@ export default function DrillingWorkspace() {
               </button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* NEW PROGRAM MODAL */}
+      {showAddProgram && (
+        <Modal title="Create Drilling Program" onClose={() => setShowAddProgram(false)}>
+          <form onSubmit={handleCreateProgram} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium mb-1">Project</label>
+              <select
+                required
+                value={newProgram.project_id}
+                onChange={(e) => setNewProgram({ ...newProgram, project_id: e.target.value })}
+                className="w-full text-sm border rounded p-2 bg-background"
+              >
+                <option value="">Select Project...</option>
+                {(Array.isArray(projects) ? projects : []).map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium mb-1">Program Name</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Nimba Exploration RC Campaign"
+                value={newProgram.program_name}
+                onChange={(e) => setNewProgram({ ...newProgram, program_name: e.target.value })}
+                className="w-full text-sm border rounded p-2 bg-background"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium mb-1">Drilling Method</label>
+                <select
+                  value={newProgram.drilling_type}
+                  onChange={(e) => setNewProgram({ ...newProgram, drilling_type: e.target.value })}
+                  className="w-full text-sm border rounded p-2 bg-background"
+                >
+                  <option value="RC">Reverse Circulation (RC)</option>
+                  <option value="DIAMOND_CORE">Diamond Core (DD)</option>
+                  <option value="RAB">RAB</option>
+                  <option value="AIR_CORE">Air Core</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium mb-1">Target Metres</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={newProgram.target_metres}
+                  onChange={(e) => setNewProgram({ ...newProgram, target_metres: Number(e.target.value) })}
+                  className="w-full text-sm border rounded p-2 bg-background"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowAddProgram(false)}
+                className="px-4 py-2 text-sm border rounded hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded font-medium hover:bg-primary/90"
+              >
+                Save Program
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* NEW HOLE MODAL */}
+      {showAddHole && (
+        <Modal title="Create Drill Hole Specification" onClose={() => setShowAddHole(false)}>
+          <form onSubmit={handleCreateHole} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium mb-1">Project</label>
+              <select
+                required
+                value={newHole.project_id}
+                onChange={(e) => setNewHole({ ...newHole, project_id: e.target.value })}
+                className="w-full text-sm border rounded p-2 bg-background"
+              >
+                <option value="">Select Project...</option>
+                {(Array.isArray(projects) ? projects : []).map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium mb-1">Hole Number / ID</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. HOLE-RC-005"
+                value={newHole.hole_number}
+                onChange={(e) => setNewHole({ ...newHole, hole_number: e.target.value })}
+                className="w-full text-sm border rounded p-2 bg-background"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium mb-1">Method</label>
+                <select
+                  value={newHole.drilling_type}
+                  onChange={(e) => setNewHole({ ...newHole, drilling_type: e.target.value })}
+                  className="w-full text-sm border rounded p-2 bg-background"
+                >
+                  <option value="RC">RC</option>
+                  <option value="DIAMOND_CORE">Diamond Core</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium mb-1">Target Depth (m)</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={newHole.target_depth_m}
+                  onChange={(e) => setNewHole({ ...newHole, target_depth_m: Number(e.target.value) })}
+                  className="w-full text-sm border rounded p-2 bg-background"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowAddHole(false)}
+                className="px-4 py-2 text-sm border rounded hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded font-medium hover:bg-primary/90"
+              >
+                Save Drill Hole
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* VIEW SHIFT DETAILS MODAL */}
+      {selectedShift && (
+        <Modal title={`Shift Report - ${selectedShift.shift_number}`} onClose={() => setSelectedShift(null)}>
+          <div className="space-y-4 text-xs">
+            <div className="flex items-center justify-between border-b pb-3 text-sm">
+              <div>
+                <span className="font-semibold">{selectedShift.shift_date} ({selectedShift.shift_type})</span>
+                <p className="text-xs text-muted-foreground">Rig: {selectedShift.rig_id || 'Primary Rig'}</p>
+              </div>
+              <span className={`px-2.5 py-0.5 rounded-full font-semibold ${
+                selectedShift.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600'
+              }`}>
+                {selectedShift.status}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 border rounded-lg bg-card">
+                <span className="text-muted-foreground block">Metres Drilled</span>
+                <strong className="text-base text-emerald-600 font-bold">{selectedShift.total_metres_drilled} m</strong>
+              </div>
+              <div className="p-3 border rounded-lg bg-card">
+                <span className="text-muted-foreground block">Core Recovery</span>
+                <strong className="text-base font-bold">{selectedShift.core_recovery_pct}%</strong>
+              </div>
+              <div className="p-3 border rounded-lg bg-card">
+                <span className="text-muted-foreground block">Hours Breakdown</span>
+                <span className="font-medium">{selectedShift.productive_hours}h Prod / {selectedShift.standby_hours}h Stby / {selectedShift.maintenance_hours}h Maint</span>
+              </div>
+            </div>
+
+            {selectedShift.status !== 'APPROVED' && (
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={async () => {
+                    await handleApproveShift(selectedShift.id);
+                    setSelectedShift(null);
+                  }}
+                  className="px-4 py-2 bg-emerald-600 text-white rounded font-medium hover:bg-emerald-700"
+                >
+                  Approve Shift & Auto-Post Revenue
+                </button>
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {/* VIEW PROGRAM DETAILS MODAL */}
+      {selectedProgram && (
+        <Modal title={`Drilling Program - ${selectedProgram.program_name}`} onClose={() => setSelectedProgram(null)}>
+          <div className="space-y-4 text-xs">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <span className="text-muted-foreground">Method: {selectedProgram.drilling_type}</span>
+              </div>
+              <span className="px-2 py-0.5 rounded bg-secondary text-xs font-semibold">{selectedProgram.status}</span>
+            </div>
+            <div className="p-4 border rounded-lg bg-card space-y-2">
+              <div className="flex justify-between font-semibold text-sm">
+                <span>Total Metres Target</span>
+                <span>{selectedProgram.target_metres} m</span>
+              </div>
+              <div className="flex justify-between font-semibold text-sm text-emerald-600">
+                <span>Drilled Progress</span>
+                <span>{selectedProgram.drilled_metres || 0} m</span>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* VIEW HOLE DETAILS MODAL */}
+      {selectedHole && (
+        <Modal title={`Drill Hole - ${selectedHole.hole_number}`} onClose={() => setSelectedHole(null)}>
+          <div className="space-y-4 text-xs">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 border rounded-lg bg-card">
+                <span className="text-muted-foreground block">Target Depth</span>
+                <strong className="text-sm font-bold">{selectedHole.target_depth_m} m</strong>
+              </div>
+              <div className="p-3 border rounded-lg bg-card">
+                <span className="text-muted-foreground block">Final Depth</span>
+                <strong className="text-sm font-bold">{selectedHole.final_depth_m || 0} m</strong>
+              </div>
+            </div>
+          </div>
         </Modal>
       )}
     </div>

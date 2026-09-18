@@ -2,17 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  ShoppingBag, Plus, RefreshCw, CheckCircle2, Clock, Truck, PackageCheck, AlertCircle, FileText
+  ShoppingBag, Plus, RefreshCw, CheckCircle2, Clock, Truck, PackageCheck, AlertCircle, FileText, Search, Eye
 } from 'lucide-react';
 import { apiFetch, PurchaseOrderRead, receivePurchaseOrderGoods } from '@/lib/api';
 import { Modal, rows } from './DataUI';
 
-export default function ProcurementWorkspace() {
+export default function ProcurementWorkspace({ subResource }: { subResource?: string }) {
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<PurchaseOrderRead[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [version, setVersion] = useState(0);
+  const [search, setSearch] = useState('');
+  const [selectedPo, setSelectedPo] = useState<PurchaseOrderRead | null>(null);
 
   // New PO Modal
   const [showAddPo, setShowAddPo] = useState(false);
@@ -89,6 +91,10 @@ export default function ProcurementWorkspace() {
     setReceiptQuantities(initial);
   };
 
+  const filteredOrders = (Array.isArray(orders) ? orders : []).filter((po) =>
+    !search || (po.po_number || '').toLowerCase().includes(search.toLowerCase()) || (po.notes || '').toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -103,6 +109,16 @@ export default function ProcurementWorkspace() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <div className="relative w-48 sm:w-64">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search POs..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 text-sm border rounded-lg bg-background"
+            />
+          </div>
           <button
             onClick={reload}
             className="flex items-center gap-2 px-3 py-1.5 rounded border text-sm font-medium hover:bg-muted"
@@ -133,7 +149,7 @@ export default function ProcurementWorkspace() {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {(Array.isArray(orders) ? orders : []).map((po) => (
+            {filteredOrders.map((po) => (
               <tr key={po.id} className="hover:bg-muted/30">
                 <td className="px-4 py-3 font-mono font-medium">{po.po_number}</td>
                 <td className="px-4 py-3 text-xs text-muted-foreground">
@@ -148,11 +164,18 @@ export default function ProcurementWorkspace() {
                     {po.status}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3 text-right flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => setSelectedPo(po)}
+                    className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                    title="View Details"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </button>
                   {po.status !== 'RECEIVED' && (
                     <button
                       onClick={() => openReceiveModal(po)}
-                      className="px-3 py-1 text-xs bg-primary text-primary-foreground rounded font-medium hover:bg-primary/90 flex items-center gap-1 ml-auto"
+                      className="px-3 py-1 text-xs bg-primary text-primary-foreground rounded font-medium hover:bg-primary/90 flex items-center gap-1"
                     >
                       <PackageCheck className="h-3.5 w-3.5" />
                       Receive Goods
@@ -161,16 +184,65 @@ export default function ProcurementWorkspace() {
                 </td>
               </tr>
             ))}
-            {orders.length === 0 && (
+            {filteredOrders.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
-                  No purchase orders created yet. Click "New Purchase Order" to issue vendor POs.
+                  No purchase orders found.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
+
+      {/* VIEW PO DETAILS MODAL */}
+      {selectedPo && (
+        <Modal title={`Purchase Order Details - ${selectedPo.po_number}`} onClose={() => setSelectedPo(null)}>
+          <div className="space-y-4 text-sm">
+            <div className="grid grid-cols-2 gap-4 border-b pb-3">
+              <div>
+                <span className="text-xs text-muted-foreground block">PO Number</span>
+                <span className="font-mono font-bold">{selectedPo.po_number}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">Status</span>
+                <span className="font-semibold text-primary">{selectedPo.status}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">Total Amount</span>
+                <span className="font-mono font-bold">${Number(selectedPo.total_amount).toLocaleString()} {selectedPo.currency}</span>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-bold uppercase text-muted-foreground mb-2">Vendor Line Items</h4>
+              <div className="space-y-2">
+                {(selectedPo.items || []).map((item: any) => (
+                  <div key={item.id} className="p-3 border rounded-lg bg-muted/20 flex justify-between items-center text-xs">
+                    <div>
+                      <span className="font-semibold block">{item.description}</span>
+                      <span className="text-muted-foreground">Unit Price: ${item.unit_price}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-mono font-bold block">Ordered: {item.quantity_ordered} | Received: {item.quantity_received || 0}</span>
+                      <span className="text-emerald-600 font-semibold">${Number(item.total_price || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setSelectedPo(null)}
+                className="px-4 py-2 text-sm bg-secondary text-secondary-foreground rounded hover:bg-muted"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* NEW PO MODAL */}
       {showAddPo && (

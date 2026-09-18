@@ -2,13 +2,23 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  DollarSign, FileText, TrendingUp, Plus, RefreshCw, Layers, Calculator, ShieldCheck
+  DollarSign, FileText, TrendingUp, Plus, RefreshCw, Layers, Calculator, ShieldCheck, Search, Eye 
 } from 'lucide-react';
 import { apiFetch, ProjectContractRead, CostSubledgerRead, RevenueSubledgerRead } from '@/lib/api';
 import { Modal, rows } from './DataUI';
 
-export default function CommercialCostingWorkspace() {
+export default function CommercialCostingWorkspace({ subResource }: { subResource?: string }) {
   const [activeTab, setActiveTab] = useState<'CONTRACTS' | 'REVENUE' | 'COSTS'>('CONTRACTS');
+  const [search, setSearch] = useState('');
+  const [selectedContract, setSelectedContract] = useState<ProjectContractRead | null>(null);
+  const [selectedCostEntry, setSelectedCostEntry] = useState<CostSubledgerRead | null>(null);
+  const [selectedRevenueEntry, setSelectedRevenueEntry] = useState<RevenueSubledgerRead | null>(null);
+
+  useEffect(() => {
+    if (subResource === 'cost-entries' || subResource === 'costs') setActiveTab('COSTS');
+    else if (subResource === 'revenue-entries' || subResource === 'revenue') setActiveTab('REVENUE');
+    else if (subResource === 'contracts') setActiveTab('CONTRACTS');
+  }, [subResource]);
   const [loading, setLoading] = useState(true);
   const [contracts, setContracts] = useState<ProjectContractRead[]>([]);
   const [costEntries, setCostEntries] = useState<CostSubledgerRead[]>([]);
@@ -146,31 +156,58 @@ export default function CommercialCostingWorkspace() {
       {/* CONTRACTS TAB */}
       {activeTab === 'CONTRACTS' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h2 className="text-lg font-semibold">Commercial Contracts</h2>
-            <button
-              onClick={() => setShowAddContract(true)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded text-sm font-medium hover:bg-primary/90"
-            >
-              <Plus className="h-4 w-4" />
-              New Contract
-            </button>
+            <div className="flex items-center gap-2">
+              <div className="relative w-64">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search contracts..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full text-sm border rounded-lg pl-9 pr-3 py-1.5 bg-background"
+                />
+              </div>
+              <button
+                onClick={() => setShowAddContract(true)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded text-sm font-medium hover:bg-primary/90 shrink-0"
+              >
+                <Plus className="h-4 w-4" />
+                New Contract
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {(Array.isArray(contracts) ? contracts : []).map((c) => (
-              <div key={c.id} className="p-4 rounded-xl border bg-card space-y-3 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-medium text-muted-foreground">{c.contract_number}</span>
-                  <span className="px-2 py-0.5 rounded text-xs bg-emerald-500/10 text-emerald-600 font-semibold">{c.status}</span>
+            {(Array.isArray(contracts) ? contracts : [])
+              .filter((c) => {
+                if (!search.trim()) return true;
+                const q = search.toLowerCase();
+                return (
+                  c.title?.toLowerCase().includes(q) ||
+                  c.contract_number?.toLowerCase().includes(q) ||
+                  c.status?.toLowerCase().includes(q)
+                );
+              })
+              .map((c) => (
+                <div
+                  key={c.id}
+                  onClick={() => setSelectedContract(c)}
+                  className="p-4 rounded-xl border bg-card space-y-3 shadow-sm hover:border-primary/50 cursor-pointer transition"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono font-medium text-muted-foreground">{c.contract_number}</span>
+                    <span className="px-2 py-0.5 rounded text-xs bg-emerald-500/10 text-emerald-600 font-semibold">{c.status}</span>
+                  </div>
+                  <h3 className="font-bold text-base leading-snug">{c.title}</h3>
+                  <p className="text-xs text-muted-foreground">Currency: {c.currency}</p>
+                  <div className="border-t pt-2 text-xs font-medium text-muted-foreground flex justify-between items-center">
+                    <span>Rate Cards: {c.rate_cards?.length || 0} active meterage / hourly bands</span>
+                    <Eye className="h-3.5 w-3.5" />
+                  </div>
                 </div>
-                <h3 className="font-bold text-base leading-snug">{c.title}</h3>
-                <p className="text-xs text-muted-foreground">Currency: {c.currency}</p>
-                <div className="border-t pt-2 text-xs font-medium text-muted-foreground">
-                  Rate Cards: {c.rate_cards?.length || 0} active meterage / hourly bands
-                </div>
-              </div>
-            ))}
+              ))}
             {contracts.length === 0 && (
               <div className="col-span-full p-8 text-center border rounded-xl bg-card text-muted-foreground">
                 No commercial contracts created. Click "New Contract" to add contract rate cards.
@@ -182,67 +219,135 @@ export default function CommercialCostingWorkspace() {
 
       {/* REVENUE TAB */}
       {activeTab === 'REVENUE' && (
-        <div className="border rounded-xl bg-card overflow-hidden">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-muted/50 text-xs font-semibold uppercase text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3">Category</th>
-                <th className="px-4 py-3">Total Base Revenue</th>
-                <th className="px-4 py-3">Currency</th>
-                <th className="px-4 py-3">Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {(Array.isArray(revenueEntries) ? revenueEntries : []).map((r) => (
-                <tr key={r.id} className="hover:bg-muted/30">
-                  <td className="px-4 py-3 font-medium">{r.category}</td>
-                  <td className="px-4 py-3 font-bold text-emerald-600">${Number(r.total_revenue_base).toLocaleString()}</td>
-                  <td className="px-4 py-3 text-xs">{r.currency}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{r.created_at?.slice(0, 10)}</td>
-                </tr>
-              ))}
-              {revenueEntries.length === 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Revenue Subledger</h2>
+            <div className="relative w-64">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search revenue entries..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full text-sm border rounded-lg pl-9 pr-3 py-1.5 bg-background"
+              />
+            </div>
+          </div>
+
+          <div className="border rounded-xl bg-card overflow-hidden">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-muted/50 text-xs font-semibold uppercase text-muted-foreground">
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
-                    No revenue auto-posted entries yet. Approve shift production reports to auto-post meterage & standby revenue.
-                  </td>
+                  <th className="px-4 py-3">Category</th>
+                  <th className="px-4 py-3">Total Base Revenue</th>
+                  <th className="px-4 py-3">Currency</th>
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y">
+                {(Array.isArray(revenueEntries) ? revenueEntries : [])
+                  .filter((r) => {
+                    if (!search.trim()) return true;
+                    const q = search.toLowerCase();
+                    return (
+                      r.category?.toLowerCase().includes(q) ||
+                      r.currency?.toLowerCase().includes(q)
+                    );
+                  })
+                  .map((r) => (
+                    <tr key={r.id} className="hover:bg-muted/30">
+                      <td className="px-4 py-3 font-medium">{r.category}</td>
+                      <td className="px-4 py-3 font-bold text-emerald-600">${Number(r.total_revenue_base).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-xs">{r.currency}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{r.created_at?.slice(0, 10)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => setSelectedRevenueEntry(r)}
+                          className="px-2 py-1 text-xs border rounded font-medium hover:bg-muted inline-flex items-center gap-1"
+                        >
+                          <Eye className="h-3 w-3" /> Details
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                {revenueEntries.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                      No revenue auto-posted entries yet. Approve shift production reports to auto-post meterage & standby revenue.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {/* COSTS TAB */}
       {activeTab === 'COSTS' && (
-        <div className="border rounded-xl bg-card overflow-hidden">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-muted/50 text-xs font-semibold uppercase text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3">Cost Category</th>
-                <th className="px-4 py-3">Description</th>
-                <th className="px-4 py-3">Amount</th>
-                <th className="px-4 py-3">Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {(Array.isArray(costEntries) ? costEntries : []).map((c) => (
-                <tr key={c.id} className="hover:bg-muted/30">
-                  <td className="px-4 py-3 font-medium">{c.cost_category}</td>
-                  <td className="px-4 py-3">{c.description}</td>
-                  <td className="px-4 py-3 font-bold text-rose-600">${Number(c.amount).toLocaleString()} {c.currency}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{c.created_at?.slice(0, 10)}</td>
-                </tr>
-              ))}
-              {costEntries.length === 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Cost Subledger</h2>
+            <div className="relative w-64">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search cost entries..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full text-sm border rounded-lg pl-9 pr-3 py-1.5 bg-background"
+              />
+            </div>
+          </div>
+
+          <div className="border rounded-xl bg-card overflow-hidden">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-muted/50 text-xs font-semibold uppercase text-muted-foreground">
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
-                    No cost subledger entries recorded. Work order completions and fuel logs auto-post operational costs.
-                  </td>
+                  <th className="px-4 py-3">Cost Category</th>
+                  <th className="px-4 py-3">Description</th>
+                  <th className="px-4 py-3">Amount</th>
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y">
+                {(Array.isArray(costEntries) ? costEntries : [])
+                  .filter((c) => {
+                    if (!search.trim()) return true;
+                    const q = search.toLowerCase();
+                    return (
+                      c.cost_category?.toLowerCase().includes(q) ||
+                      c.description?.toLowerCase().includes(q)
+                    );
+                  })
+                  .map((c) => (
+                    <tr key={c.id} className="hover:bg-muted/30">
+                      <td className="px-4 py-3 font-medium">{c.cost_category}</td>
+                      <td className="px-4 py-3">{c.description}</td>
+                      <td className="px-4 py-3 font-bold text-rose-600">${Number(c.amount).toLocaleString()} {c.currency}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{c.created_at?.slice(0, 10)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => setSelectedCostEntry(c)}
+                          className="px-2 py-1 text-xs border rounded font-medium hover:bg-muted inline-flex items-center gap-1"
+                        >
+                          <Eye className="h-3 w-3" /> Details
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                {costEntries.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                      No cost subledger entries recorded. Work order completions and fuel logs auto-post operational costs.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

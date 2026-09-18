@@ -8,8 +8,16 @@ import {
 import { apiFetch, CeoControlTowerSummary, SupervisorScorecardRead, CommercialOpportunityRead } from '@/lib/api';
 import { Modal, rows } from './DataUI';
 
-export default function ControlTowerWorkspace() {
+export default function ControlTowerWorkspace({ subResource }: { subResource?: string }) {
   const [activeTab, setActiveTab] = useState<'SUMMARY' | 'SCORECARDS' | 'OPPORTUNITIES' | 'CLIENT_PORTAL'>('SUMMARY');
+  const [search, setSearch] = useState('');
+  const [selectedScorecard, setSelectedScorecard] = useState<SupervisorScorecardRead | null>(null);
+  const [selectedOpp, setSelectedOpp] = useState<CommercialOpportunityRead | null>(null);
+
+  useEffect(() => {
+    if (subResource === 'scorecards') setActiveTab('SCORECARDS');
+    else if (subResource === 'opportunities' || subResource === 'tenders') setActiveTab('OPPORTUNITIES');
+  }, [subResource]);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<CeoControlTowerSummary | null>(null);
   const [scorecards, setScorecards] = useState<SupervisorScorecardRead[]>([]);
@@ -280,15 +288,27 @@ export default function ControlTowerWorkspace() {
       {/* TAB 2: SUPERVISOR SCORECARDS */}
       {activeTab === 'SCORECARDS' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h2 className="text-lg font-semibold">8-Pillar Weighted Supervisor Scorecards</h2>
-            <button
-              onClick={() => setShowAddScorecard(true)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded text-sm font-medium hover:bg-primary/90"
-            >
-              <Plus className="h-4 w-4" />
-              New Scorecard
-            </button>
+            <div className="flex items-center gap-2">
+              <div className="relative w-64">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search scorecards..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full text-sm border rounded-lg pl-9 pr-3 py-1.5 bg-background"
+                />
+              </div>
+              <button
+                onClick={() => setShowAddScorecard(true)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded text-sm font-medium hover:bg-primary/90 shrink-0"
+              >
+                <Plus className="h-4 w-4" />
+                New Scorecard
+              </button>
+            </div>
           </div>
 
           <div className="border rounded-xl bg-card overflow-hidden">
@@ -301,28 +321,47 @@ export default function ControlTowerWorkspace() {
                   <th className="px-4 py-3">Sub-Scores (Prod/Rig/HSE/etc)</th>
                   <th className="px-4 py-3">Overall Weighted</th>
                   <th className="px-4 py-3">Grade</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {(Array.isArray(scorecards) ? scorecards : []).map((sc) => (
-                  <tr key={sc.id} className="hover:bg-muted/30">
-                    <td className="px-4 py-3 font-mono font-medium text-xs">{sc.scorecard_number}</td>
-                    <td className="px-4 py-3 font-medium">{sc.supervisor_id}</td>
-                    <td className="px-4 py-3 text-xs">{sc.period_start} to {sc.period_end}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      P:{sc.production_score} | R:{sc.rig_condition_score} | H:{sc.hse_score} | D:{sc.downtime_score}
-                    </td>
-                    <td className="px-4 py-3 font-bold">{Number(sc.overall_weighted_score).toFixed(1)} / 100</td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded border text-xs font-bold ${getGradeColor(sc.grade)}`}>
-                        Grade {sc.grade}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {(Array.isArray(scorecards) ? scorecards : [])
+                  .filter((sc) => {
+                    if (!search.trim()) return true;
+                    const q = search.toLowerCase();
+                    return (
+                      sc.scorecard_number?.toLowerCase().includes(q) ||
+                      sc.supervisor_id?.toLowerCase().includes(q) ||
+                      sc.grade?.toLowerCase().includes(q)
+                    );
+                  })
+                  .map((sc) => (
+                    <tr key={sc.id} className="hover:bg-muted/30">
+                      <td className="px-4 py-3 font-mono font-medium text-xs">{sc.scorecard_number}</td>
+                      <td className="px-4 py-3 font-medium">{sc.supervisor_id}</td>
+                      <td className="px-4 py-3 text-xs">{sc.period_start} to {sc.period_end}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        P:{sc.production_score} | R:{sc.rig_condition_score} | H:{sc.hse_score} | D:{sc.downtime_score}
+                      </td>
+                      <td className="px-4 py-3 font-bold">{Number(sc.overall_weighted_score).toFixed(1)} / 100</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded border text-xs font-bold ${getGradeColor(sc.grade)}`}>
+                           {sc.grade}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => setSelectedScorecard(sc)}
+                          className="px-2 py-1 text-xs border rounded font-medium hover:bg-muted inline-flex items-center gap-1"
+                        >
+                          <Eye className="h-3 w-3" /> Details
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
                 {scorecards.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
                       No supervisor scorecards recorded yet. Click "New Scorecard" to evaluate rig supervisors.
                     </td>
                   </tr>
@@ -336,40 +375,66 @@ export default function ControlTowerWorkspace() {
       {/* TAB 3: TENDER PIPELINE */}
       {activeTab === 'OPPORTUNITIES' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h2 className="text-lg font-semibold">Commercial Tenders & Opportunities</h2>
-            <button
-              onClick={() => setShowAddOpp(true)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded text-sm font-medium hover:bg-primary/90"
-            >
-              <Plus className="h-4 w-4" />
-              New Opportunity
-            </button>
+            <div className="flex items-center gap-2">
+              <div className="relative w-64">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search tenders..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full text-sm border rounded-lg pl-9 pr-3 py-1.5 bg-background"
+                />
+              </div>
+              <button
+                onClick={() => setShowAddOpp(true)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded text-sm font-medium hover:bg-primary/90 shrink-0"
+              >
+                <Plus className="h-4 w-4" />
+                New Opportunity
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {(Array.isArray(opportunities) ? opportunities : []).map((opp) => (
-              <div key={opp.id} className="p-4 rounded-xl border bg-card space-y-3 shadow-sm hover:border-primary/50 transition">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-medium text-muted-foreground">{opp.opportunity_number}</span>
-                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
-                    {opp.tender_stage}
-                  </span>
+            {(Array.isArray(opportunities) ? opportunities : [])
+              .filter((opp) => {
+                if (!search.trim()) return true;
+                const q = search.toLowerCase();
+                return (
+                  opp.title?.toLowerCase().includes(q) ||
+                  opp.opportunity_number?.toLowerCase().includes(q) ||
+                  opp.tender_stage?.toLowerCase().includes(q)
+                );
+              })
+              .map((opp) => (
+                <div
+                  key={opp.id}
+                  onClick={() => setSelectedOpp(opp)}
+                  className="p-4 rounded-xl border bg-card space-y-3 shadow-sm hover:border-primary/50 cursor-pointer transition"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono font-medium text-muted-foreground">{opp.opportunity_number}</span>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
+                      {opp.tender_stage}
+                    </span>
+                  </div>
+                  <h3 className="font-semibold text-base leading-snug">{opp.title}</h3>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Estimated Value:</span>
+                    <span className="font-bold">${Number(opp.estimated_value).toLocaleString()} {opp.currency}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Win Probability:</span>
+                    <span className="font-semibold text-emerald-600">{opp.win_probability_pct}%</span>
+                  </div>
+                  {opp.expected_close_date && (
+                    <p className="text-xs text-muted-foreground">Expected Close: {opp.expected_close_date}</p>
+                  )}
                 </div>
-                <h3 className="font-semibold text-base leading-snug">{opp.title}</h3>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Estimated Value:</span>
-                  <span className="font-bold">${Number(opp.estimated_value).toLocaleString()} {opp.currency}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Win Probability:</span>
-                  <span className="font-semibold text-emerald-600">{opp.win_probability_pct}%</span>
-                </div>
-                {opp.expected_close_date && (
-                  <p className="text-xs text-muted-foreground">Expected Close: {opp.expected_close_date}</p>
-                )}
-              </div>
-            ))}
+              ))}
             {opportunities.length === 0 && (
               <div className="col-span-full p-8 text-center border rounded-xl bg-card text-muted-foreground">
                 No active tenders or commercial opportunities.
@@ -611,6 +676,106 @@ export default function ControlTowerWorkspace() {
               </button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* VIEW SCORECARD DETAILS MODAL */}
+      {selectedScorecard && (
+        <Modal title={`Supervisor Scorecard ${selectedScorecard.scorecard_number}`} onClose={() => setSelectedScorecard(null)}>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <span className="text-xs text-muted-foreground">Evaluation Period</span>
+                <p className="font-semibold text-sm">{selectedScorecard.period_start} to {selectedScorecard.period_end}</p>
+              </div>
+              <div className="text-right">
+                <span className={`px-3 py-1 rounded border text-sm font-bold ${getGradeColor(selectedScorecard.grade)}`}>
+                  Grade {selectedScorecard.grade} ({Number(selectedScorecard.overall_weighted_score).toFixed(1)} / 100)
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="p-2 border rounded bg-muted/30">
+                <span className="text-muted-foreground block">Production (25%)</span>
+                <strong className="text-sm">{selectedScorecard.production_score} / 25</strong>
+              </div>
+              <div className="p-2 border rounded bg-muted/30">
+                <span className="text-muted-foreground block">Rig Condition (20%)</span>
+                <strong className="text-sm">{selectedScorecard.rig_condition_score} / 20</strong>
+              </div>
+              <div className="p-2 border rounded bg-muted/30">
+                <span className="text-muted-foreground block">Downtime (15%)</span>
+                <strong className="text-sm">{selectedScorecard.downtime_score} / 15</strong>
+              </div>
+              <div className="p-2 border rounded bg-muted/30">
+                <span className="text-muted-foreground block">HSE (15%)</span>
+                <strong className="text-sm">{selectedScorecard.hse_score} / 15</strong>
+              </div>
+              <div className="p-2 border rounded bg-muted/30">
+                <span className="text-muted-foreground block">Consumables (10%)</span>
+                <strong className="text-sm">{selectedScorecard.consumables_score} / 10</strong>
+              </div>
+              <div className="p-2 border rounded bg-muted/30">
+                <span className="text-muted-foreground block">Crew Mgmt (5%)</span>
+                <strong className="text-sm">{selectedScorecard.crew_management_score} / 5</strong>
+              </div>
+              <div className="p-2 border rounded bg-muted/30">
+                <span className="text-muted-foreground block">Reporting (5%)</span>
+                <strong className="text-sm">{selectedScorecard.reporting_score} / 5</strong>
+              </div>
+              <div className="p-2 border rounded bg-muted/30">
+                <span className="text-muted-foreground block">Stewardship (5%)</span>
+                <strong className="text-sm">{selectedScorecard.stewardship_score} / 5</strong>
+              </div>
+            </div>
+
+            {selectedScorecard.notes && (
+              <div className="p-3 border rounded-lg bg-muted/20 text-xs space-y-1">
+                <span className="font-semibold text-muted-foreground uppercase block">Supervisor Evaluation Notes</span>
+                <p>{selectedScorecard.notes}</p>
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {/* VIEW TENDER DETAILS MODAL */}
+      {selectedOpp && (
+        <Modal title={`Tender Opportunity - ${selectedOpp.title}`} onClose={() => setSelectedOpp(null)}>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <span className="text-xs font-mono text-muted-foreground">{selectedOpp.opportunity_number}</span>
+                <h3 className="font-bold text-base">{selectedOpp.title}</h3>
+              </div>
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary">
+                {selectedOpp.tender_stage}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-xs">
+              <div className="p-3 border rounded-lg bg-card">
+                <span className="text-muted-foreground block">Estimated Commercial Value</span>
+                <strong className="text-base text-emerald-600 font-bold">${Number(selectedOpp.estimated_value).toLocaleString()} {selectedOpp.currency}</strong>
+              </div>
+              <div className="p-3 border rounded-lg bg-card">
+                <span className="text-muted-foreground block">Win Probability</span>
+                <strong className="text-base text-blue-600 font-bold">{selectedOpp.win_probability_pct}%</strong>
+              </div>
+            </div>
+
+            {selectedOpp.expected_close_date && (
+              <p className="text-xs text-muted-foreground">Expected Close Date: {selectedOpp.expected_close_date}</p>
+            )}
+
+            {selectedOpp.notes && (
+              <div className="p-3 border rounded-lg bg-muted/20 text-xs space-y-1">
+                <span className="font-semibold text-muted-foreground uppercase block">Commercial Notes</span>
+                <p>{selectedOpp.notes}</p>
+              </div>
+            )}
+          </div>
         </Modal>
       )}
     </div>
