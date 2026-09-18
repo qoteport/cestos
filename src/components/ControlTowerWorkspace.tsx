@@ -239,10 +239,10 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Building2 className="h-6 w-6 text-primary" />
-            Executive Command Center
+            Operations Command Center
           </h1>
           <p className="text-sm text-muted-foreground">
-            Executive oversight, field operational scorecards, commercial tenders, and client governance
+            Operational oversight, field leadership scorecards, commercial tenders, and client governance
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -267,7 +267,7 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
           }`}
         >
           <TrendingUp className="h-4 w-4" />
-          Executive Overview
+          Operations Overview
         </button>
         <button
           onClick={() => setActiveTab('SCORECARDS')}

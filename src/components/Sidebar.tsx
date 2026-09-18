@@ -18,15 +18,15 @@ interface SidebarGroup {
 
 const groups: SidebarGroup[] = [
   {
-    name: 'Executive Command Center',
+    name: 'Operations Command Center',
     icon: Building2,
     href: '/control-tower-overview',
     permission: 'projects.read',
     sections: [
       {
-        title: 'Executive Oversight',
+        title: 'Operations Oversight',
         links: [
-          ['Executive Summary', 'control-tower/summary'],
+          ['Operations Summary', 'control-tower/summary'],
           ['Field Leadership Operations', 'control-tower/scorecards'],
           ['Tender Pipeline', 'control-tower/opportunities'],
         ],

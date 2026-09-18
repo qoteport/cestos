@@ -90,13 +90,13 @@ export default function DashboardHeader({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-widest text-primary font-600 mb-1">
-            Executive Control Center
+            Operations Control Center
           </p>
           <h1 className="text-2xl font-700 text-foreground" style={{ letterSpacing: '-0.01em' }}>
             Good morning, Operations Team
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Cestos Operations — executive operational summary, delivery performance, and real-time alerts.
+            Cestos Operations — operational summary, delivery performance, and real-time alerts.
           </p>
         </div>
 
