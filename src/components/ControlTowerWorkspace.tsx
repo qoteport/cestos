@@ -145,6 +145,32 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
     }
   };
 
+  const getSupervisorName = (sc: SupervisorScorecardRead) => {
+    if (sc.supervisor_name) return sc.supervisor_name;
+    const supObj = sc.supervisor || (sc as any).supervisor;
+    if (supObj?.first_name || supObj?.last_name) {
+      return `${supObj.first_name || ''} ${supObj.last_name || ''}`.trim();
+    }
+    if (supObj?.full_name) return supObj.full_name;
+    const emp = (Array.isArray(employees) ? employees : []).find((e) => e.id === sc.supervisor_id);
+    if (emp) {
+      const name = `${emp.first_name || ''} ${emp.last_name || ''}`.trim();
+      if (name) return name;
+      if (emp.job_title) return `${emp.job_title} (${sc.supervisor_id.slice(0, 6)})`;
+    }
+    return sc.supervisor_id ? `Supervisor (${sc.supervisor_id.slice(0, 8)})` : 'Supervisor';
+  };
+
+  const filteredScorecards = scorecards.filter((sc) => {
+    const term = search.toLowerCase();
+    const supName = getSupervisorName(sc).toLowerCase();
+    return (
+      supName.includes(term) ||
+      sc.scorecard_number?.toLowerCase().includes(term) ||
+      sc.notes?.toLowerCase().includes(term)
+    );
+  });
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -345,20 +371,13 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {(Array.isArray(scorecards) ? scorecards : [])
-                  .filter((sc) => {
-                    if (!search.trim()) return true;
-                    const q = search.toLowerCase();
-                    return (
-                      sc.scorecard_number?.toLowerCase().includes(q) ||
-                      sc.supervisor_id?.toLowerCase().includes(q) ||
-                      sc.grade?.toLowerCase().includes(q)
-                    );
-                  })
-                  .map((sc) => (
-                    <tr key={sc.id} className="hover:bg-muted/30">
-                      <td className="px-4 py-3 font-mono font-medium text-xs">{sc.scorecard_number}</td>
-                      <td className="px-4 py-3 font-medium">{sc.supervisor_id}</td>
+                {filteredScorecards.map((sc) => (
+                  <tr key={sc.id} className="hover:bg-muted/30">
+                    <td className="px-4 py-3 font-mono font-medium text-xs">{sc.scorecard_number}</td>
+                    <td className="px-4 py-3 font-medium">
+                      <span className="font-semibold block">{getSupervisorName(sc)}</span>
+                      <span className="text-[10px] font-mono text-muted-foreground">{sc.supervisor_id}</span>
+                    </td>
                       <td className="px-4 py-3 text-xs">{sc.period_start} to {sc.period_end}</td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">
                         P:{sc.production_score} | R:{sc.rig_condition_score} | H:{sc.hse_score} | D:{sc.downtime_score}
@@ -775,6 +794,14 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
       {selectedScorecard && (
         <Modal title={`Supervisor Scorecard ${selectedScorecard.scorecard_number}`} onClose={() => setSelectedScorecard(null)}>
           <div className="space-y-4">
+            <div className="p-3 border rounded-lg bg-primary/5 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-muted-foreground block">Supervisor</span>
+                <span className="text-base font-bold text-primary">{getSupervisorName(selectedScorecard)}</span>
+              </div>
+              <span className="text-xs font-mono text-muted-foreground">{selectedScorecard.supervisor_id}</span>
+            </div>
+
             <div className="flex items-center justify-between border-b pb-3">
               <div>
                 <span className="text-xs text-muted-foreground">Evaluation Period</span>

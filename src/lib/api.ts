@@ -733,6 +733,8 @@ export interface SupervisorScorecardRead {
   id: string;
   scorecard_number: string;
   supervisor_id: string;
+  supervisor_name?: string;
+  supervisor?: { id: string; first_name?: string; last_name?: string; full_name?: string; job_title?: string };
   project_id?: string;
   period_start: string;
   period_end: string;
