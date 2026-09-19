@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import AppLayout from '@/components/AppLayout';
 import { 
   Building2, TrendingUp, Award, FileSpreadsheet, DollarSign, Activity, 
-  Flame, CheckCircle2, AlertTriangle, Layers, UserCheck, ShieldCheck, Search, Filter, RefreshCw
+  Flame, CheckCircle2, AlertTriangle, UserCheck, ShieldCheck, Search, Filter, RefreshCw, Calendar, X
 } from 'lucide-react';
 import { apiFetch, CeoControlTowerSummary, SupervisorScorecardRead, CommercialOpportunityRead } from '@/lib/api';
 import { rows } from '@/components/DataUI';
+import OperationsPerformanceCombinedChart from '@/app/components/OperationsPerformanceCombinedChart';
 
 export default function ControlTowerOverviewPage() {
   const router = useRouter();
@@ -21,6 +22,8 @@ export default function ControlTowerOverviewPage() {
   // Filters
   const [search, setSearch] = useState('');
   const [stageFilter, setStageFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const reload = () => setVersion((v) => v + 1);
 
@@ -50,38 +53,98 @@ export default function ControlTowerOverviewPage() {
     !search || (p.project_name || '').toLowerCase().includes(search.toLowerCase())
   );
 
-  const filteredOpps = (Array.isArray(opportunities) ? opportunities : []).filter((o) =>
-    !stageFilter || o.tender_stage === stageFilter
-  );
+  const applyPreset = (days: number | null) => {
+    if (days === null) {
+      setDateFrom('');
+      setDateTo('');
+      return;
+    }
+    const end = new Date();
+    const start = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    setDateTo(end.toISOString().slice(0, 10));
+    setDateFrom(start.toISOString().slice(0, 10));
+  };
 
   return (
     <AppLayout>
       <div className="space-y-6 fade-in">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+        {/* Header with Title and Date Range Filter */}
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b pb-4">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <Building2 className="h-6 w-6 text-primary" />
-              Operations Insights
+              Operations and Revenue
             </h1>
             <p className="text-sm text-muted-foreground">
-              Global operational telemetry, contract profitability, field leadership performance, and tender pipeline
+              Global operational telemetry, contract profitability, field leadership performance, and commercial revenue
             </p>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Calendar Date Filter Pickers replacing Raw Data button */}
+            <div className="flex items-center gap-2 bg-card border rounded-lg p-1.5 shadow-sm text-xs">
+              <Calendar className="h-4 w-4 text-primary ml-1 shrink-0" />
+              <div className="flex items-center gap-1">
+                <span className="text-muted-foreground font-medium">Start:</span>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="bg-background border rounded px-2 py-1 text-xs font-mono"
+                />
+              </div>
+              <span className="text-muted-foreground font-medium">to</span>
+              <div className="flex items-center gap-1">
+                <span className="text-muted-foreground font-medium">End:</span>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="bg-background border rounded px-2 py-1 text-xs font-mono"
+                />
+              </div>
+
+              {(dateFrom || dateTo) && (
+                <button
+                  onClick={() => applyPreset(null)}
+                  className="p-1 text-muted-foreground hover:text-rose-500 transition"
+                  title="Clear Date Filter"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Quick Presets */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => applyPreset(30)}
+                className={`px-2.5 py-1.5 rounded text-xs font-medium border transition ${
+                  dateFrom && dateTo ? 'bg-secondary text-secondary-foreground' : 'hover:bg-muted'
+                }`}
+              >
+                30D
+              </button>
+              <button
+                onClick={() => applyPreset(90)}
+                className="px-2.5 py-1.5 rounded text-xs font-medium border hover:bg-muted transition"
+              >
+                90D
+              </button>
+              <button
+                onClick={() => applyPreset(null)}
+                className="px-2.5 py-1.5 rounded text-xs font-medium border hover:bg-muted transition"
+              >
+                All
+              </button>
+            </div>
+
             <button
               onClick={reload}
-              className="flex items-center gap-2 px-3 py-1.5 rounded border text-sm font-medium hover:bg-muted"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-medium hover:bg-muted"
             >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
               Refresh
-            </button>
-            <button
-              onClick={() => router.push('/workspace/control-tower/summary')}
-              className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded text-sm font-medium hover:bg-primary/90"
-            >
-              <Layers className="h-4 w-4" />
-              Raw Data & Scorecards
             </button>
           </div>
         </div>
@@ -210,6 +273,35 @@ export default function ControlTowerOverviewPage() {
           </div>
         </div>
 
+        {/* Combined Trend Plot Graph directly under the Project Performance Table */}
+        <div className="border rounded-xl bg-card p-5 space-y-3 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3">
+            <div>
+              <h2 className="text-base font-bold flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-emerald-500" />
+                Operations, Revenue & Cost Performance Over Time
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Single comparative line plot tracking drilling production (metres), auto-posted revenue ($), and direct operational costs ($)
+              </p>
+            </div>
+
+            <div className="flex items-center gap-4 text-xs font-semibold shrink-0">
+              <span className="flex items-center gap-1.5 text-emerald-600">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"/> Metres Drilled (m)
+              </span>
+              <span className="flex items-center gap-1.5 text-blue-600">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"/> Revenue ($)
+              </span>
+              <span className="flex items-center gap-1.5 text-rose-600">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"/> Direct Cost ($)
+              </span>
+            </div>
+          </div>
+
+          <OperationsPerformanceCombinedChart dateFrom={dateFrom} dateTo={dateTo} />
+        </div>
+
         {/* Bottom Section: Scorecards & Tender Pipeline */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {/* Field Leadership Operations Overview */}
@@ -220,10 +312,10 @@ export default function ControlTowerOverviewPage() {
                 Field Leadership Operational Ratings
               </h2>
               <button
-                onClick={() => router.push('/workspace/control-tower/scorecards')}
+                onClick={() => router.push('/field-leadership-overview')}
                 className="text-xs text-primary font-medium hover:underline"
               >
-                View All Scorecards →
+                View Field Leadership Overview →
               </button>
             </div>
 
@@ -240,47 +332,49 @@ export default function ControlTowerOverviewPage() {
                       sc.grade === 'A' ? 'bg-emerald-500 text-white' :
                       sc.grade === 'B' ? 'bg-blue-500 text-white' : 'bg-amber-500 text-white'
                     }`}>
-                      Rating {sc.grade}
+                      Grade {sc.grade}
                     </span>
                   </div>
                 </div>
               ))}
               {scorecards.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-6">No field leadership scorecards filed yet.</p>
+                <p className="text-xs text-muted-foreground text-center py-4">No scorecards found.</p>
               )}
             </div>
           </div>
 
-          {/* Tender & Commercial Opportunities */}
+          {/* Tender Pipeline Overview */}
           <div className="border rounded-xl bg-card p-5 space-y-4 shadow-sm">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold flex items-center gap-2">
-                <FileSpreadsheet className="h-5 w-5 text-emerald-500" />
-                Tender Pipeline & Opportunities
+                <FileSpreadsheet className="h-5 w-5 text-primary" />
+                Commercial Tender Pipeline
               </h2>
               <button
-                onClick={() => router.push('/workspace/control-tower/opportunities')}
+                onClick={() => router.push('/tenders-overview')}
                 className="text-xs text-primary font-medium hover:underline"
               >
-                Manage Pipeline →
+                View Tender Pipeline Overview →
               </button>
             </div>
 
             <div className="space-y-3">
-              {filteredOpps.slice(0, 4).map((opp) => (
+              {(Array.isArray(opportunities) ? opportunities : []).slice(0, 4).map((opp) => (
                 <div key={opp.id} className="p-3 border rounded-lg bg-muted/20 flex items-center justify-between">
                   <div>
                     <span className="font-semibold text-sm block">{opp.title}</span>
-                    <span className="text-xs text-muted-foreground">Tender Stage: {opp.tender_stage}</span>
+                    <span className="text-xs text-muted-foreground">Stage: {opp.tender_stage} | Prob: {opp.win_probability_pct}%</span>
                   </div>
                   <div className="text-right">
-                    <span className="font-mono font-bold text-sm block">${Number(opp.estimated_value).toLocaleString()} {opp.currency}</span>
-                    <span className="text-xs font-medium text-emerald-600">{opp.win_probability_pct}% Win Prob</span>
+                    <span className="text-sm font-mono font-bold text-emerald-600 block">
+                      ${Number(opp.estimated_value || 0).toLocaleString()}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground uppercase">{opp.currency}</span>
                   </div>
                 </div>
               ))}
               {opportunities.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-6">No active tender opportunities recorded.</p>
+                <p className="text-xs text-muted-foreground text-center py-4">No active tender opportunities.</p>
               )}
             </div>
           </div>

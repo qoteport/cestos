@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { apiFetch, CeoControlTowerSummary, SupervisorScorecardRead, CommercialOpportunityRead, updateCommercialOpportunity } from '@/lib/api';
 import { Modal, rows } from './DataUI';
+import OperationsPerformanceCombinedChart from '@/app/components/OperationsPerformanceCombinedChart';
 
 export default function ControlTowerWorkspace({ subResource }: { subResource?: string }) {
   const [activeTab, setActiveTab] = useState<'SUMMARY' | 'SCORECARDS' | 'OPPORTUNITIES' | 'CLIENT_PORTAL'>('SUMMARY');
@@ -239,7 +240,7 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Building2 className="h-6 w-6 text-primary" />
-            Operations Insights
+            Operations and Revenue
           </h1>
           <p className="text-sm text-muted-foreground">
             Operational oversight, field leadership scorecards, commercial tenders, and client governance
@@ -382,6 +383,23 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
                     </tbody>
                   </table>
                 </div>
+              </div>
+
+              {/* Operations, Revenue & Cost Performance Over Time Chart */}
+              <div className="border rounded-xl bg-card p-5 space-y-3 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3">
+                  <div>
+                    <h3 className="text-base font-bold flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-emerald-500" />
+                      Operations, Revenue & Cost Performance Over Time
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Single comparative line plot tracking drilling production (metres), auto-posted revenue ($), and direct operational costs ($)
+                    </p>
+                  </div>
+                </div>
+
+                <OperationsPerformanceCombinedChart />
               </div>
             </>
           ) : (
