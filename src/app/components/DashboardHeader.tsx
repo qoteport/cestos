@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Filter, RefreshCw, SlidersHorizontal, X } from 'lucide-react';
 import { getProjects, getDateRangeFromPreset, type ProjectRead } from '@/lib/api';
 import { Modal } from '@/components/DataUI';
+import { useAuth } from '@/components/AuthProvider';
 
 interface DashboardHeaderProps {
   timeframe: string;
@@ -32,6 +33,16 @@ export default function DashboardHeader({
   setStatus,
   onRefresh,
 }: DashboardHeaderProps) {
+  const auth = useAuth();
+  const user = auth?.user;
+  const personName = user
+    ? ([user.first_name, user.last_name].filter(Boolean).join(' ') || user.email?.split('@')[0] || 'User')
+    : '';
+
+  const currentHour = new Date().getHours();
+  const greetingTime = currentHour < 12 ? 'Good morning' : currentHour < 17 ? 'Good afternoon' : 'Good evening';
+  const greetingName = personName || 'User';
+
   const [projects, setProjects] = useState<ProjectRead[]>([]);
   const [filterModalOpen, setFilterModalOpen] = useState(false);
 
@@ -90,10 +101,10 @@ export default function DashboardHeader({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-widest text-primary font-600 mb-1">
-            Operations Control Center
+            Operations Dashboard
           </p>
           <h1 className="text-2xl font-700 text-foreground" style={{ letterSpacing: '-0.01em' }}>
-            Good morning, Operations Team
+            {greetingTime}, {greetingName}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Cestos Operations — operational summary, delivery performance, and real-time alerts.
