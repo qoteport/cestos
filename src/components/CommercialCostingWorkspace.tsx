@@ -158,6 +158,7 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
         title: editingContract.title,
         contract_number: editingContract.contract_number,
         currency: editingContract.currency,
+        total_contract_value: editingContract.total_contract_value,
         start_date: editingContract.start_date,
         end_date: editingContract.end_date,
         status: editingContract.status,
