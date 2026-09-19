@@ -723,7 +723,10 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
             {/* Depth-banded Rate Cards Editor */}
             <div className="border-t pt-3">
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs font-bold">Rate Cards (Depth & Hourly Bands)</label>
+                <div>
+                  <label className="block text-xs font-bold">Rate Cards (Depth & Hourly Bands)</label>
+                  <p className="text-[11px] text-muted-foreground">Billable commercial rates per metre drilled, standby hour, or flat mobilization fee</p>
+                </div>
                 <button
                   type="button"
                   onClick={() => setEditingContract({
@@ -739,6 +742,17 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
                 </button>
               </div>
 
+              {/* Rate Card Grid Column Labels */}
+              <div className="grid grid-cols-12 gap-1.5 px-2 py-1 bg-muted/60 rounded text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                <span className="col-span-2">Rate Type</span>
+                <span className="col-span-2">Drilling Method</span>
+                <span className="col-span-1">From (m)</span>
+                <span className="col-span-1">To (m)</span>
+                <span className="col-span-2">Unit Rate ($)</span>
+                <span className="col-span-3">Description / Scope</span>
+                <span className="col-span-1 text-center">Remove</span>
+              </div>
+
               <div className="space-y-2">
                 {(editingContract.rate_cards || []).map((rc, idx) => (
                   <div key={idx} className="grid grid-cols-12 gap-1.5 items-center p-2 rounded border bg-muted/20 text-xs">
@@ -749,7 +763,7 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
                         updated[idx].rate_type = e.target.value;
                         setEditingContract({ ...editingContract, rate_cards: updated });
                       }}
-                      className="col-span-3 border rounded p-1 bg-background text-xs"
+                      className="col-span-2 border rounded p-1 bg-background text-xs font-medium"
                     >
                       <option value="DRILLING_METER">DRILLING_METER</option>
                       <option value="STANDBY_HOURLY">STANDBY_HOURLY</option>
@@ -760,7 +774,7 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
 
                     <input
                       type="text"
-                      placeholder="Method (HQ/PQ)"
+                      placeholder="Method (e.g. HQ/PQ)"
                       value={rc.drilling_method || ''}
                       onChange={(e) => {
                         const updated = [...(editingContract.rate_cards || [])];
@@ -772,32 +786,32 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
 
                     <input
                       type="number"
-                      placeholder="From (m)"
+                      placeholder="From (0m)"
                       value={rc.depth_from_m ?? ''}
                       onChange={(e) => {
                         const updated = [...(editingContract.rate_cards || [])];
                         updated[idx].depth_from_m = e.target.value === '' ? null : Number(e.target.value);
                         setEditingContract({ ...editingContract, rate_cards: updated });
                       }}
-                      className="col-span-2 border rounded p-1 bg-background text-xs"
+                      className="col-span-1 border rounded p-1 bg-background text-xs"
                     />
 
                     <input
                       type="number"
-                      placeholder="To (m)"
+                      placeholder="To (100m)"
                       value={rc.depth_to_m ?? ''}
                       onChange={(e) => {
                         const updated = [...(editingContract.rate_cards || [])];
                         updated[idx].depth_to_m = e.target.value === '' ? null : Number(e.target.value);
                         setEditingContract({ ...editingContract, rate_cards: updated });
                       }}
-                      className="col-span-2 border rounded p-1 bg-background text-xs"
+                      className="col-span-1 border rounded p-1 bg-background text-xs"
                     />
 
                     <input
                       type="number"
                       step="0.01"
-                      placeholder="Rate ($)"
+                      placeholder="Rate ($/m or $/hr)"
                       value={rc.unit_rate}
                       onChange={(e) => {
                         const updated = [...(editingContract.rate_cards || [])];
@@ -807,6 +821,18 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
                       className="col-span-2 border rounded p-1 bg-background text-xs font-bold"
                     />
 
+                    <input
+                      type="text"
+                      placeholder="Scope / notes (what rate represents)"
+                      value={rc.description || ''}
+                      onChange={(e) => {
+                        const updated = [...(editingContract.rate_cards || [])];
+                        updated[idx].description = e.target.value;
+                        setEditingContract({ ...editingContract, rate_cards: updated });
+                      }}
+                      className="col-span-3 border rounded p-1 bg-background text-xs"
+                    />
+
                     <button
                       type="button"
                       onClick={() => {
@@ -814,6 +840,7 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
                         setEditingContract({ ...editingContract, rate_cards: updated });
                       }}
                       className="col-span-1 p-1 text-rose-500 hover:text-rose-700 flex justify-center"
+                      title="Remove Rate Card Row"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -1002,7 +1029,10 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
             {/* Depth-Banded Rate Cards Builder */}
             <div className="border-t pt-3">
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs font-bold">Rate Cards (Depth & Hourly Bands)</label>
+                <div>
+                  <label className="block text-xs font-bold">Rate Cards (Depth & Hourly Bands)</label>
+                  <p className="text-[11px] text-muted-foreground">Billable commercial rates per metre drilled, standby hour, or flat mobilization fee</p>
+                </div>
                 <button
                   type="button"
                   onClick={() => setFormContract({
@@ -1018,6 +1048,17 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
                 </button>
               </div>
 
+              {/* Rate Card Grid Column Labels */}
+              <div className="grid grid-cols-12 gap-1.5 px-2 py-1 bg-muted/60 rounded text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                <span className="col-span-2">Rate Type</span>
+                <span className="col-span-2">Drilling Method</span>
+                <span className="col-span-1">From (m)</span>
+                <span className="col-span-1">To (m)</span>
+                <span className="col-span-2">Unit Rate ($)</span>
+                <span className="col-span-3">Description / Scope</span>
+                <span className="col-span-1 text-center">Remove</span>
+              </div>
+
               <div className="space-y-2">
                 {formContract.rate_cards.map((rc, idx) => (
                   <div key={idx} className="grid grid-cols-12 gap-1.5 items-center p-2 rounded border bg-muted/20 text-xs">
@@ -1028,7 +1069,7 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
                         updated[idx].rate_type = e.target.value;
                         setFormContract({ ...formContract, rate_cards: updated });
                       }}
-                      className="col-span-3 border rounded p-1 bg-background text-xs"
+                      className="col-span-2 border rounded p-1 bg-background text-xs font-medium"
                     >
                       <option value="DRILLING_METER">DRILLING_METER</option>
                       <option value="STANDBY_HOURLY">STANDBY_HOURLY</option>
@@ -1039,7 +1080,7 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
 
                     <input
                       type="text"
-                      placeholder="Method (HQ/PQ)"
+                      placeholder="Method (e.g. HQ/PQ)"
                       value={rc.drilling_method || ''}
                       onChange={(e) => {
                         const updated = [...formContract.rate_cards];
@@ -1051,32 +1092,32 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
 
                     <input
                       type="number"
-                      placeholder="From (m)"
+                      placeholder="From (0m)"
                       value={rc.depth_from_m ?? ''}
                       onChange={(e) => {
                         const updated = [...formContract.rate_cards];
                         updated[idx].depth_from_m = e.target.value === '' ? null : Number(e.target.value);
                         setFormContract({ ...formContract, rate_cards: updated });
                       }}
-                      className="col-span-2 border rounded p-1 bg-background text-xs"
+                      className="col-span-1 border rounded p-1 bg-background text-xs"
                     />
 
                     <input
                       type="number"
-                      placeholder="To (m)"
+                      placeholder="To (100m)"
                       value={rc.depth_to_m ?? ''}
                       onChange={(e) => {
                         const updated = [...formContract.rate_cards];
                         updated[idx].depth_to_m = e.target.value === '' ? null : Number(e.target.value);
                         setFormContract({ ...formContract, rate_cards: updated });
                       }}
-                      className="col-span-2 border rounded p-1 bg-background text-xs"
+                      className="col-span-1 border rounded p-1 bg-background text-xs"
                     />
 
                     <input
                       type="number"
                       step="0.01"
-                      placeholder="Rate ($)"
+                      placeholder="Rate ($/m or $/hr)"
                       value={rc.unit_rate}
                       onChange={(e) => {
                         const updated = [...formContract.rate_cards];
@@ -1086,6 +1127,18 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
                       className="col-span-2 border rounded p-1 bg-background text-xs font-bold"
                     />
 
+                    <input
+                      type="text"
+                      placeholder="Scope / notes (what rate represents)"
+                      value={rc.description || ''}
+                      onChange={(e) => {
+                        const updated = [...formContract.rate_cards];
+                        updated[idx].description = e.target.value;
+                        setFormContract({ ...formContract, rate_cards: updated });
+                      }}
+                      className="col-span-3 border rounded p-1 bg-background text-xs"
+                    />
+
                     <button
                       type="button"
                       onClick={() => {
@@ -1093,6 +1146,7 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
                         setFormContract({ ...formContract, rate_cards: updated });
                       }}
                       className="col-span-1 p-1 text-rose-500 hover:text-rose-700 flex justify-center"
+                      title="Remove Rate Card Row"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
