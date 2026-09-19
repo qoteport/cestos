@@ -48,6 +48,7 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
     project_id: '',
     contract_number: `CNT-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
     title: 'Drilling Master Commercial Agreement',
+    total_contract_value: 1250000.0,
     currency: 'USD',
     start_date: new Date().toISOString().slice(0, 10),
     end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
@@ -311,7 +312,10 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
                       <span className="px-2 py-0.5 rounded text-xs bg-emerald-500/10 text-emerald-600 font-semibold">{c.status}</span>
                     </div>
                     <h3 className="font-bold text-base leading-snug">{c.title}</h3>
-                    <p className="text-xs text-muted-foreground">Currency: <span className="font-semibold text-foreground">{c.currency}</span></p>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Currency: <strong className="text-foreground">{c.currency}</strong></span>
+                      <span>Value: <strong className="text-foreground font-semibold">${Number(c.total_contract_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></span>
+                    </div>
                     
                     <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
                       <span className="flex items-center gap-1">
@@ -505,10 +509,13 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
                 <span className="font-bold text-base text-foreground">{selectedContract.title}</span>
               </div>
               <div>
-                <span className="text-xs text-muted-foreground block">Status & Currency</span>
+                <span className="text-xs text-muted-foreground block">Status, Currency & Value</span>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="px-2 py-0.5 rounded text-xs bg-emerald-500/10 text-emerald-600 font-semibold">{selectedContract.status}</span>
                   <span className="font-mono text-xs font-bold bg-muted px-2 py-0.5 rounded">{selectedContract.currency}</span>
+                  <span className="font-bold text-xs text-foreground bg-primary/10 border border-primary/20 px-2 py-0.5 rounded">
+                    ${Number(selectedContract.total_contract_value || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
                 </div>
               </div>
 
@@ -706,6 +713,18 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
                   value={editingContract.currency}
                   onChange={(e) => setEditingContract({ ...editingContract, currency: e.target.value })}
                   className="w-full border rounded p-2 bg-background text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium mb-1">Total Contract Value ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="e.g. 1,250,000.00"
+                  value={editingContract.total_contract_value ?? ''}
+                  onChange={(e) => setEditingContract({ ...editingContract, total_contract_value: e.target.value === '' ? undefined : Number(e.target.value) })}
+                  className="w-full border rounded p-2 bg-background text-xs font-bold"
                 />
               </div>
             </div>
@@ -1011,6 +1030,18 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
                   value={formContract.currency}
                   onChange={(e) => setFormContract({ ...formContract, currency: e.target.value })}
                   className="w-full text-xs border rounded p-2 bg-background font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium mb-1">Total Contract Value ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="e.g. 1,250,000.00"
+                  value={formContract.total_contract_value ?? ''}
+                  onChange={(e) => setFormContract({ ...formContract, total_contract_value: e.target.value === '' ? 0 : Number(e.target.value) })}
+                  className="w-full text-xs border rounded p-2 bg-background font-bold"
                 />
               </div>
             </div>
