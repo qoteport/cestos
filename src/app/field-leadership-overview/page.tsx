@@ -406,7 +406,7 @@ export default function FieldLeadershipOverviewPage() {
       {/* CREATE SCORECARD MODAL */}
       {showAddScorecard && (
         <Modal title="Create 8-Pillar Supervisor Scorecard" onClose={() => setShowAddScorecard(false)}>
-          <form onSubmit={handleCreateScorecard} className="space-y-4 text-sm max-h-[80vh] overflow-y-auto pr-1">
+          <form onSubmit={handleCreateScorecard} className="space-y-4 text-sm p-1">
             {/* Supervisor Searchable Select */}
             <div>
               <label className="block text-xs font-medium mb-1">Supervisor Selection</label>

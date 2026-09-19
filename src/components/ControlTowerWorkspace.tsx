@@ -765,7 +765,7 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
       {/* CREATE OPPORTUNITY MODAL */}
       {showAddOpp && (
         <Modal title="Create Commercial Opportunity (Tender)" onClose={() => setShowAddOpp(false)}>
-          <form onSubmit={handleCreateOpp} className="space-y-4">
+          <form onSubmit={handleCreateOpp} className="space-y-4 p-1">
             <div>
               <label className="block text-xs font-medium mb-1">Client</label>
               <select
@@ -1062,7 +1062,7 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
       {/* EDIT TENDER MODAL */}
       {editingOpp && (
         <Modal title={`Edit Commercial Opportunity - ${editingOpp.opportunity_number}`} onClose={() => setEditingOpp(null)}>
-          <form onSubmit={handleUpdateOpp} className="space-y-4">
+          <form onSubmit={handleUpdateOpp} className="space-y-4 p-1">
             <div>
               <label className="block text-xs font-medium mb-1">Client</label>
               <select

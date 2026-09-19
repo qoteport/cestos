@@ -646,7 +646,7 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
       {/* EDIT CONTRACT MODAL */}
       {editingContract && (
         <Modal title={`Edit Commercial Contract: ${editingContract.contract_number}`} onClose={() => setEditingContract(null)}>
-          <form onSubmit={handleUpdateContract} className="space-y-4 text-sm max-h-[80vh] overflow-y-auto pr-1">
+          <form onSubmit={handleUpdateContract} className="space-y-4 text-sm p-1">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium mb-1">Contract Number</label>
@@ -948,7 +948,7 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
       {/* CREATE CONTRACT MODAL */}
       {showAddContract && (
         <Modal title="Create Commercial Contract" onClose={() => setShowAddContract(false)}>
-          <form onSubmit={handleCreateContract} className="space-y-4 text-sm max-h-[80vh] overflow-y-auto pr-1">
+          <form onSubmit={handleCreateContract} className="space-y-4 text-sm p-1">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium mb-1">Project</label>
