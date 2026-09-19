@@ -34,8 +34,6 @@ const groups: SidebarGroup[] = [
         links: [
           ['Commercial Overview', '/commercial-overview'],
           ['Commercial Contracts', 'commercial/contracts'],
-          ['Cost Subledger', 'commercial/cost-entries'],
-          ['Revenue Subledger', 'commercial/revenue-entries'],
         ],
       },
       {
