@@ -40,7 +40,6 @@ const groups: SidebarGroup[] = [
         title: 'Commercial Tenders',
         links: [
           ['Tender Pipeline', '/tenders-overview'],
-          ['Tender Opportunities Data', 'control-tower/opportunities'],
         ],
       },
     ],

@@ -202,7 +202,7 @@ export default function TendersOverviewPage() {
               className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded text-sm font-medium hover:bg-primary/90"
             >
               <Plus className="h-4 w-4" />
-              New Tender Opportunity
+              New Tender
             </button>
           </div>
         </div>
@@ -263,12 +263,6 @@ export default function TendersOverviewPage() {
               <option value="LOST">Lost</option>
             </select>
 
-            <button
-              onClick={() => router.push('/workspace/control-tower/opportunities')}
-              className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-xs font-semibold hover:bg-muted"
-            >
-              <Layers className="h-3.5 w-3.5" /> Raw Data Table
-            </button>
           </div>
         </div>
 
@@ -333,7 +327,7 @@ export default function TendersOverviewPage() {
 
           {filteredOpps.length === 0 && (
             <div className="col-span-full p-8 text-center border rounded-xl bg-card text-muted-foreground">
-              No tender opportunities match the specified criteria. Click "New Tender Opportunity" to register a bid.
+              No tender opportunities match the specified criteria. Click "New Tender" to register a bid.
             </div>
           )}
         </div>
