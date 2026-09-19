@@ -103,11 +103,11 @@ export default function FieldLeadershipOverviewPage() {
 
   const getGradeBadge = (grade: string) => {
     switch (grade) {
-      case 'A': return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
-      case 'B': return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
-      case 'C': return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
-      case 'D': return 'bg-orange-500/10 text-orange-600 border-orange-500/20';
-      default: return 'bg-rose-500/10 text-rose-600 border-rose-500/20';
+      case 'A':
+      case 'B': return 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20';
+      case 'C':
+      case 'D': return 'bg-amber-500/10 text-amber-700 border-amber-500/20';
+      default: return 'bg-rose-500/10 text-rose-700 border-rose-500/20';
     }
   };
 
@@ -143,7 +143,7 @@ export default function FieldLeadershipOverviewPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Award className="h-6 w-6 text-emerald-500" />
+              <Award className="h-6 w-6 text-primary" />
               Site Operations Leadership & Field Performance Scorecards
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -178,19 +178,19 @@ export default function FieldLeadershipOverviewPage() {
 
           <div className="p-4 rounded-xl border bg-card space-y-1">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">AVERAGE WEIGHTED SCORE</span>
-            <div className="text-2xl font-bold text-emerald-600">{avgScore.toFixed(1)}%</div>
+            <div className="text-2xl font-bold text-foreground">{avgScore.toFixed(1)}%</div>
             <span className="text-xs text-muted-foreground">Across all 8 operational pillars</span>
           </div>
 
           <div className="p-4 rounded-xl border bg-card space-y-1">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">GRADE A EXCELLENCE</span>
-            <div className="text-2xl font-bold text-blue-600">{gradeACount} scorecards</div>
+            <div className="text-2xl font-bold text-foreground">{gradeACount} scorecards</div>
             <span className="text-xs text-muted-foreground">Top-tier field leadership ratings</span>
           </div>
 
           <div className="p-4 rounded-xl border bg-card space-y-1">
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">SUPERVISORS EVALUATED</span>
-            <div className="text-2xl font-bold text-purple-600">{uniqueSupervisors}</div>
+            <div className="text-2xl font-bold text-foreground">{uniqueSupervisors}</div>
             <span className="text-xs text-muted-foreground">Active site supervisors & rig leaders</span>
           </div>
         </div>
@@ -265,10 +265,10 @@ export default function FieldLeadershipOverviewPage() {
 
                   {/* Subscores pill summary */}
                   <div className="grid grid-cols-4 gap-1 text-[10px] font-semibold text-center pt-2">
-                    <div className="bg-emerald-500/10 text-emerald-700 p-1 rounded">Prod: {sc.production_score}/25</div>
-                    <div className="bg-blue-500/10 text-blue-700 p-1 rounded">Rig: {sc.rig_condition_score}/20</div>
-                    <div className="bg-purple-500/10 text-purple-700 p-1 rounded">Down: {sc.downtime_score}/15</div>
-                    <div className="bg-amber-500/10 text-amber-700 p-1 rounded">HSE: {sc.hse_score}/15</div>
+                    <div className="bg-muted text-muted-foreground border border-border/50 p-1 rounded">Prod: {sc.production_score}/25</div>
+                    <div className="bg-muted text-muted-foreground border border-border/50 p-1 rounded">Rig: {sc.rig_condition_score}/20</div>
+                    <div className="bg-muted text-muted-foreground border border-border/50 p-1 rounded">Down: {sc.downtime_score}/15</div>
+                    <div className="bg-muted text-muted-foreground border border-border/50 p-1 rounded">HSE: {sc.hse_score}/15</div>
                   </div>
                 </div>
 
@@ -334,49 +334,49 @@ export default function FieldLeadershipOverviewPage() {
                     <tr>
                       <td className="p-2.5 font-medium">1. Production Meterage Target</td>
                       <td className="p-2.5 text-muted-foreground">25%</td>
-                      <td className="p-2.5 font-bold text-emerald-600">{selectedScorecard.production_score} / 25</td>
+                      <td className="p-2.5 font-bold text-foreground">{selectedScorecard.production_score} / 25</td>
                       <td className="p-2.5">{((selectedScorecard.production_score / 25) * 100).toFixed(0)}%</td>
                     </tr>
                     <tr>
                       <td className="p-2.5 font-medium">2. Rig Availability & Condition</td>
                       <td className="p-2.5 text-muted-foreground">20%</td>
-                      <td className="p-2.5 font-bold text-blue-600">{selectedScorecard.rig_condition_score} / 20</td>
+                      <td className="p-2.5 font-bold text-foreground">{selectedScorecard.rig_condition_score} / 20</td>
                       <td className="p-2.5">{((selectedScorecard.rig_condition_score / 20) * 100).toFixed(0)}%</td>
                     </tr>
                     <tr>
                       <td className="p-2.5 font-medium">3. Downtime Minimization</td>
                       <td className="p-2.5 text-muted-foreground">15%</td>
-                      <td className="p-2.5 font-bold text-purple-600">{selectedScorecard.downtime_score} / 15</td>
+                      <td className="p-2.5 font-bold text-foreground">{selectedScorecard.downtime_score} / 15</td>
                       <td className="p-2.5">{((selectedScorecard.downtime_score / 15) * 100).toFixed(0)}%</td>
                     </tr>
                     <tr>
                       <td className="p-2.5 font-medium">4. HSE Incident Prevention & Safety</td>
                       <td className="p-2.5 text-muted-foreground">15%</td>
-                      <td className="p-2.5 font-bold text-amber-600">{selectedScorecard.hse_score} / 15</td>
+                      <td className="p-2.5 font-bold text-foreground">{selectedScorecard.hse_score} / 15</td>
                       <td className="p-2.5">{((selectedScorecard.hse_score / 15) * 100).toFixed(0)}%</td>
                     </tr>
                     <tr>
                       <td className="p-2.5 font-medium">5. Consumables & Bit Efficiency</td>
                       <td className="p-2.5 text-muted-foreground">10%</td>
-                      <td className="p-2.5 font-bold">{selectedScorecard.consumables_score} / 10</td>
+                      <td className="p-2.5 font-bold text-foreground">{selectedScorecard.consumables_score} / 10</td>
                       <td className="p-2.5">{((selectedScorecard.consumables_score / 10) * 100).toFixed(0)}%</td>
                     </tr>
                     <tr>
                       <td className="p-2.5 font-medium">6. Crew Productivity & Management</td>
                       <td className="p-2.5 text-muted-foreground">5%</td>
-                      <td className="p-2.5 font-bold">{selectedScorecard.crew_management_score} / 5</td>
+                      <td className="p-2.5 font-bold text-foreground">{selectedScorecard.crew_management_score} / 5</td>
                       <td className="p-2.5">{((selectedScorecard.crew_management_score / 5) * 100).toFixed(0)}%</td>
                     </tr>
                     <tr>
                       <td className="p-2.5 font-medium">7. Daily Shift Log Accuracy</td>
                       <td className="p-2.5 text-muted-foreground">5%</td>
-                      <td className="p-2.5 font-bold">{selectedScorecard.reporting_score} / 5</td>
+                      <td className="p-2.5 font-bold text-foreground">{selectedScorecard.reporting_score} / 5</td>
                       <td className="p-2.5">{((selectedScorecard.reporting_score / 5) * 100).toFixed(0)}%</td>
                     </tr>
                     <tr>
                       <td className="p-2.5 font-medium">8. Site Environmental Stewardship</td>
                       <td className="p-2.5 text-muted-foreground">5%</td>
-                      <td className="p-2.5 font-bold">{selectedScorecard.stewardship_score} / 5</td>
+                      <td className="p-2.5 font-bold text-foreground">{selectedScorecard.stewardship_score} / 5</td>
                       <td className="p-2.5">{((selectedScorecard.stewardship_score / 5) * 100).toFixed(0)}%</td>
                     </tr>
                   </tbody>
@@ -491,7 +491,7 @@ export default function FieldLeadershipOverviewPage() {
                     max="25"
                     value={newScorecard.production_score}
                     onChange={(e) => setNewScorecard({ ...newScorecard, production_score: Number(e.target.value) })}
-                    className="w-full text-xs border rounded p-1.5 bg-background font-bold text-emerald-600"
+                    className="w-full text-xs border rounded p-1.5 bg-background font-bold text-foreground"
                   />
                 </div>
 
@@ -503,7 +503,7 @@ export default function FieldLeadershipOverviewPage() {
                     max="20"
                     value={newScorecard.rig_condition_score}
                     onChange={(e) => setNewScorecard({ ...newScorecard, rig_condition_score: Number(e.target.value) })}
-                    className="w-full text-xs border rounded p-1.5 bg-background font-bold text-blue-600"
+                    className="w-full text-xs border rounded p-1.5 bg-background font-bold text-foreground"
                   />
                 </div>
 
@@ -515,7 +515,7 @@ export default function FieldLeadershipOverviewPage() {
                     max="15"
                     value={newScorecard.downtime_score}
                     onChange={(e) => setNewScorecard({ ...newScorecard, downtime_score: Number(e.target.value) })}
-                    className="w-full text-xs border rounded p-1.5 bg-background font-bold text-purple-600"
+                    className="w-full text-xs border rounded p-1.5 bg-background font-bold text-foreground"
                   />
                 </div>
 
@@ -527,7 +527,7 @@ export default function FieldLeadershipOverviewPage() {
                     max="15"
                     value={newScorecard.hse_score}
                     onChange={(e) => setNewScorecard({ ...newScorecard, hse_score: Number(e.target.value) })}
-                    className="w-full text-xs border rounded p-1.5 bg-background font-bold text-amber-600"
+                    className="w-full text-xs border rounded p-1.5 bg-background font-bold text-foreground"
                   />
                 </div>
 

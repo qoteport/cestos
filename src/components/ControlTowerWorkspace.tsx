@@ -199,11 +199,11 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
 
   const getGradeColor = (grade: string) => {
     switch (grade) {
-      case 'A': return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
-      case 'B': return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
-      case 'C': return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
-      case 'D': return 'bg-orange-500/10 text-orange-600 border-orange-500/20';
-      default: return 'bg-rose-500/10 text-rose-600 border-rose-500/20';
+      case 'A':
+      case 'B': return 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20';
+      case 'C':
+      case 'D': return 'bg-amber-500/10 text-amber-700 border-amber-500/20';
+      default: return 'bg-rose-500/10 text-rose-700 border-rose-500/20';
     }
   };
 
