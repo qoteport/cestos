@@ -26,7 +26,6 @@ const groups: SidebarGroup[] = [
       {
         title: 'Operations Oversight',
         links: [
-          ['Executive Overview', '/'],
           ['Operations and Revenue', '/control-tower-overview'],
         ],
       },
