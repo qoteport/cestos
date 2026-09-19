@@ -39,6 +39,13 @@ const groups: SidebarGroup[] = [
           ['Revenue Subledger', 'commercial/revenue-entries'],
         ],
       },
+      {
+        title: 'Commercial Tenders',
+        links: [
+          ['Tender Pipeline', '/tenders-overview'],
+          ['Tender Opportunities Data', 'control-tower/opportunities'],
+        ],
+      },
     ],
   },
   {
@@ -53,13 +60,6 @@ const groups: SidebarGroup[] = [
           ['All projects', 'projects'],
           ['Clients', 'clients'],
           ['Locations', 'locations'],
-        ],
-      },
-      {
-        title: 'Commercial Tenders',
-        links: [
-          ['Tender Pipeline', '/tenders-overview'],
-          ['Tender Opportunities Data', 'control-tower/opportunities'],
         ],
       },
       {
@@ -229,8 +229,8 @@ export default function Sidebar({
       .filter(
         (g) =>
           path === g.href ||
-          (g.name === 'Dashboard' && (path === '/' || path === '/control-tower-overview' || path === '/commercial-overview')) ||
-          (g.name === 'Projects' && (path === '/project-command-center' || path === '/drilling-overview' || path === '/tenders-overview')) ||
+          (g.name === 'Dashboard' && (path === '/' || path === '/control-tower-overview' || path === '/commercial-overview' || path === '/tenders-overview')) ||
+          (g.name === 'Projects' && (path === '/project-command-center' || path === '/drilling-overview')) ||
           (g.name === 'Workforce' && (path === '/field-leadership-overview' || path === '/workforce-overview')) ||
           g.sections.some((s) => s.links.some(([, r]) => path === (r.startsWith('/') ? r : '/workspace/' + r)))
       )
