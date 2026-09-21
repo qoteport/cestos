@@ -38,15 +38,7 @@ const CustomCombinedTooltip = ({ active, payload, label }: any) => {
 };
 
 const DEFAULT_TREND_DATA: PerformancePoint[] = [
-  { month: 'Jan 2026', metres_drilled: 420, revenue: 38500, cost: 22100 },
-  { month: 'Feb 2026', metres_drilled: 580, revenue: 52400, cost: 29800 },
-  { month: 'Mar 2026', metres_drilled: 750, revenue: 68900, cost: 36200 },
-  { month: 'Apr 2026', metres_drilled: 690, revenue: 63100, cost: 34500 },
-  { month: 'May 2026', metres_drilled: 840, revenue: 78200, cost: 41000 },
-  { month: 'Jun 2026', metres_drilled: 920, revenue: 86500, cost: 44200 },
-  { month: 'Jul 2026', metres_drilled: 880, revenue: 82000, cost: 42800 },
-  { month: 'Aug 2026', metres_drilled: 1050, revenue: 98400, cost: 49600 },
-  { month: 'Sep 2026', metres_drilled: 1120, revenue: 104500, cost: 53100 },
+
 ];
 
 export default function OperationsPerformanceCombinedChart({

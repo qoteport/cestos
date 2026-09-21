@@ -1,4 +1,5 @@
 'use client';
+import BirthDateInput from './BirthDateInput';
 
 import React, { useState, useEffect, ChangeEvent, FormEvent, useRef } from 'react';
 import { ArrowLeft, ArrowRight, Check, Upload, Plus, Trash2, User, Briefcase, FileText, Phone, ShieldCheck } from 'lucide-react';
@@ -484,12 +485,7 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1">Date of Birth</label>
-                  <input
-                    type="date"
-                    className="input-field"
-                    value={personal.date_of_birth}
-                    onChange={e => setPersonal({ ...personal, date_of_birth: e.target.value })}
-                  />
+                  <BirthDateInput value={personal.date_of_birth} onChange={value => setPersonal({ ...personal, date_of_birth: value })} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1">Nationality</label>

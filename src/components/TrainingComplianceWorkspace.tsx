@@ -21,6 +21,8 @@ export default function TrainingComplianceWorkspace() {
 
   // Modals
   const [showPlanModal, setShowPlanModal] = useState(false);
+  const [savingPlan, setSavingPlan] = useState(false);
+  const [planError, setPlanError] = useState('');
   const [selectedEmpIds, setSelectedEmpIds] = useState<string[]>([]);
   const [empSearchModal, setEmpSearchModal] = useState('');
 
@@ -28,6 +30,7 @@ export default function TrainingComplianceWorkspace() {
 
   const openPlanModal = () => {
     setSelectedEmpIds([]);
+    setPlanError('');
     setEmpSearchModal('');
     setShowPlanModal(true);
   };
@@ -44,7 +47,7 @@ export default function TrainingComplianceWorkspace() {
     setLoading(true);
 
     Promise.all([
-      apiFetch<any>('/api/v1/training/compliance').catch(() => null),
+      apiFetch<any>('/api/v1/training/records').catch(() => null),
       apiFetch<any>('/api/v1/training/expiring?days=60').catch(() => []),
       apiFetch<any>('/api/v1/employee-licenses/expiring?days=60').catch(() => []),
       apiFetch<any>('/api/v1/employees?page_size=100').catch(() => []),
@@ -68,10 +71,10 @@ export default function TrainingComplianceWorkspace() {
   }, [version]);
 
   // Derived metrics synced with DB and endpoint data
-  const totalCourses = complianceData?.total_courses ?? complianceData?.active_courses ?? (trainingList.length > 0 ? trainingList.length : 12);
+  const totalCourses = complianceData?.total_courses ?? complianceData?.active_courses ?? trainingList.length;
   const expiringCount = complianceData?.expiring_count ?? expiringTraining.length;
-  const complianceRate = complianceData?.compliance_percentage ?? complianceData?.compliance_rate ?? complianceData?.overall_compliance_rate ?? 94;
-  const plannedSessions = complianceData?.planned_count ?? complianceData?.planned_sessions ?? complianceData?.upcoming_sessions ?? (trainingList.filter(t => String(t.status || t.state || '').toUpperCase() === 'PLANNED' || String(t.status || t.state || '').toUpperCase() === 'SCHEDULED').length || 4);
+  const complianceRate = complianceData?.compliance_percentage ?? complianceData?.compliance_rate ?? complianceData?.overall_compliance_rate ?? (trainingList.length ? Math.round(trainingList.filter(t => t.status === 'COMPLETED' && (!t.expiry_date || t.expiry_date >= new Date().toISOString().slice(0, 10))).length / trainingList.length * 100) : 0);
+  const plannedSessions = complianceData?.planned_count ?? complianceData?.planned_sessions ?? complianceData?.upcoming_sessions ?? trainingList.filter(t => ['PLANNED', 'IN_PROGRESS'].includes(String(t.status).toUpperCase())).length;
 
   const filteredTraining = trainingList.filter(t => {
     const searchStr = `${t.training_name || t.name || ''} ${t.training_type || ''} ${t.employee_name || ''}`.toLowerCase();
@@ -320,35 +323,12 @@ export default function TrainingComplianceWorkspace() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 border rounded-lg bg-card space-y-2.5">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-xs font-bold text-primary uppercase tracking-wider block">Mandatory Safety</span>
-                    <h3 className="text-sm font-bold text-foreground">HSE Field Safety & Rigging Certification</h3>
-                  </div>
-                  <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-100 text-emerald-800">SCHEDULED</span>
-                </div>
-                <p className="text-xs text-muted-foreground">Required 2-day refresher for all active rig operators and field crew.</p>
-                <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
-                  <span>Date: Oct 15 - Oct 17, 2026</span>
-                  <span className="font-semibold text-foreground">12 Employees Enrolled</span>
-                </div>
-              </div>
-
-              <div className="p-4 border rounded-lg bg-card space-y-2.5">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-xs font-bold text-primary uppercase tracking-wider block">Compliance Recertification</span>
-                    <h3 className="text-sm font-bold text-foreground">Heavy Machinery & Crane Driving Licence Renewal</h3>
-                  </div>
-                  <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-blue-100 text-blue-800">IN PLANNING</span>
-                </div>
-                <p className="text-xs text-muted-foreground">Annual licence re-test and practical safety audit course.</p>
-                <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
-                  <span>Date: Nov 01 - Nov 05, 2026</span>
-                  <span className="font-semibold text-foreground">8 Employees Enrolled</span>
-                </div>
-              </div>
+              {filteredTraining.filter(course => ['PLANNED', 'IN_PROGRESS'].includes(course.status)).map(course => <div key={course.id} className="p-4 border rounded-lg bg-card space-y-2">
+                <h3 className="font-bold">{course.training_name}</h3>
+                <p className="text-xs">{course.employee_name} · {course.status.replace('_', ' ')}</p>
+                <p className="text-xs text-muted-foreground">Starts {course.start_date || 'Date to be confirmed'} · {course.provider || 'Provider to be confirmed'}</p>
+              </div>)}
+              {!filteredTraining.some(course => ['PLANNED', 'IN_PROGRESS'].includes(course.status)) && <p className="text-xs text-muted-foreground">No planned training programs.</p>}
             </div>
           </div>
         )}
@@ -356,12 +336,15 @@ export default function TrainingComplianceWorkspace() {
 
       {/* MODAL: Plan Training Program */}
       {showPlanModal && (
-        <Modal name="Plan New Training Program / Course" onClose={() => setShowPlanModal(false)}>
+        <Modal name="Plan New Training Program / Course" error={planError} onClose={() => { if (!savingPlan) setShowPlanModal(false); }}>
           <form
             className="space-y-4"
             onSubmit={async (e) => {
               e.preventDefault();
+              if (savingPlan) return;
+              setPlanError('');
               if (selectedEmpIds.length === 0) {
+                setPlanError('Please select at least one employee for this training program.');
                 toast.warning('Please select at least one employee for this training program.');
                 return;
               }
@@ -373,7 +356,8 @@ export default function TrainingComplianceWorkspace() {
               const expiryVal = (form.elements.namedItem('training_expiry') as HTMLInputElement).value;
 
               try {
-                await Promise.all(
+                setSavingPlan(true);
+                const results = await Promise.allSettled(
                   selectedEmpIds.map(empId =>
                     apiFetch(`/api/v1/employees/${empId}/training`, {
                       method: 'POST',
@@ -381,21 +365,29 @@ export default function TrainingComplianceWorkspace() {
                         training_name: nameVal,
                         training_type: typeVal,
                         provider: providerVal || undefined,
-                        issue_date: startVal,
+                        start_date: startVal,
                         expiry_date: expiryVal || undefined,
-                        status: 'COMPLETED',
+                        status: 'PLANNED',
                       }),
                     })
                   )
                 );
 
+                const failed = selectedEmpIds.filter((_, index) => results[index].status === 'rejected');
+                if (failed.length) {
+                  setSelectedEmpIds(failed);
+                  reload();
+                  const failure = results.find(result => result.status === 'rejected') as PromiseRejectedResult;
+                  throw new Error(`${failed.length} participant(s) could not be saved. ${failure.reason?.message || 'Please retry.'} Successful participants have been removed from the selection.`);
+                }
                 setShowPlanModal(false);
                 setSelectedEmpIds([]);
                 toast.success('Training course planned successfully.');
                 reload();
               } catch (err: any) {
+                setPlanError(err?.message || 'Failed to plan training course.');
                 toast.error(err?.message || 'Failed to plan training course.');
-              }
+              } finally { setSavingPlan(false); }
             }}
           >
             <div>
@@ -495,7 +487,7 @@ export default function TrainingComplianceWorkspace() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold mb-1">Training / Completion Date *</label>
+                <label className="block text-xs font-semibold mb-1">Training Start Date *</label>
                 <input required type="date" name="training_start" className="input-field" defaultValue={new Date().toISOString().slice(0, 10)} />
               </div>
               <div>
@@ -506,7 +498,7 @@ export default function TrainingComplianceWorkspace() {
 
             <div className="flex justify-end gap-2 border-t pt-3">
               <button type="button" className="btn-secondary text-xs" onClick={() => setShowPlanModal(false)}>Cancel</button>
-              <button type="submit" className="btn-primary text-xs bg-emerald-700 hover:bg-emerald-800">
+              <button type="submit" disabled={savingPlan} className="btn-primary text-xs bg-emerald-700 hover:bg-emerald-800">
                 Plan Program ({selectedEmpIds.length}) & Save
               </button>
             </div>

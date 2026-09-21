@@ -375,6 +375,7 @@ export default function FieldPortalWorkspace() {
   });
 
   const [consumablesBusy, setConsumablesBusy] = useState(false);
+  const [consumablesDirty, setConsumablesDirty] = useState(false);
   const [consumablesDate, setConsumablesDate] = useState(new Date().toISOString().slice(0, 10));
   // Form State: Shift Production Report with Worked Drill Hole Intervals
   const [shiftForm, setShiftForm] = useState({
@@ -1123,6 +1124,7 @@ export default function FieldPortalWorkspace() {
     const report = (alert: AppAlert) => setPortalAlert(alert, 'shift');
     e.preventDefault();
     if (consumablesBusy) { report({ type: 'error', message: 'Wait for consumables to finish saving.' }); return; }
+    if (consumablesDirty) { report({ type: 'error', message: 'Save the new consumables or remove the unsaved rows before submitting the shift.' }); return; }
     if (!shiftForm.rig_id) {
       report({ type: 'error', message: 'Please select Rig / Equipment.' });
       return;
@@ -3204,7 +3206,7 @@ export default function FieldPortalWorkspace() {
               </div>
             </div>
 
-            <FieldConsumables key={`${shiftForm.project_id || selectedProjectId}:${shiftForm.shift_date}`} projectId={shiftForm.project_id || selectedProjectId} logDate={shiftForm.shift_date} onBusyChange={setConsumablesBusy} />
+            <FieldConsumables key={`${shiftForm.project_id || selectedProjectId}:${shiftForm.shift_date}`} projectId={shiftForm.project_id || selectedProjectId} logDate={shiftForm.shift_date} onBusyChange={setConsumablesBusy} onDirtyChange={setConsumablesDirty} />
             <div>
               <label className="block font-medium mb-1">Shift Notes / HSE Observations</label>
               <textarea

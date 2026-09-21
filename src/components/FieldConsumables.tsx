@@ -5,12 +5,13 @@ import { apiFetch } from '@/lib/api';
 import useAppFeedback from './useAppFeedback';
 
 type Row = Record<string, any>;
-type Line = { item_id: string; quantity: string };
-export default function FieldConsumables({ projectId, logDate, onBusyChange }: {
-  projectId: string; logDate: string; onBusyChange?: (busy: boolean) => void;
+type Line = { item_id: string; quantity: string; bucket_id?: string; serial_id?: string };
+type Options = { items: Row[]; stores: Row[]; stock: Row[]; serials: Row[] };
+export default function FieldConsumables({ projectId, logDate, onBusyChange, onDirtyChange }: {
+  projectId: string; logDate: string; onBusyChange?: (busy: boolean) => void; onDirtyChange?: (dirty: boolean) => void;
 }) {
   const [rows, setRows] = useState<Row[]>([]);
-  const [options, setOptions] = useState<{ items: Row[]; stores: Row[] }>({ items: [], stores: [] });
+  const [options, setOptions] = useState<Options>({ items: [], stores: [], stock: [], serials: [] });
   const [store, setStore] = useState('');
   const [lines, setLines] = useState<Line[]>([{ item_id: '', quantity: '1' }]);
   const [busy, setBusy] = useState(false);
@@ -19,6 +20,8 @@ export default function FieldConsumables({ projectId, logDate, onBusyChange }: {
   const [version, setVersion] = useState(0);
   const [submissionId, setSubmissionId] = useState('');
   const { notify } = useAppFeedback();
+  useEffect(() => { onDirtyChange?.(lines.some(line => !!line.item_id)); }, [lines, onDirtyChange]);
+  useEffect(() => () => { onDirtyChange?.(false); }, [onDirtyChange]);
   useEffect(() => {
     const refresh = () => setVersion(v => v + 1);
     window.addEventListener('field-consumables-changed', refresh);
@@ -32,7 +35,7 @@ export default function FieldConsumables({ projectId, logDate, onBusyChange }: {
     setLoading(true);
     Promise.all([
       apiFetch<Row[]>(`/api/v1/field-portal/consumables?project_id=${encodeURIComponent(projectId)}&log_date=${encodeURIComponent(logDate)}`, { signal: abort.signal }),
-      apiFetch<{ items: Row[]; stores: Row[] }>(`/api/v1/field-portal/consumables/options?project_id=${encodeURIComponent(projectId)}`, { signal: abort.signal }),
+      apiFetch<Options>(`/api/v1/field-portal/consumables/options?project_id=${encodeURIComponent(projectId)}`, { signal: abort.signal }),
     ]).then(([records, choices]) => {
       if (!abort.signal.aborted) { setRows(records); setOptions(choices); }
     }).catch(err => {
@@ -45,13 +48,18 @@ export default function FieldConsumables({ projectId, logDate, onBusyChange }: {
     const fail = (message: string) => { setError(message); notify({ type: 'error', message }); };
     if (!projectId || !logDate || !store) return fail('Select a project, date and store.');
     if (lines.some(line => !line.item_id || !Number.isFinite(Number(line.quantity)) || Number(line.quantity) <= 0)) return fail('Select an item and a positive quantity for every row.');
+    if (lines.some(line => !line.bucket_id && options.stock.filter(bucket => bucket.item_id === line.item_id && bucket.store_id === store).length > 1)) return fail('Choose a stock location for each item with multiple locations.');
     setError(''); setBusy(true); onBusyChange?.(true);
     const id = submissionId || crypto.randomUUID();
     setSubmissionId(id);
     try {
       const result = await apiFetch<Row>('/api/v1/field-portal/consumables', { method: 'POST', body: JSON.stringify({
         project_id: projectId, log_date: logDate, store_id: store, submission_id: id,
-        items: lines.map(line => ({ item_id: line.item_id, quantity: line.quantity })),
+        items: lines.map(line => {
+          const buckets = options.stock.filter(bucket => bucket.item_id === line.item_id && bucket.store_id === store);
+          const bucket = buckets.find(row => row.id === line.bucket_id) || (buckets.length === 1 ? buckets[0] : undefined);
+          return { item_id: line.item_id, quantity: line.quantity, bin_id: bucket?.bin_id, lot_id: bucket?.lot_id, serial_id: line.serial_id || undefined };
+        }),
       }) });
       setLines([{ item_id: '', quantity: '1' }]); setSubmissionId('');
       window.dispatchEvent(new Event('field-consumables-changed'));
@@ -68,9 +76,11 @@ export default function FieldConsumables({ projectId, logDate, onBusyChange }: {
       {rows.map(row => <tr key={row.id}><td className="py-2">{row.item_name}</td><td>{row.quantity} {row.unit || row.unit_of_measure || 'PCS'}</td><td>{row.document_number}</td><td>{row.status === 'DRAFT' ? 'Awaiting approval' : row.status}</td></tr>)}
     </tbody></table></div> : <p className="text-muted-foreground">No consumables logged for this date.</p>}
     <fieldset disabled={busy || loading || !projectId || !logDate} className="space-y-3">
-      <label className="block">Store / Warehouse<select aria-label="Consumables store" className="w-full border rounded p-2 bg-background" value={store} onChange={e => { setStore(e.target.value); setSubmissionId(''); }}><option value="">Select store</option>{options.stores.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
-      {lines.map((line, index) => <div key={index} className="flex gap-2 items-end">
-        <label className="flex-1">Item<select aria-label={`Consumable item ${index + 1}`} className="w-full border rounded p-2 bg-background" value={line.item_id} onChange={e => { setLines(old => old.map((row, i) => i === index ? { ...row, item_id: e.target.value } : row)); setSubmissionId(''); }}><option value="">Select consumable</option>{options.items.map(row => <option key={row.id} value={row.id}>{row.name} | UoM: {row.unit || row.unit_of_measure || 'PCS'}{row.requires_approval_to_issue ? ' — approval required' : ''}</option>)}</select></label>
+      <label className="block">Store / Warehouse<select aria-label="Consumables store" className="w-full border rounded p-2 bg-background" value={store} onChange={e => { setStore(e.target.value); setLines(old => old.map(line => ({ ...line, bucket_id: '', serial_id: '' }))); setSubmissionId(''); }}><option value="">Select store</option>{options.stores.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
+      {lines.map((line, index) => <div key={index} className="flex flex-wrap gap-2 items-end">
+        <label className="flex-1">Item<select aria-label={`Consumable item ${index + 1}`} className="w-full border rounded p-2 bg-background" value={line.item_id} onChange={e => { setLines(old => old.map((row, i) => i === index ? { ...row, item_id: e.target.value, bucket_id: '', serial_id: '' } : row)); setSubmissionId(''); }}><option value="">Select consumable</option>{options.items.map(row => <option key={row.id} value={row.id}>{row.name} | UoM: {row.unit || row.unit_of_measure || 'PCS'}{row.requires_approval_to_issue ? ' — approval required' : ''}</option>)}</select></label>
+        <label className="flex-1">Stock location<select aria-label={`Stock location ${index + 1}`} className="w-full border rounded p-2 bg-background" value={line.bucket_id || ''} onChange={e => { setLines(old => old.map((row, i) => i === index ? { ...row, bucket_id: e.target.value, serial_id: '' } : row)); setSubmissionId(''); }}><option value="">Default / select stock</option>{options.stock.filter(row => row.item_id === line.item_id && row.store_id === store).map(row => <option key={row.id} value={row.id}>{row.bin || 'Unbinned'}{row.lot ? ` / ${row.lot}` : ''} — {row.available} available</option>)}</select></label>
+        {options.serials.some(row => row.item_id === line.item_id && row.store_id === store) && <label className="flex-1">Serial<select aria-label={`Serial ${index + 1}`} className="w-full border rounded p-2 bg-background" value={line.serial_id || ''} onChange={e => { setLines(old => old.map((row, i) => i === index ? { ...row, serial_id: e.target.value } : row)); setSubmissionId(''); }}><option value="">Select serial</option>{options.serials.filter(row => row.item_id === line.item_id && row.store_id === store).map(row => <option key={row.id} value={row.id}>{row.serial_number}</option>)}</select></label>}
         <label className="w-24">Quantity<input aria-label={`Consumable quantity ${index + 1}`} type="number" step="0.0001" min="0.0001" className="w-full border rounded p-2 bg-background" value={line.quantity} onChange={e => { setLines(old => old.map((row, i) => i === index ? { ...row, quantity: e.target.value } : row)); setSubmissionId(''); }} /></label>
         <button type="button" className="btn-secondary" disabled={lines.length === 1} onClick={() => { setLines(old => old.filter((_, i) => i !== index)); setSubmissionId(''); }} aria-label={`Remove consumable ${index + 1}`}>Remove</button>
       </div>)}

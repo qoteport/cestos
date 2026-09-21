@@ -21,6 +21,11 @@ const DOMAIN_RULES: Record<string, { value: string; label: string }[]> = {
   WORKFORCE: [
     { value: 'WORKFORCE_DOCUMENT_EXPIRY', label: 'Workforce Document / Licence Expiry' },
     { value: 'WORKFORCE_ROTATION_DUE', label: 'Upcoming Rotation End Date Alert' },
+    { value: 'WORKFORCE_LEAVE_PENDING', label: 'Leave Requests Awaiting Approval' },
+    { value: 'WORKFORCE_LEAVE_UPCOMING', label: 'Upcoming Approved Leave' },
+    { value: 'WORKFORCE_TRAINING_DUE', label: 'Upcoming Training Sessions' },
+    { value: 'WORKFORCE_TRAINING_EXPIRY', label: 'Training Certificate Expiry' },
+    { value: 'WORKFORCE_CONTRACT_EXPIRY', label: 'Employment Contract Expiry' },
   ],
   PROJECTS: [
     { value: 'PROJECT_MILESTONE_DUE', label: 'Project Expected End Date Alert' },

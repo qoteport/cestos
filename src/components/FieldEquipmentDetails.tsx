@@ -10,6 +10,26 @@ const columns = {
   fuel: ['recorded_at', 'fuel_type', 'quantity_litres', 'meter_reading', 'supplier', 'notes'],
   meter: ['recorded_at', 'reading', 'reading_type', 'source', 'notes'],
 };
+const historyDate = (value: unknown, includeTime = false) => {
+  if (!value) return '—';
+  const raw = String(value);
+  const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(raw) ? `${raw}T00:00:00Z` : raw);
+  if (Number.isNaN(date.getTime())) return raw;
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC',
+    ...(includeTime ? { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' as const, timeZoneName: 'short' as const } : {}),
+  }).format(date);
+};
+const historyCell = (key: string, row: RecordRow) => {
+  if (key === 'status' && row.approved_at) return 'APPROVED';
+  if (key === 'scheduled_date') return historyDate(row[key]);
+  if (key === 'completed_at' || key === 'recorded_at') return historyDate(row[key], true);
+  if (key === 'notes' && row[key]) return String(row[key]).replace(
+    /\s*\[(\d{4}-\d{2}-\d{2}T[^\]]+)\][ \t]*/g,
+    (_, timestamp: string) => `\n[${historyDate(timestamp, true)}]\n`,
+  ).trim();
+  return String(row[key] ?? '—');
+};
 export default function FieldEquipmentDetails({ asset, projectId, onClose }: { asset: RecordRow; projectId: string; onClose: () => void }) {
   const [kind, setKind] = useState<keyof typeof columns>('maintenance');
   const [page, setPage] = useState(1);
@@ -45,7 +65,7 @@ export default function FieldEquipmentDetails({ asset, projectId, onClose }: { a
         : <div className="overflow-x-auto"><table className="w-full text-left text-xs">
           <thead><tr>{columns[kind].map(key => <th key={key} className="p-2 border-b capitalize">{key.replace(/_/g, ' ')}</th>)}</tr></thead>
           <tbody>{data?.items?.map((row: RecordRow) => <tr key={`${row.source || kind}-${row.id}`}>
-            {columns[kind].map(key => <td key={key} className="p-2 border-b whitespace-pre-wrap">{key === 'status' && row.approved_at ? 'APPROVED' : String(row[key] ?? '—')}</td>)}
+            {columns[kind].map(key => <td key={key} className="p-2 border-b whitespace-pre-wrap align-top leading-relaxed">{historyCell(key, row)}</td>)}
           </tr>)}</tbody>
         </table>{!data?.items?.length && <p className="py-4 text-muted-foreground">No records found.</p>}</div>}
       <div className="flex justify-between items-center">
