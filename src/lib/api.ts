@@ -119,7 +119,10 @@ export interface UserRead {
   first_name?: string;
   last_name?: string;
   is_active: boolean;
+  is_superuser?: boolean;
+  is_field_portal_only?: boolean;
   role?: string;
+  roles?: any[];
 }
 
 export async function login(data: LoginRequest): Promise<TokenResponse> {
@@ -173,7 +176,7 @@ export interface OperationsSummary {
   expiring_equipment_registrations?: number;
   critical_stock_items?: number;
   pending_inventory_requests?: number;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export async function getOperationsSummary(params?: Record<string, string>): Promise<OperationsSummary> {
@@ -234,7 +237,7 @@ export interface ProjectRead {
   start_date?: string;
   end_date?: string;
   location?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface ProjectOverview extends ProjectRead {
@@ -245,7 +248,7 @@ export interface ProjectOverview extends ProjectRead {
   current_assets?: unknown[];
   recent_assignments?: unknown[];
   sites?: unknown[];
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface PaginatedResponse<T> {
@@ -289,7 +292,7 @@ export interface WorkforceDashboard {
   inactive_employees?: number;
   by_department?: { department: string; count: number }[];
   by_project?: { project: string; count: number }[];
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export async function getWorkforceDashboard(params?: Record<string, string>): Promise<WorkforceDashboard> {
@@ -345,7 +348,7 @@ export interface FleetDashboard {
   by_project?: { project: string; count: number }[];
   assets_by_project?: Record<string, number> | { project: string; count: number }[];
   assets?: Record<string, any>[];
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export async function getFleetDashboard(params?: Record<string, string>): Promise<FleetDashboard> {
@@ -403,7 +406,7 @@ export interface InventoryDashboard {
   items_requiring_reorder?: number;
   reorder_required?: number;
   recent_transactions?: unknown[];
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export async function getInventoryDashboard(params?: Record<string, string>): Promise<InventoryDashboard> {
@@ -440,7 +443,7 @@ export interface DrillingProgramRead {
   drilled_metres: number;
   status: string;
   created_at: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface DrillHoleRead {
@@ -454,7 +457,7 @@ export interface DrillHoleRead {
   azimuth_deg?: number;
   status: string;
   created_at: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface DrillingShiftReportRead {
@@ -479,7 +482,7 @@ export interface DrillingShiftReportRead {
   time_segments?: any[];
   crew_members?: any[];
   created_at: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export async function getDrillingPrograms(params?: Record<string, string>): Promise<DrillingProgramRead[]> {
@@ -499,8 +502,8 @@ export async function getDrillHoles(params?: Record<string, string>): Promise<Dr
   return apiFetch<DrillHoleRead[]>(`/api/v1/drilling/holes${qs}`);
 }
 
-export async function createDrillHole(data: Record<string, any>): Promise<DrillHoleRead> {
-  return apiFetch<DrillHoleRead>('/api/v1/drilling/holes', {
+export async function createDrillHole(programId: string, data: Record<string, any>): Promise<DrillHoleRead> {
+  return apiFetch<DrillHoleRead>(`/api/v1/drilling/programs/${programId}/holes`, {
     method: 'POST',
     body: JSON.stringify(data),
   });
@@ -526,13 +529,24 @@ export async function approveDrillingShift(shiftId: string): Promise<DrillingShi
   return apiFetch<DrillingShiftReportRead>(`/api/v1/drilling/shifts/${shiftId}/approve`, { method: 'POST' });
 }
 
-// ─── Phase 2: Commercial Contracts & Subledgers ──────────────────────────────
+export async function updateDrillingShift(shiftId: string, data: Record<string, any>): Promise<DrillingShiftReportRead> {
+  return apiFetch<DrillingShiftReportRead>(`/api/v1/drilling/shifts/${shiftId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteDrillingShift(shiftId: string): Promise<void> {
+  return apiFetch<void>(`/api/v1/drilling/shifts/${shiftId}`, { method: 'DELETE' });
+}
+
+// ─── Phase 2: Commercial & Contracts ────────────────────────────────────────
 
 export interface ProjectContractRead {
   id: string;
   project_id: string;
+  contract_name: string;
   contract_number: string;
-  title: string;
   status: string;
   currency: string;
   start_date?: string;
@@ -541,7 +555,7 @@ export interface ProjectContractRead {
   total_contract_value?: number;
   attachments?: { name: string; url: string }[];
   rate_cards?: any[];
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface CostSubledgerRead {
@@ -553,7 +567,7 @@ export interface CostSubledgerRead {
   amount: number;
   currency: string;
   created_at: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface RevenueSubledgerRead {
@@ -567,7 +581,7 @@ export interface RevenueSubledgerRead {
   description?: string;
   entry_date?: string;
   created_at: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export async function getProjectContracts(params?: Record<string, string>): Promise<ProjectContractRead[]> {
@@ -587,6 +601,10 @@ export async function updateProjectContract(id: string, data: Record<string, any
     method: 'PATCH',
     body: JSON.stringify(data),
   });
+}
+
+export async function deleteProjectContract(id: string): Promise<void> {
+  return apiFetch<void>(`/api/v1/commercial/contracts/${id}`, { method: 'DELETE' });
 }
 
 export async function getProjectFinancials(projectId: string): Promise<unknown> {

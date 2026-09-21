@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { FileText, AlertTriangle, Search, RefreshCw, ArrowLeft, Eye, CheckCircle, ArrowRight, ShieldAlert, Clock } from 'lucide-react';
 import { apiFetch, apiFetchBlob } from '@/lib/api';
 import { toast } from 'sonner';
+import { normalizeExpiringDocument } from '@/lib/expiringDocuments';
 import { Row, display } from './DataUI';
 
 export default function ExpiringDocumentsWorkspace() {
@@ -24,9 +25,10 @@ export default function ExpiringDocumentsWorkspace() {
   useEffect(() => {
     let active = true;
     setLoading(true);
+    setActionError('');
 
     Promise.all([
-      apiFetch<any>(`/api/v1/employee-documents/expiring?days=${daysFilter}`).catch(() => []),
+      apiFetch<any>(`/api/v1/employee-documents/expiring?days=${daysFilter}`),
       apiFetch<any>('/api/v1/employees?page_size=100').catch(() => []),
     ]).then(([docData, empData]) => {
       if (!active) return;
@@ -38,8 +40,13 @@ export default function ExpiringDocumentsWorkspace() {
         if (e.id) eMap[e.id] = e;
       });
 
-      setDocuments(docList);
+      setDocuments(docList.map(normalizeExpiringDocument));
       setEmployeesMap(eMap);
+      setLoading(false);
+    }).catch((err) => {
+      if (!active) return;
+      setDocuments([]);
+      setActionError(err.message || 'Could not load expiring documents');
       setLoading(false);
     });
 
@@ -77,7 +84,7 @@ export default function ExpiringDocumentsWorkspace() {
 
   const totalExpiring = documents.length;
   const criticalCount = documents.filter(d => {
-    const days = d.days_left ?? d.days_remaining ?? 10;
+    const days = d.days_until_expiry ?? d.days_left ?? d.days_remaining ?? Number.POSITIVE_INFINITY;
     return days <= 7;
   }).length;
 
@@ -201,12 +208,12 @@ export default function ExpiringDocumentsWorkspace() {
                   const fullName = [emp.first_name, emp.last_name].filter(Boolean).join(' ') || emp.name || doc.employee_name || 'Employee';
                   const empNum = emp.employee_number || doc.employee_number || (doc.employee_id ? doc.employee_id.slice(0, 8) : null);
                   const docTitle = doc.title || doc.name || display(doc.document_type || 'Document');
-                  const daysLeft = doc.days_left ?? doc.days_remaining ?? 14;
+                  const daysLeft = doc.days_until_expiry ?? doc.days_left ?? doc.days_remaining ?? null;
 
                   const badgeStyle =
-                    daysLeft <= 7
+                    daysLeft !== null && daysLeft <= 7
                       ? 'bg-rose-100 text-rose-800 border-rose-300 font-bold'
-                      : daysLeft <= 15
+                      : daysLeft !== null && daysLeft <= 15
                       ? 'bg-amber-100 text-amber-800 border-amber-300 font-semibold' :'bg-blue-100 text-blue-800 border-blue-200';
 
                   return (
@@ -237,13 +244,13 @@ export default function ExpiringDocumentsWorkspace() {
                       </td>
 
                       <td className="p-3 font-semibold text-rose-700">
-                        {display(doc.expiry_date || doc.valid_until || 'Soon')}
+                        {display(doc.expiry_date || doc.valid_until || 'Not recorded')}
                       </td>
 
                       <td className="p-3">
                         <span className={`px-2.5 py-1 rounded-full text-[11px] border inline-flex items-center gap-1 ${badgeStyle}`}>
                           <Clock size={11} />
-                          {daysLeft < 0 ? 'Expired' : `Expiring in ${daysLeft} days`}
+                          {daysLeft === null ? 'Expiry not recorded' : daysLeft < 0 ? `Expired ${Math.abs(daysLeft)} days ago` : `Expiring in ${daysLeft} days`}
                         </span>
                       </td>
 

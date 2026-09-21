@@ -74,19 +74,29 @@ export default function ProjectCommand() {
               Project #{d?.project?.project_number || '—'}
             </p>
           </div>
-          {d?.project?.status && (
-            <span
-              className={`badge ${
-                d.project.status === 'ACTIVE'
-                  ? 'badge-active'
-                  : d.project.status === 'MOBILIZING'
-                    ? 'badge-mobilizing'
-                    : 'badge-neutral'
-              }`}
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              className="px-3.5 py-2 bg-secondary hover:bg-muted text-foreground font-semibold rounded-lg text-xs border transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+              onClick={() => setEditing(true)}
             >
-              {d.project.status}
-            </span>
-          )}
+              <Edit size={14} className="text-primary" />
+              Edit Project
+            </button>
+            {d?.project?.status && (
+              <span
+                className={`badge ${
+                  d.project.status === 'ACTIVE'
+                    ? 'badge-active'
+                    : d.project.status === 'MOBILIZING'
+                      ? 'badge-mobilizing'
+                      : 'badge-neutral'
+                }`}
+              >
+                {d.project.status}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -172,12 +182,10 @@ export default function ProjectCommand() {
                       <p className="text-xs text-muted-foreground">Key specs, drilling trends, and quick management controls</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {auth.can('projects.update') && (
-                        <button className="btn-secondary text-xs flex items-center gap-1" onClick={() => setEditing(true)}>
-                          <Edit size={13} />
-                          Edit project / manager
-                        </button>
-                      )}
+                      <button className="btn-secondary text-xs flex items-center gap-1 font-semibold" onClick={() => setEditing(true)}>
+                        <Edit size={13} className="text-primary" />
+                        Edit Project
+                      </button>
                       <button className="btn-secondary text-xs flex items-center gap-1" onClick={() => setTab('updates')}>
                         <Plus size={13} />
                         Submit field update
@@ -309,9 +317,9 @@ export default function ProjectCommand() {
               {tab === 'files & notes' && <ProjectRecords key={id} projectId={id} />}
 
               {tab === 'sites' && (
-                <div className="space-y-4">
+                <div className="space-y-4 ml-auto">
                   {auth.can('locations.create') && (
-                    <button className="btn-primary" onClick={() => setAddingSite(true)}>
+                    <button className="btn-primary ml-auto" onClick={() => setAddingSite(true)}>
                       Add project site
                     </button>
                   )}

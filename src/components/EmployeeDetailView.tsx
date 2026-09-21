@@ -1,4 +1,5 @@
 'use client';
+import { employeePermissions } from '@/lib/employeePermissions';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -182,7 +183,7 @@ export function formatAuditActivity(act: Row) {
   return { titleStr, descStr, formattedDate, IconNode, badgeColor };
 }
 
-export default function EmployeeDetailView({ employeeId }: { employeeId: string }) {
+export default function EmployeeDetailView({ employeeId, onClose }: { employeeId: string; onClose?: () => void }) {
   const router = useRouter();
   const auth = useAuth();
   const [employee, setEmployee] = useState<Row | null>(null);
@@ -190,11 +191,8 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { data: locations } = useData<Row[]>('/api/v1/locations');
-  const canManageContracts =
-    auth.can('employees.contracts.manage') ||
-    auth.can('employees.documents.manage') ||
-    auth.can('employees.write') ||
-    auth.access?.is_superuser;
+  const profilePermissions = employeePermissions(auth.access);
+  const canManageContracts = profilePermissions.contracts;
   const canDownloadDocs = auth.can('documents.download') || auth.access?.is_superuser;
 
   // Active tab state
@@ -270,6 +268,9 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
   const toArray = (d: any): Row[] =>
     Array.isArray(d) ? d : Array.isArray(d?.items) ? d.items : [];
 
+  const [resolvedEmpId, setResolvedEmpId] = useState<string>(employeeId);
+  const realEmpId = employee?.id ? String(employee.id) : (resolvedEmpId || employeeId);
+
   // Reload trigger
   const [version, setVersion] = useState(0);
   const reloadAll = () => setVersion((v) => v + 1);
@@ -282,11 +283,11 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
 
     async function loadData() {
       let targetId = employeeId;
-      if (employeeId === 'me') {
+      if (employeeId === 'me' || (auth?.user?.id && employeeId === auth.user.id)) {
         try {
           const myProfile = await apiFetch<Row>('/api/v1/hr/me');
           if (myProfile?.id) {
-            targetId = myProfile.id;
+            targetId = String(myProfile.id);
           } else {
             if (active) setError('No active employee profile linked to your account.');
             if (active) setLoading(false);
@@ -299,6 +300,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
         }
       }
 
+      setResolvedEmpId(targetId);
       const root = `/api/v1/employees/${targetId}`;
 
       try {
@@ -318,7 +320,10 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
           ]);
 
         if (!active) return;
-        if (empData) setEmployee(empData);
+        if (empData) {
+          setEmployee(empData);
+          if (empData.id) setResolvedEmpId(String(empData.id));
+        }
         if (overData) setOverview(overData);
         setFamily(toArray(famData));
         setEmergency(toArray(emData));
@@ -336,7 +341,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
     return () => {
       active = false;
     };
-  }, [employeeId, version]);
+  }, [employeeId, version, auth?.user?.id]);
 
   // Fetch photo blob if present
   useEffect(() => {
@@ -348,21 +353,19 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
     let createdUrl: string | null = null;
     const url = employee.profile_photo_url;
 
-    if (url.startsWith('data:')) {
-      setPhotoUrl(url);
-      return;
-    }
-
-    apiFetchBlob(url)
-      .then((blob) => {
-        if (active && blob && blob.size > 0) {
+    if (url.startsWith('/api/')) {
+      apiFetchBlob(url)
+        .then((blob) => {
+          if (!active) return;
           createdUrl = URL.createObjectURL(blob);
           setPhotoUrl(createdUrl);
-        }
-      })
-      .catch(() => {
-        if (active) setPhotoUrl(null);
-      });
+        })
+        .catch(() => {
+          if (active) setPhotoUrl(null);
+        });
+    } else {
+      setPhotoUrl(url);
+    }
 
     return () => {
       active = false;
@@ -372,11 +375,11 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
 
   // Fetch Tab Specific Sub-data
   useEffect(() => {
-    if (!employeeId) return;
-    const root = `/api/v1/employees/${employeeId}`;
+    if (!realEmpId || realEmpId === 'me') return;
+    const root = `/api/v1/employees/${realEmpId}`;
 
     if (activeTab === 'salaries') {
-      apiFetch<any>(`/api/v1/hr/employees/${employeeId}/salaries`)
+      apiFetch<any>(`/api/v1/hr/employees/${realEmpId}/salaries`)
         .then((d) => setSalaries(toArray(d)))
         .catch(() => setSalaries([]));
     } else if (activeTab === 'contracts' || activeTab === 'documents') {
@@ -445,7 +448,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
         .then((d) => setActivities(toArray(d)))
         .catch(() => setActivities([]));
     }
-  }, [employeeId, activeTab, version]);
+  }, [employeeId, realEmpId, activeTab, version]);
 
   const toggleArchive = async () => {
     if (!employee) return;
@@ -455,12 +458,12 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
     setActionError('');
     try {
       if (isArchiving) {
-        await apiFetch(`/api/v1/employees/${employeeId}`, {
+        await apiFetch(`/api/v1/employees/${realEmpId}`, {
           method: 'PATCH',
           body: JSON.stringify({ employment_status: 'TERMINATED' }),
         });
       }
-      await apiFetch(`/api/v1/employees/${employeeId}/${action}`, { method: 'POST' });
+      await apiFetch(`/api/v1/employees/${realEmpId}/${action}`, { method: 'POST' });
       reloadAll();
     } catch (e: any) {
       setActionError(e?.message || `Failed to ${action} employee.`);
@@ -478,15 +481,15 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
       formData.append('file', file);
       formData.append('title', 'Profile photo');
       formData.append('document_type', 'OTHER');
-      const doc = await apiFetch<any>(`/api/v1/employees/${employeeId}/documents/upload`, {
+      const doc = await apiFetch<any>(`/api/v1/employees/${realEmpId}/documents/upload`, {
         method: 'POST',
         body: formData,
       });
       if (doc?.id) {
-        await apiFetch(`/api/v1/employees/${employeeId}`, {
+        await apiFetch(`/api/v1/employees/${realEmpId}`, {
           method: 'PATCH',
           body: JSON.stringify({
-            profile_photo_url: `/api/v1/employees/${employeeId}/documents/${doc.id}/download`,
+            profile_photo_url: `/api/v1/employees/${realEmpId}/documents/${doc.id}/download`,
           }),
         });
         reloadAll();
@@ -503,7 +506,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
     setActionError('');
     try {
       const blob = await apiFetchBlob(
-        `/api/v1/employees/${employeeId}/documents/${docId}/download`
+        `/api/v1/employees/${realEmpId}/documents/${docId}/download`
       );
       downloadBlob(blob, titleStr || 'document');
     } catch (err: any) {
@@ -518,7 +521,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
     setActionError('');
     try {
       const blob = await apiFetchBlob(
-        `/api/v1/employees/${employeeId}/documents/${docId}/download`
+        `/api/v1/employees/${realEmpId}/documents/${docId}/download`
       );
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank', 'noopener,noreferrer');
@@ -538,7 +541,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
       reloadAll();
     } catch {
       try {
-        await apiFetch(`/api/v1/employees/${employeeId}/documents/${docId}`, { method: 'DELETE' });
+        await apiFetch(`/api/v1/employees/${realEmpId}/documents/${docId}`, { method: 'DELETE' });
         reloadAll();
       } catch (err: any) {
         setActionError(err?.message || 'Failed to delete document.');
@@ -553,7 +556,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
     setActionError('');
     try {
       const blob = await apiFetchBlob(
-        `/api/v1/employees/${employeeId}/resumes/${resumeId}/download`
+        `/api/v1/employees/${realEmpId}/resumes/${resumeId}/download`
       );
       downloadBlob(blob, titleStr || 'resume');
     } catch (err: any) {
@@ -568,7 +571,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
     setActionError('');
     try {
       const blob = await apiFetchBlob(
-        `/api/v1/employees/${employeeId}/resumes/${resumeId}/download`
+        `/api/v1/employees/${realEmpId}/resumes/${resumeId}/download`
       );
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank', 'noopener,noreferrer');
@@ -635,9 +638,19 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
     return (
       <div className="card border-red-200 p-6 space-y-4">
         <p className="text-red-700 font-semibold">{error || 'Employee record not found.'}</p>
-        <Link href="/workspace/employees" className="btn-secondary">
-          <ArrowLeft size={14} /> View Employee Directory
-        </Link>
+        {onClose ? (
+          <button type="button" onClick={onClose} className="btn-secondary">
+            <ArrowLeft size={14} /> Close Profile
+          </button>
+        ) : auth.user?.is_field_portal_only ? (
+          <Link href="/field-portal" className="btn-secondary">
+            <ArrowLeft size={14} /> Back to Field Operations Portal
+          </Link>
+        ) : (
+          <Link href="/workspace/employees" className="btn-secondary">
+            <ArrowLeft size={14} /> View Employee Directory
+          </Link>
+        )}
       </div>
     );
   }
@@ -697,12 +710,29 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
       {/* Header Bar */}
       <div className="flex flex-wrap justify-between items-start gap-4 border-b pb-5">
         <div>
-          <Link
-            href="/workspace/employees"
-            className="text-xs text-primary flex gap-1 items-center mb-2 hover:underline"
-          >
-            <ArrowLeft size={14} /> Employee Directory
-          </Link>
+          {onClose ? (
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-xs text-primary flex gap-1 items-center mb-2 hover:underline font-semibold"
+            >
+              <ArrowLeft size={14} /> Close Profile
+            </button>
+          ) : auth.user?.is_field_portal_only ? (
+            <Link
+              href="/field-portal"
+              className="text-xs text-primary flex gap-1 items-center mb-2 hover:underline font-semibold"
+            >
+              <ArrowLeft size={14} /> Back to Field Operations Portal
+            </Link>
+          ) : (
+            <Link
+              href="/workspace/employees"
+              className="text-xs text-primary flex gap-1 items-center mb-2 hover:underline"
+            >
+              <ArrowLeft size={14} /> Employee Directory
+            </Link>
+          )}
           <div className="flex items-center gap-3">
             <span className="text-xs font-mono font-bold bg-secondary px-2.5 py-1 rounded text-primary border">
               {employee.employee_number || 'EMP-PROFILE'}
@@ -736,22 +766,27 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
             <Calendar size={14} /> Performance & Calendar
           </button>
 
-          {/* Admin Account Security & Password Reset Modal Opener */}
-          <button className="btn-secondary text-xs" onClick={() => setShowAccountModal(true)}>
-            <Key size={14} /> Account & Security
-          </button>
+          {/* Admin Account Security & Password Reset Modal Opener — HR/Admin only */}
+          {profilePermissions.account && (
+            <button className="btn-secondary text-xs" onClick={() => setShowAccountModal(true)}>
+              <Key size={14} /> Account & Security
+            </button>
+          )}
 
           <button className="btn-secondary text-xs" onClick={() => setEditingEmployee(true)}>
             <Edit size={14} /> Edit Profile
           </button>
 
-          <button
-            disabled={busy}
-            onClick={toggleArchive}
-            className={`btn-secondary text-xs ${employee.is_active ? 'text-rose-700 hover:bg-rose-50' : 'text-emerald-700'}`}
-          >
-            <Archive size={14} /> {employee.is_active ? 'Archive' : 'Restore'}
-          </button>
+          {/* Archive/Restore — HR/Admin only */}
+          {profilePermissions.archive && (
+            <button
+              disabled={busy}
+              onClick={toggleArchive}
+              className={`btn-secondary text-xs ${employee.is_active ? 'text-rose-700 hover:bg-rose-50' : 'text-emerald-700'}`}
+            >
+              <Archive size={14} /> {employee.is_active ? 'Archive' : 'Restore'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -992,7 +1027,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   setActiveSubModal({
                     name: 'Add Emergency Contact',
                     schemaName: 'EmergencyContactCreate',
-                    path: `/api/v1/employees/${employeeId}/emergency-contacts`,
+                    path: `/api/v1/employees/${realEmpId}/emergency-contacts`,
                   })
                 }
               >
@@ -1097,7 +1132,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   setActiveSubModal({
                     name: 'Add Family Member',
                     schemaName: 'EmployeeFamilyCreate',
-                    path: `/api/v1/employees/${employeeId}/family`,
+                    path: `/api/v1/employees/${realEmpId}/family`,
                   })
                 }
               >
@@ -1146,7 +1181,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   setActiveSubModal({
                     name: 'New Project Assignment',
                     schemaName: 'EmployeeAssignmentCreate',
-                    path: `/api/v1/employees/${employeeId}/assignments`,
+                    path: `/api/v1/employees/${realEmpId}/assignments`,
                   })
                 }
               >
@@ -1170,7 +1205,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                         className="cursor-pointer hover:text-primary transition-colors flex items-center gap-1.5"
                         onClick={() => setViewingAssignment(item)}
                       >
-                        {item.assignment_number || 'Assignment'}
+                        {item.project_name || item.assignment_number || 'Project Assignment'}
                       </span>
                       <div className="flex items-center gap-2">
                         <span className="text-primary font-semibold">{display(item.status)}</span>
@@ -1189,7 +1224,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                               setActiveSubModal({
                                 name: 'Update Project Assignment',
                                 schemaName: 'EmployeeAssignmentUpdate',
-                                path: `/api/v1/employees/${employeeId}/assignments/${item.id}`,
+                                path: `/api/v1/employees/${realEmpId}/assignments/${item.id}`,
                                 initial: item,
                               })
                             }
@@ -1202,7 +1237,11 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                     <p className="text-muted-foreground text-[11px]">
                       Role: {display(item.role_on_project || 'Member')} · Start:{' '}
                       {display(item.start_date)}
+                      {item.end_date ? ` · End: ${display(item.end_date)}` : ' · Ongoing'}
                     </p>
+                    {item.assignment_number && (
+                      <p className="text-muted-foreground text-[10px] font-mono">{item.assignment_number}</p>
+                    )}
                   </div>
                 ))
               )}
@@ -1487,7 +1526,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   setActiveSubModal({
                     name: 'Add Emergency Contact',
                     schemaName: 'EmergencyContactCreate',
-                    path: `/api/v1/employees/${employeeId}/emergency-contacts`,
+                    path: `/api/v1/employees/${realEmpId}/emergency-contacts`,
                   })
                 }
               >
@@ -1547,7 +1586,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   setActiveSubModal({
                     name: 'Add Family Member',
                     schemaName: 'EmployeeFamilyCreate',
-                    path: `/api/v1/employees/${employeeId}/family`,
+                    path: `/api/v1/employees/${realEmpId}/family`,
                   })
                 }
               >
@@ -1612,7 +1651,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   setActiveSubModal({
                     name: 'Upload Resume',
                     schemaName: 'EmployeeResumeCreate',
-                    path: `/api/v1/employees/${employeeId}/resumes/upload`,
+                    path: `/api/v1/employees/${realEmpId}/resumes/upload`,
                   })
                 }
               >
@@ -1686,7 +1725,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   setActiveSubModal({
                     name: 'Upload Document',
                     schemaName: 'EmployeeDocumentCreate',
-                    path: `/api/v1/employees/${employeeId}/documents/upload`,
+                    path: `/api/v1/employees/${realEmpId}/documents/upload`,
                   })
                 }
               >
@@ -1866,7 +1905,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   setActiveSubModal({
                     name: 'Add Qualification',
                     schemaName: 'QualificationCreate',
-                    path: `/api/v1/employees/${employeeId}/qualifications`,
+                    path: `/api/v1/employees/${realEmpId}/qualifications`,
                   })
                 }
               >
@@ -1916,7 +1955,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   setActiveSubModal({
                     name: 'Add Skill',
                     schemaName: 'EmployeeSkillCreate',
-                    path: `/api/v1/employees/${employeeId}/skills`,
+                    path: `/api/v1/employees/${realEmpId}/skills`,
                   })
                 }
               >
@@ -1967,7 +2006,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   setActiveSubModal({
                     name: 'Add License',
                     schemaName: 'LicenseCreate',
-                    path: `/api/v1/employees/${employeeId}/licenses`,
+                    path: `/api/v1/employees/${realEmpId}/licenses`,
                   })
                 }
               >
@@ -2017,7 +2056,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   setActiveSubModal({
                     name: 'Add Training',
                     schemaName: 'TrainingCreate',
-                    path: `/api/v1/employees/${employeeId}/training`,
+                    path: `/api/v1/employees/${realEmpId}/training`,
                   })
                 }
               >
@@ -2072,7 +2111,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   setActiveSubModal({
                     name: 'New Project Assignment',
                     schemaName: 'EmployeeAssignmentCreate',
-                    path: `/api/v1/employees/${employeeId}/assignments`,
+                    path: `/api/v1/employees/${realEmpId}/assignments`,
                   })
                 }
               >
@@ -2105,8 +2144,11 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                             className="hover:text-primary transition-colors text-left font-semibold"
                             onClick={() => setViewingAssignment(item)}
                           >
-                            {item.assignment_number || '—'}
+                            {item.project_name || item.assignment_number || '—'}
                           </button>
+                          {item.project_name && item.assignment_number && (
+                            <p className="text-[10px] text-muted-foreground font-mono font-normal">{item.assignment_number}</p>
+                          )}
                         </td>
                         <td className="p-2.5">{display(item.role_on_project || 'Member')}</td>
                         <td className="p-2.5">{display(item.start_date)}</td>
@@ -2127,7 +2169,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                                 setActiveSubModal({
                                   name: 'Update Project Assignment',
                                   schemaName: 'EmployeeAssignmentUpdate',
-                                  path: `/api/v1/employees/${employeeId}/assignments/${item.id}`,
+                                  path: `/api/v1/employees/${realEmpId}/assignments/${item.id}`,
                                   initial: item,
                                 })
                               }
@@ -2159,7 +2201,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                 setActiveSubModal({
                   name: 'Add Authorization',
                   schemaName: 'AssetAuthorizationCreate',
-                  path: `/api/v1/employees/${employeeId}/asset-authorizations`,
+                  path: `/api/v1/employees/${realEmpId}/asset-authorizations`,
                 })
               }
             >
@@ -2233,7 +2275,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                                 setActiveSubModal({
                                   name: 'Edit Authorization',
                                   schemaName: 'AssetAuthorizationUpdate',
-                                  path: `/api/v1/employees/${employeeId}/asset-authorizations/${item.id}`,
+                                  path: `/api/v1/employees/${realEmpId}/asset-authorizations/${item.id}`,
                                   method: 'PATCH',
                                   initial: item,
                                 })
@@ -2328,7 +2370,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                               setBusy(true);
                               try {
                                 await apiFetch(
-                                  `/api/v1/employees/${employeeId}/time-logs/${item.id}`,
+                                  `/api/v1/employees/${realEmpId}/time-logs/${item.id}`,
                                   { method: 'DELETE' }
                                 );
                               } catch {
@@ -2419,7 +2461,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                               setBusy(true);
                               try {
                                 await apiFetch(
-                                  `/api/v1/employees/${employeeId}/leave-requests/${item.id}`,
+                                  `/api/v1/employees/${realEmpId}/leave-requests/${item.id}`,
                                   { method: 'DELETE' }
                                 );
                               } catch {
@@ -3088,7 +3130,7 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
       )}
 
       {/* CUSTOM MODAL: Admin Account Security & Password Reset */}
-      {showAccountModal && (
+      {showAccountModal && profilePermissions.account && (
         <Modal
           name={`Account Security & Password Reset — ${fullName}`}
           onClose={() => {
@@ -3100,12 +3142,12 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
             {/* Inline Alert Component Banner */}
             {securityAlert && (
               <div
-                className={`p-3 rounded-lg border text-xs flex items-center justify-between gap-2 transition-all ${
+                className={`p-3.5 rounded-xl border text-xs font-semibold flex items-center justify-between gap-2 shadow-sm transition-all ${
                   securityAlert.type === 'success'
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
                     : securityAlert.type === 'warning'
-                    ? 'bg-amber-50 border-amber-200 text-amber-800'
-                    : 'bg-rose-50 border-rose-200 text-rose-800'
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400'
+                    : 'bg-destructive/10 border-destructive/30 text-destructive dark:bg-rose-950/40 dark:border-rose-800/40 dark:text-rose-400'
                 }`}
               >
                 <div className="flex items-center gap-2">
@@ -3211,17 +3253,23 @@ export default function EmployeeDetailView({ employeeId }: { employeeId: string 
                   setBusy(true);
                   setSecurityAlert(null);
                   try {
-                    await apiFetch(`/api/v1/hr/password-reset`, {
-                      method: 'POST',
-                      body: JSON.stringify({ email: targetEmail }),
-                    });
+                    if (employee.id) {
+                      await apiFetch(`/api/v1/hr/employees/${employee.id}/account/reset`, {
+                        method: 'POST',
+                      });
+                    } else {
+                      await apiFetch(`/api/v1/hr/password-reset-request`, {
+                        method: 'POST',
+                        body: JSON.stringify({ email: targetEmail }),
+                      });
+                    }
                     const successMsg = `Password reset email sent to ${targetEmail}.`;
                     toast.success(successMsg);
                     setSecurityAlert({ type: 'success', message: successMsg });
                   } catch (err: any) {
-                    const noticeMsg = err?.message || `Password reset email sent to ${targetEmail}.`;
-                    toast.info(noticeMsg);
-                    setSecurityAlert({ type: 'success', message: noticeMsg });
+                    const noticeMsg = err?.message || `Failed to send password reset email to ${targetEmail}.`;
+                    toast.error(noticeMsg);
+                    setSecurityAlert({ type: 'error', message: noticeMsg });
                   } finally {
                     setBusy(false);
                   }

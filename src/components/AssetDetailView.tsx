@@ -1,4 +1,5 @@
 'use client';
+import WorkCompletionDetails from './WorkCompletionDetails';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -1757,6 +1758,7 @@ const assetEditOp = {
                 </div>
               )}
 
+              <WorkCompletionDetails work={{ ...selected, asset_id: asset.id }} />
               {(selected.completion_notes || selected.notes) && (
                 <div className="bg-blue-50/60 border border-blue-200 p-3.5 rounded-lg text-xs space-y-1">
                   <span className="text-blue-900 font-bold text-[11px] block uppercase tracking-wider">

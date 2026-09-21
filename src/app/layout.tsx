@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { AuthProvider } from '@/components/AuthProvider';
 import '../styles/tailwind.css';
 import '../styles/integration.css';
-import { Toaster } from 'sonner';
+import AppToaster from '@/components/AppToaster';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -33,16 +33,7 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <AuthProvider>
         {children}
-        <Toaster
-          position="bottom-right"
-          toastOptions={{
-            style: {
-              fontFamily: 'var(--font-dm-sans)',
-              fontSize: '13px',
-              fontWeight: '500',
-            },
-          }}
-        />
+        <AppToaster />
 
         </AuthProvider>
 

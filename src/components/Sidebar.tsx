@@ -3,7 +3,25 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, FileText, FolderKanban, Users, Truck, Package, ChevronDown, PanelLeftClose, PanelLeftOpen, LogOut, User, Bell, ShieldCheck, Building2, Flame, DollarSign, ShoppingBag } from 'lucide-react';
+import {
+  LayoutDashboard,
+  FileText,
+  FolderKanban,
+  Users,
+  Truck,
+  Package,
+  ChevronDown,
+  PanelLeftClose,
+  PanelLeftOpen,
+  LogOut,
+  User,
+  Bell,
+  ShieldCheck,
+  Building2,
+  Flame,
+  DollarSign,
+  ShoppingBag,
+} from 'lucide-react';
 import AppLogo from './ui/AppLogo';
 import { useAuth, canAccessAdministration } from './AuthProvider';
 import { operation } from './ResourceWorkspace';
@@ -17,6 +35,7 @@ interface SidebarGroup {
 }
 
 const groups: SidebarGroup[] = [
+  
   {
     name: 'Dashboard',
     icon: Building2,
@@ -26,20 +45,16 @@ const groups: SidebarGroup[] = [
       {
         title: 'Operations Oversight',
         links: [
-          ['Operations and Revenue', '/control-tower-overview'],
+          ['Operations and Revenue', 'operations-and-revenue'],
+          ['Cost Subledger', 'commercial/cost-entries'],
+          ['Revenue Subledger', 'commercial/revenue-entries'],
         ],
       },
       {
-        title: 'Commercial & Costing',
+        title: 'Commercial',
         links: [
-          ['Commercial Overview', '/commercial-overview'],
-          ['Commercial Contracts', 'commercial/contracts'],
-        ],
-      },
-      {
-        title: 'Commercial Tenders',
-        links: [
-          ['Tender Pipeline', '/tenders-overview'],
+          ['Contracts', 'commercial/contracts'],
+          ['Commercial Tenders', '/tenders-overview'],
         ],
       },
     ],
@@ -81,17 +96,14 @@ const groups: SidebarGroup[] = [
           ['Employees', 'employees'],
           ['Availability', 'employees/available'],
           ['Rotations', 'rotations/current'],
-          ['Upcoming rotations', 'rotations/upcoming'],          
+          // ['Upcoming rotations', 'rotations/upcoming'],
           ['Salaries & Compensation', 'hr/salaries'],
           ['Leave management', 'leave-management'],
         ],
       },
       {
         title: 'Field Leadership & Performance',
-        links: [
-          ['Field Leadership Scorecards', '/field-leadership-overview'],
-          ['Supervisor Scorecards Data', 'control-tower/scorecards'],
-        ],
+        links: [['Field Leadership Scorecards', '/field-leadership-overview']],
       },
       {
         title: 'Compliance & Structure',
@@ -225,10 +237,15 @@ export default function Sidebar({
       .filter(
         (g) =>
           path === g.href ||
-          (g.name === 'Dashboard' && (path === '/' || path === '/control-tower-overview' || path === '/commercial-overview' || path === '/tenders-overview')) ||
-          (g.name === 'Projects' && (path === '/project-command-center' || path === '/drilling-overview')) ||
-          (g.name === 'Workforce' && (path === '/field-leadership-overview' || path === '/workforce-overview')) ||
-          g.sections.some((s) => s.links.some(([, r]) => path === (r.startsWith('/') ? r : '/workspace/' + r)))
+          (g.name === 'Dashboard' &&
+            (path === '/' || path === '/control-tower-overview' || path === '/tenders-overview')) ||
+          (g.name === 'Projects' &&
+            (path === '/project-command-center' || path === '/drilling-overview')) ||
+          (g.name === 'Workforce' &&
+            (path === '/field-leadership-overview' || path === '/workforce-overview')) ||
+          g.sections.some((s) =>
+            s.links.some(([, r]) => path === (r.startsWith('/') ? r : '/workspace/' + r))
+          )
       )
       .map((g) => g.name)
   );
@@ -236,13 +253,17 @@ export default function Sidebar({
   const name = [auth.user?.first_name, auth.user?.last_name].filter(Boolean).join(' ');
 
   const active = (href: string) =>
-    path === href || (href === '/' && path === '/control-tower-overview') || (href === '/projects-overview' && path === '/project-command-center')
-      ? 'bg-secondary text-primary font-semibold' :'text-muted-foreground hover:bg-muted hover:text-foreground';
+    path === href ||
+    (href === '/' && path === '/control-tower-overview') ||
+    (href === '/projects-overview' && path === '/project-command-center')
+      ? 'bg-secondary text-primary font-semibold'
+      : 'text-muted-foreground hover:bg-muted hover:text-foreground';
 
   return (
     <aside
       className={
-        'border-r bg-card flex flex-col flex-shrink-0 sidebar-transition no-print ' + (collapsed ?'w-16' : 'w-60')
+        'border-r bg-card flex flex-col flex-shrink-0 sidebar-transition no-print ' +
+        (collapsed ? 'w-16' : 'w-60')
       }
     >
       {/* Logo */}
@@ -301,11 +322,21 @@ export default function Sidebar({
                   <div className="ml-4 pl-3 border-l my-1 space-y-2">
                     {g.sections.map((sec, sIdx) => {
                       const visibleLinks = sec.links.filter(([, r]) => {
+                        if (r === 'operations-and-revenue')
+                          return auth.can('operations.insights.read');
+                        if (
+                          r === 'commercial/cost-entries' ||
+                          r === 'commercial/revenue-entries' ||
+                          r === 'commercial/contracts' ||
+                          r === '/tenders-overview'
+                        )
+                          return auth.can('commercial.read');
                         if (r.startsWith('/')) return true;
                         const op = operation('/api/v1/' + r, 'GET');
                         if (!op) return true;
                         return (op.permissions || []).every((p: string) => auth.can(p));
                       });
+
                       if (!visibleLinks.length) return null;
                       return (
                         <div key={sec.title || sIdx} className="space-y-0.5">
@@ -315,11 +346,14 @@ export default function Sidebar({
                             </p>
                           )}
                           {visibleLinks.map(([label, resource]) => {
-                            const targetHref = resource.startsWith('/') ? resource : '/workspace/' + resource;
+                            const targetHref = resource.startsWith('/')
+                              ? resource
+                              : '/workspace/' + resource;
                             return (
                               <Link
                                 className={
-                                  'block px-2 py-1.5 rounded text-xs transition-colors ' + active(targetHref)
+                                  'block px-2 py-1.5 rounded text-xs transition-colors ' +
+                                  active(targetHref)
                                 }
                                 href={targetHref}
                                 key={resource}
@@ -345,23 +379,27 @@ export default function Sidebar({
           ['My leave', 'hr/me/leave-requests'],
           ['Notifications', 'hr/notifications'],
           ['Administration', 'admin'],
-        ].filter(([, r]) => r !== 'admin' || canAccessAdministration(auth)).map(([label, r]) => (
-          <Link
-            key={r}
-            title={label}
-            className={'flex gap-3 items-center p-2.5 rounded text-sm ' + active('/workspace/' + r)}
-            href={'/workspace/' + r}
-          >
-            {r === 'hr/notifications' ? (
-              <Bell size={18} />
-            ) : r === 'admin' ? (
-              <ShieldCheck size={18} />
-            ) : (
-              <User size={18} />
-            )}
-            {!collapsed && label}
-          </Link>
-        ))}
+        ]
+          .filter(([, r]) => r !== 'admin' || canAccessAdministration(auth))
+          .map(([label, r]) => (
+            <Link
+              key={r}
+              title={label}
+              className={
+                'flex gap-3 items-center p-2.5 rounded text-sm ' + active('/workspace/' + r)
+              }
+              href={'/workspace/' + r}
+            >
+              {r === 'hr/notifications' ? (
+                <Bell size={18} />
+              ) : r === 'admin' ? (
+                <ShieldCheck size={18} />
+              ) : (
+                <User size={18} />
+              )}
+              {!collapsed && label}
+            </Link>
+          ))}
       </nav>
 
       {/* Footer */}

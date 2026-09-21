@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, ChangeEvent, FormEvent, useRef } from 'react';
 import { ArrowLeft, ArrowRight, Check, Upload, Plus, Trash2, User, Briefcase, FileText, Phone, ShieldCheck } from 'lucide-react';
+import { useAuth } from './AuthProvider';
+import { employeePermissions } from '@/lib/employeePermissions';
 import { apiFetch } from '@/lib/api';
 import { Modal, Row } from './DataUI';
 
@@ -30,6 +32,8 @@ interface EmployeeWizardFormProps {
 }
 
 export default function EmployeeWizardForm({ initial, onClose, onSaved }: EmployeeWizardFormProps) {
+  const auth = useAuth();
+  const canAttachContract = employeePermissions(auth.access).contracts;
   const [step, setStep] = useState(1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -304,7 +308,7 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
         }
 
         // Upload contract document if selected
-        if (contractFile) {
+        if (canAttachContract && contractFile) {
           try {
             const formData = new FormData();
             formData.append('file', contractFile);
@@ -740,7 +744,7 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                     onChange={e => setEmployment({ ...employment, contract_end_date: e.target.value })}
                   />
                 </div>
-                <div className="md:col-span-2 border rounded p-4 space-y-3 bg-muted/20">
+                {canAttachContract && <div className="md:col-span-2 border rounded p-4 space-y-3 bg-muted/20">
                   <span className="text-xs font-bold uppercase text-primary tracking-wider block">
                     Employment Contract Attachment (Optional)
                   </span>
@@ -774,7 +778,7 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                       </label>
                     </div>
                   )}
-                </div>
+                </div>}
                 <div className="md:col-span-2">
                   <label className="block text-xs font-semibold mb-1">Employment Notes</label>
                   <textarea
@@ -1047,7 +1051,7 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                 {/* Attachments Review */}
                 <div className="border rounded p-4 bg-muted/20 space-y-2">
                   <h4 className="text-xs font-bold uppercase text-primary tracking-wider">Attachments</h4>
-                  <p className="text-xs">Contract: {contractFile ? contractFile.name : 'No contract attached'}</p>
+                  {canAttachContract && <p className="text-xs">Contract: {contractFile ? contractFile.name : 'No contract attached'}</p>}
                   <p className="text-xs">Photo: {photoFile ? photoFile.name : 'No photo uploaded'}</p>
                   <p className="text-xs">Resume: {resumeFile ? resumeFile.name : 'No resume uploaded'}</p>
                 </div>

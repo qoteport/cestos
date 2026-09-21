@@ -8,14 +8,30 @@ import {
   Eye, Pencil, Paperclip, Download, Calendar, Layers, CheckCircle2, AlertTriangle, Clock 
 } from 'lucide-react';
 import { apiFetch, CommercialOpportunityRead, updateCommercialOpportunity } from '@/lib/api';
-import { Modal, rows } from '@/components/DataUI';
+import { Modal, ErrorModal, rows } from '@/components/DataUI';
+import { useAuth } from '@/components/AuthProvider';
 
 export default function TendersOverviewPage() {
+  const auth = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [opportunities, setOpportunities] = useState<CommercialOpportunityRead[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [version, setVersion] = useState(0);
+
+  if (!auth.loading && !auth.can('commercial.read')) {
+    return (
+      <AppLayout>
+        <div className="card p-8 text-center space-y-3 border border-border">
+          <h2 className="text-xl font-bold text-foreground">Access Restricted</h2>
+          <p className="text-sm text-muted-foreground">
+            You do not have permission to view Commercial Tenders & Opportunities. Contact your system administrator or CEO.
+          </p>
+        </div>
+      </AppLayout>
+    );
+  }
+
 
   // Filters
   const [search, setSearch] = useState('');
@@ -98,6 +114,8 @@ export default function TendersOverviewPage() {
     }
   };
 
+  const [errorMessage, setErrorMessage] = useState('');
+
   const handleCreateOpp = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -108,7 +126,7 @@ export default function TendersOverviewPage() {
       setShowAddOpp(false);
       reload();
     } catch (err: any) {
-      alert(err.message || 'Failed to create tender opportunity');
+      setErrorMessage(err.message || 'Failed to create tender opportunity');
     }
   };
 
@@ -139,7 +157,7 @@ export default function TendersOverviewPage() {
       }
       reload();
     } catch (err: any) {
-      alert(err.message || 'Failed to update tender opportunity');
+      setErrorMessage(err.message || 'Failed to update tender opportunity');
     }
   };
 
@@ -183,7 +201,7 @@ export default function TendersOverviewPage() {
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <FileSpreadsheet className="h-6 w-6 text-amber-500" />
-              Tender Pipeline & Commercial Opportunities
+              Commercial Tenders & Opportunities
             </h1>
             <p className="text-sm text-muted-foreground">
               Commercial tender tracking, win probability analysis, estimated contract values, and bid documentation
@@ -654,6 +672,8 @@ export default function TendersOverviewPage() {
           </form>
         </Modal>
       )}
+
+      <ErrorModal error={errorMessage} onClose={() => setErrorMessage('')} />
     </AppLayout>
   );
 }

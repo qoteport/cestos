@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, CostSubledgerRead, RevenueSubledgerRead } from '@/lib/api';
 
 interface PerformancePoint {
   month: string;
@@ -52,37 +52,123 @@ const DEFAULT_TREND_DATA: PerformancePoint[] = [
 export default function OperationsPerformanceCombinedChart({
   dateFrom,
   dateTo,
+  projectId,
+  showRevenue = true,
 }: {
   dateFrom?: string;
   dateTo?: string;
+  projectId?: string;
+  showRevenue?: boolean;
 }) {
   const [chartData, setChartData] = useState<PerformancePoint[]>(DEFAULT_TREND_DATA);
 
   useEffect(() => {
-    // Attempt to fetch live telemetry trend if available
-    apiFetch<any>('/api/v1/projects/dashboard-summary')
-      .then((res) => {
-        if (res && Array.isArray(res.by_month) && res.by_month.length > 0) {
-          const liveData = res.by_month.map((m: any) => ({
-            month: m.month || 'N/A',
-            metres_drilled: Number(m.metres || m.metres_drilled || 0),
-            revenue: Number(m.revenue || Math.round((m.metres || 100) * 85)),
-            cost: Number(m.cost || Math.round((m.metres || 100) * 45)),
-          }));
-          setChartData(liveData);
-        }
-      })
-      .catch(() => {
-        // Fallback to trend baseline
-      });
-  }, []);
+    let active = true;
 
-  // Filter trend points if dateFrom / dateTo are specified
-  const filteredData = chartData.filter((point) => {
-    if (!dateFrom && !dateTo) return true;
-    // Basic date window matching if month strings match format
-    return true;
-  });
+    Promise.all([
+      apiFetch<RevenueSubledgerRead[]>('/api/v1/commercial/revenue-entries').catch(() => []),
+      apiFetch<CostSubledgerRead[]>('/api/v1/commercial/cost-entries').catch(() => []),
+      apiFetch<any>('/api/v1/drilling/shifts').catch(() => []),
+    ]).then(([revEntries, costEntries, shifts]) => {
+      if (!active) return;
+
+      const monthMap: Record<string, { label: string; metres_drilled: number; revenue: number; cost: number; sortKey: string }> = {};
+
+      const parseMonth = (dateStr?: any) => {
+        if (!dateStr || typeof dateStr !== 'string') return null;
+        try {
+          const d = new Date(dateStr);
+          if (isNaN(d.getTime())) return null;
+          const label = d.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+          const sortKey = d.toISOString().slice(0, 7);
+          return { label, sortKey, fullDate: d.toISOString().slice(0, 10) };
+        } catch {
+          return null;
+        }
+      };
+
+      const isWithinDate = (dStr?: string) => {
+        if (!dStr) return true;
+        if (dateFrom && dStr < dateFrom) return false;
+        if (dateTo && dStr > dateTo) return false;
+        return true;
+      };
+
+      const matchesProject = (pId?: string) => {
+        if (!projectId) return true;
+        return pId === projectId;
+      };
+
+      // Aggregate Revenue Entries
+      (Array.isArray(revEntries) ? revEntries : []).forEach((r) => {
+        const dateVal = r.posted_at || r.created_at || (r as any).entry_date;
+        const info = parseMonth(dateVal);
+        if (!info) return;
+        if (!isWithinDate(info.fullDate)) return;
+        if (!matchesProject((r as any).project_id)) return;
+
+        if (!monthMap[info.label]) {
+          monthMap[info.label] = { label: info.label, metres_drilled: 0, revenue: 0, cost: 0, sortKey: info.sortKey };
+        }
+        const val = Number(r.total_revenue_base || r.amount || r.total_revenue || 0);
+        monthMap[info.label].revenue += val;
+        if (r.revenue_category === 'DRILLING_METERAGE' || r.category === 'DRILLING_METERAGE') {
+          monthMap[info.label].metres_drilled += Number(r.quantity || 0);
+        }
+      });
+
+      // Aggregate Cost Entries
+      (Array.isArray(costEntries) ? costEntries : []).forEach((c) => {
+        const dateVal = c.posted_at || c.created_at;
+        const info = parseMonth(dateVal);
+        if (!info) return;
+        if (!isWithinDate(info.fullDate)) return;
+        if (!matchesProject((c as any).project_id)) return;
+
+        if (!monthMap[info.label]) {
+          monthMap[info.label] = { label: info.label, metres_drilled: 0, revenue: 0, cost: 0, sortKey: info.sortKey };
+        }
+        const val = Number(c.total_cost_base || c.amount || c.total_cost || 0);
+        monthMap[info.label].cost += val;
+      });
+
+      // Aggregate Shift Reports (metres)
+      const shiftList = Array.isArray(shifts) ? shifts : (shifts as any)?.items || [];
+      shiftList.forEach((s: any) => {
+        const dateVal = s.report_date || s.created_at;
+        const info = parseMonth(dateVal);
+        if (!info) return;
+        if (!isWithinDate(info.fullDate)) return;
+        if (!matchesProject(s.project_id)) return;
+
+        if (!monthMap[info.label]) {
+          monthMap[info.label] = { label: info.label, metres_drilled: 0, revenue: 0, cost: 0, sortKey: info.sortKey };
+        }
+        if (s.total_metres) {
+          monthMap[info.label].metres_drilled += Number(s.total_metres || 0);
+        }
+      });
+
+      const sortedMonths = Object.values(monthMap)
+        .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
+        .map(({ label, metres_drilled, revenue, cost }) => ({
+          month: label,
+          metres_drilled: Math.round(metres_drilled),
+          revenue: Math.round(revenue),
+          cost: Math.round(cost),
+        }));
+
+      if (sortedMonths.length > 0) {
+        setChartData(sortedMonths);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [dateFrom, dateTo, projectId]);
+
+  const filteredData = chartData;
 
   return (
     <div className="w-full h-80 pt-2">
@@ -124,17 +210,18 @@ export default function OperationsPerformanceCombinedChart({
             activeDot={{ r: 6 }}
           />
 
-          {/* Line 2: Revenue ($) (Blue) */}
-          <Line
-            yAxisId="right"
-            type="monotone"
-            dataKey="revenue"
-            name="Revenue ($)"
-            stroke="#3b82f6"
-            strokeWidth={3}
-            dot={{ r: 4, fill: '#3b82f6' }}
-            activeDot={{ r: 6 }}
-          />
+          {showRevenue && (
+            <Line
+              yAxisId="right"
+              type="monotone"
+              dataKey="revenue"
+              name="Revenue ($)"
+              stroke="#3b82f6"
+              strokeWidth={3}
+              dot={{ r: 4, fill: '#3b82f6' }}
+              activeDot={{ r: 6 }}
+            />
+          )}
 
           {/* Line 3: Direct Cost ($) (Rose) */}
           <Line

@@ -16,6 +16,7 @@ export default function RegisterUserModal({ onClose, onSaved }: RegisterUserModa
   const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
   const [isSuperuser, setIsSuperuser] = useState(false);
+  const [isFieldPortalOnly, setIsFieldPortalOnly] = useState(false);
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
 
@@ -95,12 +96,13 @@ export default function RegisterUserModal({ onClose, onSaved }: RegisterUserModa
       });
 
       // 2. Attach security roles & superuser status if selected
-      if (createdUser?.id && (selectedRoleIds.length > 0 || isSuperuser)) {
+      if (createdUser?.id && (selectedRoleIds.length > 0 || isSuperuser || isFieldPortalOnly)) {
         await apiFetch(`/api/v1/users/${createdUser.id}`, {
           method: 'PATCH',
           body: JSON.stringify({
             is_active: true,
             is_superuser: isSuperuser,
+            is_field_portal_only: isFieldPortalOnly,
             role_ids: selectedRoleIds,
           }),
         });
@@ -307,6 +309,27 @@ export default function RegisterUserModal({ onClose, onSaved }: RegisterUserModa
               checked={isSuperuser}
               onChange={(e) => setIsSuperuser(e.target.checked)}
               className="w-4 h-4 rounded border-amber-400 text-primary focus:ring-primary/20 cursor-pointer"
+            />
+          </div>
+
+          {/* Field Portal Toggle */}
+          <div className="p-3.5 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <ShieldCheck className="text-blue-600 dark:text-blue-400 shrink-0" size={20} />
+              <div>
+                <h5 className="font-semibold text-sm text-blue-900 dark:text-blue-200">
+                  Restrict to Field Portal Only
+                </h5>
+                <p className="text-xs text-blue-700 dark:text-blue-400">
+                  Directs user account strictly to the Field Portal upon login (field staff & supervisors).
+                </p>
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={isFieldPortalOnly}
+              onChange={(e) => setIsFieldPortalOnly(e.target.checked)}
+              className="w-4 h-4 rounded border-blue-400 text-primary focus:ring-primary/20 cursor-pointer"
             />
           </div>
         </div>

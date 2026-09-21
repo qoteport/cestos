@@ -38,6 +38,7 @@ function AdminWorkspaceContent({
   const [editRoleIds, setEditRoleIds] = useState<string[]>([]);
   const [editIsActive, setEditIsActive] = useState<boolean>(true);
   const [editIsSuperuser, setEditIsSuperuser] = useState<boolean>(false);
+  const [editIsFieldPortalOnly, setEditIsFieldPortalOnly] = useState<boolean>(false);
   const [updateUserBusy, setUpdateUserBusy] = useState<boolean>(false);
 
   useEffect(() => {
@@ -45,6 +46,7 @@ function AdminWorkspaceContent({
       setEditRoleIds(Array.isArray(editUser.roles) ? editUser.roles.map((r: any) => String(r.id)) : []);
       setEditIsActive(!!editUser.is_active);
       setEditIsSuperuser(!!editUser.is_superuser);
+      setEditIsFieldPortalOnly(!!editUser.is_field_portal_only);
     }
   }, [editUser]);
 
@@ -170,6 +172,7 @@ function AdminWorkspaceContent({
         body: JSON.stringify({
           is_active: editIsActive,
           is_superuser: editIsSuperuser,
+          is_field_portal_only: editIsFieldPortalOnly,
           role_ids: editRoleIds,
         }),
       });
@@ -273,7 +276,7 @@ function AdminWorkspaceContent({
 
         <button
           onClick={() => setTab('leave')}
-          className={`px-4 py-2.5 font-medium text-sm border-b-2 transition flex items-center gap-2 ${
+          className={`hidden px-4 py-2.5 font-medium text-sm border-b-2 transition flex items-center gap-2 ${
             tab === 'leave' ?'border-primary text-primary font-semibold' :'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
@@ -615,6 +618,7 @@ function AdminWorkspaceContent({
                       perms: [
                         { code: 'assets.read', name: 'Read Equipment Register', desc: 'View fleet assets & availability' },
                         { code: 'assets.read_assigned', name: 'Read Assigned Equipment Only', desc: 'Restrict equipment reads to assigned assets' },
+                        { code: 'assets.read_write', name: 'Read & Update Equipment', desc: 'Full access to view and update fleet equipment details & status' },
                         { code: 'assets.create', name: 'Add Equipment', desc: 'Register new machinery or vehicles' },
                         { code: 'assets.update', name: 'Update Equipment', desc: 'Edit specifications & status' },
                         { code: 'assets.assignments.manage', name: 'Manage Asset Assignments', desc: 'Assign equipment to sites/operators' },
@@ -846,6 +850,23 @@ function AdminWorkspaceContent({
                   </span>
                   <span className="text-[11px] text-muted-foreground">
                     Bypass granular permission checks across all modules.
+                  </span>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-3 p-3 border rounded-lg hover:bg-blue-500/10 cursor-pointer transition border-blue-500/20 bg-blue-500/5 col-span-2">
+                <input
+                  type="checkbox"
+                  checked={editIsFieldPortalOnly}
+                  onChange={(e) => setEditIsFieldPortalOnly(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-input text-blue-600 focus:ring-blue-500/20"
+                />
+                <div>
+                  <span className="text-xs font-semibold text-foreground block flex items-center gap-1">
+                    Field Portal Only Mode
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    Restrict user account to the Field Portal upon login (designed for field staff & supervisors).
                   </span>
                 </div>
               </label>

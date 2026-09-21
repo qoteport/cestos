@@ -1,9 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Bell, CheckCircle2, Share2, Plus, RefreshCw, Search, Filter, Wrench, Package, Users, FolderKanban, Clock, Mail, ShieldAlert, Play, Trash2,  } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Bell, CheckCircle2, Share2, Plus, RefreshCw, Search, Filter, Wrench, Package, Users, FolderKanban, Clock, Mail, ShieldAlert, Play, Trash2, Pencil } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from './AuthProvider';
+import useNotificationCount from './useNotificationCount';
+import useNotificationData from './useNotificationData';
+import useAppFeedback from './useAppFeedback';
 import { useData, State, Row, rows, Modal, title } from './DataUI';
 
 const DOMAIN_RULES: Record<string, { value: string; label: string }[]> = {
@@ -13,20 +16,21 @@ const DOMAIN_RULES: Record<string, { value: string; label: string }[]> = {
   ],
   EQUIPMENT: [
     { value: 'EQUIPMENT_MAINTENANCE_DUE', label: 'Equipment Maintenance Due / Overdue' },
-    { value: 'EQUIPMENT_STATUS_CHANGE', label: 'Equipment Breakdown / Quarantine Alert' },
+    { value: 'EQUIPMENT_STATUS_CHANGE', label: 'Equipment Breakdown / Maintenance / Quarantine Alert' },
   ],
   WORKFORCE: [
     { value: 'WORKFORCE_DOCUMENT_EXPIRY', label: 'Workforce Document / Licence Expiry' },
-    { value: 'WORKFORCE_ROTATION_DUE', label: 'Upcoming Rotation Due Alert' },
+    { value: 'WORKFORCE_ROTATION_DUE', label: 'Upcoming Rotation End Date Alert' },
   ],
   PROJECTS: [
-    { value: 'PROJECT_MILESTONE_DUE', label: 'Project Milestone / End Date Alert' },
-    { value: 'PROJECT_BUDGET_THRESHOLD', label: 'Project Budget / Cost Threshold Alert' },
+    { value: 'PROJECT_MILESTONE_DUE', label: 'Project Expected End Date Alert' },
   ],
 };
 
-export default function NotificationWorkspace() {
+export default function NotificationWorkspace({ fieldPortal = false }: { fieldPortal?: boolean }) {
   const auth = useAuth();
+  const canManageSchedules = !fieldPortal && (!!auth.access?.is_superuser || ['employees.alerts.manage', 'inventory.manage', 'inventory.admin', 'inventory.write', 'assets.update', 'assets.manage', 'assets.write', 'projects.update', 'projects.manage', 'projects.write'].some(code => auth.access?.permissions.includes(code)));
+  const [page, setPage] = useState(1);
   const [tab, setTab] = useState<'notifications' | 'schedules'>('notifications');
   const [domainFilter, setDomainFilter] = useState<string>('ALL');
   const [resolvedFilter, setResolvedFilter] = useState<'ALL' | 'UNRESOLVED' | 'RESOLVED'>('ALL');
@@ -39,9 +43,18 @@ export default function NotificationWorkspace() {
   const [forwardSearch, setForwardSearch] = useState('');
   const [forwardNotes, setForwardNotes] = useState('');
   const [forwardingBusy, setForwardingBusy] = useState(false);
-  const [actionError, setActionError] = useState('');
+  const [actionError, setActionErrorState] = useState('');
+  const { notify } = useAppFeedback();
+  const setActionError = (message: string) => {
+    setActionErrorState(message);
+    if (message) notify({ type: 'error', message });
+  };
+  const setActionSuccess = (message: string) => {
+    if (message) notify({ type: 'success', message });
+  };
 
   const [createScheduleOpen, setCreateScheduleOpen] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<Row | null>(null);
   const [schedTitle, setSchedTitle] = useState('');
   const [schedDomain, setSchedDomain] = useState('INVENTORY');
   const [schedRuleType, setSchedRuleType] = useState('INVENTORY_CONSUMABLES_EXPIRY');
@@ -51,6 +64,7 @@ export default function NotificationWorkspace() {
   const [schedDelivery, setSchedDelivery] = useState('BOTH');
   const [schedRecipients, setSchedRecipients] = useState<string[]>([]);
   const [recipientSearch, setRecipientSearch] = useState('');
+  const [schedIsActive, setSchedIsActive] = useState(true);
   const [schedBusy, setSchedBusy] = useState(false);
 
   // Helper function to check if employee is supervisor/manager
@@ -68,29 +82,33 @@ export default function NotificationWorkspace() {
   };
 
   // Fetch users for forwarding and recipient selection
-  const usersRes = useData('/api/v1/employees?page_size=100');
+  const usersRes = useData(fieldPortal ? null : '/api/v1/employees?page_size=100');
   const userList = rows(usersRes.data);
 
   // Fetch notifications
-  const params = new URLSearchParams();
+  const params = new URLSearchParams({ page: String(page), page_size: '50' });
   if (domainFilter !== 'ALL') params.set('domain', domainFilter);
   if (resolvedFilter === 'RESOLVED') params.set('is_resolved', 'true');
   if (resolvedFilter === 'UNRESOLVED') params.set('is_resolved', 'false');
   if (query) params.set('search', query);
 
-  const notifsRes = useData('/api/v1/notifications?' + params.toString());
+  const notifsRes = useNotificationData(tab === 'notifications' ? '/api/v1/notifications?' + params.toString() : null);
+  useEffect(() => { if (notifsRes.error) notify({ type: 'error', message: notifsRes.error }); }, [notifsRes.error, notify]);
   const notifItems = rows(notifsRes.data?.items || notifsRes.data);
   const totalNotifs = notifsRes.data?.total ?? notifItems.length;
 
   // Fetch schedules
-  const schedsRes = useData('/api/v1/notification-schedules');
+  const schedsRes = useData(canManageSchedules ? '/api/v1/notification-schedules' : null);
   const scheduleItems = rows(schedsRes.data);
+
+  useEffect(() => { setPage(1); }, [domainFilter, resolvedFilter, query]);
+
 
   // Actions
   async function markRead(id: string) {
     try {
       await apiFetch(`/api/v1/notifications/${id}/read`, { method: 'POST' });
-      notifsRes.reload();
+      window.dispatchEvent(new Event('cestos:notifications-changed'));
     } catch (e: any) {
       setActionError(e.message || 'Failed to mark read');
     }
@@ -99,7 +117,7 @@ export default function NotificationWorkspace() {
   async function resolveNotification(id: string) {
     try {
       await apiFetch(`/api/v1/notifications/${id}/resolve`, { method: 'POST' });
-      notifsRes.reload();
+      window.dispatchEvent(new Event('cestos:notifications-changed'));
     } catch (e: any) {
       setActionError(e.message || 'Failed to resolve notification');
     }
@@ -122,7 +140,7 @@ export default function NotificationWorkspace() {
       setForwardTargetUserIds([]);
       setForwardSearch('');
       setForwardNotes('');
-      notifsRes.reload();
+      window.dispatchEvent(new Event('cestos:notifications-changed'));
     } catch (e: any) {
       setActionError(e.message || 'Failed to forward notification');
     } finally {
@@ -130,32 +148,80 @@ export default function NotificationWorkspace() {
     }
   }
 
-  async function handleCreateScheduleSubmit(e: React.FormEvent) {
+  const openCreateSchedule = () => {
+    setEditingSchedule(null);
+    setSchedTitle('');
+    setSchedDomain('INVENTORY');
+    setSchedRuleType('INVENTORY_CONSUMABLES_EXPIRY');
+    setSchedLeadDays(14);
+    setSchedFrequency('DAILY');
+    setSchedPriority('IMPORTANT');
+    setSchedDelivery('BOTH');
+    setSchedRecipients([]);
+    setRecipientSearch('');
+    setSchedIsActive(true);
+    setActionError('');
+    setCreateScheduleOpen(true);
+  };
+
+  const openEditSchedule = (s: Row) => {
+    setEditingSchedule(s);
+    setSchedTitle(String(s.title || ''));
+    const domainVal = String(s.domain || 'INVENTORY');
+    setSchedDomain(domainVal);
+    const availableRules = DOMAIN_RULES[domainVal] || [];
+    const ruleVal = String(s.rule_type || (availableRules[0]?.value || 'INVENTORY_CONSUMABLES_EXPIRY'));
+    setSchedRuleType(ruleVal);
+    setSchedLeadDays(s.lead_time_days !== undefined && s.lead_time_days !== null ? Number(s.lead_time_days) : 14);
+    setSchedFrequency(String(s.frequency || 'DAILY'));
+    setSchedPriority(String(s.priority_tag || 'IMPORTANT'));
+    setSchedDelivery(String(s.delivery_method || 'BOTH'));
+    const recs = Array.isArray(s.recipient_user_ids)
+      ? s.recipient_user_ids.map(String)
+      : [];
+    setSchedRecipients(recs);
+    setRecipientSearch('');
+    setSchedIsActive(s.is_active !== undefined && s.is_active !== null ? Boolean(s.is_active) : true);
+    setActionError('');
+    setCreateScheduleOpen(true);
+  };
+
+  async function handleScheduleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSchedBusy(true);
     setActionError('');
     try {
-      await apiFetch('/api/v1/notification-schedules', {
-        method: 'POST',
-        body: JSON.stringify({
-          title: schedTitle || 'Notification Schedule',
-          domain: schedDomain,
-          rule_type: schedRuleType,
-          lead_time_days: Number(schedLeadDays),
-          frequency: schedFrequency,
-          priority_tag: schedPriority,
-          delivery_method: schedDelivery,
-          recipient_user_ids: schedRecipients,
-          is_active: true,
-        }),
-      });
+      const payload = {
+        title: schedTitle || 'Notification Schedule',
+        domain: schedDomain,
+        rule_type: schedRuleType,
+        lead_time_days: Number(schedLeadDays),
+        frequency: schedFrequency,
+        priority_tag: schedPriority,
+        delivery_method: schedDelivery,
+        recipient_user_ids: schedRecipients,
+        is_active: schedIsActive,
+      };
+
+      if (editingSchedule) {
+        await apiFetch(`/api/v1/notification-schedules/${editingSchedule.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await apiFetch('/api/v1/notification-schedules', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+      }
       setCreateScheduleOpen(false);
+      setEditingSchedule(null);
       setSchedTitle('');
       setSchedRecipients([]);
       schedsRes.reload();
-      notifsRes.reload();
+      window.dispatchEvent(new Event('cestos:notifications-changed'));
     } catch (e: any) {
-      setActionError(e.message || 'Failed to create schedule');
+      setActionError(e.message || (editingSchedule ? 'Failed to update schedule' : 'Failed to create schedule'));
     } finally {
       setSchedBusy(false);
     }
@@ -163,9 +229,12 @@ export default function NotificationWorkspace() {
 
   async function triggerScheduleNow(schedId: string) {
     try {
-      await apiFetch(`/api/v1/notification-schedules/${schedId}/run-now`, { method: 'POST' });
+      setActionError('');
+      setActionSuccess('');
+      const result = await apiFetch<any>(`/api/v1/notification-schedules/${schedId}/run-now`, { method: 'POST' });
+      setActionSuccess(`Schedule evaluated: ${result.generated_notifications} new recipient notifications. Email deliveries are queued when enabled.`);
       schedsRes.reload();
-      notifsRes.reload();
+      window.dispatchEvent(new Event('cestos:notifications-changed'));
     } catch (e: any) {
       setActionError(e.message || 'Failed to trigger schedule');
     }
@@ -180,7 +249,7 @@ export default function NotificationWorkspace() {
     }
   }
 
-  const unreadCount = notifItems.filter((n) => !n.read_at).length;
+  const unreadCount = useNotificationCount();
   const unresolvedCount = notifItems.filter((n) => !n.is_resolved).length;
 
   return (
@@ -190,10 +259,10 @@ export default function NotificationWorkspace() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2.5">
             <Bell className="text-primary" size={26} />
-            Notifications & Scheduling Command Center
+            {fieldPortal ? 'Field Notifications' : 'Notifications & Scheduling Command Center'}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Granular automated notification schedules across Projects, Workforce, Equipment & Inventory
+            {fieldPortal ? 'Your project assignments, maintenance tasks, contract reminders, and leave updates.' : 'Granular automated notification schedules across Projects, Workforce, Equipment & Inventory'}
           </p>
         </div>
         <div className="flex gap-2">
@@ -201,10 +270,10 @@ export default function NotificationWorkspace() {
             <RefreshCw size={14} />
             Refresh
           </button>
-          <button className="btn-primary text-xs" onClick={() => setCreateScheduleOpen(true)}>
+          {!fieldPortal && <button className="btn-primary text-xs" onClick={openCreateSchedule}>
             <Plus size={14} />
-            New Granular Schedule
-          </button>
+            New Schedule
+          </button>}
         </div>
       </div>
 
@@ -226,6 +295,7 @@ export default function NotificationWorkspace() {
           <p className="text-2xl font-bold text-amber-700 mt-2">{unresolvedCount}</p>
         </div>
 
+        {!fieldPortal && <>
         <div className="card p-4 bg-white border border-border">
           <div className="flex justify-between items-start">
             <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">Active Schedules</span>
@@ -234,6 +304,7 @@ export default function NotificationWorkspace() {
           <p className="text-2xl font-bold text-purple-700 mt-2">{scheduleItems.length}</p>
         </div>
 
+        </>}
         <div className="card p-4 bg-white border border-border">
           <div className="flex justify-between items-start">
             <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">Total Feed Log</span>
@@ -255,15 +326,17 @@ export default function NotificationWorkspace() {
           <Bell size={16} />
           Alert Feed ({notifItems.length})
         </button>
+        {!fieldPortal && <>
         <button
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             tab === 'schedules' ?'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
           }`}
-          onClick={() => setTab('schedules')}
+          disabled={!canManageSchedules} onClick={() => setTab('schedules')}
         >
           <Clock size={16} />
-          Granular Automated Schedules ({scheduleItems.length})
+          Automated Schedules ({scheduleItems.length})
         </button>
+        </>}
       </div>
 
       {tab === 'notifications' ? (
@@ -323,7 +396,7 @@ export default function NotificationWorkspace() {
           </form>
 
           {/* Notifications Feed */}
-          <State loading={notifsRes.loading} error={notifsRes.error} retry={notifsRes.reload}>
+          <State loading={notifsRes.loading} error="" retry={notifsRes.reload}>
             {notifItems.length === 0 ? (
               <div className="card p-10 text-center text-muted-foreground">
                 <Bell size={32} className="mx-auto mb-2 opacity-40" />
@@ -443,9 +516,11 @@ export default function NotificationWorkspace() {
                             </button>
                           )}
 
+                          {!fieldPortal && <>
                           <button
                             className="btn-secondary text-2xs py-1 px-2.5 text-indigo-700 hover:bg-indigo-50"
                             onClick={() => {
+                              setActionError('');
                               setForwardNotif(n);
                               setForwardTargetUserIds([]);
                               setForwardSearch('');
@@ -454,7 +529,8 @@ export default function NotificationWorkspace() {
                           >
                             <Share2 size={12} />
                             Forward
-                          </button>
+                          </button>                          </>}
+
                         </div>
                       </div>
                     </div>
@@ -463,6 +539,11 @@ export default function NotificationWorkspace() {
               </div>
             )}
           </State>
+          <div className="flex items-center justify-end gap-3 text-sm">
+            <button className="btn-secondary" disabled={page <= 1} onClick={() => setPage((value) => value - 1)}>Previous</button>
+            <span>Page {page} of {Math.max(1, Math.ceil(Number(totalNotifs) / 50))}</span>
+            <button className="btn-secondary" disabled={page * 50 >= Number(totalNotifs)} onClick={() => setPage((value) => value + 1)}>Next</button>
+          </div>
         </div>
       ) : (
         /* Granular Notification Schedules Tab */
@@ -471,10 +552,10 @@ export default function NotificationWorkspace() {
             <span className="text-xs text-muted-foreground">
               Automated rule evaluation runs daily to check lead thresholds across consumables, inventory, workforce & equipment.
             </span>
-            <button className="btn-primary text-xs" onClick={() => setCreateScheduleOpen(true)}>
+            {!fieldPortal && <button className="btn-primary text-xs" onClick={openCreateSchedule}>
               <Plus size={14} />
               Create Schedule Rule
-            </button>
+            </button>}
           </div>
 
           <State loading={schedsRes.loading} error={schedsRes.error} retry={schedsRes.reload}>
@@ -513,7 +594,11 @@ export default function NotificationWorkspace() {
                         <td className="px-4 py-3 font-semibold text-primary">
                           {s.lead_time_days} Days Lead Time
                         </td>
-                        <td className="px-4 py-3">{s.frequency || 'DAILY'}</td>
+                        <td className="px-4 py-3">
+                          <div>{s.frequency || 'DAILY'}</div>
+                          <div className="text-muted-foreground mt-1">Last run: {s.last_run_at ? new Date(s.last_run_at).toLocaleString() : 'Never'}</div>
+                          <div className="text-muted-foreground">Next: {s.next_run_at ? new Date(s.next_run_at).toLocaleString() : s.frequency === 'ONCE' && s.last_run_at ? 'Completed' : 'Awaiting scheduler'}</div>
+                        </td>
                         <td className="px-4 py-3">
                           <div className="flex gap-1.5 flex-wrap">
                             <span className="badge bg-amber-100 text-amber-800 text-2xs font-bold">
@@ -533,6 +618,13 @@ export default function NotificationWorkspace() {
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex justify-end gap-2">
+                            <button
+                              className="btn-secondary text-2xs py-1 px-2.5 text-blue-700 hover:bg-blue-50"
+                              onClick={() => openEditSchedule(s)}
+                              title="Edit schedule"
+                            >
+                              <Pencil size={11} /> Edit
+                            </button>
                             <button
                               className="btn-secondary text-2xs py-1 px-2.5 text-emerald-700 hover:bg-emerald-50"
                               onClick={() => triggerScheduleNow(s.id)}
@@ -713,7 +805,7 @@ export default function NotificationWorkspace() {
                 />
               </div>
 
-              {actionError && (
+      {actionError && (
                 <p role="alert" className="text-rose-700 bg-rose-50 p-2.5 rounded-lg border border-rose-200 text-xs">
                   {actionError}
                 </p>
@@ -742,13 +834,16 @@ export default function NotificationWorkspace() {
         );
       })()}
 
-      {/* Create Granular Schedule Modal */}
+      {/* Create / Edit Granular Schedule Modal */}
       {createScheduleOpen && (
         <Modal
-          name="Setup Granular Automated Notification Schedule"
-          onClose={() => setCreateScheduleOpen(false)}
+          name={editingSchedule ? "Edit Automated Notification Schedule" : "Setup Automated Notification Schedule"}
+          onClose={() => {
+            setCreateScheduleOpen(false);
+            setEditingSchedule(null);
+          }}
         >
-          <form onSubmit={handleCreateScheduleSubmit} className="space-y-4 text-xs">
+          <form onSubmit={handleScheduleSubmit} className="space-y-4 text-xs">
             <div>
               <label className="block font-semibold mb-1">Schedule Title *</label>
               <input
@@ -860,6 +955,20 @@ export default function NotificationWorkspace() {
               </div>
             </div>
 
+            {/* Active Status Checkbox */}
+            <div className="flex items-center gap-2 p-2.5 rounded-lg border bg-muted/20">
+              <input
+                id="schedIsActive"
+                type="checkbox"
+                checked={schedIsActive}
+                onChange={(e) => setSchedIsActive(e.target.checked)}
+                className="rounded border-input text-primary focus:ring-primary h-4 w-4"
+              />
+              <label htmlFor="schedIsActive" className="text-xs font-semibold cursor-pointer select-none">
+                Active Schedule (Automated evaluations are active)
+              </label>
+            </div>
+
             {/* Redesigned Employee Selection */}
             <div>
               <div className="flex items-center justify-between mb-1">
@@ -871,7 +980,7 @@ export default function NotificationWorkspace() {
                     type="button"
                     className="text-primary hover:underline font-medium"
                     onClick={() => {
-                      setSchedRecipients(userList.map((u: Row) => String(u.id)));
+                      setSchedRecipients(userList.map((u: Row) => String(u.user_id || u.id)));
                     }}
                   >
                     Select All
@@ -938,7 +1047,7 @@ export default function NotificationWorkspace() {
                     }
 
                     return filtered.map((u: Row) => {
-                      const uid = String(u.id);
+                      const uid = String(u.user_id || u.id);
                       const checked = schedRecipients.includes(uid);
                       const fullName = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.name || u.email || 'Employee';
                       const titleText = u.position_name || u.job_title || u.department_name || '';
@@ -982,7 +1091,7 @@ export default function NotificationWorkspace() {
                 </div>
               </div>
               <span className="text-[11px] text-muted-foreground block mt-1">
-                Check specific employees to receive automated notification alerts. Leave blank to notify account managers.
+                Check specific employees to receive automated notification alerts. Leave blank to notify the schedule creator. Selected employees must have an active user account.
               </span>
             </div>
 
@@ -997,12 +1106,17 @@ export default function NotificationWorkspace() {
               <button
                 type="button"
                 className="btn-secondary text-xs"
-                onClick={() => setCreateScheduleOpen(false)}
+                onClick={() => {
+                  setCreateScheduleOpen(false);
+                  setEditingSchedule(null);
+                }}
               >
                 Cancel
               </button>
               <button disabled={schedBusy} className="btn-primary text-xs">
-                {schedBusy ? 'Creating Schedule…' : 'Save Notification Schedule'}
+                {schedBusy
+                  ? (editingSchedule ? 'Updating Schedule…' : 'Creating Schedule…')
+                  : (editingSchedule ? 'Update Notification Schedule' : 'Save Notification Schedule')}
               </button>
             </div>
           </form>

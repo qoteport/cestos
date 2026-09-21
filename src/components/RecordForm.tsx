@@ -56,6 +56,9 @@ const lookup: Row = {
   reservation_id: 'inventory/reservations',
   rotation_pattern_id: 'rotation-patterns',
   parent_component_id: 'components',
+  contract_number: 'commercial/contracts',
+  contract_id: 'commercial/contracts',
+  commercial_contract_id: 'commercial/contracts',
 };
 const fieldEnums: Record<string, string[]> = {
   currency: ['USD', 'GHS', 'ZAR', 'EUR', 'GBP', 'CAD', 'AUD', 'KES', 'NGN'],
@@ -404,6 +407,7 @@ function getFieldLabel(key: string, resource: string): string {
   if (key === 'purchase_price') return 'Purchase Price / Asset Cost ($)';
   if (key === 'purchase_currency') return 'Purchase Currency';
   if (key === 'supplier_id' || key === 'preferred_supplier_id') return 'Supplier';
+  if (key === 'contract_number' || key === 'contract_id' || key === 'commercial_contract_id') return 'Commercial Contract';
   return title(key);
 }
 
@@ -455,6 +459,12 @@ function formatLookupOptionLabel(r: Row, route?: string): string {
   }
   if (route === 'assets') {
     return display(r.asset_name || r.name || r.asset_tag || r.serial_number || r.id);
+  }
+  if (route === 'commercial/contracts') {
+    const num = r.contract_number || r.number || r.code || r.title || r.name || String(r.id || '');
+    const client = r.client?.name || r.client_name || '';
+    const titleText = r.title || r.name || '';
+    return client ? `${display(num)} — ${display(client)} (${display(titleText)})` : display(num);
   }
   return display(r.name || r.title || r.code || r.document_number || r.asset_name || r.id);
 }
@@ -543,7 +553,7 @@ function Reference({
       />
     );
 
-  const selectedRow = options.find((r) => String(r.id) === String(value)) || selectedEntity;
+  const selectedRow = options.find((r) => String(r.id) === String(value) || String(r.contract_number) === String(value)) || selectedEntity;
 
   const fieldLabel = field === 'manager_employee_id' ? 'Department Manager' : field === 'supervisor_id' ? 'Supervisor' : getFieldLabel(field, resource);
 
@@ -563,7 +573,7 @@ function Reference({
       );
 
   const searchableOptions: SearchableSelectOption[] = options.map((r) => ({
-    value: String(r.id),
+    value: field === 'contract_number' ? String(r.contract_number || r.id) : String(r.id),
     label: formatLookupOptionLabel(r, route),
     badge: (field === 'supervisor_id' || route === 'employees') && isSupervisorRow(r) ? 'Supervisor' : undefined,
     raw: r,
@@ -711,7 +721,7 @@ function Fields({
   }
 
   if (resource === 'projects') {
-    fields = fields.filter(([k]) => k !== 'notes');
+    fields = fields.filter(([k]) => !['notes', 'contract_value', 'default_currency', 'currency'].includes(k));
   }
   const isPrimary = (key: string) =>
     required.includes(key) ||
@@ -833,7 +843,7 @@ function Fields({
             <option value="false">One-time Maintenance</option>
             <option value="true">Recurring Maintenance</option>
           </select>
-        ) : key.endsWith('_id') ? (
+        ) : (key.endsWith('_id') || !!lookup[key]) ? (
           <Reference
             field={key}
             value={val}

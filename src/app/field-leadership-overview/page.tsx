@@ -8,7 +8,7 @@ import {
   Eye, CheckCircle2, ShieldCheck, Layers, Calendar, ChevronDown, UserCheck 
 } from 'lucide-react';
 import { apiFetch, SupervisorScorecardRead } from '@/lib/api';
-import { Modal, rows } from '@/components/DataUI';
+import { Modal, ErrorModal, rows } from '@/components/DataUI';
 
 export default function FieldLeadershipOverviewPage() {
   const router = useRouter();
@@ -83,10 +83,12 @@ export default function FieldLeadershipOverviewPage() {
     return sc.supervisor_id ? `Supervisor (${sc.supervisor_id.slice(0, 8)})` : 'Supervisor';
   };
 
+  const [errorMessage, setErrorMessage] = useState('');
+
   const handleCreateScorecard = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newScorecard.supervisor_id) {
-      alert('Please select a supervisor');
+      setErrorMessage('Please select a supervisor');
       return;
     }
     try {
@@ -97,7 +99,7 @@ export default function FieldLeadershipOverviewPage() {
       setShowAddScorecard(false);
       reload();
     } catch (err: any) {
-      alert(err.message || 'Failed to create scorecard');
+      setErrorMessage(err.message || 'Failed to create scorecard');
     }
   };
 
@@ -163,7 +165,7 @@ export default function FieldLeadershipOverviewPage() {
               className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded text-sm font-medium hover:bg-primary/90"
             >
               <Plus className="h-4 w-4" />
-              New Supervisor Scorecard
+              New Scorecard
             </button>
           </div>
         </div>
@@ -277,7 +279,7 @@ export default function FieldLeadershipOverviewPage() {
                     onClick={() => setSelectedScorecard(sc)}
                     className="px-3 py-1 bg-primary text-primary-foreground rounded text-xs font-medium hover:bg-primary/90 flex items-center gap-1"
                   >
-                    <Eye className="h-3 w-3" /> View 8-Pillar Scorecard
+                    <Eye className="h-3 w-3" /> View Scorecard
                   </button>
                 </div>
               </div>
@@ -610,6 +612,8 @@ export default function FieldLeadershipOverviewPage() {
           </form>
         </Modal>
       )}
+
+      <ErrorModal error={errorMessage} onClose={() => setErrorMessage('')} />
     </AppLayout>
   );
 }

@@ -1,4 +1,5 @@
 'use client';
+import WorkCompletionDetails from './WorkCompletionDetails';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -532,6 +533,7 @@ export default function EquipmentMaintenanceWorkspace() {
       {/* Details Modal */}
       {selectedJob && (
         <Modal name={`Maintenance Details · ${selectedJob.title}`} onClose={() => setSelectedJob(null)}>
+          <WorkCompletionDetails work={selectedJob} />
           <div className="space-y-4 text-xs">
             {selectedJob.isOverdue && (
               <div className="bg-rose-100 border border-rose-300 p-3 rounded text-rose-900 font-bold flex items-center gap-2">

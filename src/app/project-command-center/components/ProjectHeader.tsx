@@ -3,8 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import { Edit, ChevronRight, MapPin, User, Calendar, Target, SlidersHorizontal, Filter, X } from 'lucide-react';
 import Link from 'next/link';
-import { getProjects, getProjectOverview, type ProjectOverview } from '@/lib/api';
-import { Modal, useData, rows } from '@/components/DataUI';
+import { apiFetch, getProjects, getProjectOverview, type ProjectOverview } from '@/lib/api';
+import { Modal, useData, rows, display } from '@/components/DataUI';
+import SearchableSelect, { SearchableSelectOption } from '@/components/SearchableSelect';
 
 function formatDate(d?: string): string {
   if (!d) return '—';
@@ -15,6 +16,20 @@ function formatDate(d?: string): string {
 export default function ProjectHeader() {
   const [project, setProject] = useState<ProjectOverview | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Edit Project State
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    status: 'ACTIVE',
+    location: '',
+    contract_number: '',
+    target_metres: 0,
+    start_date: '',
+    end_date: '',
+    description: '',
+  });
 
   // Filter States
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
@@ -38,6 +53,35 @@ export default function ProjectHeader() {
 
   const clientsRes = useData('/api/v1/clients?page_size=100');
   const clientList = rows(clientsRes.data);
+
+  const commercialContractsRes = useData('/api/v1/commercial/contracts?page_size=100');
+  const commercialContractsList = rows(commercialContractsRes.data);
+
+  const commercialContractOptions: SearchableSelectOption[] = commercialContractsList.map((c: any) => {
+    const num = c.contract_number || c.number || c.code || c.title || String(c.id);
+    const client = c.client?.name || c.client_name || '';
+    const titleText = c.title || c.name || '';
+    return {
+      value: num,
+      label: client ? `${display(num)} — ${display(client)} (${display(titleText)})` : display(num),
+      raw: c,
+    };
+  });
+
+  useEffect(() => {
+    if (project) {
+      setEditForm({
+        name: project.name || '',
+        status: project.status || 'ACTIVE',
+        location: (project.location as string) || '',
+        contract_number: (project as any).contract_number || '',
+        target_metres: (project as any).target_metres || 0,
+        start_date: project.start_date ? project.start_date.slice(0, 10) : '',
+        end_date: project.end_date ? project.end_date.slice(0, 10) : '',
+        description: (project as any).description || '',
+      });
+    }
+  }, [project]);
 
   useEffect(() => {
     setLoading(true);
@@ -79,6 +123,43 @@ export default function ProjectHeader() {
     setFilterModalOpen(false);
   };
 
+  const handleSaveProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!project?.id) return;
+    setSaving(true);
+    try {
+      await apiFetch(`/api/v1/projects/${project.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          name: editForm.name,
+          status: editForm.status,
+          location: editForm.location,
+          contract_number: editForm.contract_number || undefined,
+          target_metres: Number(editForm.target_metres) || undefined,
+          start_date: editForm.start_date || undefined,
+          end_date: editForm.end_date || undefined,
+          description: editForm.description,
+        }),
+      });
+      setEditModalOpen(false);
+      if (selectedProjectId) {
+        const overview = await getProjectOverview(selectedProjectId);
+        setProject(overview);
+      } else {
+        const res = await getProjects({ page_size: '1' });
+        const first = res?.items?.[0];
+        if (first?.id) {
+          const overview = await getProjectOverview(first.id);
+          setProject(overview);
+        }
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to update project');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const managerName = project?.project_manager
     ? ((project.project_manager as { full_name?: string; first_name?: string; last_name?: string })?.full_name ||
        `${(project.project_manager as { first_name?: string })?.first_name ?? ''} ${(project.project_manager as { last_name?: string })?.last_name ?? ''}`.trim())
@@ -102,19 +183,29 @@ export default function ProjectHeader() {
           <span className="text-foreground font-500">{project?.name || 'Project Command Center'}</span>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setFilterModalOpen(true)}
-          className="px-3 py-2 bg-primary text-primary-foreground font-semibold rounded-lg text-xs hover:bg-primary/90 transition flex items-center gap-1.5 shadow-sm"
-        >
-          <SlidersHorizontal size={14} />
-          Filter Data
-          {activeCount > 0 && (
-            <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-white text-primary font-bold">
-              {activeCount}
-            </span>
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setEditModalOpen(true)}
+            className="px-3 py-2 bg-secondary text-foreground font-semibold rounded-lg text-xs hover:bg-muted border transition flex items-center gap-1.5 shadow-sm"
+          >
+            <Edit size={14} className="text-primary" />
+            Edit Project
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterModalOpen(true)}
+            className="px-3 py-2 bg-primary text-primary-foreground font-semibold rounded-lg text-xs hover:bg-primary/90 transition flex items-center gap-1.5 shadow-sm"
+          >
+            <SlidersHorizontal size={14} />
+            Filter Data
+            {activeCount > 0 && (
+              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-white text-primary font-bold">
+                {activeCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Active Filter Pills */}
@@ -242,7 +333,11 @@ export default function ProjectHeader() {
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
-              <button className="btn-secondary text-sm">
+              <button
+                type="button"
+                onClick={() => setEditModalOpen(true)}
+                className="btn-secondary text-sm flex items-center gap-1.5"
+              >
                 <Edit size={14} />
                 Edit Project
               </button>
@@ -361,6 +456,124 @@ export default function ProjectHeader() {
                 className="px-4 py-2 text-xs bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90"
               >
                 Apply Database Filters
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* EDIT PROJECT POPUP MODAL */}
+      {editModalOpen && project && (
+        <Modal name={`Edit Project: ${project.name}`} onClose={() => setEditModalOpen(false)}>
+          <form onSubmit={handleSaveProject} className="space-y-4 text-xs">
+            <div>
+              <label className="block font-semibold mb-1 text-foreground">Project Name *</label>
+              <input
+                type="text"
+                required
+                className="w-full px-3 py-2 border rounded-lg bg-background text-xs font-semibold"
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold mb-1 text-foreground">Operational Status *</label>
+                <select
+                  className="w-full px-3 py-2 border rounded-lg bg-background text-xs font-medium"
+                  value={editForm.status}
+                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                >
+                  <option value="ACTIVE">Active</option>
+                  <option value="MOBILIZING">Mobilizing</option>
+                  <option value="PLANNING">Planning</option>
+                  <option value="PAUSED">Paused</option>
+                  <option value="COMPLETED">Completed</option>
+                  <option value="CLOSED">Closed</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1 text-foreground">Target Metres (m)</label>
+                <input
+                  type="number"
+                  min="0"
+                  className="w-full px-3 py-2 border rounded-lg bg-background text-xs font-mono font-bold"
+                  value={editForm.target_metres}
+                  onChange={(e) => setEditForm({ ...editForm, target_metres: Number(e.target.value) })}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-semibold mb-1 text-foreground">Commercial Contract</label>
+              <SearchableSelect
+                options={commercialContractOptions}
+                value={editForm.contract_number}
+                onChange={(val) => setEditForm({ ...editForm, contract_number: val })}
+                placeholder="Select commercial contract..."
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold mb-1 text-foreground">Start Date</label>
+                <input
+                  type="date"
+                  className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+                  value={editForm.start_date}
+                  onChange={(e) => setEditForm({ ...editForm, start_date: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1 text-foreground">Target End Date</label>
+                <input
+                  type="date"
+                  className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+                  value={editForm.end_date}
+                  onChange={(e) => setEditForm({ ...editForm, end_date: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-semibold mb-1 text-foreground">Site Location / Territory</label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+                placeholder="e.g. Drill Pad B-14, Solway Site"
+                value={editForm.location}
+                onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold mb-1 text-foreground">Description / Notes</label>
+              <textarea
+                rows={3}
+                className="w-full px-3 py-2 border rounded-lg bg-background text-xs resize-y"
+                placeholder="Project overview, scope of work, or contract notes..."
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t">
+              <button
+                type="button"
+                className="px-4 py-2 text-xs border rounded-lg hover:bg-muted font-medium"
+                onClick={() => setEditModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-4 py-2 text-xs bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition"
+              >
+                {saving ? 'Saving...' : 'Save Project Changes'}
               </button>
             </div>
           </form>

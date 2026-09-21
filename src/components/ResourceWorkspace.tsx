@@ -142,15 +142,41 @@ function normalizeResource(res: string): string {
 }
 
 export default function ResourceWorkspace({ resource }: { resource: string }) {
+  const auth = useAuth();
   const normResource = normalizeResource(resource);
   const searchParams = useSearchParams();
 
   const subResource = normResource.includes('/') ? normResource.split('/')[1] : normResource;
 
   // Phase 1-6 Custom Workspaces
-  if (normResource.startsWith('control-tower')) return <ControlTowerWorkspace subResource={subResource} />;
+  if (normResource.startsWith('control-tower') || normResource.startsWith('operations-and-revenue')) {
+    if (!auth.can('operations.insights.read')) {
+      return (
+        <div className="card p-8 text-center space-y-3 border border-border">
+          <h2 className="text-xl font-bold text-foreground">Access Restricted</h2>
+          <p className="text-sm text-muted-foreground">
+            You do not have permission to view Operations & Revenue insights. Contact your system administrator or CEO.
+          </p>
+        </div>
+      );
+    }
+    return <ControlTowerWorkspace subResource={subResource} />;
+  }
   if (normResource.startsWith('drilling')) return <DrillingWorkspace subResource={subResource} />;
-  if (normResource.startsWith('commercial')) return <CommercialCostingWorkspace subResource={subResource} />;
+  if (normResource.startsWith('commercial')) {
+    if (!auth.can('commercial.read')) {
+      return (
+        <div className="card p-8 text-center space-y-3 border border-border">
+          <h2 className="text-xl font-bold text-foreground">Access Restricted</h2>
+          <p className="text-sm text-muted-foreground">
+            You do not have permission to view Commercial pages and subledgers. Contact your system administrator or CEO.
+          </p>
+        </div>
+      );
+    }
+    return <CommercialCostingWorkspace subResource={subResource} />;
+  }
+
   if (normResource.startsWith('procurement') || normResource === 'purchase-orders') return <ProcurementWorkspace subResource={subResource} />;
   if (normResource.startsWith('hse') || normResource === 'capa') return <HseIncidentsWorkspace subResource={subResource} />;
 

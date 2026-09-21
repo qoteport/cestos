@@ -30,6 +30,41 @@ function ReportForm({
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const [reportDate, setReportDate] = useState(initial?.report_date || today());
+  const [titleText, setTitleText] = useState(initial?.title || '');
+  const [metresVal, setMetresVal] = useState(initial?.metres != null ? String(initial.metres) : '');
+  const [holesVal, setHolesVal] = useState(initial?.drill_holes != null ? String(initial.drill_holes) : '');
+  const [avgDepthVal, setAvgDepthVal] = useState(initial?.average_depth != null ? String(initial.average_depth) : '');
+  const [notesText, setNotesText] = useState(initial?.notes || '');
+  const [selectedShiftId, setSelectedShiftId] = useState('');
+
+  const shiftsRes = useData<any[]>('/api/v1/drilling/shifts?project_id=' + projectId);
+  const shifts = rows(shiftsRes.data);
+
+  function handleImportShift(shiftId: string) {
+    setSelectedShiftId(shiftId);
+    if (!shiftId) return;
+    const s = shifts.find((shift: any) => String(shift.id) === shiftId);
+    if (!s) return;
+
+    const m = s.total_metres ?? s.total_metres_drilled ?? s.metres_drilled ?? 0;
+    const hCount = Array.isArray(s.intervals) && s.intervals.length > 0 ? s.intervals.length : 1;
+    const hasIntervals = Array.isArray(s.intervals) && s.intervals.length > 0;
+    const avgD = hasIntervals ? s.intervals[s.intervals.length - 1].to_depth_m : (s.end_depth_m ?? m);
+    const dateStr = s.date || s.shift_date || (s.created_at ? s.created_at.slice(0, 10) : today());
+    const shiftNum = s.report_number || s.shift_number || (s.id ? `DR-${s.id.slice(0, 8).toUpperCase()}` : '');
+    const titleStr = `Daily Shift Report ${shiftNum} (${s.shift_type || 'DAY'} Shift)`;
+    const coreRec = s.avg_core_recovery_pct ?? s.core_recovery_pct ?? 0;
+    const notesStr = `[Shift Production Report ${shiftNum}]: Core Recovery: ${coreRec}%. ${s.notes || ''}`.trim();
+
+    setReportDate(dateStr);
+    setTitleText(titleStr);
+    setMetresVal(String(m));
+    setHolesVal(String(hCount));
+    setAvgDepthVal(String(avgD));
+    setNotesText(notesStr);
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
@@ -39,15 +74,15 @@ function ReportForm({
     const report: Row = {
       site_id: values.get('site_id'),
       report_type: type,
-      report_date: values.get('report_date'),
-      title: String(values.get('title')).trim(),
-      notes: values.get('notes') || null,
+      report_date: reportDate,
+      title: titleText.trim(),
+      notes: notesText || null,
     };
     if (type === 'DRILLING_UPDATE') {
       Object.assign(report, {
-        metres: values.get('metres'),
-        drill_holes: Number(values.get('drill_holes')),
-        average_depth: values.get('average_depth'),
+        metres: metresVal ? Number(metresVal) : 0,
+        drill_holes: holesVal ? Number(holesVal) : 0,
+        average_depth: avgDepthVal ? Number(avgDepthVal) : 0,
       });
     }
     const payload = new FormData();
@@ -83,7 +118,7 @@ function ReportForm({
         <p className="text-sm text-muted-foreground">
           {initial
             ? 'Update measurements or notes for this report entry.'
-            : 'Record work for this reporting period. Enter additional meters and holes, rather than project-to-date totals.'}
+            : 'Record work for this reporting period. Enter additional meters and holes, or import directly from Daily Shift Production Reports.'}
         </p>
         <div className="grid sm:grid-cols-2 gap-4">
           <label className="text-sm">
@@ -127,7 +162,8 @@ function ReportForm({
               type="date"
               required
               max={today()}
-              defaultValue={initial?.report_date || today()}
+              value={reportDate}
+              onChange={(e) => setReportDate(e.target.value)}
               className="input-field mt-1"
             />
           </label>
@@ -137,36 +173,81 @@ function ReportForm({
               name="title"
               required
               maxLength={200}
-              defaultValue={initial?.title || ''}
+              value={titleText}
+              onChange={(e) => setTitleText(e.target.value)}
               className="input-field mt-1"
               placeholder="e.g. Day shift drilling progress"
             />
           </label>
         </div>
+
         {type === 'DRILLING_UPDATE' && (
-          <fieldset className="border rounded-lg p-4">
-            <legend className="text-sm font-semibold px-2">Drilling measurements</legend>
-            <div className="grid sm:grid-cols-3 gap-3">
-              {[
-                ['metres', 'Meters covered', '0.01', initial?.metres],
-                ['drill_holes', 'Number of drill holes', '1', initial?.drill_holes],
-                ['average_depth', 'Average depth reached (m)', '0.01', initial?.average_depth],
-              ].map(([name, label, step, defaultVal]) => (
-                <label key={name} className="text-sm">
-                  {label}
+          <div className="space-y-3 border rounded-lg p-4 bg-muted/10">
+            {shifts.length > 0 && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg space-y-1">
+                <label className="text-xs font-bold text-amber-800 dark:text-amber-300 block">
+                  ⚡ Import Data from Daily Shift Production Report
+                </label>
+                <select
+                  className="input-field text-xs bg-background"
+                  value={selectedShiftId}
+                  onChange={(e) => handleImportShift(e.target.value)}
+                >
+                  <option value="">-- Select a shift report to auto-populate --</option>
+                  {shifts.map((s: any) => (
+                    <option key={s.id} value={s.id}>
+                      Shift #{s.report_number || s.shift_number || s.id?.slice(0, 8)} | {s.date || s.shift_date} ({s.shift_type || 'DAY'}) | {s.total_metres ?? s.total_metres_drilled ?? s.metres_drilled ?? 0}m drilled | {s.avg_core_recovery_pct ?? s.core_recovery_pct ?? 0}% core
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <fieldset>
+              <legend className="text-sm font-semibold mb-2">Drilling measurements</legend>
+              <div className="grid sm:grid-cols-3 gap-3">
+                <label className="text-sm">
+                  Meters covered
                   <input
                     className="input-field mt-1"
                     type="number"
                     required
-                    name={name}
+                    name="metres"
                     min="0"
-                    step={step}
-                    defaultValue={defaultVal != null ? String(defaultVal) : ''}
+                    step="0.01"
+                    value={metresVal}
+                    onChange={(e) => setMetresVal(e.target.value)}
                   />
                 </label>
-              ))}
-            </div>
-          </fieldset>
+                <label className="text-sm">
+                  Number of drill holes
+                  <input
+                    className="input-field mt-1"
+                    type="number"
+                    required
+                    name="drill_holes"
+                    min="0"
+                    step="1"
+                    value={holesVal}
+                    onChange={(e) => setHolesVal(e.target.value)}
+                  />
+                </label>
+                <label className="text-sm">
+                  Average depth reached (m)
+                  <input
+                    className="input-field mt-1"
+                    type="number"
+                    required
+                    name="average_depth"
+                    min="0"
+                    step="0.01"
+                    value={avgDepthVal}
+                    onChange={(e) => setAvgDepthVal(e.target.value)}
+                  />
+                </label>
+              </div>
+            </fieldset>
+          </div>
         )}
         <label className="block text-sm">
           Notes, conditions and blockers
@@ -174,7 +255,8 @@ function ReportForm({
             name="notes"
             maxLength={20000}
             rows={4}
-            defaultValue={initial?.notes || ''}
+            value={notesText}
+            onChange={(e) => setNotesText(e.target.value)}
             className="input-field mt-1"
           />
         </label>

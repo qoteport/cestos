@@ -20,7 +20,11 @@ export default function LoginForm() {
 
   useEffect(() => {
     if (!auth.loading && auth.user) {
-      router.replace('/');
+      if (auth.user.is_field_portal_only) {
+        router.replace('/field-portal');
+      } else {
+        router.replace('/');
+      }
       return;
     }
     const hashParams = new URLSearchParams(window.location.hash.slice(1));
@@ -53,7 +57,12 @@ export default function LoginForm() {
         setTokens(data.access_token, data.refresh_token, remember);
         localStorage.setItem('cestos_organization', org);
         await auth.reload();
-        router.replace('/');
+        const me = await apiFetch<any>('/api/v1/auth/me').catch(() => null);
+        if (me?.is_field_portal_only) {
+          router.replace('/field-portal');
+        } else {
+          router.replace('/');
+        }
       }
     } catch (e) {
       clearTokens();

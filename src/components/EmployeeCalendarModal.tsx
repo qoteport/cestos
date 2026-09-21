@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Clock, FileText, Activity, Briefcase, Eye, Edit } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Clock, FileText, Activity, Briefcase, Eye, Edit, Wrench } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { Row, display, title, Modal } from './DataUI';
 import AssignmentDetailsModal from './AssignmentDetailsModal';
@@ -29,6 +29,7 @@ export default function EmployeeCalendarModal({
   const [activities, setActivities] = useState<Row[]>([]);
   const [rotations, setRotations] = useState<Row[]>([]);
   const [assignments, setAssignments] = useState<Row[]>([]);
+  const [workOrders, setWorkOrders] = useState<Row[]>([]);
 
   const [viewingAssignment, setViewingAssignment] = useState<Row | null>(null);
   const [editingAssignment, setEditingAssignment] = useState<Row | null>(null);
@@ -48,12 +49,15 @@ export default function EmployeeCalendarModal({
       apiFetch<Row[]>(`${root}/activity`).catch(() => []),
       apiFetch<Row[]>(`${root}/rotations`).catch(() => []),
       apiFetch<Row[]>(`${root}/assignments`).catch(() => []),
-    ]).then(([timeData, leaveData, actData, rotData, assignData]) => {
+      apiFetch<any>('/api/v1/maintenance/work-orders').catch(() => []),
+    ]).then(([timeData, leaveData, actData, rotData, assignData, woData]) => {
       setTimeLogs(Array.isArray(timeData) ? timeData : (timeData as any)?.items || []);
       setLeaveRequests(Array.isArray(leaveData) ? leaveData : (leaveData as any)?.items || []);
       setActivities(Array.isArray(actData) ? actData : (actData as any)?.items || []);
       setRotations(Array.isArray(rotData) ? rotData : (rotData as any)?.items || []);
       setAssignments(Array.isArray(assignData) ? assignData : (assignData as any)?.items || []);
+      const allWOs: Row[] = Array.isArray(woData) ? woData : (woData as any)?.items || [];
+      setWorkOrders(allWOs.filter((wo: any) => wo.assigned_technician_id === employeeId || (Array.isArray(wo.assigned_to_ids) && wo.assigned_to_ids.includes(employeeId))));
       setLoading(false);
     });
   };
@@ -136,7 +140,14 @@ export default function EmployeeCalendarModal({
       return dateStr >= start;
     });
 
-    return { timeLog: log, leaves, activities: acts, rotations: rots, assignments: dayAssignments };
+
+    // Work orders scheduled on this date
+    const dayWorkOrders = workOrders.filter(wo => {
+      const d = wo.scheduled_date ? String(wo.scheduled_date).slice(0, 10) : wo.started_at ? String(wo.started_at).slice(0, 10) : '';
+      return d === dateStr;
+    });
+
+    return { timeLog: log, leaves, activities: acts, rotations: rots, assignments: dayAssignments, workOrders: dayWorkOrders };
   };
 
   // Calculate monthly KPIs
@@ -151,6 +162,7 @@ export default function EmployeeCalendarModal({
   const pendingLeavesCount = leaveRequests.filter(l => l.status === 'PENDING').length;
   const activeAssignmentsCount = assignments.filter(a => a.status === 'ACTIVE' || !a.status).length;
   const totalActivitiesCount = activities.length;
+  const openWorkOrdersCount = workOrders.filter(wo => !['COMPLETED','CANCELLED'].includes(wo.status)).length;
 
   // Render Days Grid
   const renderCalendarDays = () => {
@@ -169,9 +181,9 @@ export default function EmployeeCalendarModal({
       const isSelected = dateStr === selectedDate;
       const isToday = dateStr === new Date().toISOString().slice(0, 10);
 
-      const { timeLog, leaves, activities: dayActs, assignments: dayAssigns } = getEventsForDate(dateStr);
+      const { timeLog, leaves, activities: dayActs, assignments: dayAssigns, workOrders: dayWOs } = getEventsForDate(dateStr);
 
-      const hasEvents = !!timeLog || leaves.length > 0 || dayActs.length > 0 || dayAssigns.length > 0;
+      const hasEvents = !!timeLog || leaves.length > 0 || dayActs.length > 0 || dayAssigns.length > 0 || dayWOs.length > 0;
 
       days.push(
         <div
@@ -198,6 +210,7 @@ export default function EmployeeCalendarModal({
                 {leaves.length > 0 && <span className="w-2 h-2 rounded-full bg-emerald-500" title="Leave" />}
                 {timeLog && <span className="w-2 h-2 rounded-full bg-blue-600" title="Time Log" />}
                 {dayActs.length > 0 && <span className="w-2 h-2 rounded-full bg-amber-500" title="Activity" />}
+                {dayWOs.length > 0 && <span className="w-2 h-2 rounded-full bg-orange-600" title="Work Order" />}
               </div>
             )}
           </div>
@@ -234,6 +247,17 @@ export default function EmployeeCalendarModal({
               </span>
             ))}
 
+
+            {dayWOs.map((wo, idx) => (
+              <span
+                key={`wo-${idx}`}
+                className="block truncate px-1 py-0.5 rounded bg-orange-100 text-orange-900 font-semibold flex items-center gap-1 border border-orange-200"
+                title={`Work Order: ${wo.title || wo.wo_number}`}
+              >
+                <Wrench size={10} className="shrink-0 text-orange-700" />
+                <span className="truncate">{wo.wo_number || wo.title || 'WO'}</span>
+              </span>
+            ))}
             {!timeLog && leaves.length === 0 && dayAssigns.length === 0 && dayActs.length > 0 && (
               <span className="block truncate px-1 py-0.5 rounded bg-muted text-muted-foreground flex items-center gap-1">
                 <Activity size={10} className="shrink-0" />
@@ -251,10 +275,10 @@ export default function EmployeeCalendarModal({
   const selectedEvents = getEventsForDate(selectedDate);
 
   return (
-    <Modal name={`Schedule & Performance Calendar — ${employeeName}`} onClose={onClose}>
+    <Modal name={`Schedule & Performance Calendar â€” ${employeeName}`} onClose={onClose}>
       <div className="space-y-6">
         {/* KPI Performance Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 border-b pb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 border-b pb-4">
           <div className="p-3 rounded bg-purple-50/70 border border-purple-200">
             <span className="text-[11px] font-semibold text-purple-700 block">Project Assignments</span>
             <span className="text-xl font-bold text-purple-900">{activeAssignmentsCount} Active</span>
@@ -278,6 +302,11 @@ export default function EmployeeCalendarModal({
           <div className="p-3 rounded bg-slate-50 border border-slate-200">
             <span className="text-[11px] font-semibold text-slate-700 block">Total Audit Logs</span>
             <span className="text-xl font-bold text-slate-900">{totalActivitiesCount} Events</span>
+          </div>
+
+          <div className="p-3 rounded bg-orange-50/70 border border-orange-200">
+            <span className="text-[11px] font-semibold text-orange-700 block">Work Orders Assigned</span>
+            <span className="text-xl font-bold text-orange-900">{openWorkOrdersCount} Open</span>
           </div>
         </div>
 
@@ -443,6 +472,29 @@ export default function EmployeeCalendarModal({
                     ))
                   ) : (
                     <p className="text-xs text-muted-foreground italic pl-2">No leave booked for this day.</p>
+                  )}
+                </div>
+
+
+                {/* Work Orders Section */}
+                <div className="space-y-2 border-t pt-3">
+                  <h5 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5">
+                    <Wrench size={14} className="text-orange-600" /> Assigned Work Orders
+                  </h5>
+                  {selectedEvents.workOrders.length > 0 ? (
+                    selectedEvents.workOrders.map((wo, i) => (
+                      <div key={i} className="p-3 bg-orange-50/60 border border-orange-200 rounded text-xs space-y-1">
+                        <div className="flex justify-between font-semibold text-orange-900">
+                          <span>{wo.wo_number || wo.title || "Work Order"}</span>
+                          <span className="px-1.5 py-0.5 rounded bg-orange-200 text-orange-900 text-[10px]">{wo.status}</span>
+                        </div>
+                        <p className="text-orange-800">{wo.title}</p>
+                        {wo.scheduled_date && <p className="text-orange-700">Scheduled: {display(wo.scheduled_date)}</p>}
+                        {wo.priority && <p className="text-orange-700">Priority: {display(wo.priority)}</p>}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic pl-2">No work orders scheduled for this day.</p>
                   )}
                 </div>
 

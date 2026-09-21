@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Search, Play, Zap, Users, FolderKanban, Wrench, Package, ShieldCheck, Building2, Lock, PlusCircle, Clock, ArrowRightLeft, Fuel, Gauge, Receipt, Truck, DollarSign, UserPlus, UserCheck, Briefcase, MapPin, CheckCircle2, MinusCircle, SlidersHorizontal, Boxes, Tag, ClipboardCheck, ClipboardList, ShieldAlert, AlertTriangle, RotateCcw, BookmarkPlus, Layers, Activity } from 'lucide-react';
+import { Search, Play, Zap, Users, FolderKanban, Wrench, Package, ShieldCheck, Building2, Lock, PlusCircle, Clock, ArrowRightLeft, Fuel, Gauge, Receipt, Truck, DollarSign, UserPlus, UserCheck, Briefcase, MapPin, CheckCircle2, MinusCircle, SlidersHorizontal, Boxes, Tag, ClipboardCheck, ClipboardList, ShieldAlert, AlertTriangle, RotateCcw, BookmarkPlus, Layers, Activity, Compass, Flame, Filter } from 'lucide-react';
 
 import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/components/AuthProvider';
@@ -58,6 +58,19 @@ const COMMAND_REGISTRY: CommandDef[] = [
     icon: UserCheck,
     customModalType: 'edit-employee',
     tags: ['edit employee', 'update employee', 'employee profile', 'change position', 'department', 'hr', 'staff'],
+  },
+  {
+    id: 'assign-employee-project',
+    title: 'Assign Workforce / Employee to Project',
+    description: 'Deploy workforce or field technician to an active site project, set deployment role, start date, and location.',
+    category: 'WORKFORCE',
+    categoryName: 'Workforce & HR',
+    permission: 'employees.assign',
+    icon: ArrowRightLeft,
+    customModalType: 'employee-select',
+    targetPathPattern: '/api/v1/employees/{id}/assignments',
+    resource: 'employees/assignments',
+    tags: ['assign workforce', 'deploy employee', 'assign employee', 'workforce assignment', 'project assignment', 'deploy staff', 'hr', 'personnel'],
   },
   {
     id: 'record-salary',
@@ -147,6 +160,78 @@ const COMMAND_REGISTRY: CommandDef[] = [
     resource: 'projects',
     path: '/api/v1/projects',
     tags: ['project', 'new project', 'contract', 'site', 'operation', 'add project'],
+  },
+  {
+    id: 'create-drilling-shift',
+    title: 'Create Daily Shift Production Report',
+    description: 'Log daily shift metres drilled, core recovery percentage, worked drill hole depth intervals, attachments, and operational remarks.',
+    category: 'PROJECTS',
+    categoryName: 'Projects & Sites',
+    permission: 'drilling.shifts.create',
+    icon: Clock,
+    path: '/api/v1/drilling/shifts',
+    resource: 'drilling/shifts',
+    tags: ['drilling', 'shift report', 'daily shift', 'metres', 'core recovery', 'hole interval', 'rig log', '360 report'],
+  },
+  {
+    id: 'create-360-report',
+    title: '⚡ 360° Daily Operational Report Hub',
+    description: 'Submit a unified 360° daily report covering shift production, asset breakdowns/defects, fuel logs, HSE incidents, and store issue consumptions.',
+    category: 'PROJECTS',
+    categoryName: 'Projects & Sites',
+    permission: 'projects.update',
+    icon: Flame,
+    path: '/api/v1/drilling/shifts',
+    resource: 'drilling/shifts',
+    tags: ['360 report', 'daily 360', 'operational report', 'defects', 'fuel', 'hse', 'store consumptions', 'drilling'],
+  },
+  {
+    id: 'create-drilling-program',
+    title: 'Create Drilling Campaign Program',
+    description: 'Define an exploration or mining campaign program with target metres, drilling method (RC, Diamond Core, RAB), and target project.',
+    category: 'PROJECTS',
+    categoryName: 'Projects & Sites',
+    permission: 'drilling.programs.create',
+    icon: Layers,
+    path: '/api/v1/drilling/programs',
+    resource: 'drilling/programs',
+    tags: ['drilling program', 'campaign', 'target metres', 'rc', 'diamond core', 'drilling'],
+  },
+  {
+    id: 'create-drill-hole',
+    title: 'Create Drill Hole Specification(s)',
+    description: 'Specify single or batch drill holes with auto-generated unique hole IDs, target depths, dip/azimuth inclination, and georeferenced collar coordinates.',
+    category: 'PROJECTS',
+    categoryName: 'Projects & Sites',
+    permission: 'drilling.holes.create',
+    icon: Compass,
+    path: '/api/v1/drilling/holes',
+    resource: 'drilling/holes',
+    tags: ['drill hole', 'borehole', 'collar coords', 'dip', 'azimuth', 'target depth', 'hole specification'],
+  },
+  {
+    id: 'create-commercial-contract',
+    title: 'Create Commercial Drilling Contract',
+    description: 'Register a client commercial contract with total contract value, start/end dates, billing rate terms, and completion pacing matrix.',
+    category: 'PROJECTS',
+    categoryName: 'Projects & Sites',
+    permission: 'commercial.contracts.create',
+    icon: DollarSign,
+    path: '/api/v1/commercial/contracts',
+    resource: 'commercial/contracts',
+    tags: ['commercial', 'contract', 'rate card', 'billing', 'revenue', 'commercial contract', 'client'],
+  },
+  {
+    id: 'create-contract-rate-card',
+    title: 'Create Commercial Rate Card',
+    description: 'Configure commercial rate card depth bands ($/m), standby hourly rates ($/h), daywork ($/h), or flat mobilization fees.',
+    category: 'PROJECTS',
+    categoryName: 'Projects & Sites',
+    permission: 'commercial.rate_cards.manage',
+    icon: Receipt,
+    path: '/api/v1/commercial/contracts',
+    resource: 'commercial/rate-cards',
+    tags: ['rate card', 'depth band', 'standby rate', 'hourly rate', 'mobilization fee', 'drilling rate', 'commercial'],
   },
   {
     id: 'update-project-progress',
@@ -547,6 +632,7 @@ export default function CommandCenterPage() {
   const auth = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey>('ALL');
+  const [onlyEditable, setOnlyEditable] = useState(true);
 
   // Modal execution state
   const [activeCommand, setActiveCommand] = useState<CommandDef | null>(null);
@@ -556,10 +642,22 @@ export default function CommandCenterPage() {
   const [pendingSelectCommand, setPendingSelectCommand] = useState<CommandDef | null>(null);
   const [pendingAssetSelectCommand, setPendingAssetSelectCommand] = useState<CommandDef | null>(null);
 
-  // Filter commands by search and category
+  const canRun = (cmd: CommandDef): boolean => {
+    return auth.can(cmd.permission);
+  };
+
+  const authorizedCount = useMemo(() => {
+    return COMMAND_REGISTRY.filter((c) => canRun(c)).length;
+  }, [auth]);
+
+  // Filter commands by search, category, and editability permission
   const filteredCommands = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     return COMMAND_REGISTRY.filter((cmd) => {
+      // Show ONLY commands the user is authorized/able to edit & run
+      if (onlyEditable && !canRun(cmd)) {
+        return false;
+      }
       // Category match
       if (selectedCategory !== 'ALL' && cmd.category !== selectedCategory) {
         return false;
@@ -572,15 +670,7 @@ export default function CommandCenterPage() {
       const matchCat = cmd.categoryName.toLowerCase().includes(query);
       return matchTitle || matchDesc || matchTags || matchCat;
     });
-  }, [searchQuery, selectedCategory]);
-
-  const canRun = (cmd: CommandDef): boolean => {
-    return auth.can(cmd.permission);
-  };
-
-  const authorizedCount = useMemo(() => {
-    return COMMAND_REGISTRY.filter((c) => auth.can(c.permission)).length;
-  }, [auth]);
+  }, [searchQuery, selectedCategory, onlyEditable, auth]);
 
   const handleRunCommand = (cmd: CommandDef) => {
     if (!canRun(cmd)) {
@@ -714,8 +804,25 @@ export default function CommandCenterPage() {
               </button>
             )}
           </div>
-          <div className="text-xs text-muted-foreground font-500 whitespace-nowrap">
-            Showing <strong className="text-foreground font-700">{filteredCommands.length}</strong> commands
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={() => setOnlyEditable(!onlyEditable)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-600 transition-all ${
+                onlyEditable
+                  ? 'bg-primary/10 border-primary/40 text-primary shadow-2xs'
+                  : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Filter size={13} />
+              <span>Editable Commands Only</span>
+              <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${onlyEditable ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'}`}>
+                {onlyEditable ? 'ON' : 'OFF'}
+              </span>
+            </button>
+            <div className="text-xs text-muted-foreground font-500 whitespace-nowrap">
+              Showing <strong className="text-foreground font-700">{filteredCommands.length}</strong> commands
+            </div>
           </div>
         </div>
 
@@ -730,8 +837,10 @@ export default function CommandCenterPage() {
               const IconComponent = cat.icon;
               const isSelected = selectedCategory === cat.key;
               const count = cat.key === 'ALL'
-                ? COMMAND_REGISTRY.length
-                : COMMAND_REGISTRY.filter((c) => c.category === cat.key).length;
+                ? (onlyEditable ? COMMAND_REGISTRY.filter((c) => canRun(c)).length : COMMAND_REGISTRY.length)
+                : (onlyEditable
+                    ? COMMAND_REGISTRY.filter((c) => c.category === cat.key && canRun(c)).length
+                    : COMMAND_REGISTRY.filter((c) => c.category === cat.key).length);
 
               return (
                 <button

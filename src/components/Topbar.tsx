@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Bell, Search, LogOut, Zap, Sparkles, X, User, Clock, Calendar, ShieldCheck } from 'lucide-react';
 import { useAuth, canAccessAdministration } from './AuthProvider';
 import { useData, rows } from './DataUI';
+import useNotificationCount from './useNotificationCount';
 
 export default function Topbar() {
   const auth = useAuth();
@@ -14,8 +15,7 @@ export default function Topbar() {
   const [resource, setResource] = useState('projects');
   const [show, setShow] = useState(false);
 
-  const notifications = useData('/api/v1/hr/notifications');
-  const unread = rows(notifications?.data)?.filter(r => !r?.read_at)?.length;
+  const unread = useNotificationCount();
 
   const sections = [
     ['Projects', 'projects', 'projects.read'],

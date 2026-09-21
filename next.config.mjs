@@ -17,7 +17,7 @@ const nextConfig = {
   },
   experimental: {
     // Set the timeout to 2 minutes (120,000 ms) or higher as needed
-    proxyTimeout: 120000, 
+    proxyTimeout: 140000, 
   },
   images: {
     remotePatterns: imageHosts,

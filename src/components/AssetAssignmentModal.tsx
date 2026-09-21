@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ArrowRight, Truck, CheckCircle2 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { Modal, Row, rows, useData, State } from './DataUI';
+import SearchableSelect from './SearchableSelect';
 export default function AssetAssignmentModal({
   asset,
   currentProject,
@@ -77,16 +78,12 @@ export default function AssetAssignmentModal({
     <Modal name={transfer ? 'Transfer asset' : 'Assign asset to project'} onClose={onClose}>
       <form onSubmit={save} className="space-y-5">
         {!asset ? (
-          <label className="block text-xs font-semibold">
-            Equipment / Asset *
-            <select
-              className="input-field mt-1 text-xs"
-              value={selectedAssetId}
-              required
-              onChange={(e) => setSelectedAssetId(e.target.value)}
-            >
-              <option value="">Select equipment asset to assign…</option>
-              {rows(assetsData.data).map((a) => {
+          <div>
+            <label className="block text-xs font-semibold mb-1">
+              Equipment / Asset *
+            </label>
+            <SearchableSelect
+              options={rows(assetsData.data).map((a) => {
                 const projName =
                   a.current_project?.name ||
                   a.project_name ||
@@ -95,14 +92,19 @@ export default function AssetAssignmentModal({
                 const statusLabel = projName
                   ? `Assigned: ${projName}`
                   : a.status?.replace(/_/g, ' ') || 'AVAILABLE';
-                return (
-                  <option key={a.id} value={a.id}>
-                    {a.name || a.asset_code || a.code} ({a.asset_number || 'No Code'}) — {statusLabel}
-                  </option>
-                );
+                return {
+                  value: a.id,
+                  label: `${a.name || a.asset_code || a.code} (${a.asset_number || 'No Code'})`,
+                  sublabel: statusLabel,
+                  badge: a.asset_number || a.code,
+                };
               })}
-            </select>
-          </label>
+              value={selectedAssetId}
+              onChange={(val) => setSelectedAssetId(val)}
+              placeholder="Search equipment asset to assign..."
+              required
+            />
+          </div>
         ) : (
           <div className="flex items-center gap-3">
             <span className="p-3 rounded-lg bg-secondary text-primary">
@@ -132,19 +134,12 @@ export default function AssetAssignmentModal({
         </div>
         <State loading={projects.loading} error={projects.error} retry={projects.reload}>
           <div className="grid md:grid-cols-2 gap-4">
-            <label className="text-xs font-semibold">
-              Destination project *
-              <select
-                className="input-field mt-1"
-                value={target}
-                required
-                onChange={(e) => {
-                  setTarget(e.target.value);
-                  setLocation('');
-                }}
-              >
-                <option value="">Select project</option>
-                {rows(projects.data)
+            <div>
+              <label className="block text-xs font-semibold mb-1">
+                Destination project *
+              </label>
+              <SearchableSelect
+                options={rows(projects.data)
                   .filter(
                     (p) =>
                       p.id !== currentProject?.id &&
@@ -152,45 +147,51 @@ export default function AssetAssignmentModal({
                       p.status !== 'CLOSED' &&
                       p.status !== 'COMPLETED'
                   )
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label className="text-xs font-semibold">
-              Destination site
-              <select
-                className="input-field mt-1"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-              >
-                <option value="">No site specified</option>
-                {rows(locations.data)
+                  .map((p) => ({
+                    value: p.id,
+                    label: p.name,
+                    sublabel: p.code || p.project_code,
+                  }))}
+                value={target}
+                onChange={(val) => {
+                  setTarget(val);
+                  setLocation('');
+                }}
+                placeholder="Search destination project..."
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1">
+                Destination site
+              </label>
+              <SearchableSelect
+                options={rows(locations.data)
                   .filter((r) => !r.project_id || r.project_id === target)
-                  .map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label className="text-xs font-semibold">
-              Primary operator
-              <select
-                className="input-field mt-1"
+                  .map((r) => ({
+                    value: r.id,
+                    label: r.name,
+                  }))}
+                value={location}
+                onChange={(val) => setLocation(val)}
+                placeholder="No site specified"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1">
+                Primary operator
+              </label>
+              <SearchableSelect
+                options={rows(people.data).map((r) => ({
+                  value: r.id,
+                  label: `${r.first_name || ''} ${r.last_name || ''}`.trim() || r.email || r.id,
+                  sublabel: r.job_title || r.role || r.department,
+                }))}
                 value={operator}
-                onChange={(e) => setOperator(e.target.value)}
-              >
-                <option value="">No operator specified</option>
-                {rows(people.data).map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.first_name} {r.last_name}
-                  </option>
-                ))}
-              </select>
-            </label>
+                onChange={(val) => setOperator(val)}
+                placeholder="No operator specified"
+              />
+            </div>
             <label className="text-xs font-semibold">
               Handover meter reading
               <input
