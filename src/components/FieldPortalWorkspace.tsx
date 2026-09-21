@@ -220,7 +220,7 @@ export default function FieldPortalWorkspace() {
         description: createWOForm.description.trim() || 'Field Work Order Maintenance Task',
         asset_name: selectedAsset?.name || 'Equipment Asset',
         asset_id: createWOForm.asset_id,
-        project_name: selectedAsset?.assigned_project_name || selectedAsset?.project_name || 'Solway Mount Belleh Project',
+        project_name: selectedAsset?.assigned_project_name || selectedAsset?.project_name || 'No Assignment',
         priority: createWOForm.priority,
         status: 'OPEN',
         assigned_to: assignedTechNames,
@@ -609,8 +609,8 @@ export default function FieldPortalWorkspace() {
         setDrillHoles(loadedHoles);
       } else {
         setDrillHoles([
-          { id: 'dh-101', hole_number: 'SMB-RC-001', project_name: 'Solway Mount Belleh Project', target_depth_m: 250, drilling_method: 'RC' },
-          { id: 'dh-102', hole_number: 'SMB-RC-002', project_name: 'Solway Mount Belleh Project', target_depth_m: 300, drilling_method: 'RC' },
+          { id: 'dh-101', hole_number: 'SMB-RC-001', project_name: 'No Assignment', target_depth_m: 250, drilling_method: 'RC' },
+          { id: 'dh-102', hole_number: 'SMB-RC-002', project_name: 'No Assignment', target_depth_m: 300, drilling_method: 'RC' },
           { id: 'dh-103', hole_number: 'NMB-DD-012', project_name: 'Nimba Exploration Project', target_depth_m: 400, drilling_method: 'CORE (DD)' },
         ]);
       }
@@ -1270,7 +1270,7 @@ export default function FieldPortalWorkspace() {
         description: `Scheduled ${maintForm.maintenance_type} cycle for ${assetName}.\nTaxonomy: ${maintForm.failure_taxonomy}\nService Meter Target: ${maintForm.meter_reading} Hours.\nInstructions: ${maintForm.notes || 'None'}`,
         asset_name: assetName,
         asset_id: maintForm.asset_id,
-        project_name: myProjects[0]?.name || 'Solway Mount Belleh Project',
+        project_name: myProjects[0]?.name || 'No Assignment',
         location: 'Site Rig Pad / Field Shed',
         priority: maintForm.priority,
         status: 'OPEN',
@@ -2760,7 +2760,7 @@ export default function FieldPortalWorkspace() {
                 </div>
                 <div className="flex justify-between py-1 border-b">
                   <span className="text-muted-foreground">Assigned Project</span>
-                  <span className="font-bold text-foreground">{myProjects[0]?.name || 'Solway Mount Belleh Project'}</span>
+                  <span className="font-bold text-foreground">{myProjects[0]?.name || 'No Assignment'}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b">
                   <span className="text-muted-foreground">Portal View</span>
@@ -4139,7 +4139,7 @@ export default function FieldPortalWorkspace() {
               </div>
               <div className="flex justify-between border-b pb-1.5">
                 <span className="text-muted-foreground">Assigned Project</span>
-                <span className="font-bold">{myProjects[0]?.name || 'Solway Mount Belleh Project'}</span>
+                <span className="font-bold">{myProjects[0]?.name || 'No Assignment'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Operational Status</span>
