@@ -5,11 +5,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FileText, AlertTriangle, Search, RefreshCw, ArrowLeft, Eye, CheckCircle, ArrowRight, ShieldAlert, Clock } from 'lucide-react';
 import { apiFetch, apiFetchBlob } from '@/lib/api';
+import { openUniversalFileViewer } from '@/lib/fileViewer';
 import { toast } from 'sonner';
 import { normalizeExpiringDocument } from '@/lib/expiringDocuments';
 import { Row, display } from './DataUI';
 
-export default function ExpiringDocumentsWorkspace() {
+export default function ExpiringDocumentsWorkspace({ baseRoute = '/workspace' }: { baseRoute?: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [documents, setDocuments] = useState<Row[]>([]);
@@ -65,8 +66,7 @@ export default function ExpiringDocumentsWorkspace() {
     setActionError('');
     try {
       const blob = await apiFetchBlob(`/api/v1/employees/${empId}/documents/${docId}/download`);
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank', 'noopener,noreferrer');
+      openUniversalFileViewer({ blob, fileName: doc.file_name || doc.name || doc.title || 'Employee document', title: doc.title || 'Employee document' });
     } catch (err: any) {
       setActionError(err?.message || 'Failed to view document.');
     } finally {
@@ -93,8 +93,8 @@ export default function ExpiringDocumentsWorkspace() {
       {/* Header Bar */}
       <div className="flex flex-wrap justify-between items-center gap-4 border-b pb-4">
         <div>
-          <Link href="/workforce-overview" className="text-xs text-primary flex items-center gap-1 mb-2 hover:underline">
-            <ArrowLeft size={12} /> Workforce Overview
+          <Link href={baseRoute === '/workspace' ? '/workforce-overview' : baseRoute} className="text-xs text-primary flex items-center gap-1 mb-2 hover:underline">
+            <ArrowLeft size={12} /> {baseRoute === '/workspace' ? 'Workforce Overview' : 'Back to Portal'}
           </Link>
           <h1 className="text-2xl font-bold text-foreground">Expiring Employee Documents & Licences</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
@@ -232,7 +232,7 @@ export default function ExpiringDocumentsWorkspace() {
 
                       <td className="p-3">
                         {doc.employee_id ? (
-                          <Link href={`/workspace/employees/${doc.employee_id}`} className="font-bold text-foreground hover:text-primary transition-colors block">
+                          <Link href={`${baseRoute}/employees/${doc.employee_id}`} className="font-bold text-foreground hover:text-primary transition-colors block">
                             {fullName}
                           </Link>
                         ) : (
@@ -268,7 +268,7 @@ export default function ExpiringDocumentsWorkspace() {
 
                           {doc.employee_id && (
                             <Link
-                              href={`/workspace/employees/${doc.employee_id}?tab=documents`}
+                              href={`${baseRoute}/employees/${doc.employee_id}?tab=documents`}
                               className="btn-primary py-1 px-2.5 text-[11px] flex items-center gap-1"
                               title="Resolve / Renew Document on Employee Profile"
                             >

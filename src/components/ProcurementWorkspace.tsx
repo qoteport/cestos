@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { apiFetch, PurchaseOrderRead, receivePurchaseOrderGoods } from '@/lib/api';
 import { Modal, rows } from './DataUI';
+import { PurchaseOrderCategoryField, purchaseOrderCategoryLabel } from './PurchaseOrderCategoryField';
+import { useOperationalDataSync } from '@/lib/operationalDataSync';
 
 export default function ProcurementWorkspace({ subResource }: { subResource?: string }) {
   const [loading, setLoading] = useState(true);
@@ -21,6 +23,7 @@ export default function ProcurementWorkspace({ subResource }: { subResource?: st
   const [newPo, setNewPo] = useState({
     supplier_id: '',
     project_id: '',
+    category: '',
     currency: 'USD',
     notes: '',
     items: [
@@ -34,6 +37,9 @@ export default function ProcurementWorkspace({ subResource }: { subResource?: st
   const [receiptQuantities, setReceiptQuantities] = useState<Record<string, number>>({});
 
   const reload = () => setVersion((v) => v + 1);
+  useOperationalDataSync((update) => {
+    if ((update.domain === 'purchase_orders' || update.domain === 'expenses') && document.visibilityState === 'visible') reload();
+  });
 
   useEffect(() => {
     let active = true;
@@ -143,6 +149,7 @@ export default function ProcurementWorkspace({ subResource }: { subResource?: st
             <tr>
               <th className="px-4 py-3">PO #</th>
               <th className="px-4 py-3">Line Items</th>
+              <th className="px-4 py-3">Category</th>
               <th className="px-4 py-3">Total Amount</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3 text-right">Actions</th>
@@ -155,6 +162,7 @@ export default function ProcurementWorkspace({ subResource }: { subResource?: st
                 <td className="px-4 py-3 text-xs text-muted-foreground">
                   {(po.items || []).map((i: any) => `${i.description} (${i.quantity_ordered})`).join(', ') || 'No line items'}
                 </td>
+                <td className="px-4 py-3">{purchaseOrderCategoryLabel(po.category)}</td>
                 <td className="px-4 py-3 font-bold">${Number(po.total_amount).toLocaleString()} {po.currency}</td>
                 <td className="px-4 py-3">
                   <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
@@ -186,7 +194,7 @@ export default function ProcurementWorkspace({ subResource }: { subResource?: st
             ))}
             {filteredOrders.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
                   No purchase orders found.
                 </td>
               </tr>
@@ -209,8 +217,16 @@ export default function ProcurementWorkspace({ subResource }: { subResource?: st
                 <span className="font-semibold text-primary">{selectedPo.status}</span>
               </div>
               <div>
+                <span className="text-xs text-muted-foreground block">Category</span>
+                <span className="font-semibold">{purchaseOrderCategoryLabel(selectedPo.category)}</span>
+              </div>
+              <div>
                 <span className="text-xs text-muted-foreground block">Total Amount</span>
                 <span className="font-mono font-bold">${Number(selectedPo.total_amount).toLocaleString()} {selectedPo.currency}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">Requested by</span>
+                <span className="font-semibold">{selectedPo.created_by_name || '—'}</span>
               </div>
             </div>
 
@@ -275,6 +291,11 @@ export default function ProcurementWorkspace({ subResource }: { subResource?: st
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium mb-1">Category (Optional)</label>
+              <PurchaseOrderCategoryField value={newPo.category} onChange={(category) => setNewPo({ ...newPo, category })} className="w-full text-sm border rounded p-2 bg-background" />
             </div>
 
             {/* Line Items */}

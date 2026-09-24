@@ -144,7 +144,7 @@ const COMMAND_REGISTRY: CommandDef[] = [
     permission: 'employees.manage',
     icon: ShieldAlert,
     resource: 'incidents',
-    path: '/api/v1/incidents',
+    path: '/api/v1/hse/incidents',
     tags: ['incident', 'injury', 'near miss', 'hse', 'safety', 'accident', 'incident report'],
   },
 

@@ -9,6 +9,7 @@ export interface SearchableSelectOption {
   sublabel?: string;
   badge?: string;
   raw?: any;
+  disabled?: boolean;
 }
 
 export interface SearchableSelectProps {
@@ -73,6 +74,7 @@ export default function SearchableSelect({
   });
 
   const handleSelect = (opt: SearchableSelectOption) => {
+    if (opt.disabled) return;
     onChange(opt.value, opt);
     setIsOpen(false);
   };
@@ -184,8 +186,10 @@ export default function SearchableSelect({
                   <button
                     key={opt.value}
                     type="button"
+                    disabled={opt.disabled}
+                    aria-disabled={opt.disabled}
                     onClick={() => handleSelect(opt)}
-                    className={`w-full text-left px-2.5 py-1.5 rounded text-xs flex items-center justify-between gap-2 transition-colors ${
+                    className={`disabled:opacity-50 disabled:cursor-not-allowed w-full text-left px-2.5 py-1.5 rounded text-xs flex items-center justify-between gap-2 transition-colors ${
                       isSelected
                         ? 'bg-primary/10 text-primary font-semibold'
                         : 'hover:bg-muted text-foreground'
@@ -402,7 +406,7 @@ export function MultiSearchableSelect({
                     key={opt.value}
                     type="button"
                     onClick={() => handleToggle(opt)}
-                    className={`w-full text-left px-2.5 py-1.5 rounded text-xs flex items-center justify-between gap-2 transition-colors ${
+                    className={`disabled:opacity-50 disabled:cursor-not-allowed w-full text-left px-2.5 py-1.5 rounded text-xs flex items-center justify-between gap-2 transition-colors ${
                       isSelected
                         ? 'bg-primary/10 text-primary font-semibold'
                         : 'hover:bg-muted text-foreground'

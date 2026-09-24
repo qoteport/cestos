@@ -41,6 +41,7 @@ import {
   updateProjectContract,
   deleteProjectContract,
 } from '@/lib/api';
+import { openUniversalFileViewer } from '@/lib/fileViewer';
 import { Modal, ErrorModal, SearchableProjectSelect, rows } from './DataUI';
 
 interface RateCardInput {
@@ -1969,7 +1970,7 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <button
-                        onClick={() => window.open(att.url, '_blank')}
+                        onClick={() => openUniversalFileViewer({ fileUrl: att.url, fileName: att.name || 'Contract attachment', title: 'Contract attachment' })}
                         className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded border hover:bg-muted flex items-center gap-1 font-medium"
                         title="View Document"
                       >

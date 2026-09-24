@@ -4,13 +4,15 @@ import { useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { Modal } from './DataUI';
 import useAppFeedback from './useAppFeedback';
+import SearchableSelect from './SearchableSelect';
 
 type Row = Record<string, any>;
 
-export default function FieldShiftEditModal({ shift, assets, holes, onClose, onSaved }: {
+export default function FieldShiftEditModal({ shift, assets, holes, sites = [], onClose, onSaved }: {
   shift: Row;
   assets: Row[];
   holes: Row[];
+  sites?: Row[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -19,6 +21,7 @@ export default function FieldShiftEditModal({ shift, assets, holes, onClose, onS
     shift_type: shift.shift_type,
     rig_id: shift.rig_id,
     notes: shift.notes || '',
+    site_location_id: shift.site_location_id || '',
   });
   const [intervals, setIntervals] = useState<Row[]>((shift.intervals || []).map((row: Row) => ({ ...row })));
   const [times, setTimes] = useState<Row[]>((shift.time_segments || []).map((row: Row) => ({ ...row })));
@@ -27,7 +30,7 @@ export default function FieldShiftEditModal({ shift, assets, holes, onClose, onS
   const rigOptions = assets.some(asset => asset.id === shift.rig_id)
     ? assets
     : [{ id: shift.rig_id, name: shift.rig_name || 'Recorded rig' }, ...assets];
-  const projectHoles = holes.filter(hole => hole.project_id === shift.project_id);
+  const projectHoles = holes.filter(hole => hole.project_id === shift.project_id && (!form.site_location_id || hole.site_location_id === form.site_location_id));
   const locked = shift.status === 'APPROVED' || !!shift.approved_at;
   const fieldClassName = 'w-full border rounded-lg p-2 bg-background';
 
@@ -41,6 +44,7 @@ export default function FieldShiftEditModal({ shift, assets, holes, onClose, onS
         method: 'PUT',
         body: JSON.stringify({
           ...form,
+          site_location_id: form.site_location_id || null,
           intervals: intervals.map(row => ({
             drill_hole_id: row.drill_hole_id,
             from_depth_m: Number(row.from_depth_m),
@@ -78,7 +82,7 @@ export default function FieldShiftEditModal({ shift, assets, holes, onClose, onS
           </div>
           <div>
             <label className="block font-bold mb-1">Site / Project</label>
-            <input readOnly value={shift.project_name || shift.project_code || 'Recorded project'} className={`${fieldClassName} text-muted-foreground`} />
+            <SearchableSelect value={form.site_location_id} onChange={value => setForm({ ...form, site_location_id: value })} options={sites.filter(site => site.project_id === shift.project_id).map(site => ({ value: site.id, label: `${site.name} | ${site.project_name || shift.project_name || ''}` }))} placeholder="Select site / location" />
           </div>
         </div>
 
@@ -102,7 +106,7 @@ export default function FieldShiftEditModal({ shift, assets, holes, onClose, onS
               <label className="block font-bold text-foreground">Worked Drill Hole Intervals</label>
               <span className="text-[10px] text-muted-foreground block">Select drilled hole and enter the depth range for this shift</span>
             </div>
-            <button type="button" onClick={() => setIntervals(values => [...values, { drill_hole_id: '', from_depth_m: 0, to_depth_m: 0, core_recovered_m: null }])} className="px-2 py-1 text-[11px] bg-secondary text-primary font-bold rounded-lg hover:bg-secondary/80">
+            <button type="button" onClick={() => setIntervals(values => { const used = new Set(values.map(row => row.drill_hole_id)); const next = projectHoles.find(hole => !used.has(hole.id) && Number(hole.current_depth_m ?? 0) < Number(hole.target_depth_m ?? Infinity)); return [...values, { drill_hole_id: next?.id || '', from_depth_m: next?.current_depth_m || 0, to_depth_m: next?.current_depth_m || 0, core_recovered_m: null }]; })} className="px-2 py-1 text-[11px] bg-secondary text-primary font-bold rounded-lg hover:bg-secondary/80">
               + Add Interval
             </button>
           </div>

@@ -9,6 +9,7 @@ import SystemManual from './SystemManual';
 
 export default function AdminWorkspace(props: { initialTab?: 'users' | 'roles' | 'leave' | 'audit' | 'manual' } = {}) {
   const auth = useAuth();
+
   if (auth.loading) return null;
   if (!canAccessAdministration(auth)) return <div className="card p-6">Administration is not available for your account.</div>;
   return <AdminWorkspaceContent {...props} />;
@@ -22,6 +23,8 @@ function AdminWorkspaceContent({
   const auth = useAuth();
   const [tab, setTab] = useState<'users' | 'roles' | 'leave' | 'audit' | 'manual'>(initialTab);
   const [search, setSearch] = useState('');
+  const [auditListPage, setAuditListPage] = React.useState(1);
+  const [filteredUsersPage, setFilteredUsersPage] = React.useState(1);
   const [leaveStatusFilter, setLeaveStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
   const [actionError, setActionError] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
@@ -39,6 +42,7 @@ function AdminWorkspaceContent({
   const [editIsActive, setEditIsActive] = useState<boolean>(true);
   const [editIsSuperuser, setEditIsSuperuser] = useState<boolean>(false);
   const [editIsFieldPortalOnly, setEditIsFieldPortalOnly] = useState<boolean>(false);
+  const [editPortalType, setEditPortalType] = useState<string>('FULL');
   const [updateUserBusy, setUpdateUserBusy] = useState<boolean>(false);
 
   useEffect(() => {
@@ -47,6 +51,7 @@ function AdminWorkspaceContent({
       setEditIsActive(!!editUser.is_active);
       setEditIsSuperuser(!!editUser.is_superuser);
       setEditIsFieldPortalOnly(!!editUser.is_field_portal_only);
+      setEditPortalType(editUser.portal_type || (editUser.is_field_portal_only ? 'FIELD' : 'FULL'));
     }
   }, [editUser]);
 
@@ -172,7 +177,8 @@ function AdminWorkspaceContent({
         body: JSON.stringify({
           is_active: editIsActive,
           is_superuser: editIsSuperuser,
-          is_field_portal_only: editIsFieldPortalOnly,
+          portal_type: editPortalType,
+          is_field_portal_only: editPortalType === 'FIELD',
           role_ids: editRoleIds,
         }),
       });
@@ -348,7 +354,7 @@ function AdminWorkspaceContent({
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {filteredUsers.map((u) => {
+                  {filteredUsers.slice((filteredUsersPage - 1) * 15, filteredUsersPage * 15).map((u) => {
                     const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'User';
                     return (
                       <tr key={String(u.id)} className="hover:bg-muted/30 transition">
@@ -426,6 +432,31 @@ function AdminWorkspaceContent({
                   )}
                 </tbody>
               </table>
+              <div className="flex items-center justify-between mt-4 px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 rounded-b-2xl">
+                <span className="text-xs text-slate-500 font-medium">
+                  Showing {Math.min(1 + (filteredUsersPage - 1) * 15, filteredUsers.length)} - {Math.min(filteredUsersPage * 15, filteredUsers.length)} of {filteredUsers.length} records
+                </span>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setFilteredUsersPage(p => Math.max(1, p - 1))} 
+                    disabled={filteredUsersPage === 1}
+                    className="px-3 py-1.5 text-xs font-bold border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-800 transition"
+                  >
+                    Prev
+                  </button>
+                  <span className="text-xs font-bold px-2">
+                    Page {filteredUsersPage} of {Math.max(1, Math.ceil(filteredUsers.length / 15))}
+                  </span>
+                  <button 
+                    onClick={() => setFilteredUsersPage(p => Math.min(Math.ceil(filteredUsers.length / 15), p + 1))} 
+                    disabled={filteredUsersPage >= Math.ceil(filteredUsers.length / 15)}
+                    className="px-3 py-1.5 text-xs font-bold border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-800 transition"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+
             </div>
           </State>
         </div>
@@ -705,7 +736,7 @@ function AdminWorkspaceContent({
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {auditList.map((a: any, idx: number) => (
+                  {auditList.slice((auditListPage - 1) * 15, auditListPage * 15).map((a: any, idx: number) => (
                     <tr key={String(a.id || idx)} className="hover:bg-muted/30">
                       <td className="p-3 text-muted-foreground">
                         {a.created_at ? new Date(String(a.created_at)).toLocaleString() : 'N/A'}
@@ -728,6 +759,31 @@ function AdminWorkspaceContent({
                   )}
                 </tbody>
               </table>
+              <div className="flex items-center justify-between mt-4 px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 rounded-b-2xl">
+                <span className="text-xs text-slate-500 font-medium">
+                  Showing {Math.min(1 + (auditListPage - 1) * 15, auditList.length)} - {Math.min(auditListPage * 15, auditList.length)} of {auditList.length} records
+                </span>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setAuditListPage(p => Math.max(1, p - 1))} 
+                    disabled={auditListPage === 1}
+                    className="px-3 py-1.5 text-xs font-bold border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-800 transition"
+                  >
+                    Prev
+                  </button>
+                  <span className="text-xs font-bold px-2">
+                    Page {auditListPage} of {Math.max(1, Math.ceil(auditList.length / 15))}
+                  </span>
+                  <button 
+                    onClick={() => setAuditListPage(p => Math.min(Math.ceil(auditList.length / 15), p + 1))} 
+                    disabled={auditListPage >= Math.ceil(auditList.length / 15)}
+                    className="px-3 py-1.5 text-xs font-bold border border-slate-200 dark:border-slate-700 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-800 transition"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+
             </div>
           </State>
         </div>
@@ -854,22 +910,54 @@ function AdminWorkspaceContent({
                 </div>
               </label>
 
-              <label className="flex items-start gap-3 p-3 border rounded-lg hover:bg-blue-500/10 cursor-pointer transition border-blue-500/20 bg-blue-500/5 col-span-2">
-                <input
-                  type="checkbox"
-                  checked={editIsFieldPortalOnly}
-                  onChange={(e) => setEditIsFieldPortalOnly(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-input text-blue-600 focus:ring-blue-500/20"
-                />
-                <div>
-                  <span className="text-xs font-semibold text-foreground block flex items-center gap-1">
-                    Field Portal Only Mode
-                  </span>
-                  <span className="text-[11px] text-muted-foreground">
-                    Restrict user account to the Field Portal upon login (designed for field staff & supervisors).
-                  </span>
+              <div className="col-span-2 space-y-2">
+                <label className="block text-xs font-semibold text-foreground">Portal Access Mode</label>
+                <p className="text-[11px] text-muted-foreground">
+                  Controls which portal this user is directed to upon login. Admins set this; users cannot switch portals themselves.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {([
+                    { value: 'FIELD',       label: 'Field Portal',         desc: 'Field staff — lightweight mobile view',      color: 'blue' },
+                    { value: 'FIELD_ADMIN', label: 'Field Admin Portal',   desc: 'Field admin — work orders, HSE, fleet, costs', color: 'orange' },
+                    { value: 'HR',          label: 'HR Portal',            desc: 'HR officers — people & leave management',    color: 'emerald' },
+                    { value: 'FINANCE',     label: 'Finance Portal',       desc: 'Finance team — invoices & cost tracking',    color: 'violet' },
+                    { value: 'EXECUTIVE',   label: 'Executive Portal',     desc: 'Executive team — oversight & telemetry',     color: 'indigo' },
+                  ] as const).map(({ value, label, desc, color }) => {
+                    const isSelected = editPortalType === value;
+                    const colorMap: Record<string, string> = {
+                      slate:   'border-slate-400 bg-slate-50 dark:bg-slate-900/30',
+                      blue:    'border-blue-400 bg-blue-50 dark:bg-blue-900/30',
+                      emerald: 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/30',
+                      violet:  'border-violet-400 bg-violet-50 dark:bg-violet-900/30',
+                      orange:  'border-orange-400 bg-orange-50 dark:bg-orange-900/30',
+                      indigo:  'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30',
+                    };
+                    const ringMap: Record<string, string> = {
+                      slate:   'ring-slate-400',
+                      blue:    'ring-blue-400',
+                      emerald: 'ring-emerald-400',
+                      violet:  'ring-violet-400',
+                      orange:  'ring-orange-400',
+                      indigo:  'ring-indigo-400',
+                    };
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setEditPortalType(value)}
+                        className={`text-left p-3 rounded-lg border-2 transition-all cursor-pointer ${
+                          isSelected
+                            ? `${colorMap[color]} ${ringMap[color]} ring-2`
+                            : 'border-input hover:bg-muted/40'
+                        }`}
+                      >
+                        <span className="text-xs font-bold block">{label}</span>
+                        <span className="text-[11px] text-muted-foreground">{desc}</span>
+                      </button>
+                    );
+                  })}
                 </div>
-              </label>
+              </div>
             </div>
 
             <div className="border-t pt-4 space-y-3">

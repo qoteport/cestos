@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Truck, ArrowLeft, RefreshCw, Plus, Search, Filter, Wrench, CheckCircle, ShieldAlert, FileText, Upload, Eye, Download, Edit } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
+import { openUniversalFileViewer } from '@/lib/fileViewer';
 import { toast } from 'sonner';
 import { Row, display, Modal } from './DataUI';
 
@@ -653,14 +654,13 @@ export default function EquipmentComponentsWorkspace() {
               </div>
               <div className="flex justify-center gap-2 pt-2">
                 {previewDoc.file_url ? (
-                  <a
-                    href={previewDoc.file_url}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => openUniversalFileViewer({ fileUrl: previewDoc.file_url, fileName: previewDoc.file_name || previewDoc.title || 'Component specification', title: 'Component specification' })}
                     className="btn-primary py-1.5 px-3 text-xs flex items-center gap-1"
                   >
                     <Download size={13} /> Download Spec Document
-                  </a>
+                  </button>
                 ) : (
                   <button
                     type="button"

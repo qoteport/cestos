@@ -15,7 +15,7 @@ export default function useAppFeedback() {
       ...previous, [formId]: alert.type === 'error' ? message : '',
     }));
     toast[alert.type](message, {
-      duration: alert.type === 'error' ? Infinity : 6000,
+      duration: 30_000,
       closeButton: true,
     });
   }, []);

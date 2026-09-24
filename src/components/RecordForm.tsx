@@ -455,7 +455,7 @@ function formatLookupOptionLabel(r: Row, route?: string): string {
     return display(r.name || r.title || r.project_number || r.code || r.id);
   }
   if (route === 'locations') {
-    return display(r.name || r.site_name || r.code || r.id);
+    return [display(r.name || r.site_name || r.code || r.id), r.project_name].filter(Boolean).join(" | ");
   }
   if (route === 'assets') {
     return display(r.asset_name || r.name || r.asset_tag || r.serial_number || r.id);
@@ -522,6 +522,7 @@ function Reference({
       try {
         let url = '/api/v1/' + route + '?page_size=100&search=' + encodeURIComponent(search);
 
+        if (field === 'location_id' && selectedProjectId) url += '&project_id=' + encodeURIComponent(selectedProjectId);
         const d = await apiFetch(url);
         if (active) {
           let fetchedRows = rows(d);

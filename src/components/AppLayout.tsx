@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import { useAuth } from './AuthProvider';
@@ -10,10 +10,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const { user, loading, error, reload } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const inWorkspace = pathname === '/workspace' || pathname.startsWith('/workspace/');
+  const portalRoutes: Record<string, string> = {
+    FIELD: '/field-portal',
+    FIELD_ADMIN: '/field-admin-portal',
+    HR: '/hr-portal',
+    FINANCE: '/finance-portal',
+    EXECUTIVE: '/executive-portal',
+  };
+  const assignedPortal = user?.portal_type ? portalRoutes[user.portal_type.toUpperCase()] : undefined;
+  const workspaceBlocked = inWorkspace && !!assignedPortal;
 
   useEffect(() => {
-    if (!loading && !user && !error) router.replace('/sign-up-login');
-  }, [user, loading, error, router]);
+    if (!loading && !user && !error) {
+      router.replace('/sign-up-login');
+      return;
+    }
+    if (!loading && user && workspaceBlocked) {
+      router.replace(assignedPortal!);
+      return;
+    }
+    if (!loading && user && !user.is_superuser) {
+      const p = user.portal_type || 'FIELD';
+      router.replace(portalRoutes[p.toUpperCase()] || '/field-portal');
+    }
+  }, [user, loading, error, router, workspaceBlocked, assignedPortal]);
 
   if (error) {
     return (
@@ -38,6 +60,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         role="status"
       >
         Restoring your workspace…
+      </main>
+    );
+  }
+
+  if (workspaceBlocked) {
+    return (
+      <main className="min-h-screen flex items-center justify-center text-muted-foreground" role="status">
+        Redirecting to your assigned portal…
       </main>
     );
   }

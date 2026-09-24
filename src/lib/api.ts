@@ -1,5 +1,6 @@
 // Browser calls stay on this origin; Next.js proxies to the configured backend.
 import {getAccessToken, getRefreshToken, setTokens, clearTokens, refreshSession} from './session';
+import { notifyOperationalDataUpdated } from './operationalDataSync';
 export {getAccessToken, getRefreshToken, setTokens, clearTokens} from './session';
 export const BASE_URL = '';
 export class ApiError extends Error {
@@ -59,7 +60,20 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, authe
       if (typeof window !== 'undefined') window.dispatchEvent(new Event('cestos:session-expired'));
     }
   }
-  return readResponse<T>(response);
+  const result = await readResponse<T>(response);
+  const method = (options.method || 'GET').toUpperCase();
+  if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+    const route = path.split('?')[0];
+    if (route.startsWith('/api/v1/procurement/purchase-orders')) {
+      notifyOperationalDataUpdated('purchase_orders');
+    }
+    if (route.startsWith('/api/v1/operational-expenses')) {
+      notifyOperationalDataUpdated('expenses');
+      // Expense creation and payments are reflected on the linked PO tables too.
+      notifyOperationalDataUpdated('purchase_orders');
+    }
+  }
+  return result;
 }
 
 export async function apiFetchBlob(path: string, options: RequestInit = {}, authenticated = true): Promise<Blob> {
@@ -121,6 +135,7 @@ export interface UserRead {
   is_active: boolean;
   is_superuser?: boolean;
   is_field_portal_only?: boolean;
+  portal_type?: string;
   role?: string;
   roles?: any[];
 }
@@ -710,9 +725,11 @@ export interface PurchaseOrderRead {
   po_number: string;
   supplier_id: string;
   project_id?: string;
+  category?: string | null;
   status: string;
   total_amount: number;
   currency: string;
+  created_by_name?: string | null;
   notes?: string;
   items?: any[];
   created_at: string;

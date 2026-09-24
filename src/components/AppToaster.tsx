@@ -9,9 +9,9 @@ export default function AppToaster() {
   useEffect(() => setMounted(true), []);
   if (!mounted) return null;
   return createPortal(
-    <Toaster position="top-center" richColors closeButton expand
+    <Toaster position="top-center" richColors closeButton expand duration={30_000}
       style={{ zIndex: 2147483647 }}
-      toastOptions={{ style: { fontFamily: 'var(--font-dm-sans)', fontSize: '14px' } }}
+      toastOptions={{ duration: 30_000, style: { fontFamily: 'var(--font-dm-sans)', fontSize: '14px' } }}
     />, document.body,
   );
 }

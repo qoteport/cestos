@@ -166,7 +166,6 @@ export default function IncidentReportingWorkspace() {
 
     Promise.all([
       apiFetch<any>('/api/v1/incidents?page_size=100')
-        .catch(() => apiFetch<any>('/api/v1/hr/incidents?page_size=100'))
         .catch(() => []),
       apiFetch<any>('/api/v1/employees?page_size=100').catch(() => []),
       apiFetch<any>('/api/v1/projects?page_size=100').catch(() => []),
@@ -473,7 +472,7 @@ export default function IncidentReportingWorkspace() {
                         <span
                           className={`inline-block px-2 py-0.5 text-[10px] font-bold  ${severityBadge}`}
                         >
-                          {inc.severity}
+                          {String(inc.severity || '').replaceAll('_', ' ')}
                         </span>
                       </td>
                       <td className="p-3">
@@ -620,53 +619,25 @@ function CreateIncidentForm({
 
     try {
       const selectedEmp = employees.find((e) => String(e.id) === employeeId);
-      const selectedProj = projects.find((p) => String(p.id) === projectId);
-
-      const fd = new FormData();
-      fd.append('title', title);
-      fd.append('incident_type', incidentType);
-      fd.append('severity', severity);
-      if (employeeId) fd.append('employee_id', employeeId);
-      if (projectId) fd.append('project_id', projectId);
-      fd.append('location', location);
-      fd.append('incident_date', incidentDate);
-      fd.append('description', description);
-      fd.append('corrective_action', correctiveAction);
-
-      files.forEach((f) => fd.append('files', f));
-
-      let savedRecord: Row;
-      try {
-        savedRecord = await apiFetch<Row>('/api/v1/incidents', {
-          method: 'POST',
-          body: fd,
-        });
-      } catch {
-        // Fallback mock record if backend endpoint is initializing
-        const incNum = `INC-2026-${Math.floor(100 + Math.random() * 900)}`;
-        savedRecord = {
-          id: `inc-${Date.now()}`,
-          incident_number: incNum,
-          title,
-          incident_type: incidentType,
-          severity,
-          status: 'REPORTED',
-          incident_date: incidentDate,
-          location: location || selectedProj?.name || 'Project Site',
-          employee_involved_name: selectedEmp
-            ? [selectedEmp.first_name, selectedEmp.last_name].filter(Boolean).join(' ') || selectedEmp.name
-            : 'Staff Member',
-          description,
-          corrective_action: correctiveAction,
-          attachments: files.map((f, i) => ({
-            id: `att-${Date.now()}-${i}`,
-            filename: f.name,
-            file_size: `${(f.size / 1024).toFixed(1)} KB`,
-          })),
-        };
-      }
-
-      onSuccess(savedRecord);
+      const selectedProj = projects.find((p) => String(p.id) === projectId) || projects[0];
+      const resolvedProjectId = projectId || selectedProj?.id;
+      if (!resolvedProjectId) throw new Error('Select a project before submitting the incident report.');
+      const form = new FormData();
+      form.append('title', title);
+      form.append('incident_type', incidentType);
+      form.append('severity', severity);
+      form.append('project_id', String(resolvedProjectId));
+      if (employeeId) form.append('employee_id', employeeId);
+      form.append('location', location);
+      form.append('incident_date', incidentDate);
+      form.append('description', description);
+      form.append('corrective_action', correctiveAction);
+      files.forEach((file) => form.append('files', file));
+      const savedRecord = await apiFetch<Row>('/api/v1/incidents', { method: 'POST', body: form });
+      onSuccess({
+        ...savedRecord,
+        employee_involved_name: selectedEmp ? [selectedEmp.first_name, selectedEmp.last_name].filter(Boolean).join(' ') || selectedEmp.name : undefined,
+      });
     } catch (err: any) {
       setError(err?.message || 'Failed to submit incident report.');
     } finally {
@@ -926,86 +897,60 @@ function IncidentDetailModalContent({
     : [];
 
   return (
-    <div className="space-y-5">
-      {/* Header Info */}
-      <div className="flex flex-wrap justify-between items-start gap-4 border-b pb-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-mono font-bold text-xs bg-primary/10 text-primary px-2 py-0.5 rounded border border-primary/20">
-              {incident.incident_number || incident.id}
-            </span>
-            <span className="text-xs font-semibold text-muted-foreground uppercase">
-              {display(incident.incident_type).replace(/_/g, ' ')}
-            </span>
-          </div>
-          <h3 className="text-lg font-bold text-foreground">{incident.title}</h3>
+    <div className="space-y-6 text-foreground font-sans leading-relaxed">
+      {/* Document Title Header */}
+      <div className="space-y-1">
+        <div className="text-xs font-bold tracking-widest text-muted-foreground uppercase">
+          Official Safety Event Report &bull; Reference #{incident.incident_number || incident.id}
         </div>
+        <h3 className="text-xl sm:text-2xl font-bold text-foreground leading-tight">{incident.title}</h3>
+      </div>
 
-        <div className="flex items-center gap-2">
-          <span
-            className={`px-2.5 py-1 text-xs font-bold rounded border ${
-              incident.severity === 'CRITICAL'
-                ? 'bg-rose-100 text-rose-800 border-rose-300'
-                : incident.severity === 'HIGH'
-                  ? 'bg-amber-100 text-amber-800 border-amber-300'
-                  : 'bg-blue-100 text-blue-800 border-blue-300'
-            }`}
-          >
-            Severity: {incident.severity}
-          </span>
-          <span
-            className={`px-2.5 py-1 text-xs font-bold rounded border ${
-              incident.status === 'RESOLVED' || incident.status === 'CLOSED'
-                ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                : 'bg-purple-100 text-purple-800 border-purple-300'
-            }`}
-          >
-            {display(incident.status).replace(/_/g, ' ')}
-          </span>
+      {/* Document Key Metadata Block (Word Doc Style - No borders, no bg cards) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3 text-xs">
+        <div>
+          <span className="block font-bold text-muted-foreground text-[11px] uppercase tracking-wider">Incident Category</span>
+          <span className="font-semibold text-foreground mt-0.5 block">{display(incident.incident_type).replace(/_/g, ' ')}</span>
+        </div>
+        <div>
+          <span className="block font-bold text-muted-foreground text-[11px] uppercase tracking-wider">Severity Level</span>
+          <span className="font-semibold text-foreground mt-0.5 block">{String(incident.severity || 'MEDIUM').replaceAll('_', ' ')}</span>
+        </div>
+        <div>
+          <span className="block font-bold text-muted-foreground text-[11px] uppercase tracking-wider">Report Status</span>
+          <span className="font-semibold text-foreground mt-0.5 block">{display(incident.status).replace(/_/g, ' ')}</span>
+        </div>
+        <div>
+          <span className="block font-bold text-muted-foreground text-[11px] uppercase tracking-wider">Reported By</span>
+          <span className="font-semibold text-foreground mt-0.5 block">{incident.reported_by_name || 'Safety Inspector'}</span>
+        </div>
+        <div>
+          <span className="block font-bold text-muted-foreground text-[11px] uppercase tracking-wider">Incident Date &amp; Time</span>
+          <span className="font-medium text-foreground mt-0.5 block">{formattedDate}</span>
+        </div>
+        <div>
+          <span className="block font-bold text-muted-foreground text-[11px] uppercase tracking-wider">Employee Involved</span>
+          <span className="font-medium text-foreground mt-0.5 block">{incident.employee_involved_name || 'Staff Member'}</span>
+        </div>
+        <div className="sm:col-span-2">
+          <span className="block font-bold text-muted-foreground text-[11px] uppercase tracking-wider">Location / Site Area</span>
+          <span className="font-medium text-foreground mt-0.5 block">{incident.location || 'Site'}</span>
         </div>
       </div>
 
-      {/* Grid Meta */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-muted/20 p-3.5 rounded border text-xs">
-        <div>
-          <span className="text-muted-foreground block text-[11px]">Location & Site</span>
-          <span className="font-semibold text-foreground flex items-center gap-1 mt-0.5">
-            <MapPin size={13} className="text-rose-600" /> {incident.location || 'Site'}
-          </span>
-        </div>
-        <div>
-          <span className="text-muted-foreground block text-[11px]">Incident Date & Time</span>
-          <span className="font-semibold text-foreground flex items-center gap-1 mt-0.5">
-            <Calendar size={13} className="text-blue-600" /> {formattedDate}
-          </span>
-        </div>
-        <div>
-          <span className="text-muted-foreground block text-[11px]">Employee Involved</span>
-          <span className="font-semibold text-foreground flex items-center gap-1 mt-0.5">
-            <User size={13} className="text-emerald-600" /> {incident.employee_involved_name || 'Staff Member'}
-          </span>
-        </div>
-        <div>
-          <span className="text-muted-foreground block text-[11px]">Reported By</span>
-          <span className="font-semibold text-foreground flex items-center gap-1 mt-0.5">
-            <User size={13} className="text-purple-600" /> {incident.reported_by_name || 'Safety Inspector'}
-          </span>
-        </div>
-      </div>
-
-      {/* Description */}
-      <div className="space-y-1.5">
-        <h4 className="text-xs font-bold text-foreground">Incident Narrative</h4>
-        <p className="text-xs text-muted-foreground bg-background p-3 rounded border leading-relaxed whitespace-pre-wrap">
+      {/* Section 1: Incident Narrative */}
+      <div className="pt-2 space-y-1.5">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">1. Detailed Incident Narrative</h4>
+        <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
           {incident.description || 'No detailed narrative recorded.'}
         </p>
       </div>
 
-      {/* Corrective Action */}
+      {/* Section 2: Immediate Corrective Action Taken */}
       {incident.corrective_action && (
-        <div className="space-y-1.5">
-          <h4 className="text-xs font-bold text-foreground">Corrective Action Taken</h4>
-          <p className="text-xs text-emerald-900 bg-emerald-50/50 p-3 rounded border border-emerald-200 leading-relaxed whitespace-pre-wrap">
+        <div className="pt-2 space-y-1.5">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">2. Immediate Corrective Action Taken</h4>
+          <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
             {incident.corrective_action}
           </p>
         </div>

@@ -461,12 +461,12 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1">Preferred Name</label>
+                  <label className="block text-xs font-semibold mb-1">NASCOP Number</label>
                   <input
                     className="input-field"
                     value={personal.preferred_name}
                     onChange={e => setPersonal({ ...personal, preferred_name: e.target.value })}
-                    placeholder="e.g. Johnny"
+                    placeholder="e.g. NASCOP-12345"
                   />
                 </div>
                 <div>

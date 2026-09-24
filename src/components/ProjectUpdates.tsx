@@ -1,6 +1,7 @@
 import { Download, Eye, Pencil } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
+import { openUniversalFileViewer } from '@/lib/fileViewer';
 import { useAuth } from './AuthProvider';
 import { Modal, Row, State, display, rows, title, useData } from './DataUI';
 import { number } from './ProjectDashboard';
@@ -282,93 +283,6 @@ function ReportForm({
   );
 }
 
-function getMimeType(fileName?: string, mimeType?: string): string {
-  if (mimeType && mimeType !== 'application/octet-stream') return mimeType;
-  if (!fileName) return 'application/octet-stream';
-  const ext = fileName.split('.').pop()?.toLowerCase();
-  switch (ext) {
-    case 'pdf':
-      return 'application/pdf';
-    case 'png':
-      return 'image/png';
-    case 'jpg':
-    case 'jpeg':
-      return 'image/jpeg';
-    case 'gif':
-      return 'image/gif';
-    case 'webp':
-      return 'image/webp';
-    case 'svg':
-      return 'image/svg+xml';
-    case 'txt':
-      return 'text/plain';
-    case 'csv':
-      return 'text/csv';
-    case 'html':
-      return 'text/html';
-    case 'json':
-      return 'application/json';
-    default:
-      return 'application/octet-stream';
-  }
-}
-
-function FilePreviewModal({
-  file,
-  onClose,
-}: {
-  file: { url: string; name: string; mimeType: string };
-  onClose: () => void;
-}) {
-  const isImage = file.mimeType.startsWith('image/');
-  const isPdf = file.mimeType === 'application/pdf';
-  const isText = file.mimeType.startsWith('text/') || file.mimeType === 'application/json';
-
-  return (
-    <Modal name={`Preview: ${file.name}`} onClose={onClose}>
-      <div className="space-y-4">
-        <div className="border border-border rounded p-2 bg-muted/20 min-h-[300px] flex items-center justify-center">
-          {isImage ? (
-            <img
-              src={file.url}
-              alt={file.name}
-              className="max-h-[60vh] max-w-full object-contain mx-auto"
-            />
-          ) : isPdf || isText ? (
-            <iframe src={file.url} className="w-full h-[65vh] border-0 rounded" title={file.name} />
-          ) : (
-            <div className="text-center py-12">
-              <p className="text-sm text-foreground font-600 mb-2">{file.name}</p>
-              <p className="text-xs text-muted-foreground mb-4">
-                Preview not directly embeddable for format ({file.mimeType})
-              </p>
-              <a href={file.url} download={file.name} className="btn-primary text-xs">
-                Download file
-              </a>
-            </div>
-          )}
-        </div>
-        <div className="flex justify-between items-center text-xs">
-          <span className="text-muted-foreground font-500">{file.name}</span>
-          <div className="flex gap-2">
-            <a
-              href={file.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-secondary text-xs"
-            >
-              Open in new window
-            </a>
-            <button className="btn-primary text-xs" onClick={onClose}>
-              Close preview
-            </button>
-          </div>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
 export default function ProjectUpdates({
   projectId,
   sites,
@@ -381,11 +295,6 @@ export default function ProjectUpdates({
   const auth = useAuth();
   const [open, setOpen] = useState(false);
   const [editingReport, setEditingReport] = useState<Row | null>(null);
-  const [previewFile, setPreviewFile] = useState<{
-    url: string;
-    name: string;
-    mimeType: string;
-  } | null>(null);
   const [page, setPage] = useState(1);
   const [type, setType] = useState('');
   const [site, setSite] = useState('');
@@ -411,10 +320,7 @@ export default function ProjectUpdates({
       const rawBlob = await apiFetchBlob(
         '/api/v1/projects/' + projectId + '/reports/' + r.id + '/attachment?inline=true'
       );
-      const mimeType = getMimeType(r.file_name, r.mime_type);
-      const typedBlob = new Blob([rawBlob], { type: mimeType });
-      const url = URL.createObjectURL(typedBlob);
-      setPreviewFile({ url, name: r.file_name || 'Attachment', mimeType });
+      openUniversalFileViewer({ blob: rawBlob, fileName: r.file_name || 'Attachment', title: 'Project report attachment' });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to view file');
     }
@@ -602,7 +508,6 @@ export default function ProjectUpdates({
           }}
         />
       )}
-      {previewFile && <FilePreviewModal file={previewFile} onClose={() => setPreviewFile(null)} />}
     </div>
   );
 }

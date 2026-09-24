@@ -93,6 +93,7 @@ import EquipmentWorkOrdersWorkspace from './EquipmentWorkOrdersWorkspace';
 import EquipmentDefectsWorkspace from './EquipmentDefectsWorkspace';
 import EquipmentInspectionsWorkspace from './EquipmentInspectionsWorkspace';
 import EquipmentFuelLogsWorkspace from './EquipmentFuelLogsWorkspace';
+import OperationalExpensesWorkspace from './OperationalExpensesWorkspace';
 import ControlTowerWorkspace from './ControlTowerWorkspace';
 import DrillingWorkspace from './DrillingWorkspace';
 import CommercialCostingWorkspace from './CommercialCostingWorkspace';
@@ -141,7 +142,7 @@ function normalizeResource(res: string): string {
   return res;
 }
 
-export default function ResourceWorkspace({ resource }: { resource: string }) {
+export default function ResourceWorkspace({ resource, readOnly }: { resource: string; readOnly?: boolean }) {
   const auth = useAuth();
   const normResource = normalizeResource(resource);
   const searchParams = useSearchParams();
@@ -199,6 +200,7 @@ export default function ResourceWorkspace({ resource }: { resource: string }) {
   if (normResource === 'maintenance/defects' || normResource === 'defects' || normResource === 'assets/defects') return <EquipmentDefectsWorkspace />;
   if (normResource === 'inspections' || normResource === 'assets/inspections') return <EquipmentInspectionsWorkspace />;
   if (normResource === 'fuel-logs' || normResource === 'fuel_logs' || normResource === 'assets/fuel-logs') return <EquipmentFuelLogsWorkspace />;
+  if (normResource === 'operational-expenses' || normResource === 'operational_expenses') return <OperationalExpensesWorkspace />;
 
   const matchStore = /^(inventory\/stores|stores)\/([0-9a-f-]{36})$/i.exec(normResource);
   if (matchStore) return <StoreDetailView storeId={matchStore[2]} />;
@@ -212,10 +214,10 @@ export default function ResourceWorkspace({ resource }: { resource: string }) {
   const matchEmployee = /^(employees)\/([0-9a-f-]{36}|me)$/i.exec(normResource);
   if (matchEmployee) return <EmployeeDetailView employeeId={matchEmployee[2]} />;
 
-  return <ResourceList key={normResource} resource={normResource} />;
+  return <ResourceList key={normResource} resource={normResource} readOnly={readOnly} />;
 }
 
-function ResourceList({ resource }: { resource: string }) {
+function ResourceList({ resource, readOnly }: { resource: string; readOnly?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryParam = searchParams.get('search') || '';
@@ -438,7 +440,7 @@ function ResourceList({ resource }: { resource: string }) {
           <button aria-label="Refresh records" className="btn-secondary" onClick={req.reload}>
             <RefreshCw size={16} />
           </button>
-          {allowed(create) && (
+          {allowed(create) && !readOnly && (
             <button className="btn-primary" onClick={() => setCreating(true)}>
               <Plus size={16} />
               New {label.toLowerCase()}

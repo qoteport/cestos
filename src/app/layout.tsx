@@ -4,6 +4,8 @@ import { AuthProvider } from '@/components/AuthProvider';
 import '../styles/tailwind.css';
 import '../styles/integration.css';
 import AppToaster from '@/components/AppToaster';
+import PwaRuntime from '@/components/PwaRuntime';
+import UniversalFileViewerHost from '@/components/UniversalFileViewerHost';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -13,6 +15,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'Cestos Operations — Field Operations Command Platform',
   description: 'Cestos Operations helps mining and drilling companies manage workforce, equipment fleet, and inventory across multiple active projects from one command platform.',
+  manifest: '/manifest.webmanifest',
   icons: {
     icon: [
       { url: 'https://cestos-global-reach--cestos-global-reach.us-central1.hosted.app/assets/cestos-logo-with-company-name-no-bg-BQ8Mdlo4.jpg', type: 'image/jpeg' },
@@ -34,6 +37,8 @@ export default function RootLayout({
         <AuthProvider>
         {children}
         <AppToaster />
+        <PwaRuntime />
+        <UniversalFileViewerHost />
 
         </AuthProvider>
 

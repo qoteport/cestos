@@ -15,7 +15,15 @@ import { operation } from './ResourceWorkspace';
 import { useAuth } from './AuthProvider';
 import DrillingPerformanceChart from '@/app/components/DrillingPerformanceChart';
 
-export default function ProjectCommand() {
+export default function ProjectCommand({
+  projectId,
+  onBack,
+  readOnly = false,
+}: {
+  projectId?: string;
+  onBack?: () => void;
+  readOnly?: boolean;
+} = {}) {
   const router = useRouter();
   const [id, setId] = useState('');
   const [tab, setTab] = useState('overview');
@@ -25,7 +33,7 @@ export default function ProjectCommand() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const requested = new URLSearchParams(window.location.search).get('project');
+    const requested = projectId || new URLSearchParams(window.location.search).get('project');
     if (requested) setId(requested);
     setReady(true);
   }, []);
@@ -181,24 +189,26 @@ export default function ProjectCommand() {
                       <p className="text-sm font-700 text-foreground">Project Overview & Control Hub</p>
                       <p className="text-xs text-muted-foreground">Key specs, drilling trends, and quick management controls</p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      <button className="btn-secondary text-xs flex items-center gap-1 font-semibold" onClick={() => setEditing(true)}>
-                        <Edit size={13} className="text-primary" />
-                        Edit Project
-                      </button>
-                      <button className="btn-secondary text-xs flex items-center gap-1" onClick={() => setTab('updates')}>
-                        <Plus size={13} />
-                        Submit field update
-                      </button>
-                      <button className="btn-secondary text-xs flex items-center gap-1" onClick={() => setTab('workforce')}>
-                        <Users size={13} />
-                        Assign workforce
-                      </button>
-                      <button className="btn-secondary text-xs flex items-center gap-1" onClick={() => setTab('equipment')}>
-                        <Wrench size={13} />
-                        Assign assets
-                      </button>
-                    </div>
+                    {!readOnly && (
+                      <div className="flex flex-wrap gap-2">
+                        <button className="btn-secondary text-xs flex items-center gap-1 font-semibold" onClick={() => setEditing(true)}>
+                          <Edit size={13} className="text-primary" />
+                          Edit Project
+                        </button>
+                        <button className="btn-secondary text-xs flex items-center gap-1" onClick={() => setTab('updates')}>
+                          <Plus size={13} />
+                          Submit field update
+                        </button>
+                        <button className="btn-secondary text-xs flex items-center gap-1" onClick={() => setTab('workforce')}>
+                          <Users size={13} />
+                          Assign workforce
+                        </button>
+                        <button className="btn-secondary text-xs flex items-center gap-1" onClick={() => setTab('equipment')}>
+                          <Wrench size={13} />
+                          Allocate equipment
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Drilling Performance Chart */}

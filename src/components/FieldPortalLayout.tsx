@@ -26,6 +26,7 @@ import {
   ChevronDown,
   Menu,
   X,
+  ShoppingCart,
 } from 'lucide-react';
 import AppLogo from './ui/AppLogo';
 import useNotificationCount from './useNotificationCount';
@@ -115,6 +116,7 @@ export default function FieldPortalLayout({
       label: 'Equipment & Maintenance',
       icon: Truck,
     },
+    ...(isSupervisorOrAdmin ? [{ id: 'PURCHASE_ORDERS', label: 'Purchase Orders', icon: ShoppingCart }] : []),
     {
       id: 'STORES',
       label: 'Stores & Consumables',
@@ -437,12 +439,20 @@ export default function FieldPortalLayout({
           <div className="flex items-center gap-1.5 sm:gap-3">
             <Link
               href="/field-portal/notifications"
-              title="Notifications"
+              title={unreadNotifications > 0 ? `${unreadNotifications} new notifications` : 'Notifications'}
               aria-label={`Notifications${unreadNotifications ? `, ${unreadNotifications} unread` : ''}`}
-              className="relative p-2 text-blue-800 bg-blue-50 border border-blue-200 hover:bg-blue-100 focus-visible:ring-2 focus-visible:ring-blue-600 rounded-lg"
+              className={`relative p-2 rounded-lg border transition ${
+                unreadNotifications > 0
+                  ? 'bg-amber-50 border-amber-300 text-amber-700 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-400'
+                  : 'text-blue-800 bg-blue-50 border-blue-200 hover:bg-blue-100'
+              }`}
             >
-              <Bell className="h-5 w-5" />
-              {unreadNotifications > 0 && <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white ring-2 ring-white text-[10px] leading-5 text-center font-bold">{unreadNotifications > 99 ? '99+' : unreadNotifications}</span>}
+              <Bell className={`h-5 w-5 ${unreadNotifications > 0 ? 'text-amber-600 dark:text-amber-400 animate-pulse' : ''}`} />
+              {unreadNotifications > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white ring-2 ring-white text-[10px] leading-5 text-center font-bold">
+                  {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                </span>
+              )}
             </Link>
             {onRefresh && (
               <button
@@ -498,7 +508,7 @@ export default function FieldPortalLayout({
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
-                className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-all relative ${
+                className={`flex items-center justify-center w-full h-full transition-all relative ${
                   active ? 'text-primary font-bold' : 'text-muted-foreground hover:text-foreground font-medium'
                 }`}
               >
@@ -506,7 +516,7 @@ export default function FieldPortalLayout({
                   <span className="absolute top-0 w-8 h-0.5 bg-primary rounded-full" />
                 )}
                 <Icon className={`h-5 w-5 ${active ? 'scale-110 text-primary' : ''} transition-transform`} />
-                <span className="text-[10px] tracking-tight">{item.label}</span>
+
               </button>
             );
           })}

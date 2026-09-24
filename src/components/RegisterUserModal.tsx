@@ -16,7 +16,7 @@ export default function RegisterUserModal({ onClose, onSaved }: RegisterUserModa
   const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
   const [isSuperuser, setIsSuperuser] = useState(false);
-  const [isFieldPortalOnly, setIsFieldPortalOnly] = useState(false);
+  const [portalType, setPortalType] = useState<string>('FIELD');
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
 
@@ -96,13 +96,14 @@ export default function RegisterUserModal({ onClose, onSaved }: RegisterUserModa
       });
 
       // 2. Attach security roles & superuser status if selected
-      if (createdUser?.id && (selectedRoleIds.length > 0 || isSuperuser || isFieldPortalOnly)) {
+      if (createdUser?.id && (selectedRoleIds.length > 0 || isSuperuser || portalType !== 'FULL')) {
         await apiFetch(`/api/v1/users/${createdUser.id}`, {
           method: 'PATCH',
           body: JSON.stringify({
             is_active: true,
             is_superuser: isSuperuser,
-            is_field_portal_only: isFieldPortalOnly,
+            portal_type: portalType,
+            is_field_portal_only: portalType === 'FIELD',
             role_ids: selectedRoleIds,
           }),
         });
@@ -218,9 +219,14 @@ export default function RegisterUserModal({ onClose, onSaved }: RegisterUserModa
         {/* Section 3: Roles & Permissions Selection */}
         <div className="space-y-3">
           <div className="flex items-center justify-between border-b pb-1">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Security Roles & Access Permissions
-            </h4>
+            <div>
+              <h4 className="text-xs font-semibold text-foreground">
+                Assigned Security Roles
+              </h4>
+              <p className="text-[11px] text-muted-foreground">
+                Select one or more roles to grant granular permissions.
+              </p>
+            </div>
             <span className="text-xs text-muted-foreground">
               {selectedRoleIds.length} role(s) selected
             </span>
@@ -234,9 +240,9 @@ export default function RegisterUserModal({ onClose, onSaved }: RegisterUserModa
           ) : (
             <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
               {roles.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-3 text-center border border-dashed rounded">
-                  No custom security roles created yet. You can assign default access or grant Superuser access.
-                </p>
+                <div className="p-4 text-center text-xs text-muted-foreground border border-dashed rounded">
+                  No security roles defined.
+                </div>
               ) : (
                 roles.map((role) => {
                   const isChecked = selectedRoleIds.includes(String(role.id));
@@ -312,25 +318,35 @@ export default function RegisterUserModal({ onClose, onSaved }: RegisterUserModa
             />
           </div>
 
-          {/* Field Portal Toggle */}
-          <div className="p-3.5 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <ShieldCheck className="text-blue-600 dark:text-blue-400 shrink-0" size={20} />
+          {/* Portal Access Mode */}
+          <div className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 space-y-2">
+            <div className="flex items-center gap-2.5 mb-2">
+              <UserCheck className="text-slate-600 dark:text-slate-400 shrink-0" size={20} />
               <div>
-                <h5 className="font-semibold text-sm text-blue-900 dark:text-blue-200">
-                  Restrict to Field Portal Only
-                </h5>
-                <p className="text-xs text-blue-700 dark:text-blue-400">
-                  Directs user account strictly to the Field Portal upon login (field staff & supervisors).
-                </p>
+                <h5 className="font-semibold text-sm text-slate-900 dark:text-slate-200">Portal Access Mode</h5>
+                <p className="text-xs text-slate-600 dark:text-slate-400">Controls which portal this user sees on login.</p>
               </div>
             </div>
-            <input
-              type="checkbox"
-              checked={isFieldPortalOnly}
-              onChange={(e) => setIsFieldPortalOnly(e.target.checked)}
-              className="w-4 h-4 rounded border-blue-400 text-primary focus:ring-primary/20 cursor-pointer"
-            />
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { value: 'FIELD',       label: 'Field Portal',         color: 'bg-blue-50 border-blue-300 dark:bg-blue-900/30 dark:border-blue-700' },
+                { value: 'FIELD_ADMIN', label: 'Field Admin Portal',   color: 'bg-orange-50 border-orange-300 dark:bg-orange-900/30 dark:border-orange-700' },
+                { value: 'HR',          label: 'HR Portal',            color: 'bg-emerald-50 border-emerald-300 dark:bg-emerald-900/30 dark:border-emerald-700' },
+                { value: 'FINANCE',     label: 'Finance Portal',       color: 'bg-violet-50 border-violet-300 dark:bg-violet-900/30 dark:border-violet-700' },
+                { value: 'EXECUTIVE',   label: 'Executive Portal',     color: 'bg-indigo-50 border-indigo-300 dark:bg-indigo-900/30 dark:border-indigo-700' },
+              ] as const).map(({ value, label, color }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setPortalType(value)}
+                  className={`p-2 rounded-lg border-2 text-xs font-semibold text-left transition-all ${color} ${
+                    portalType === value ? 'ring-2 ring-primary' : 'opacity-70 hover:opacity-100'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

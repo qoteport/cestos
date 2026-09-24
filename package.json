@@ -40,14 +40,14 @@
   },
   "scripts": {
     "dev": "next dev --turbopack -p 4028",
-    "build": "next build",
+    "build": "node scripts/generate-build-version.mjs && next build",
     "start": "next dev --turbopack -p 4028",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,md,json}\"",
     "serve": "next start",
     "type-check": "tsc --noEmit",
-    "build:cf": "node scripts/build-cloudflare.mjs",
+    "build:cf": "node scripts/generate-build-version.mjs && node scripts/build-cloudflare.mjs",
     "preview:cf": "npm run build:cf && opennextjs-cloudflare preview",
     "deploy:cf": "npm run build:cf && opennextjs-cloudflare deploy",
     "check:cf": "npm run build:cf && wrangler deploy --dry-run"
@@ -63,7 +63,8 @@
     "react-dom": "19.0.3",
     "react-hook-form": "^7.87.0",
     "recharts": "^2.15.2",
-    "sonner": "^1.7.4"
+    "sonner": "^1.7.4",
+    "ts-morph": "^28.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

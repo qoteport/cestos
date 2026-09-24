@@ -20,11 +20,15 @@ export default function LoginForm() {
 
   useEffect(() => {
     if (!auth.loading && auth.user) {
-      if (auth.user.is_field_portal_only) {
-        router.replace('/field-portal');
-      } else {
-        router.replace('/');
-      }
+      const pt = auth.user.portal_type || 'FIELD';
+      const portalRoutes: Record<string, string> = {
+        FIELD: '/field-portal',
+        HR: '/hr-portal',
+        FINANCE: '/finance-portal',
+        FIELD_ADMIN: '/field-admin-portal',
+        EXECUTIVE: '/executive-portal',
+      };
+      router.replace(portalRoutes[pt] || '/field-portal');
       return;
     }
     const hashParams = new URLSearchParams(window.location.hash.slice(1));
@@ -52,22 +56,27 @@ export default function LoginForm() {
         setPassword('');
         setConfirm('');
         setMessage('Password saved. Sign in with your new password.');
+        setBusy(false);
       } else {
         const data = await login({ organization_id: org, email: email.trim(), password });
         setTokens(data.access_token, data.refresh_token, remember);
         localStorage.setItem('cestos_organization', org);
         await auth.reload();
         const me = await apiFetch<any>('/api/v1/auth/me').catch(() => null);
-        if (me?.is_field_portal_only) {
-          router.replace('/field-portal');
-        } else {
-          router.replace('/');
-        }
+        const pt = me?.portal_type || 'FIELD';
+        const portalRoutes: Record<string, string> = {
+          FIELD: '/field-portal',
+          HR: '/hr-portal',
+          FINANCE: '/finance-portal',
+          FIELD_ADMIN: '/field-admin-portal',
+          EXECUTIVE: '/executive-portal',
+        };
+        // Keep spinner showing until the route transition completes
+        router.replace(portalRoutes[pt] || '/field-portal');
       }
     } catch (e) {
       clearTokens();
       setError(e instanceof Error ? e.message : 'Unable to sign in.');
-    } finally {
       setBusy(false);
     }
   }
@@ -179,7 +188,7 @@ export default function LoginForm() {
 
           <button disabled={busy} className="btn-primary w-full justify-center py-3">
             {busy ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />}
-            {busy ? 'Please wait…' : token ? 'Save password' : 'Sign in'}
+            {busy ? 'Signing in…' : token ? 'Save password' : 'Sign in'}
           </button>
         </form>
         <p className="text-xs text-muted-foreground mt-6">

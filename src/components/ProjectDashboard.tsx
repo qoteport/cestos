@@ -47,7 +47,7 @@ export function ReportMetrics({ data }: { data: Row }) {
 
 const PROJECT_STATUSES = ['PLANNING', 'MOBILIZING', 'ACTIVE', 'PAUSED', 'COMPLETED', 'CLOSED', 'CANCELLED'];
 
-export function ProjectRegister({ dashboard = false }: { dashboard?: boolean }) {
+export function ProjectRegister({ dashboard = false, onSelectProject, readOnly }: { dashboard?: boolean; onSelectProject?: (id: string) => void; readOnly?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialSearch = searchParams?.get('search') || '';
@@ -99,48 +99,35 @@ export function ProjectRegister({ dashboard = false }: { dashboard?: boolean }) 
             Open a project to manage its team, sites and updates.
           </p>
         </div>
-        <div className="flex gap-2">
-          <button className="btn-secondary" aria-label="Refresh projects" onClick={data.reload}>
-            <RefreshCw size={15} />
-          </button>
-          {/* Filter button */}
+        <div className="flex items-center gap-2">
           <button
-            className={`btn-secondary ${hasActiveFilter ? 'border-primary text-primary' : ''}`}
-            onClick={() => setFilterOpen(o => !o)}
-            aria-label="Toggle filters"
-            aria-expanded={filterOpen}
+            className={`btn-secondary text-xs flex items-center gap-1 ${hasActiveFilter ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : ''}`}
+            onClick={() => setFilterOpen(!filterOpen)}
           >
-            <Filter size={15} />
-            Filter
-            {hasActiveFilter && (
-              <span className="ml-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] font-700 flex items-center justify-center">
-                1
-              </span>
-            )}
+            <Filter size={14} /> Filters
           </button>
-          <button
-            className="btn-secondary"
-            disabled={!list.length || data.loading}
-            onClick={exportPage}
-          >
-            <Download size={15} />
-            Export page
+          {!readOnly && (
+            <button className="btn-secondary text-xs flex items-center gap-1" onClick={exportPage}>
+              <Download size={14} /> Export CSV
+            </button>
+          )}
+          <button className="btn-secondary text-xs flex items-center gap-1" onClick={data.reload}>
+            <RefreshCw size={14} />
           </button>
-          {auth.can('projects.create') && !dashboard && (
-            <button className="btn-primary" onClick={() => setCreating(true)}>
-              <Plus size={15} />
-              New project
+          {auth?.can('projects.create') && !dashboard && !readOnly && (
+            <button className="btn-primary text-xs flex items-center gap-1" onClick={() => setCreating(true)}>
+              <Plus size={14} /> Create project
             </button>
           )}
         </div>
       </div>
 
-      {/* Search bar — always visible */}
-      <label className="block text-xs">
+      <label className="text-xs">
         Search projects
         <input
-          className="input-field mt-1"
+          type="search"
           placeholder="Name, number or contract…"
+          className="input-field mt-1 w-full"
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -204,7 +191,13 @@ export function ProjectRegister({ dashboard = false }: { dashboard?: boolean }) 
             'expected_end_date',
             'target_metres',
           ]}
-          onSelect={(r) => router.push('/project-command-center?project=' + r.id)}
+          onSelect={(r) => {
+            if (onSelectProject) {
+              onSelectProject(r.id);
+            } else {
+              router.push('/project-command-center?project=' + r.id);
+            }
+          }}
         />
         <div className="flex justify-between items-center text-xs mt-4">
           <span>

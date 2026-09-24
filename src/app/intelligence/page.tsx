@@ -8,6 +8,7 @@ import AppLayout from '@/components/AppLayout';
 import AppLogo from '@/components/ui/AppLogo';
 import { useAuth } from '@/components/AuthProvider';
 import { apiFetch } from '@/lib/api';
+import { openUniversalFileViewer } from '@/lib/fileViewer';
 import { useData, rows } from '@/components/DataUI';
 import { toast } from 'sonner';
 
@@ -217,6 +218,8 @@ function formatInlineMarkdown(text: string): React.ReactNode {
         const label = match[1];
         const url = match[2];
         const isExternal = url.startsWith('http://') || url.startsWith('https://');
+        const fileUrl = /\.(pdf|docx?|xlsx?|pptx?|csv|txt|png|jpe?g|gif|webp|svg)(?:[?#]|$)/i.test(url)
+          || /\/(?:download|view|attachment|file)(?:\/|[?#]|$)/i.test(url);
         return (
           <a
             key={index}
@@ -225,7 +228,11 @@ function formatInlineMarkdown(text: string): React.ReactNode {
             rel="noopener noreferrer"
             className="text-primary font-700 underline underline-offset-2 hover:text-primary/80 transition-colors inline-flex items-center gap-0.5 mx-0.5"
             onClick={(e) => {
-              if (!isExternal) {
+              if (fileUrl) {
+                e.preventDefault();
+                const fileName = decodeURIComponent(url.split(/[/?#]/).filter(Boolean).pop() || label);
+                openUniversalFileViewer({ fileUrl: url, fileName, title: label });
+              } else if (!isExternal) {
                 e.preventDefault();
                 window.open(url, '_blank');
               }

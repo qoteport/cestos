@@ -28,7 +28,8 @@ import {
 } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import { Modal } from '@/components/DataUI';
-import { apiFetch, apiFetchBlob, downloadBlob, getAccessToken } from '@/lib/api';
+import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
+import { openUniversalFileViewer } from '@/lib/fileViewer';
 import Icon from '@/components/ui/AppIcon';
 
 
@@ -195,10 +196,12 @@ export default function DocumentsPage() {
     }
   };
   const handleViewDocument = (row: DocumentRow) => {
-    const token = getAccessToken();
     const cleanFilename = row.file_name || `${row.title || 'document'}.pdf`;
-    const viewUrl = `/api/v1/documents/${row.id}/view/${encodeURIComponent(cleanFilename)}${token ? `?token=${encodeURIComponent(token)}` : ''}`;
-    window.open(viewUrl, '_blank', 'noopener,noreferrer');
+    openUniversalFileViewer({
+      fileUrl: `/api/v1/documents/${row.id}/download`,
+      fileName: cleanFilename,
+      title: row.title || 'Document preview',
+    });
   };
   const title =
     category ||
@@ -595,8 +598,7 @@ export default function DocumentsPage() {
                   onClick={async () => {
                     try {
                       const blob = await apiFetchBlob(`/api/v1/documents/${reading.id}/download`);
-                      const url = URL.createObjectURL(blob);
-                      window.open(url, '_blank', 'noopener,noreferrer');
+                      openUniversalFileViewer({ blob, fileName: reading.file_name, title: reading.title || 'Document preview' });
                     } catch (e) {
                       setError(e instanceof Error ? e.message : 'Could not view file');
                     }

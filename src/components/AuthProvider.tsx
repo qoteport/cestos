@@ -62,7 +62,7 @@ export function AuthProvider({children}:{children:ReactNode}) {
           r.toLowerCase().includes(kw)
         )
       );
-      if (code === 'assets.read' || code === 'assets.read_assigned' || code.endsWith('.read') || user?.is_field_portal_only || isSupervisorOrLead) return true;
+      if (code === 'assets.read' || code === 'assets.read_assigned' || code.endsWith('.read') || user?.portal_type === 'FIELD' || user?.is_field_portal_only || isSupervisorOrLead) return true;
       if (userPerms.includes('assets.manage') || userPerms.includes('assets.write') || userPerms.includes('assets.update')) return true;
     }
     if (code.startsWith('projects.') && (userPerms.includes('projects.manage') || userPerms.includes('projects.write') || userPerms.includes('projects.update'))) return true;

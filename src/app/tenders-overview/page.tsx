@@ -8,6 +8,7 @@ import {
   Eye, Pencil, Paperclip, Download, Calendar, Layers, CheckCircle2, AlertTriangle, Clock 
 } from 'lucide-react';
 import { apiFetch, CommercialOpportunityRead, updateCommercialOpportunity } from '@/lib/api';
+import { openUniversalFileViewer } from '@/lib/fileViewer';
 import { Modal, ErrorModal, rows } from '@/components/DataUI';
 import { useAuth } from '@/components/AuthProvider';
 
@@ -409,7 +410,7 @@ export default function TendersOverviewPage() {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button
-                    onClick={() => window.open(selectedOpp.attachment_url, '_blank')}
+                    onClick={() => openUniversalFileViewer({ fileUrl: selectedOpp.attachment_url, fileName: selectedOpp.attachment_name || 'Tender attachment', title: 'Tender attachment' })}
                     className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded border hover:bg-muted flex items-center gap-1 font-medium"
                   >
                     <Eye className="h-3 w-3" /> View Document

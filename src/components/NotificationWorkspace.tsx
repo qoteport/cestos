@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Bell, CheckCircle2, Share2, Plus, RefreshCw, Search, Filter, Wrench, Package, Users, FolderKanban, Clock, Mail, ShieldAlert, Play, Trash2, Pencil } from 'lucide-react';
+import { Bell, CheckCircle2, Share2, Plus, RefreshCw, Search, Filter, Wrench, Package, Users, FolderKanban, Clock, Mail, ShieldAlert, Play, Trash2, Pencil, ExternalLink } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from './AuthProvider';
 import useNotificationCount from './useNotificationCount';
@@ -30,11 +30,26 @@ const DOMAIN_RULES: Record<string, { value: string; label: string }[]> = {
   PROJECTS: [
     { value: 'PROJECT_MILESTONE_DUE', label: 'Project Expected End Date Alert' },
   ],
+  FINANCE: [
+    { value: 'FINANCE_EXPENSE_PAYMENT_PENDING', label: 'Submitted Expense Awaiting Payment' },
+    { value: 'FINANCE_OPERATIONAL_EXPENSE_THRESHOLD', label: 'Operational Expense Above Amount Threshold' },
+    { value: 'FINANCE_PURCHASE_ORDER_THRESHOLD', label: 'Purchase Order Above Amount Threshold' },
+    { value: 'FINANCE_PURCHASE_ORDER_GOODS_RECEIVED', label: 'Purchase Order Goods Received' },
+  ],
+  HSE: [
+    { value: 'HSE_CORRECTIVE_ACTION_DUE', label: 'Corrective Action Due / Overdue' },
+    { value: 'HSE_INCIDENT_FOLLOWUP_OVERDUE', label: 'Open Incident Follow-up' },
+  ],
 };
+const isImmediateFinanceRule = (rule: unknown) => [
+  'FINANCE_OPERATIONAL_EXPENSE_THRESHOLD',
+  'FINANCE_PURCHASE_ORDER_THRESHOLD',
+  'FINANCE_PURCHASE_ORDER_GOODS_RECEIVED',
+].includes(String(rule || ''));
 
-export default function NotificationWorkspace({ fieldPortal = false }: { fieldPortal?: boolean }) {
+export default function NotificationWorkspace({ fieldPortal = false, hideSchedules = false }: { fieldPortal?: boolean; hideSchedules?: boolean }) {
   const auth = useAuth();
-  const canManageSchedules = !fieldPortal && (!!auth.access?.is_superuser || ['employees.alerts.manage', 'inventory.manage', 'inventory.admin', 'inventory.write', 'assets.update', 'assets.manage', 'assets.write', 'projects.update', 'projects.manage', 'projects.write'].some(code => auth.access?.permissions.includes(code)));
+  const canManageSchedules = !fieldPortal && !hideSchedules && (!!auth.access?.is_superuser || auth.user?.portal_type === 'FINANCE' || ['employees.alerts.manage', 'inventory.manage', 'inventory.admin', 'inventory.write', 'assets.update', 'assets.manage', 'assets.write', 'projects.update', 'projects.manage', 'projects.write', 'finance.expenses.manage', 'operational_expenses.manage', 'hse.manage', 'hse.incidents.manage', 'hse.write'].some(code => auth.access?.permissions.includes(code)) || ['finance', 'accountant', 'accounts payable', 'hse', 'hse officer', 'hse manager', 'safety', 'safety officer'].some(role => auth.access?.roles.some(value => value.toLowerCase() === role)));
   const [page, setPage] = useState(1);
   const [tab, setTab] = useState<'notifications' | 'schedules'>('notifications');
   const [domainFilter, setDomainFilter] = useState<string>('ALL');
@@ -63,6 +78,7 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
   const [schedTitle, setSchedTitle] = useState('');
   const [schedDomain, setSchedDomain] = useState('INVENTORY');
   const [schedRuleType, setSchedRuleType] = useState('INVENTORY_CONSUMABLES_EXPIRY');
+  const [schedThresholdAmount, setSchedThresholdAmount] = useState('');
   const [schedLeadDays, setSchedLeadDays] = useState(14);
   const [schedFrequency, setSchedFrequency] = useState('DAILY');
   const [schedPriority, setSchedPriority] = useState('IMPORTANT');
@@ -71,6 +87,15 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
   const [recipientSearch, setRecipientSearch] = useState('');
   const [schedIsActive, setSchedIsActive] = useState(true);
   const [schedBusy, setSchedBusy] = useState(false);
+  const isFinanceEventRule = [
+    'FINANCE_OPERATIONAL_EXPENSE_THRESHOLD',
+    'FINANCE_PURCHASE_ORDER_THRESHOLD',
+    'FINANCE_PURCHASE_ORDER_GOODS_RECEIVED',
+  ].includes(schedRuleType);
+  const thresholdRequired = [
+    'FINANCE_OPERATIONAL_EXPENSE_THRESHOLD',
+    'FINANCE_PURCHASE_ORDER_THRESHOLD',
+  ].includes(schedRuleType);
 
   // Helper function to check if employee is supervisor/manager
   const isSupervisor = (u: Row) => {
@@ -87,7 +112,7 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
   };
 
   // Fetch users for forwarding and recipient selection
-  const usersRes = useData(fieldPortal ? null : '/api/v1/employees?page_size=100');
+  const usersRes = useData('/api/v1/employees?page_size=100');
   const userList = rows(usersRes.data);
 
   // Fetch notifications
@@ -113,15 +138,25 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
   async function markRead(id: string) {
     try {
       await apiFetch(`/api/v1/notifications/${id}/read`, { method: 'POST' });
+      notifsRes.reload();
       window.dispatchEvent(new Event('cestos:notifications-changed'));
     } catch (e: any) {
       setActionError(e.message || 'Failed to mark read');
     }
   }
 
+  function openNotificationTarget(notification: Row) {
+    const target = String(notification.action_url || '');
+    if (!target.startsWith('/') || target.startsWith('//')) return;
+    if (!notification.read_at) void markRead(notification.id);
+    window.location.assign(target);
+  }
+
   async function resolveNotification(id: string) {
     try {
       await apiFetch(`/api/v1/notifications/${id}/resolve`, { method: 'POST' });
+      await apiFetch(`/api/v1/notifications/${id}/read`, { method: 'POST' }).catch(() => {});
+      notifsRes.reload();
       window.dispatchEvent(new Event('cestos:notifications-changed'));
     } catch (e: any) {
       setActionError(e.message || 'Failed to resolve notification');
@@ -145,6 +180,7 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
       setForwardTargetUserIds([]);
       setForwardSearch('');
       setForwardNotes('');
+      notifsRes.reload();
       window.dispatchEvent(new Event('cestos:notifications-changed'));
     } catch (e: any) {
       setActionError(e.message || 'Failed to forward notification');
@@ -158,6 +194,7 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
     setSchedTitle('');
     setSchedDomain('INVENTORY');
     setSchedRuleType('INVENTORY_CONSUMABLES_EXPIRY');
+    setSchedThresholdAmount('');
     setSchedLeadDays(14);
     setSchedFrequency('DAILY');
     setSchedPriority('IMPORTANT');
@@ -177,6 +214,8 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
     const availableRules = DOMAIN_RULES[domainVal] || [];
     const ruleVal = String(s.rule_type || (availableRules[0]?.value || 'INVENTORY_CONSUMABLES_EXPIRY'));
     setSchedRuleType(ruleVal);
+    const criteria = s.criteria && typeof s.criteria === 'object' ? s.criteria as Record<string, unknown> : {};
+    setSchedThresholdAmount(criteria.threshold_amount === undefined || criteria.threshold_amount === null ? '' : String(criteria.threshold_amount));
     setSchedLeadDays(s.lead_time_days !== undefined && s.lead_time_days !== null ? Number(s.lead_time_days) : 14);
     setSchedFrequency(String(s.frequency || 'DAILY'));
     setSchedPriority(String(s.priority_tag || 'IMPORTANT'));
@@ -200,6 +239,11 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
         title: schedTitle || 'Notification Schedule',
         domain: schedDomain,
         rule_type: schedRuleType,
+        criteria: schedRuleType === 'FINANCE_OPERATIONAL_EXPENSE_THRESHOLD' || schedRuleType === 'FINANCE_PURCHASE_ORDER_THRESHOLD'
+          ? { threshold_amount: Number(schedThresholdAmount) }
+          : schedRuleType === 'FINANCE_PURCHASE_ORDER_GOODS_RECEIVED' && schedThresholdAmount !== ''
+            ? { threshold_amount: Number(schedThresholdAmount) }
+            : {},
         lead_time_days: Number(schedLeadDays),
         frequency: schedFrequency,
         priority_tag: schedPriority,
@@ -258,16 +302,16 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
   const unresolvedCount = notifItems.filter((n) => !n.is_resolved).length;
 
   return (
-    <div className="space-y-6 fade-in">
+    <div className="space-y-5 fade-in px-1">
       {/* Header & KPI Summary */}
       <div className="flex flex-wrap justify-between items-end gap-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2.5">
-            <Bell className="text-primary" size={26} />
-            {fieldPortal ? 'Field Notifications' : 'Notifications & Scheduling Command Center'}
+            <Bell className={fieldPortal ? "text-orange-600 dark:text-orange-400" : "text-primary"} size={26} />
+            {fieldPortal ? 'Field Notifications' : 'Notification Queue'}
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {fieldPortal ? 'Your project assignments, maintenance tasks, contract reminders, and leave updates.' : 'Granular automated notification schedules across Projects, Workforce, Equipment & Inventory'}
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            {fieldPortal ? 'Your project assignments, maintenance tasks, contract reminders, and leave updates.' : 'Review and act on system alerts across all operations.'}
           </p>
         </div>
         <div className="flex gap-2">
@@ -275,7 +319,7 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
             <RefreshCw size={14} />
             Refresh
           </button>
-          {!fieldPortal && <button className="btn-primary text-xs" onClick={openCreateSchedule}>
+          {(!fieldPortal && !hideSchedules) && <button className="btn-primary text-xs" onClick={openCreateSchedule}>
             <Plus size={14} />
             New Schedule
           </button>}
@@ -283,25 +327,25 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="card p-4 bg-white border border-border">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="card p-4 border border-border">
           <div className="flex justify-between items-start">
             <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">Unread Alerts</span>
-            <span className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Bell size={16} /></span>
+            <span className={fieldPortal ? "p-2 bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300 rounded-lg" : "p-2 bg-blue-50 text-blue-600 rounded-lg"}><Bell size={16} /></span>
           </div>
           <p className="text-2xl font-bold text-foreground mt-2">{unreadCount}</p>
         </div>
 
-        <div className="card p-4 bg-white border border-border">
+        <div className="card p-4 border border-border">
           <div className="flex justify-between items-start">
             <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">Unresolved Issues</span>
-            <span className="p-2 bg-amber-50 text-amber-600 rounded-lg"><ShieldAlert size={16} /></span>
+            <span className="p-2 bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 rounded-lg"><ShieldAlert size={16} /></span>
           </div>
-          <p className="text-2xl font-bold text-amber-700 mt-2">{unresolvedCount}</p>
+          <p className="text-2xl font-bold text-amber-700 dark:text-amber-400 mt-2">{unresolvedCount}</p>
         </div>
 
-        {!fieldPortal && <>
-        <div className="card p-4 bg-white border border-border">
+        {(!fieldPortal && !hideSchedules) && <>
+        <div className="card p-4 border border-border">
           <div className="flex justify-between items-start">
             <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">Active Schedules</span>
             <span className="p-2 bg-purple-50 text-purple-600 rounded-lg"><Clock size={16} /></span>
@@ -310,12 +354,12 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
         </div>
 
         </>}
-        <div className="card p-4 bg-white border border-border">
+        <div className="card p-4 border border-border">
           <div className="flex justify-between items-start">
             <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">Total Feed Log</span>
-            <span className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><CheckCircle2 size={16} /></span>
+            <span className={fieldPortal ? "p-2 bg-orange-50 text-orange-600 dark:bg-orange-950 dark:text-orange-400 rounded-lg" : "p-2 bg-emerald-50 text-emerald-600 rounded-lg"}><CheckCircle2 size={16} /></span>
           </div>
-          <p className="text-2xl font-bold text-emerald-700 mt-2">{totalNotifs}</p>
+          <p className={fieldPortal ? "text-2xl font-bold text-orange-700 dark:text-orange-400 mt-2" : "text-2xl font-bold text-emerald-700 mt-2"}>{totalNotifs}</p>
         </div>
       </div>
 
@@ -324,14 +368,14 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
         <button
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             tab === 'notifications'
-              ? 'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
+              ? (fieldPortal ? 'border-orange-600 text-orange-600 font-bold dark:border-orange-500 dark:text-orange-400' : 'border-primary text-primary') :'border-transparent text-muted-foreground hover:text-foreground'
           }`}
           onClick={() => setTab('notifications')}
         >
           <Bell size={16} />
           Alert Feed ({notifItems.length})
         </button>
-        {!fieldPortal && <>
+        {(!fieldPortal && !hideSchedules) && <>
         <button
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             tab === 'schedules' ?'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
@@ -352,12 +396,12 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
               <span className="text-muted-foreground font-semibold flex items-center gap-1">
                 <Filter size={13} /> Domain:
               </span>
-              {['ALL', 'PROJECTS', 'WORKFORCE', 'EQUIPMENT', 'INVENTORY'].map((d) => (
+              {['ALL', 'PROJECTS', 'WORKFORCE', 'EQUIPMENT', 'INVENTORY', 'FINANCE', 'HSE'].map((d) => (
                 <button
                   key={d}
                   className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${
                     domainFilter === d
-                      ? 'bg-primary text-primary-foreground'
+                      ? (fieldPortal ? 'bg-orange-600 text-white font-bold' : 'bg-primary text-primary-foreground')
                       : 'bg-white text-muted-foreground hover:bg-muted border'
                   }`}
                   onClick={() => setDomainFilter(d)}
@@ -395,7 +439,7 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <button className="btn-secondary text-xs">
+            <button className={`btn-secondary text-xs ${fieldPortal ? 'bg-orange-600 hover:bg-orange-700 text-white font-bold border-none' : ''}`}>
               <Search size={14} /> Search
             </button>
           </form>
@@ -424,7 +468,7 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
                         isResolved
                           ? 'bg-slate-50/60 border-slate-200 text-slate-600 opacity-80'
                           : isRead
-                            ? 'bg-white border-border' :'bg-blue-50/30 border-blue-200 shadow-sm'
+                            ? 'bg-white border-border' : fieldPortal ? 'bg-orange-50/40 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900 shadow-sm' : 'bg-blue-50/30 border-blue-200 shadow-sm'
                       }`}
                     >
                       <div className="flex flex-wrap justify-between items-start gap-3">
@@ -455,13 +499,13 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
                             </span>
 
                             {/* Delivery Method Badge */}
-                            <span className="badge bg-indigo-50 text-indigo-700 border-indigo-200 text-2xs font-medium flex items-center gap-1">
+                            <span className="hidden badge bg-indigo-50 text-indigo-700 border-indigo-200 text-2xs font-medium flex items-center gap-1">
                               <Mail size={10} />
                               Method: {delivery}
                             </span>
 
                             {!isRead && (
-                              <span className="badge bg-blue-600 text-white text-2xs font-bold">
+                              <span className={`badge text-2xs font-bold ${fieldPortal ? 'bg-orange-600 text-white' : 'bg-blue-600 text-white'}`}>
                                 UNREAD
                               </span>
                             )}
@@ -502,6 +546,15 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
 
                         {/* Action buttons */}
                         <div className="flex items-center gap-2 shrink-0">
+                          {n.action_url && String(n.action_url).startsWith('/') && !String(n.action_url).startsWith('//') && (
+                            <button
+                              type="button"
+                              className="btn-primary text-2xs py-1 px-2.5 inline-flex items-center gap-1"
+                              onClick={() => openNotificationTarget(n)}
+                            >
+                              <ExternalLink size={12} /> Open record
+                            </button>
+                          )}
                           {!isRead && (
                             <button
                               className="btn-secondary text-2xs py-1 px-2.5"
@@ -521,9 +574,8 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
                             </button>
                           )}
 
-                          {!fieldPortal && <>
                           <button
-                            className="btn-secondary text-2xs py-1 px-2.5 text-indigo-700 hover:bg-indigo-50"
+                            className="btn-secondary text-2xs py-1 px-2.5 text-indigo-700 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/40"
                             onClick={() => {
                               setActionError('');
                               setForwardNotif(n);
@@ -534,7 +586,7 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
                           >
                             <Share2 size={12} />
                             Forward
-                          </button>                          </>}
+                          </button>
 
                         </div>
                       </div>
@@ -555,9 +607,9 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
         <div className="space-y-4">
           <div className="flex justify-between items-center bg-muted/20 p-3 rounded card">
             <span className="text-xs text-muted-foreground">
-              Automated rule evaluation runs daily to check lead thresholds across consumables, inventory, workforce & equipment.
+              Scheduled rules check operational data on their cadence. Finance threshold and goods-received rules alert recipients immediately when matching events occur.
             </span>
-            {!fieldPortal && <button className="btn-primary text-xs" onClick={openCreateSchedule}>
+            {(!fieldPortal && !hideSchedules) && <button className="btn-primary text-xs" onClick={openCreateSchedule}>
               <Plus size={14} />
               Create Schedule Rule
             </button>}
@@ -568,7 +620,7 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
               <div className="card p-10 text-center text-muted-foreground">
                 <Clock size={32} className="mx-auto mb-2 opacity-40" />
                 <p className="font-semibold text-foreground">No notification schedules configured</p>
-                <p className="text-xs mt-1">Set up granular schedules to automate expiry and maintenance alerts.</p>
+                <p className="text-xs mt-1">Set up scheduled checks and immediate event alerts for your operational workflows.</p>
               </div>
             ) : (
               <div className="overflow-x-auto card">
@@ -590,19 +642,27 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
                         <td className="px-4 py-3 font-semibold text-foreground">
                           <div>{s.title}</div>
                           <span className="text-2xs text-muted-foreground uppercase tracking-wider font-bold">
-                            {s.domain}
+                            {String(s.domain || '').replaceAll('_', ' ')}
                           </span>
                         </td>
                         <td className="px-4 py-3 font-medium text-slate-700">
                           {s.rule_type?.replace(/_/g, ' ')}
+                          {isImmediateFinanceRule(s.rule_type) && s.criteria?.threshold_amount !== undefined && s.criteria?.threshold_amount !== null && s.criteria?.threshold_amount !== '' && (
+                            <span className="block mt-1 text-[10px] text-violet-700">
+                              Amount above {Number(s.criteria.threshold_amount).toLocaleString()}
+                            </span>
+                          )}
+                          {s.rule_type === 'FINANCE_PURCHASE_ORDER_GOODS_RECEIVED' && (s.criteria?.threshold_amount === undefined || s.criteria?.threshold_amount === null || s.criteria?.threshold_amount === '') && (
+                            <span className="block mt-1 text-[10px] text-violet-700">Every goods receipt</span>
+                          )}
                         </td>
                         <td className="px-4 py-3 font-semibold text-primary">
-                          {s.lead_time_days} Days Lead Time
+                          {isImmediateFinanceRule(s.rule_type) ? 'Immediate event alert' : `${s.lead_time_days} Days Lead Time`}
                         </td>
                         <td className="px-4 py-3">
-                          <div>{s.frequency || 'DAILY'}</div>
-                          <div className="text-muted-foreground mt-1">Last run: {s.last_run_at ? new Date(s.last_run_at).toLocaleString() : 'Never'}</div>
-                          <div className="text-muted-foreground">Next: {s.next_run_at ? new Date(s.next_run_at).toLocaleString() : s.frequency === 'ONCE' && s.last_run_at ? 'Completed' : 'Awaiting scheduler'}</div>
+                          <div>{isImmediateFinanceRule(s.rule_type) ? 'On Event' : (s.frequency || 'DAILY')}</div>
+                          {!isImmediateFinanceRule(s.rule_type) && <><div className="text-muted-foreground mt-1">Last run: {s.last_run_at ? new Date(s.last_run_at).toLocaleString() : 'Never'}</div>
+                          <div className="text-muted-foreground">Next: {s.next_run_at ? new Date(s.next_run_at).toLocaleString() : s.frequency === 'ONCE' && s.last_run_at ? 'Completed' : 'Awaiting scheduler'}</div></>}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex gap-1.5 flex-wrap">
@@ -879,6 +939,8 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
                   <option value="EQUIPMENT">Equipment Domain</option>
                   <option value="WORKFORCE">Workforce Domain</option>
                   <option value="PROJECTS">Projects Domain</option>
+                  <option value="FINANCE">Finance Domain</option>
+                  <option value="HSE">Health, Safety & Environment Domain</option>
                 </select>
               </div>
 
@@ -898,20 +960,34 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
               </div>
             </div>
 
+            {isFinanceEventRule ? (
+              <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
+                <label className="block font-semibold mb-1">
+                  {schedRuleType === 'FINANCE_PURCHASE_ORDER_GOODS_RECEIVED' ? 'Optional Purchase Order Amount Threshold' : 'Amount Threshold *'}
+                </label>
+                <input className="input-field text-xs max-w-sm" type="number" min="0" step="0.01" required={thresholdRequired} value={schedThresholdAmount} onChange={(e) => setSchedThresholdAmount(e.target.value)} placeholder="e.g. 5000.00" />
+                <span className="text-[11px] text-muted-foreground block">
+                  {schedRuleType === 'FINANCE_PURCHASE_ORDER_GOODS_RECEIVED'
+                    ? 'Leave blank to notify on every goods receipt. Set a value to notify only when the purchase order total is above it.'
+                    : 'Send an immediate alert only when the submitted amount is greater than this value.'}
+                  {' '}Recipients are notified as soon as the matching event is recorded.
+                </span>
+              </div>
+            ) : (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block font-semibold mb-1">Lead Time (Days Before Expiry / Event) *</label>
+                <label className="block font-semibold mb-1">Lead Time (Days Before Event) *</label>
                 <input
                   className="input-field text-xs"
                   type="number"
-                  min="1"
+                  min="0"
                   max="365"
                   required
                   value={schedLeadDays}
                   onChange={(e) => setSchedLeadDays(Number(e.target.value))}
                 />
                 <span className="text-[11px] text-muted-foreground block mt-0.5">
-                  e.g. 14 days before expiry date
+                  Alerts match events due within this many days; use 0 for due or overdue events only.
                 </span>
               </div>
 
@@ -931,6 +1007,7 @@ export default function NotificationWorkspace({ fieldPortal = false }: { fieldPo
                 </select>
               </div>
             </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div>

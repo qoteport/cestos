@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bell, Search, LogOut, Zap, Sparkles, X, User, Clock, Calendar, ShieldCheck } from 'lucide-react';
+import { Bell, BellRing, Search, LogOut, Zap, Sparkles, X, User, Clock, Calendar, ShieldCheck } from 'lucide-react';
 import { useAuth, canAccessAdministration } from './AuthProvider';
 import { useData, rows } from './DataUI';
 import useNotificationCount from './useNotificationCount';
@@ -14,8 +14,34 @@ export default function Topbar() {
   const [search, setSearch] = useState('');
   const [resource, setResource] = useState('projects');
   const [show, setShow] = useState(false);
+  const [browserNotifications, setBrowserNotifications] = useState(false);
+  const [notificationsDenied, setNotificationsDenied] = useState(false);
 
   const unread = useNotificationCount();
+
+  React.useEffect(() => {
+    if (!auth?.user?.id) return;
+    const available = 'Notification' in window;
+    setBrowserNotifications(localStorage.getItem(`cestos.browserNotifications.enabled.${auth.user.id}`) === 'true' && available && Notification.permission === 'granted');
+    setNotificationsDenied(available && Notification.permission === 'denied');
+  }, [auth?.user?.id]);
+
+  const toggleBrowserNotifications = async () => {
+    if (!auth?.user?.id || !('Notification' in window)) return;
+    if (browserNotifications) {
+      localStorage.setItem(`cestos.browserNotifications.enabled.${auth.user.id}`, 'false');
+      setBrowserNotifications(false);
+      window.dispatchEvent(new Event('cestos:browser-notifications-changed'));
+      return;
+    }
+    const permission = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission;
+    if (permission === 'granted') {
+      localStorage.setItem(`cestos.browserNotifications.enabled.${auth.user.id}`, 'true');
+      setBrowserNotifications(true);
+      setNotificationsDenied(false);
+      window.dispatchEvent(new Event('cestos:browser-notifications-changed'));
+    }
+  };
 
   const sections = [
     ['Projects', 'projects', 'projects.read'],
@@ -171,6 +197,16 @@ export default function Topbar() {
 
                 {/* Quick Navigation / Profile links */}
                 <div className="py-2 space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => void toggleBrowserNotifications()}
+                    disabled={notificationsDenied && !browserNotifications}
+                    className="flex w-full items-center gap-2.5 px-2.5 py-2 text-left text-xs font-medium text-foreground hover:bg-muted transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                    title={notificationsDenied ? 'Allow notifications in your browser site settings first' : undefined}
+                  >
+                    <BellRing size={15} className="text-muted-foreground" />
+                    <span>{browserNotifications ? 'Turn off browser notifications' : notificationsDenied ? 'Browser notifications blocked' : 'Enable browser notifications'}</span>
+                  </button>
                   <Link
                     href="/workspace/employees/me"
                     onClick={() => setShow(false)}

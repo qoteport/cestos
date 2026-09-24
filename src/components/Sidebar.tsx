@@ -134,6 +134,7 @@ const groups: SidebarGroup[] = [
       {
         title: 'Operations & Maintenance',
         links: [
+          ['Operational Expenses', 'operational-expenses'],
           ['Maintenance & Schedules', 'maintenance'],
           ['Work orders', 'maintenance/work-orders'],
           ['Defects', 'maintenance/defects'],

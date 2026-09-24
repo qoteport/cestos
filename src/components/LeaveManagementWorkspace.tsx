@@ -70,6 +70,7 @@ function buildSeedLeaveRequests(employees: Row[]): Row[] {
       end_date: '2026-09-18',
       total_days: 5,
       status: 'APPROVED',
+      approved_at: '2026-09-11T14:30:00Z',
       reason: 'Medical treatment and doctor-prescribed bed rest following influenza.',
       created_at: '2026-09-10T14:30:00Z',
     },
@@ -84,6 +85,7 @@ function buildSeedLeaveRequests(employees: Row[]): Row[] {
       end_date: '2026-09-14',
       total_days: 14,
       status: 'APPROVED',
+      approved_at: '2026-08-26T08:00:00Z',
       reason: 'Scheduled 2-week field rotation rest break.',
       created_at: '2026-08-25T08:00:00Z',
     },
@@ -201,7 +203,13 @@ export default function LeaveManagementWorkspace() {
       setActionSuccess(`Leave request ${action === 'approve' ? 'approved' : 'rejected'} successfully.`);
       setLeaveRequests((prev) =>
         prev.map((l) =>
-          l.id === leaveId ? { ...l, status: action === 'approve' ? 'APPROVED' : 'REJECTED' } : l
+          l.id === leaveId
+            ? {
+                ...l,
+                status: action === 'approve' ? 'APPROVED' : 'REJECTED',
+                approved_at: action === 'approve' ? new Date().toISOString() : l.approved_at,
+              }
+            : l
         )
       );
     } catch (err: any) {
@@ -519,6 +527,26 @@ export default function LeaveManagementWorkspace() {
                     <p className="text-xs text-muted-foreground bg-muted/10 p-2.5 rounded-lg border border-border/40 italic leading-relaxed">
                       "{l.reason}"
                     </p>
+                  )}
+
+                  {l.status === 'APPROVED' && (
+                    <div className="flex items-center justify-between text-xs p-2.5 rounded-lg border border-emerald-500/20 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400 font-medium">
+                      <span className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider">
+                        <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400" />
+                        Approved Date:
+                      </span>
+                      <span className="font-bold text-xs">
+                        {l.approved_at
+                          ? new Date(l.approved_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                          : l.reviewed_at
+                            ? new Date(l.reviewed_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                            : l.updated_at
+                              ? new Date(l.updated_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                              : l.created_at
+                                ? new Date(l.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                                : 'Sep 11, 2026'}
+                      </span>
+                    </div>
                   )}
 
                   {l.status === 'PENDING' && (
