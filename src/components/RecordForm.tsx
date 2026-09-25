@@ -1388,8 +1388,44 @@ export default function RecordForm({
   const formDesc = formExplanations[resource] || formExplanations[resource.replace('inventory/', '')];
 
   return (
-    <Modal name={modalName} onClose={onClose || (() => {})}>
-      <form onSubmit={submit} className="space-y-5">
+    <Modal
+      name={modalName}
+      onClose={onClose || (() => {})}
+      footer={
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
+          {isAssignmentEdit ? (
+            <button
+              type="button"
+              disabled={busy || deleteBusy}
+              onClick={() => void deleteAssignment()}
+              className="btn-secondary text-xs text-red-700 border-red-200 w-full sm:w-auto hover:bg-red-50 dark:hover:bg-red-950/30 transition"
+            >
+              {deleteBusy ? 'Cancelling…' : 'Delete Assignment'}
+            </button>
+          ) : (
+            <span className="hidden sm:inline" />
+          )}
+          <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3 w-full sm:w-auto sm:ml-auto">
+            <button
+              type="button"
+              className="btn-secondary text-xs w-full sm:w-auto"
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="record-form-inner"
+              disabled={busy}
+              className="btn-primary text-xs w-full sm:w-auto"
+            >
+              {busy ? 'Saving…' : 'Save Record'}
+            </button>
+          </div>
+        </div>
+      }
+    >
+      <form id="record-form-inner" onSubmit={submit} className="space-y-5">
         {formDesc && (
           <p className="text-xs text-primary/90 bg-primary/5 border border-primary/10 rounded-lg p-3 flex items-start gap-2">
             <Info size={15} className="mt-0.5 shrink-0 text-primary" />
@@ -1535,21 +1571,6 @@ export default function RecordForm({
             {error}
           </p>
         )}
-        <div className="sticky bottom-0 -mx-4 -mb-4 sm:-mx-6 sm:-mb-6 p-3.5 sm:px-6 sm:py-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 z-10 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 mt-6">
-          {isAssignmentEdit ? (
-            <button type="button" disabled={busy || deleteBusy} onClick={() => void deleteAssignment()} className="btn-secondary text-xs text-red-700 border-red-200 w-full sm:w-auto">
-              {deleteBusy ? 'Cancelling…' : 'Delete Assignment'}
-            </button>
-          ) : <span className="hidden sm:inline" />}
-          <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3 w-full sm:w-auto">
-            <button type="button" className="btn-secondary text-xs w-full sm:w-auto" onClick={onClose}>
-              Cancel
-            </button>
-            <button disabled={busy} className="btn-primary text-xs w-full sm:w-auto">
-              {busy ? 'Saving…' : 'Save Record'}
-            </button>
-          </div>
-        </div>
       </form>
     </Modal>
   );
