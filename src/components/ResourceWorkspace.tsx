@@ -10,6 +10,7 @@ import { Row, title, rows, display, useData, State, Table, Facts, Modal } from '
 import RecordForm from './RecordForm';
 import SearchableSelect from './SearchableSelect';
 import AssetDetailView from './AssetDetailView';
+import AssetThumbnail from './AssetThumbnail';
 import EmployeeDetailView from './EmployeeDetailView';
 import EmployeeWizardForm from './EmployeeWizardForm';
 import { ProjectRegister } from './ProjectDashboard';
@@ -705,17 +706,11 @@ function ResourceList({ resource, readOnly }: { resource: string; readOnly?: boo
                         return (
                           <tr key={asset.id} className="hover:bg-muted/30 transition-colors">
                             <td className="p-3">
-                              {imgUrl ? (
-                                <img
-                                  src={imgUrl}
-                                  alt={asset.name || 'Asset'}
-                                  className="w-10 h-10 rounded-lg object-cover border border-border shadow-xs"
-                                />
-                              ) : (
-                                <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary font-bold flex items-center justify-center text-xs shrink-0 border border-primary/20">
-                                  <Truck size={18} />
-                                </div>
-                              )}
+                              <AssetThumbnail
+                                photoUrl={imgUrl}
+                                assetId={asset.id}
+                                assetName={asset.name}
+                              />
                             </td>
 
                             <td className="p-3">

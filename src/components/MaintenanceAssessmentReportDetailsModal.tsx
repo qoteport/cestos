@@ -20,8 +20,8 @@ function DisplayValue({ value }: { value: unknown }) {
 }
 
 export default function MaintenanceAssessmentReportDetailsModal({
-  record, onClose, onEdit, editable,
-}: { record: any; onClose: () => void; onEdit: () => void; editable: boolean }) {
+  record, onClose, onEdit, editable, projects = [], sites = [],
+}: { record: any; onClose: () => void; onEdit: () => void; editable: boolean; projects?: any[]; sites?: any[] }) {
   const reportDate = (value?: string) => value ? new Date(`${value.slice(0, 10)}T00:00:00`).toLocaleDateString() : '—';
   const printable = () => window.print();
   return <Modal title={`Maintenance assessment · ${record.report_number || ''}`} onClose={onClose} className="sm:!h-[90vh] sm:!max-h-[90vh] sm:!max-w-6xl" footer={<div className="flex w-full justify-end gap-2"><button type="button" className="btn-secondary inline-flex items-center gap-2" onClick={printable}><Printer size={15} /> Print</button>{editable && <button type="button" className="btn-primary inline-flex items-center gap-2" onClick={onEdit}><Pencil size={15} /> Edit report</button>}</div>}>
@@ -30,6 +30,7 @@ export default function MaintenanceAssessmentReportDetailsModal({
         {[
           ['Report number', record.report_number], ['Report date', reportDate(record.report_date)],
           ['Reporting period', `${reportDate(record.reporting_period_start)} – ${reportDate(record.reporting_period_end)}`],
+          ['Project', record.project_name_custom || record.project?.name || projects.find((item) => String(item.id) === String(record.project_id))?.name || '—'], ['Site / work location', record.site_name_custom || record.site?.name || sites.find((item) => String(item.id) === String(record.site_location_id))?.name || '—'],
           ['Status', record.status], ['Prepared by', record.prepared_by_name], ['Position', record.prepared_by_position], ['Submitted to', record.submitted_to],
         ].map(([label, value]) => <div key={label} className="bg-white px-3 py-2"><div className="text-[10px] font-bold uppercase text-slate-500">{label}</div><div className="mt-1 font-semibold text-slate-900">{value || '—'}</div></div>)}
       </section>

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Truck, MapPin, FolderKanban, Tag, RefreshCw } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { Modal, Row } from './DataUI';
+import AssetThumbnail from './AssetThumbnail';
 
 interface SelectAssetModalProps {
   title?: string;
@@ -114,13 +115,7 @@ export default function SelectAssetModal({
                   className="card p-3 border hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer flex items-center justify-between gap-3 group"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden border">
-                      {photo ? (
-                        <img src={photo} alt={ast.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <Truck size={20} className="text-primary/70" />
-                      )}
-                    </div>
+                    <AssetThumbnail photoUrl={photo} assetId={ast.id} assetName={ast.name} />
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-xs text-foreground truncate">{ast.name}</span>
