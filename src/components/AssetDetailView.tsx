@@ -165,7 +165,13 @@ export function formatAssetAuditActivity(act: Row) {
   };
 }
 
-export default function AssetDetailView({ assetId }: { assetId: string }) {
+export default function AssetDetailView({
+  assetId,
+  hideInsuranceAndRegistration,
+}: {
+  assetId: string;
+  hideInsuranceAndRegistration?: boolean;
+}) {
   const auth = useAuth();
   const root = '/api/v1/assets/' + assetId;
   const overview = useData(root + '/overview');
@@ -940,7 +946,10 @@ const assetEditOp = {
             )}
             <nav className="tab-nav overflow-x-auto" aria-label="Asset sections">
               {tabs
-                .filter(([key]) => key === 'overview' || allowed(root + '/' + key))
+                .filter(([key]) => {
+                  if (hideInsuranceAndRegistration && (key === 'insurance' || key === 'registrations')) return false;
+                  return key === 'overview' || allowed(root + '/' + key);
+                })
                 .map(([key, label, Icon]) => (
                   <button
                     key={key}

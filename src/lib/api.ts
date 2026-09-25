@@ -1,10 +1,54 @@
 // Browser calls stay on this origin; Next.js proxies to the configured backend.
 import {getAccessToken, getRefreshToken, setTokens, clearTokens, refreshSession} from './session';
 import { notifyOperationalDataUpdated } from './operationalDataSync';
+import { cacheApiResponse, currentOfflineScope, enqueueOfflineWrite, listOfflineWrites, readCachedApiResponse, removeOfflineWrite, restoreOfflineBody, serializeOfflineBody, updateOfflineWrite, type OfflineWrite } from './offlineStore';
 export {getAccessToken, getRefreshToken, setTokens, clearTokens} from './session';
 export const BASE_URL = '';
 export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); this.name = 'ApiError'; }
+}
+export class OfflineQueuedError extends ApiError {
+  constructor(public queueId: string) { super(0, 'Cestos is unreachable. This change is saved on this device and will sync when the server is available.'); this.name = 'OfflineQueuedError'; }
+}
+type ApiFetchPolicy = { queueWhenOffline?: boolean; cacheOfflineRead?: boolean; cacheResponse?: boolean };
+let backendHealthCheckedAt = 0;
+let backendIsReachable = false;
+let backendHealthCheck: Promise<boolean> | null = null;
+
+async function checkApiBackend(force = false): Promise<boolean> {
+  if (!force && Date.now() - backendHealthCheckedAt < 8_000) return backendIsReachable;
+  if (backendHealthCheck) return backendHealthCheck;
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 4_000);
+  backendHealthCheck = fetch(`${BASE_URL}/api/v1/health`, { method: 'GET', cache: 'no-store', signal: controller.signal })
+    .then((response) => response.ok)
+    .catch(() => false)
+    .then((reachable) => {
+      backendIsReachable = reachable;
+      backendHealthCheckedAt = Date.now();
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('cestos:backend-connectivity-changed', { detail: { reachable } }));
+      return reachable;
+    })
+    .finally(() => { window.clearTimeout(timeout); backendHealthCheck = null; });
+  return backendHealthCheck;
+}
+
+async function enqueueRequest(path: string, options: RequestInit, method: string, authenticated: boolean, scope: string | null): Promise<never> {
+  if (!authenticated || /\/auth\/(login|refresh|logout|password-reset|reset-password)/i.test(path)) {
+    throw new ApiError(0, 'This action needs an active internet connection and cannot be queued safely.');
+  }
+  const body = serializeOfflineBody(options.body);
+  const token = getAccessToken();
+  if (!body || !scope || !token) throw new ApiError(0, 'Cestos is unreachable and this request cannot be safely stored for later sync.');
+  const id = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const headers = new Headers(options.headers);
+  headers.delete('authorization');
+  headers.delete('content-type');
+  headers.delete('content-length');
+  const write: OfflineWrite = { id, scope, path, method, authenticated, headers: [...headers.entries()], ...body, createdAt: Date.now(), state: 'pending', attempts: 0 };
+  try { await enqueueOfflineWrite(write); }
+  catch { throw new ApiError(0, 'Cestos is unreachable, and this device could not store the request. Keep the form open and try again when storage is available.'); }
+  throw new OfflineQueuedError(id);
 }
 // Extracts a human-readable message from DRF/FastAPI style error/validation bodies.
 function extractErrorMessage(body: any, status: number): string {
@@ -41,15 +85,37 @@ async function readResponse<T>(response: Response): Promise<T> {
   if (!response.ok) throw new ApiError(response.status, extractErrorMessage(body, response.status));
   return body as T;
 }
-export async function apiFetch<T>(path: string, options: RequestInit = {}, authenticated = true): Promise<T> {
+export async function apiFetch<T>(path: string, options: RequestInit = {}, authenticated = true, policy: ApiFetchPolicy = {}): Promise<T> {
   if (typeof window === 'undefined') return {} as T;
+  const method = (options.method || 'GET').toUpperCase();
+  const isRead = method === 'GET' || method === 'HEAD';
   const token = authenticated ? getAccessToken() : null;
+  const offlineScope = await currentOfflineScope(token);
+  if (isRead && navigator.onLine === false) {
+    if (policy.cacheOfflineRead !== false && offlineScope) {
+      const cached = await readCachedApiResponse<T>(offlineScope, path);
+      if (cached !== undefined) return cached;
+    }
+    throw new ApiError(0, 'This information is not available offline yet. Open it while connected, then it will be available on this device.');
+  }
+  if (!isRead && policy.queueWhenOffline !== false && (navigator.onLine === false || !(await checkApiBackend()))) {
+    return enqueueRequest(path, options, method, authenticated, offlineScope);
+  }
   const headers = new Headers(options.headers);
   if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json');
   if (token) headers.set('Authorization', `Bearer ${token}`);
   let response: Response;
   try { response = await fetch(`${BASE_URL}${path}`, {...options, headers, cache:'no-store'}); }
-  catch { throw new ApiError(0, 'Cannot reach the server. Check your connection and try again.'); }
+  catch {
+    if (isRead && policy.cacheOfflineRead !== false && offlineScope) {
+      const cached = await readCachedApiResponse<T>(offlineScope, path);
+      if (cached !== undefined) return cached;
+    }
+    if (!isRead && policy.queueWhenOffline !== false && !(await checkApiBackend(true))) {
+      return enqueueRequest(path, options, method, authenticated, offlineScope);
+    }
+    throw new ApiError(0, 'Cannot reach the server. Check your connection and try again.');
+  }
   if (response.status === 401 && authenticated) {
     if (await refreshSession(BASE_URL, token)) {
       headers.set('Authorization', `Bearer ${getAccessToken()}`);
@@ -60,8 +126,17 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, authe
       if (typeof window !== 'undefined') window.dispatchEvent(new Event('cestos:session-expired'));
     }
   }
+  if (isRead && response.status >= 500 && policy.cacheOfflineRead !== false && offlineScope && !(await checkApiBackend(true))) {
+    const cached = await readCachedApiResponse<T>(offlineScope, path);
+    if (cached !== undefined) return cached;
+  }
+  if (!isRead && policy.queueWhenOffline !== false && response.status >= 500 && !(await checkApiBackend(true))) {
+    return enqueueRequest(path, options, method, authenticated, offlineScope);
+  }
   const result = await readResponse<T>(response);
-  const method = (options.method || 'GET').toUpperCase();
+  if (isRead && policy.cacheResponse !== false && response.headers.get('content-type')?.includes('application/json') && offlineScope) {
+    await cacheApiResponse(offlineScope, path, result);
+  }
   if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
     const route = path.split('?')[0];
     if (route.startsWith('/api/v1/procurement/purchase-orders')) {
@@ -76,13 +151,74 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, authe
   return result;
 }
 
+export async function getOfflineWriteQueue(): Promise<OfflineWrite[]> {
+  const scope = await currentOfflineScope(getAccessToken());
+  return scope ? listOfflineWrites(scope) : [];
+}
+
+export async function discardOfflineWrite(id: string): Promise<void> { await removeOfflineWrite(id); }
+
+export async function retryOfflineWrite(id: string): Promise<void> {
+  const rows = await getOfflineWriteQueue();
+  const row = rows.find((entry) => entry.id === id);
+  if (row) await updateOfflineWrite({ ...row, state: 'pending', error: undefined });
+}
+
+let offlineSync: Promise<void> | null = null;
+export async function syncOfflineWriteQueue(): Promise<void> {
+  if (typeof window === 'undefined' || navigator.onLine === false || offlineSync) return offlineSync || undefined;
+  const token = getAccessToken();
+  const scope = await currentOfflineScope(token);
+  if (!scope) return;
+  if (!(await checkApiBackend())) return;
+  const sync = async () => {
+    const rows = await listOfflineWrites(scope);
+    for (const row of rows) {
+      if (navigator.onLine === false || row.state === 'failed') break;
+      try {
+        const headers = new Headers(row.headers);
+        const body = restoreOfflineBody(row);
+        await apiFetch(row.path, { method: row.method, headers, body }, row.authenticated, { queueWhenOffline: false, cacheOfflineRead: false, cacheResponse: false });
+        await removeOfflineWrite(row.id);
+        window.dispatchEvent(new CustomEvent('cestos:offline-write-synced', { detail: { id: row.id, path: row.path } }));
+      } catch (error) {
+        const reachable = await checkApiBackend(true);
+        const current: OfflineWrite = {
+          ...row,
+          attempts: row.attempts + 1,
+          state: reachable ? 'failed' : 'pending',
+          error: error instanceof Error ? error.message : 'Sync failed.',
+        };
+        await updateOfflineWrite(current);
+        break;
+      }
+    }
+  };
+  offlineSync = ('locks' in navigator && navigator.locks)
+    ? navigator.locks.request('cestos-offline-write-sync', async () => { await sync(); }).then(() => undefined)
+    : sync();
+  try { await offlineSync; } finally { offlineSync = null; }
+}
+
 export async function apiFetchBlob(path: string, options: RequestInit = {}, authenticated = true): Promise<Blob> {
   const token = authenticated ? getAccessToken() : null;
+  const method = (options.method || 'GET').toUpperCase();
+  const offlineScope = await currentOfflineScope(token);
+  const cachedFile = () => method === 'GET' && offlineScope ? readCachedApiResponse<Blob>(offlineScope, path) : Promise.resolve(undefined);
+  if (method === 'GET' && navigator.onLine === false) {
+    const cached = await cachedFile();
+    if (cached) return cached;
+    throw new ApiError(0, 'This file has not been opened on this device and is unavailable offline.');
+  }
   const headers = new Headers(options.headers);
   if (token) headers.set('Authorization', `Bearer ${token}`);
   let response: Response;
   try { response = await fetch(`${BASE_URL}${path}`, {...options, headers, cache:'no-store'}); }
-  catch { throw new ApiError(0, 'Cannot reach the server. Check your connection and try again.'); }
+  catch {
+    const cached = await cachedFile();
+    if (cached) return cached;
+    throw new ApiError(0, 'Cannot reach the server. Check your connection and try again.');
+  }
   if (response.status === 401 && authenticated) {
     if (await refreshSession(BASE_URL, token)) {
       headers.set('Authorization', `Bearer ${getAccessToken()}`);
@@ -94,12 +230,18 @@ export async function apiFetchBlob(path: string, options: RequestInit = {}, auth
     }
   }
   if (!response.ok) {
+    if (method === 'GET' && response.status >= 500 && !(await checkApiBackend(true))) {
+      const cached = await cachedFile();
+      if (cached) return cached;
+    }
     const text = await response.text().catch(() => '');
     let body;
     try { body = text ? JSON.parse(text) : undefined; } catch {}
     throw new ApiError(response.status, body?.error?.message || `Failed to fetch file (${response.status})`);
   }
-  return response.blob();
+  const blob = await response.blob();
+  if (method === 'GET' && offlineScope) await cacheApiResponse(offlineScope, path, blob);
+  return blob;
 }
 
 export function downloadBlob(blob: Blob, filename: string) {

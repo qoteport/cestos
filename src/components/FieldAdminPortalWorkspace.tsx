@@ -8,7 +8,7 @@ import {
   HardHat, Bell, User, Wrench, ShieldCheck, Clock, Truck, RefreshCw, LogOut, Menu, X, Pencil,
   AlertTriangle, Plus, CheckCircle2, DollarSign, Fuel, Users, FileText, Download, Eye,
   Building2, Calendar, FilePlus, ChevronRight, Check, Ban, AlertCircle, Sparkles, Filter,
-  Activity, Paperclip, Upload, Package, Trash2, TrendingUp, File, ArrowLeft, BarChart2, ChevronDown, ChevronUp
+  Activity, Paperclip, Upload, Package, Trash2, TrendingUp, File, ArrowLeft, BarChart2, ChevronDown, ChevronUp, Search
 } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, BarChart, Bar, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { useAuth } from '@/components/AuthProvider';
@@ -27,10 +27,12 @@ import { openUniversalFileViewer } from '@/lib/fileViewer';
 import PurchaseOrderCategoryChart from './PurchaseOrderCategoryChart';
 import { useOperationalDataSync } from '@/lib/operationalDataSync';
 import EmployeeDetailView from './EmployeeDetailView';
+import RecordForm from './RecordForm';
+import { operation } from './ResourceWorkspace';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type AdminTab = 'PROJECTS' | 'FUEL' | 'MAINTENANCE' | 'PEOPLE' | 'EXPENSES' | 'PURCHASE_ORDERS' | 'HSE' | 'NOTIFICATIONS';
+type AdminTab = 'PROJECTS' | 'EQUIPMENT' | 'FUEL' | 'MAINTENANCE' | 'PEOPLE' | 'EXPENSES' | 'PURCHASE_ORDERS' | 'HSE' | 'NOTIFICATIONS';
 
 interface ProjectOption {
   id: string;
@@ -109,7 +111,7 @@ export default function FieldAdminPortalWorkspace() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
-    if (tab === 'NOTIFICATIONS' || tab === 'PURCHASE_ORDERS' || tab === 'EXPENSES') setActiveTab(tab);
+    if (tab === 'NOTIFICATIONS' || tab === 'EQUIPMENT' || tab === 'PURCHASE_ORDERS' || tab === 'EXPENSES') setActiveTab(tab as AdminTab);
   }, []);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [banner, setBanner] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
@@ -145,6 +147,11 @@ export default function FieldAdminPortalWorkspace() {
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [selectedMaintenanceRecord, setSelectedMaintenanceRecord] = useState<{ record: any; kind: 'work_order' | 'preventive' | 'breakdown'; startEditing: boolean } | null>(null);
   const [maintFilter, setMaintFilter] = useState<'ALL' | 'SCHEDULES' | 'BREAKDOWN' | 'PREVENTIVE'>('ALL');
+
+  // Equipment state
+  const [showAddAssetModal, setShowAddAssetModal] = useState(false);
+  const [editingAsset, setEditingAsset] = useState<any | null>(null);
+  const [equipmentSearch, setEquipmentSearch] = useState('');
 
   // Employee detail view state
   const [selectedEmployee, setSelectedEmployee] = useState<any | null>(null);
@@ -559,7 +566,17 @@ export default function FieldAdminPortalWorkspace() {
     return true;
   };
 
-  const filteredAssets = assets;
+  const filteredAssets = React.useMemo(() => {
+    if (!equipmentSearch.trim()) return assets;
+    const q = equipmentSearch.toLowerCase().trim();
+    return assets.filter((ast: any) => {
+      const name = (ast.name || ast.asset_name || '').toLowerCase();
+      const code = (ast.asset_number || ast.code || ast.serial_number || '').toLowerCase();
+      const cat = (ast.category || ast.asset_type || ast.model || '').toLowerCase();
+      const site = (ast.location_name || ast.site_name || ast.location || '').toLowerCase();
+      return name.includes(q) || code.includes(q) || cat.includes(q) || site.includes(q);
+    });
+  }, [assets, equipmentSearch]);
   const filteredEmployees = employees;
   const filteredWorkOrders = filterByProj(workOrders).filter((w) =>
     isWithinDateFilter(w.scheduled_date || w.created_at)
@@ -1529,12 +1546,12 @@ Signed: Field Operations Administration
   const tabs: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
     { id: 'PROJECTS', label: 'My Projects', icon: <Building2 size={16} /> },
     { id: 'PURCHASE_ORDERS', label: 'Purchase Orders', icon: <FileText size={16} /> },
-      { id: 'EXPENSES', label: 'Expenses', icon: <DollarSign size={16} /> },
+    { id: 'EXPENSES', label: 'Expenses', icon: <DollarSign size={16} /> },
     { id: 'FUEL', label: 'Fuel', icon: <Fuel size={16} /> },
     { id: 'MAINTENANCE', label: 'Maintenance', icon: <Wrench size={16} /> },
     { id: 'HSE', label: 'HSE', icon: <ShieldCheck size={16} /> },
-        { id: 'PEOPLE', label: 'Employees', icon: <Users size={16} /> },
-    { id: 'NOTIFICATIONS', label: 'Notifications', icon: <Clock size={16} /> },
+    { id: 'PEOPLE', label: 'Employees', icon: <Users size={16} /> },
+    { id: 'EQUIPMENT', label: 'Equipment', icon: <Truck size={16} /> },
   ];
 
   return (
@@ -1988,6 +2005,111 @@ Signed: Field Operations Administration
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            )}
+
+            {/* EQUIPMENT TAB */}
+            {activeTab === 'EQUIPMENT' && (
+              <div className="space-y-4">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+                    <div>
+                      <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <Truck className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                        Project Equipment & Machinery
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Equipment and fleet assigned to current project
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                        <input
+                          type="text"
+                          placeholder="Search equipment..."
+                          value={equipmentSearch}
+                          onChange={(e) => setEquipmentSearch(e.target.value)}
+                          className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddAssetModal(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold transition shadow-xs shrink-0"
+                      >
+                        <Plus size={14} /> New Equipment
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Equipment Table */}
+                  <div className="overflow-x-auto mt-4">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-semibold uppercase text-[10px] tracking-wider border-y border-slate-100 dark:border-slate-800">
+                        <tr>
+                          <th className="px-4 py-3">Equipment / Asset</th>
+                          <th className="px-4 py-3">Code / Serial</th>
+                          <th className="px-4 py-3">Category / Model</th>
+                          <th className="px-4 py-3">Operating Status</th>
+                          <th className="px-4 py-3">Location / Site</th>
+                          <th className="px-4 py-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {filteredAssets.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
+                              No equipment found for this project.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredAssets.map((ast: any) => (
+                            <tr key={ast.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                              <td className="px-4 py-3 font-semibold text-slate-900 dark:text-slate-100">
+                                <button
+                                  type="button"
+                                  onClick={() => router.push(`/field-admin-portal/equipment/${ast.id}`)}
+                                  className="hover:text-orange-600 dark:hover:text-orange-400 hover:underline text-left font-bold"
+                                >
+                                  {ast.name || ast.asset_name || 'Unnamed Asset'}
+                                </button>
+                              </td>
+                              <td className="px-4 py-3 text-slate-600 dark:text-slate-400 font-mono">
+                                {ast.asset_number || ast.code || ast.serial_number || 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                                {ast.category || ast.asset_type || ast.model || 'Machinery'}
+                              </td>
+                              <td className="px-4 py-3">
+                                <StatusBadge status={ast.operating_status || ast.status || 'OPERATIONAL'} />
+                              </td>
+                              <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                                {ast.location_name || ast.site_name || ast.location || 'On Site'}
+                              </td>
+                              <td className="px-4 py-3 text-right space-x-2">
+                                <button
+                                  type="button"
+                                  onClick={() => router.push(`/field-admin-portal/equipment/${ast.id}`)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-[11px] font-medium transition"
+                                >
+                                  <Eye size={12} /> View
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingAsset(ast)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-orange-50 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/50 border border-orange-200 dark:border-orange-800 text-[11px] font-medium transition"
+                                >
+                                  <Pencil size={12} /> Edit
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
@@ -5098,6 +5220,36 @@ Signed: Field Operations Administration
           );
         })}
       </nav>
+
+      {/* Create Equipment Modal */}
+      {showAddAssetModal && (
+        <RecordForm
+          path="/api/v1/assets"
+          title="Register New Equipment"
+          operation={operation('/api/v1/assets', 'POST') || {}}
+          onClose={() => setShowAddAssetModal(false)}
+          onSaved={() => {
+            setShowAddAssetModal(false);
+            void reloadData();
+          }}
+        />
+      )}
+
+      {/* Edit Equipment Modal */}
+      {editingAsset && (
+        <RecordForm
+          path={`/api/v1/assets/${editingAsset.id}`}
+          title={`Edit Equipment - ${editingAsset.name || editingAsset.asset_number || 'Equipment'}`}
+          operation={operation('/api/v1/assets', 'POST') || operation(`/api/v1/assets/${editingAsset.id}`, 'PATCH') || {}}
+          initial={editingAsset}
+          method="PATCH"
+          onClose={() => setEditingAsset(null)}
+          onSaved={() => {
+            setEditingAsset(null);
+            void reloadData();
+          }}
+        />
+      )}
 
       {/* Universal File Viewer Modal */}
       <UniversalFileViewerModal
