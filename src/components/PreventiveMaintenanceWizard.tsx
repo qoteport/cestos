@@ -342,7 +342,7 @@ export default function PreventiveMaintenanceWizard({
   return <Modal
     title={`${record ? 'Edit' : 'Preventive'} Maintenance Job Card`}
     onClose={onClose}
-    className="sm:!h-[94vh] sm:!max-h-[94vh] sm:!w-[92vw] sm:!max-w-[1440px]"
+    className="sm:!h-[90vh] sm:!max-h-[90vh] sm:!max-w-4xl"
     footer={
       <div className="flex flex-row items-center justify-between gap-2.5 sm:gap-3 w-full">
         {view === 'ASSISTED' && step > 0 ? (

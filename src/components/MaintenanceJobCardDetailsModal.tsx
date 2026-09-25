@@ -184,7 +184,7 @@ export default function MaintenanceJobCardDetailsModal({
     }
   }
 
-  return <Modal title={editing ? `Edit ${kindLabel}` : kindLabel} onClose={onClose} className="sm:!max-w-[96vw] sm:!max-h-[94vh]" footer={<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+  return <Modal title={editing ? `Edit ${kindLabel}` : kindLabel} onClose={onClose} className="sm:!max-w-4xl sm:!max-h-[90vh]" footer={<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
     <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
       {kind !== 'work_order' && (attachmentsLoading ? <span className="text-xs text-slate-500">Checking attachments…</span> : attachments.length ? attachments.map((file: any) => <div key={file.id} className="flex shrink-0 items-center gap-2 rounded-none border border-slate-400 bg-[#f4f7fb] px-2 py-1.5 dark:bg-slate-800">
         <span className="max-w-40 truncate text-[11px] font-semibold" title={file.file_name || file.title}>{file.file_name || file.title || 'Job card attachment'}</span>
