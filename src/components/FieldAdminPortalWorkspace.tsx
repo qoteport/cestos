@@ -9,7 +9,7 @@ import {
   AlertTriangle, Plus, CheckCircle2, DollarSign, Fuel, Users, FileText, Download, Eye,
   Building2, Calendar, FilePlus, ChevronRight, Check, Ban, AlertCircle, Sparkles, Filter,
   Activity, Paperclip, Upload, Package, Trash2, TrendingUp, File, ArrowLeft, BarChart2, ChevronDown, ChevronUp, Search,
-  Zap, Droplet, ShieldAlert, UserCheck
+  Zap, Droplet, ShieldAlert, UserCheck, ShoppingCart
 } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, BarChart, Bar, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { useAuth } from '@/components/AuthProvider';
@@ -138,6 +138,7 @@ export default function FieldAdminPortalWorkspace() {
   const [loading, setLoading] = useState(true);
 
   // Modals state
+  const [showPoModal, setShowPoModal] = useState(false);
   const [showFuelBoughtModal, setShowFuelBoughtModal] = useState(false);
   const [showFuelAllocModal, setShowFuelAllocModal] = useState(false);
   const [showWOModal, setShowWOModal] = useState(false);
@@ -414,7 +415,7 @@ export default function FieldAdminPortalWorkspace() {
       const projectMetricsUrl = '/api/v1/projects/field-admin-metrics';
 
       const fpAssetUrl = `/api/v1/field-portal/equipment?project_id=${activeProject.id}`;
-      const allAssetsUrl = '/api/v1/assets?page_size=200';
+      const allAssetsUrl = '/api/v1/assets?page_size=100';
       const allEmpUrl = '/api/v1/employees?page_size=100';
 
       const [aRes, fpARes, allARes, eRes, allERes, wRes, fdRes, faRes, sitesRes, iRes, nRes, drRes, cRes, metricsRes, pmCardsRes, breakdownCardsRes] = await Promise.all([
@@ -1573,14 +1574,14 @@ Signed: Field Operations Administration
         <div className="flex flex-col items-center space-y-3 flex-1 overflow-y-auto scrollbar-none w-full py-1">
           <button
             type="button"
-            onClick={() => setShowWOModal(true)}
+            onClick={() => setShowPoModal(true)}
             className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-orange-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
-            aria-label="Breakdown Work Order Form"
+            aria-label="Create Purchase Order Form"
           >
-            <Wrench size={18} />
+            <ShoppingCart size={18} />
             <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-              Breakdown Work Order Form
+              Create Purchase Order Form
             </span>
           </button>
           <button
@@ -1597,18 +1598,6 @@ Signed: Field Operations Administration
           </button>
           <button
             type="button"
-            onClick={() => setShowScheduleModal(true)}
-            className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-orange-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
-            aria-label="Schedule Equipment Maintenance"
-          >
-            <Calendar size={18} />
-            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-              Schedule Equipment Maintenance
-            </span>
-          </button>
-          <button
-            type="button"
             onClick={() => setShowFuelBoughtModal(true)}
             className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-orange-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
             aria-label="Register Bulk Fuel Delivery Form"
@@ -1621,14 +1610,14 @@ Signed: Field Operations Administration
           </button>
           <button
             type="button"
-            onClick={() => setShowAddAssetModal(true)}
+            onClick={() => setShowWOModal(true)}
             className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-orange-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
-            aria-label="Register Equipment Asset Form"
+            aria-label="Breakdown Work Order Form"
           >
-            <Truck size={18} />
+            <Wrench size={18} />
             <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-              Register Equipment Asset Form
+              Breakdown Work Order Form
             </span>
           </button>
           <button
@@ -1653,6 +1642,18 @@ Signed: Field Operations Administration
             <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
               Book Personnel Leave Request
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAddAssetModal(true)}
+            className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-orange-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+            aria-label="Register Equipment Asset Form"
+          >
+            <Truck size={18} />
+            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+              Register Equipment Asset Form
             </span>
           </button>
         </div>
@@ -5335,6 +5336,20 @@ Signed: Field Operations Administration
           );
         })}
       </nav>
+
+      {/* Create Purchase Order Modal */}
+      {showPoModal && (
+        <RecordForm
+          path="/api/v1/procurement/purchase-orders"
+          title="Create Purchase Order"
+          operation={operation('/api/v1/procurement/purchase-orders', 'POST') || {}}
+          onClose={() => setShowPoModal(false)}
+          onSaved={() => {
+            setShowPoModal(false);
+            void reloadData();
+          }}
+        />
+      )}
 
       {/* Create Equipment Modal */}
       {showAddAssetModal && (

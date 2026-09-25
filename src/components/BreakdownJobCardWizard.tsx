@@ -157,7 +157,7 @@ export default function BreakdownJobCardWizard({ assets, projectId, onClose, onS
           } catch {}
         }
         if (list.length === 0) {
-          const allRes = await apiFetch<any>('/api/v1/assets?page_size=200');
+          const allRes = await apiFetch<any>('/api/v1/assets?page_size=100');
           list = Array.isArray(allRes) ? allRes : allRes?.items || [];
         }
         if (active && list.length > 0) setEquipmentList(list);

@@ -336,7 +336,7 @@ export default function FinancePortalWorkspace() {
       apiFetch<any>('/api/v1/field-portal/fuel-deliveries').then((res) => { if (active) setFuelDeliveries(Array.isArray(res) ? res : res?.items || []); }).catch(() => []),
       apiFetch<any>('/api/v1/field-portal/fuel-allocations').then((res) => { if (active) setFuelAllocations(Array.isArray(res) ? res : res?.items || []); }).catch(() => []),
       apiFetch<any>('/api/v1/field-portal/sites').then((res) => { if (active) setProjectSites(Array.isArray(res) ? res : res?.items || []); }).catch(() => []),
-      apiFetch<any>('/api/v1/assets?page_size=200').then((res) => { if (active) setAssets(Array.isArray(res) ? res : res?.items || []); }).catch(() => []),
+      apiFetch<any>('/api/v1/assets?page_size=100').then((res) => { if (active) setAssets(Array.isArray(res) ? res : res?.items || []); }).catch(() => []),
       apiFetch<any>('/api/v1/commercial/cost-entries').then((res) => { if (active) setExpenses(Array.isArray(res) ? res : res?.items || []); }).catch(() => []),
       apiFetch<any>('/api/v1/operational-expenses').then((res) => {
         if (active) {
