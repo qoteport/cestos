@@ -427,7 +427,7 @@ const assetEditOp = {
       },
       status: {
         type: 'string',
-        enum: ['OPERATIONAL', 'STANDBY', 'MAINTENANCE', 'BREAKDOWN', 'OUT_OF_SERVICE'],
+        enum: ['OPERATING', 'STANDBY', 'UNDER_MAINTENANCE', 'MAINTENANCE', 'BREAKDOWN', 'OUT_OF_SERVICE', 'AVAILABLE', 'ASSIGNED', 'QUARANTINED', 'DISPOSED'],
         title: 'Asset Status',
       },
       meter_type: {

@@ -1003,8 +1003,13 @@ function clean(data: Row, schema: Row): Row {
   const out: Row = {};
   for (const [key, raw] of Object.entries(schema.properties || {})) {
     const s = resolve(raw as Row);
-    const val = data[key] ?? s.default;
+    let val = data[key] ?? s.default;
     if (val === '' || val == null) continue;
+    if (key === 'status' && typeof val === 'string') {
+      const u = val.toUpperCase().trim();
+      if (u === 'MAINTENANCE') val = 'UNDER_MAINTENANCE';
+      if (u === 'OPERATIONAL') val = 'OPERATING';
+    }
     if (s.type === 'array') out[key] = val.map((v: Row) => clean(v, resolve(s.items)));
     else if (s.format === 'date-time') out[key] = new Date(val).toISOString();
     else if (s.type === 'integer' || s.type === 'number') out[key] = Number(val);
@@ -1291,6 +1296,9 @@ export default function RecordForm({
         return;
       }
       if (isAssetMainRecord) {
+        if (initial?.id || method === 'PATCH') {
+          delete body.current_meter_reading;
+        }
         result =
           savedAsset ||
           (await apiFetch<Row>(path, {

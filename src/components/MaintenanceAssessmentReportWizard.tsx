@@ -90,6 +90,9 @@ export default function MaintenanceAssessmentReportWizard({
   }));
   const projectOptions = projects.map((project) => ({ value: String(project.id), label: project.name || project.project_name || project.project_number }));
   const siteOptions = projectSites.map((site) => ({ value: String(site.id), label: site.name || site.site_name || site.code || 'Site' }));
+  const sectionHeadingClass = mode === 'FREE_FLOW'
+    ? 'bg-[#184877] px-2 py-1 text-center text-[11px] font-bold uppercase text-white'
+    : 'border-b pb-2 text-sm font-bold';
 
   const patch = (key: string, value: any) => setData((old) => ({ ...old, [key]: value }));
   const patchRow = (section: string, index: number, key: string, value: string) => setData((old) => ({
@@ -106,7 +109,7 @@ export default function MaintenanceAssessmentReportWizard({
   }))];
 
   const controls = <div className="space-y-4">
-    <h3 className="border-b pb-2 text-sm font-bold">Report control</h3>
+    <h3 className={sectionHeadingClass}>Report control</h3>
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <label className="space-y-1"><span className="block font-medium">Report number <span className="text-muted-foreground">(auto-generated if blank)</span></span><input className="input-field" value={data.report_number} onChange={(e) => patch('report_number', e.target.value)} placeholder="Leave blank to generate" maxLength={50} /></label>
       <label className="space-y-1"><span className="block font-medium">Reporting period start *</span><input className="input-field" type="date" value={data.reporting_period_start} onChange={(e) => patch('reporting_period_start', e.target.value)} required /></label>
@@ -127,7 +130,7 @@ export default function MaintenanceAssessmentReportWizard({
   const tableSection = (sectionKey: string) => {
     const definition = sectionDefinitions[sectionKey];
     return <div className="space-y-3" key={sectionKey}>
-      <div className="flex items-center justify-between border-b pb-2"><h3 className="text-sm font-bold">{definition.title}</h3><button type="button" className="btn-secondary text-xs" onClick={() => addRow(sectionKey)}>+ Add row</button></div>
+      <div className={`flex items-center justify-between gap-2 ${sectionHeadingClass}`}><h3 className="text-sm font-bold">{definition.title}</h3><button type="button" className="btn-secondary text-xs" onClick={() => addRow(sectionKey)}>+ Add row</button></div>
       {(data[sectionKey] || []).map((row: ReportRow, index: number) => <div key={`${sectionKey}-${index}`} className="grid gap-3 rounded-lg border border-border bg-muted/10 p-3 sm:grid-cols-2 lg:grid-cols-3">
         {definition.columns.map((column) => column.asset ? <div className="space-y-1" key={column.key}><span className="block font-medium">{column.label}</span><SearchableSelect options={assetOptions} value={row[column.key] || ''} onChange={(value) => { const asset = assets.find((item) => String(item.id) === String(value)); patchRow(sectionKey, index, column.key, value); if (asset) patchRow(sectionKey, index, sectionKey === 'equipment_fleet' ? 'equipment' : 'area_equipment', asset.name || asset.asset_name || asset.asset_number || ''); }} placeholder="Search equipment" /></div> : <label className={column.wide ? 'space-y-1 sm:col-span-2' : 'space-y-1'} key={column.key}><span className="block font-medium">{column.label}</span>{['observation_failure', 'action_taken_response', 'maintenance_focus', 'current_approach', 'purpose', 'justification'].includes(column.key) ? <textarea className="input-field min-h-20 resize-y" value={row[column.key] || ''} onChange={(e) => patchRow(sectionKey, index, column.key, e.target.value)} /> : <input className="input-field" value={row[column.key] || ''} onChange={(e) => patchRow(sectionKey, index, column.key, e.target.value)} />}</label>)}
         <div className="flex items-end justify-end"><button type="button" className="text-xs font-semibold text-red-700" onClick={() => removeRow(sectionKey, index)} disabled={data[sectionKey].length <= 1}>Remove row</button></div>
@@ -170,7 +173,7 @@ export default function MaintenanceAssessmentReportWizard({
       </div>
       {error && <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-red-800">{error}</div>}
       {mode === 'ASSISTED' && <div className="flex flex-wrap gap-1.5">{steps.map((item, index) => <button key={item.title} type="button" onClick={() => setStep(index)} className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${step === index ? 'border-blue-800 bg-blue-800 text-white' : 'text-muted-foreground'}`}>{index + 1}. {item.title}</button>)}</div>}
-      <div className="max-h-[64vh] space-y-6 overflow-y-auto p-1">{mode === 'ASSISTED' ? steps[step].body : steps.map((item) => <section key={item.title} className="space-y-4"><h2 className="text-sm font-bold text-blue-900">{item.title}</h2>{item.body}</section>)}</div>
+      <div className={`max-h-[64vh] space-y-6 overflow-y-auto p-1 ${mode === 'FREE_FLOW' ? 'bg-slate-100 p-2 sm:p-4' : ''}`}>{mode === 'ASSISTED' ? steps[step].body : steps.map((item) => <section key={item.title} className="space-y-4 bg-white p-3 text-slate-900 shadow sm:p-4"><h2 className={sectionHeadingClass}>{item.title}</h2>{item.body}</section>)}</div>
     </div>
   </Modal>;
 }
