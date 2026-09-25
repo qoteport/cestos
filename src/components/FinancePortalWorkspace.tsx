@@ -1166,16 +1166,16 @@ Signed: Finance & Procurement Administration
   // 5. Fuel Management
   // 6. Projects
   // 7. My Profile
-  const navItems: { id: FinanceTab; label: string; icon: React.ElementType }[] = [
-    { id: 'EXPENSES', label: 'Operational Expenses', icon: DollarSign },
-    { id: 'OPERATIONAL_EXPENSES', label: 'Claims Submission', icon: FileText },
+  const navItems: { id: FinanceTab; label: string; mobileLabel?: string; icon: React.ElementType }[] = [
+    { id: 'EXPENSES', label: 'Operational Expenses', mobileLabel: 'Expenses', icon: DollarSign },
+    { id: 'OPERATIONAL_EXPENSES', label: 'Claims Submission', mobileLabel: 'Claims', icon: FileText },
    /* { id: 'INVOICES', label: 'Invoices', icon: FileText },*/
-    { id: 'PURCHASE_ORDERS', label: 'Purchase Orders', icon: ShoppingCart },
-    { id: 'VENDORS', label: 'Vendors', icon: Building2 },
-    { id: 'FUEL', label: 'Fuel Management', icon: Fuel },
-    { id: 'PROJECTS', label: 'Projects', icon: Briefcase },
-    { id: 'NOTIFICATIONS', label: 'Notifications', icon: Bell },
-      ];
+    { id: 'PURCHASE_ORDERS', label: 'Purchase Orders', mobileLabel: 'Purchases', icon: ShoppingCart },
+    { id: 'VENDORS', label: 'Vendors', mobileLabel: 'Vendors', icon: Building2 },
+    { id: 'FUEL', label: 'Fuel Management', mobileLabel: 'Fuel', icon: Fuel },
+    { id: 'PROJECTS', label: 'Projects', mobileLabel: 'Projects', icon: Briefcase },
+    { id: 'NOTIFICATIONS', label: 'Notifications', mobileLabel: 'Alerts', icon: Bell },
+  ];
 
   // ─── Render Date & Project Filter Bar Component ─────────────────────────────
 
@@ -3757,7 +3757,7 @@ Signed: Finance & Procurement Administration
                   </span>
                 )}
               </div>
-              <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[64px]">{item.label}</span>
+              <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[64px]">{item.mobileLabel || item.label}</span>
               {isActive && (
                 <span className="absolute top-0 w-8 h-0.5 bg-violet-600 dark:bg-violet-400 rounded-full shadow-sm" />
               )}

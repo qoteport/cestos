@@ -1093,15 +1093,15 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
     }).length;
   }, [scopedPurchaseOrders]);
 
-  const navItems: { id: ExecutiveTab; label: string; icon: React.ComponentType<{ size?: number; className?: string }>; badge?: number }[] = [
-    { id: 'EXPENSES', label: 'Operational Expenses', icon: TrendingUp },
-    { id: 'PURCHASE_ORDERS', label: 'Purchase Orders', icon: ShoppingCart, badge: unapprovedPurchaseOrdersCount },
-    { id: 'FUEL', label: 'Fuel Management', icon: Fuel },
-    { id: 'PEOPLE', label: 'Employees', icon: Users },
-    { id: 'HSE', label: 'HSE & Safety', icon: ShieldAlert },
-    { id: 'PROJECTS', label: 'Projects', icon: Briefcase },
-    { id: 'EQUIPMENTS', label: 'Equipments', icon: Truck },
-    { id: 'COMPLIANCE', label: 'Compliance & Documents', icon: Shield },
+  const navItems: { id: ExecutiveTab; label: string; mobileLabel?: string; icon: React.ComponentType<{ size?: number; className?: string }>; badge?: number }[] = [
+    { id: 'EXPENSES', label: 'Operational Expenses', mobileLabel: 'Expenses', icon: TrendingUp },
+    { id: 'PURCHASE_ORDERS', label: 'Purchase Orders', mobileLabel: 'Purchases', icon: ShoppingCart, badge: unapprovedPurchaseOrdersCount },
+    { id: 'FUEL', label: 'Fuel Management', mobileLabel: 'Fuel', icon: Fuel },
+    { id: 'PEOPLE', label: 'Employees', mobileLabel: 'Workers', icon: Users },
+    { id: 'HSE', label: 'HSE & Safety', mobileLabel: 'Safety', icon: ShieldAlert },
+    { id: 'PROJECTS', label: 'Projects', mobileLabel: 'Projects', icon: Briefcase },
+    { id: 'EQUIPMENTS', label: 'Equipments', mobileLabel: 'Fleet', icon: Truck },
+    { id: 'COMPLIANCE', label: 'Compliance & Documents', mobileLabel: 'Compliance', icon: Shield },
   ];
 
   return (
@@ -2949,7 +2949,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                   </span>
                 )}
               </div>
-              <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[64px]">{item.label}</span>
+              <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[64px]">{item.mobileLabel || item.label}</span>
               {isActive && (
                 <span className="absolute top-0 w-8 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-full shadow-sm" />
               )}

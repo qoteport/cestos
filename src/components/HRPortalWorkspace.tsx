@@ -826,13 +826,13 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
     </div>
   );
 
-  const navItems: { id: HRTab; label: string; icon: React.ComponentType<{ size?: number; className?: string }>; badge?: number }[] = [
-    { id: 'PEOPLE', label: 'Employees', icon: Users },
-    { id: 'LEAVE', label: 'Leave Requests', icon: Calendar },
-    { id: 'PROJECTS', label: 'Projects', icon: Briefcase },
-    { id: 'HSE', label: 'HSE & Safety', icon: ShieldAlert },
-    { id: 'COMPLIANCE', label: 'Compliance & Documents', icon: Shield },
-    { id: 'DOC_REQUESTS', label: 'Document Requests', icon: Download },
+  const navItems: { id: HRTab; label: string; mobileLabel?: string; icon: React.ComponentType<{ size?: number; className?: string }>; badge?: number }[] = [
+    { id: 'PEOPLE', label: 'Employees', mobileLabel: 'Workers', icon: Users },
+    { id: 'LEAVE', label: 'Leave Requests', mobileLabel: 'Leave', icon: Calendar },
+    { id: 'PROJECTS', label: 'Projects', mobileLabel: 'Projects', icon: Briefcase },
+    { id: 'HSE', label: 'HSE & Safety', mobileLabel: 'Safety', icon: ShieldAlert },
+    { id: 'COMPLIANCE', label: 'Compliance & Documents', mobileLabel: 'Compliance', icon: Shield },
+    { id: 'DOC_REQUESTS', label: 'Document Requests', mobileLabel: 'Requests', icon: Download },
   ];
 
   return (
@@ -1865,7 +1865,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                   </span>
                 )}
               </div>
-              <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[64px]">{item.label}</span>
+              <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[64px]">{item.mobileLabel || item.label}</span>
               {isActive && (
                 <span className="absolute top-0 w-8 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-full shadow-sm" />
               )}

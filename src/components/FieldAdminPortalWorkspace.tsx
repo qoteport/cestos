@@ -1544,15 +1544,15 @@ Signed: Field Operations Administration
 
   // ─── Tabs Array ──────────────────────────────────────────────────────────────
 
-  const tabs: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'PROJECTS', label: 'My Projects', icon: <Building2 size={16} /> },
-    { id: 'PURCHASE_ORDERS', label: 'Purchase Orders', icon: <FileText size={16} /> },
-    { id: 'EXPENSES', label: 'Expenses', icon: <DollarSign size={16} /> },
-    { id: 'FUEL', label: 'Fuel', icon: <Fuel size={16} /> },
-    { id: 'MAINTENANCE', label: 'Maintenance', icon: <Wrench size={16} /> },
-    { id: 'HSE', label: 'HSE', icon: <ShieldCheck size={16} /> },
-    { id: 'PEOPLE', label: 'Employees', icon: <Users size={16} /> },
-    { id: 'EQUIPMENT', label: 'Equipment', icon: <Truck size={16} /> },
+  const tabs: { id: AdminTab; label: string; mobileLabel?: string; icon: React.ReactNode }[] = [
+    { id: 'PROJECTS', label: 'My Projects', mobileLabel: 'Projects', icon: <Building2 size={16} /> },
+    { id: 'PURCHASE_ORDERS', label: 'Purchase Orders', mobileLabel: 'Purchases', icon: <FileText size={16} /> },
+    { id: 'EXPENSES', label: 'Expenses', mobileLabel: 'Expenses', icon: <DollarSign size={16} /> },
+    { id: 'FUEL', label: 'Fuel', mobileLabel: 'Fuel', icon: <Fuel size={16} /> },
+    { id: 'MAINTENANCE', label: 'Maintenance', mobileLabel: 'Repairs', icon: <Wrench size={16} /> },
+    { id: 'HSE', label: 'HSE', mobileLabel: 'HSE', icon: <ShieldCheck size={16} /> },
+    { id: 'PEOPLE', label: 'Employees', mobileLabel: 'Workers', icon: <Users size={16} /> },
+    { id: 'EQUIPMENT', label: 'Equipment', mobileLabel: 'Fleet', icon: <Truck size={16} /> },
   ];
 
   return (
@@ -5225,7 +5225,7 @@ Signed: Field Operations Administration
               <div className={`relative ${isActive ? 'opacity-100 scale-110' : 'opacity-70'} transition-transform`}>
                 {t.icon}
               </div>
-              <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[64px]">{t.label}</span>
+              <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[64px]">{t.mobileLabel || t.label}</span>
               {isActive && (
                 <span className="absolute top-0 w-8 h-0.5 bg-orange-600 dark:bg-orange-400 rounded-full shadow-sm" />
               )}
