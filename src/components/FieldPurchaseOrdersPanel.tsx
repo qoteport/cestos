@@ -28,7 +28,19 @@ function ExpensePaymentBadge({ status }: { status?: string | null }) {
   return <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${style}`}>{label}</span>;
 }
 
-export default function FieldPurchaseOrdersPanel({ projectId, projectName }: { projectId: string; projectName?: string }) {
+export default function FieldPurchaseOrdersPanel({
+  projectId,
+  projectName,
+  datePreset = 'ALL',
+  customStartDate,
+  customEndDate,
+}: {
+  projectId: string;
+  projectName?: string;
+  datePreset?: string;
+  customStartDate?: string;
+  customEndDate?: string;
+}) {
   const [orders, setOrders] = useState<Row[]>([]);
   const [suppliers, setSuppliers] = useState<Row[]>([]);
   const [busy, setBusy] = useState(false);
@@ -122,6 +134,48 @@ export default function FieldPurchaseOrdersPanel({ projectId, projectName }: { p
     return () => { window.clearInterval(interval); window.removeEventListener('focus', refresh); };
   }, []);
   useOperationalDataSync(() => { if (document.visibilityState === 'visible') void reload().catch((e) => setMessage(e.message || 'Could not refresh purchase orders.')); });
+
+  const isWithinDate = (dateInput: string | Date | undefined) => {
+    if (datePreset === 'ALL') return true;
+    if (!dateInput) return true;
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return true;
+    const now = new Date();
+    if (datePreset === 'TODAY') {
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      return d >= startOfDay && d <= endOfDay;
+    }
+    if (datePreset === '10_DAYS') {
+      const tenDaysAgo = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000);
+      tenDaysAgo.setHours(0, 0, 0, 0);
+      return d >= tenDaysAgo && d <= now;
+    }
+    if (datePreset === '30_DAYS') {
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      thirtyDaysAgo.setHours(0, 0, 0, 0);
+      return d >= thirtyDaysAgo && d <= now;
+    }
+    if (datePreset === 'CUSTOM') {
+      if (customStartDate) {
+        const start = new Date(customStartDate);
+        if (!isNaN(start.getTime()) && d < start) return false;
+      }
+      if (customEndDate) {
+        const end = new Date(customEndDate);
+        if (!isNaN(end.getTime()) && d > end) return false;
+      }
+      return true;
+    }
+    return true;
+  };
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((po) => {
+      if (projectId && po.project_id && String(po.project_id) !== String(projectId)) return false;
+      return isWithinDate(po.order_date || po.created_at || po.date);
+    });
+  }, [orders, projectId, datePreset, customStartDate, customEndDate]);
 
   const supplierOptions = useMemo(() => suppliers.map((row) => ({ value: String(row.name || ''), label: String(row.name || '') })).filter((o) => o.value), [suppliers]);
   const hasExpense = (po: Row) => Boolean(po.expense_raised) || raisedPurchaseOrderIds.has(String(po.id));
@@ -219,7 +273,7 @@ export default function FieldPurchaseOrdersPanel({ projectId, projectName }: { p
           </tr>
         </thead>
         <tbody className="divide-y">
-          {orders.map((po) => {
+          {filteredOrders.map((po) => {
             const payments = po.expense_payments || [];
             return <tr key={po.id} className="align-top">
               <td className="p-3 font-mono font-bold">{po.po_number}</td>
@@ -245,7 +299,7 @@ export default function FieldPurchaseOrdersPanel({ projectId, projectName }: { p
               <td className="p-3"><div className="flex min-w-36 flex-wrap gap-2"><button type="button" onClick={() => setViewDetailPO(po)} className="inline-flex items-center gap-1 rounded border border-slate-200 bg-white px-2.5 py-1.5 font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700" title="View PO Details & Line Items"><Eye size={13} className="shrink-0 text-orange-600" />Details</button>{['DRAFT', 'WAITING_APPROVAL'].includes(po.status) && <button type="button" onClick={() => openEdit(po)} className="rounded border px-2.5 py-1.5 font-semibold hover:bg-orange-50">{po.status === 'DRAFT' ? 'Edit draft' : 'Edit / add quotation'}</button>}{po.status === 'APPROVED' && !hasExpense(po) && <button type="button" onClick={() => setExpensePO(po)} className="rounded bg-orange-600 px-2.5 py-1.5 font-bold text-white hover:bg-orange-700">Raise Expense</button>}{canReceive(po) && <button type="button" onClick={() => openReceive(po)} className="inline-flex items-center gap-1 rounded bg-emerald-600 px-2.5 py-1.5 font-bold text-white hover:bg-emerald-700"><Truck size={12} />Receive Goods</button>}</div></td>
             </tr>;
           })}
-          {orders.length === 0 && <tr><td className="p-8 text-center text-slate-500" colSpan={9}>No purchase orders saved yet.</td></tr>}
+          {filteredOrders.length === 0 && <tr><td className="p-8 text-center text-slate-500" colSpan={9}>No purchase orders found matching the selected filters.</td></tr>}
         </tbody>
       </table>
     </div>

@@ -1691,8 +1691,7 @@ Signed: Field Operations Administration
       {/* Main Content Area */}
       <main className="flex-1 px-4 py-6 max-w-7xl mx-auto w-full space-y-6 pb-24 md:pb-6">
         {/* Date Range & Time Preset Filter Toolbar (Hidden on PROJECTS, PEOPLE, MY_PROFILE, NOTIFICATIONS) */}
-        {/* Date Range & Time Preset Filter Toolbar (Hidden on PROJECTS, PEOPLE, MY_PROFILE, NOTIFICATIONS) */}
-        {!['PROJECTS', 'PEOPLE', 'NOTIFICATIONS', 'PURCHASE_ORDERS'].includes(activeTab) && (
+        {!['PROJECTS', 'PEOPLE', 'NOTIFICATIONS'].includes(activeTab) && (
           <div className="relative bg-white dark:bg-slate-900 border rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-sm z-30">
             <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
               <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 mr-1 w-full sm:w-auto">
@@ -2808,7 +2807,13 @@ Signed: Field Operations Administration
 
             {/* EXPENSES TAB */}
             {activeTab === 'PURCHASE_ORDERS' && (
-              <FieldPurchaseOrdersPanel projectId={selectedProjectId} projectName={projects.find((project) => project.id === selectedProjectId)?.name} />
+              <FieldPurchaseOrdersPanel
+                projectId={selectedProjectId}
+                projectName={projects.find((project) => project.id === selectedProjectId)?.name}
+                datePreset={datePreset}
+                customStartDate={customStartDate}
+                customEndDate={customEndDate}
+              />
             )}
             {activeTab === 'EXPENSES' && (
               <div className="space-y-6">
