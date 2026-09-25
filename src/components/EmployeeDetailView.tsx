@@ -1356,38 +1356,10 @@ function ensureValidUUID(idStr: any): string {
                     className="p-2.5 bg-muted/30 hover:bg-muted/50 border rounded text-xs space-y-1 transition-all"
                   >
                     <div className="flex justify-between font-bold text-foreground">
-                      <span
-                        className="cursor-pointer hover:text-primary transition-colors flex items-center gap-1.5"
-                        onClick={() => setViewingAssignment(item)}
-                      >
+                      <span>
                         {item.project_name || item.assignment_number || 'Project Assignment'}
                       </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-primary font-semibold">{display(item.status)}</span>
-                        <button
-                          type="button"
-                          className="text-xs text-primary font-600 hover:underline inline-flex items-center gap-0.5"
-                          onClick={() => setViewingAssignment(item)}
-                        >
-                          <Eye size={11} /> View
-                        </button>
-                        {item.id && (
-                          <button
-                            type="button"
-                            className="text-xs text-primary font-600 hover:underline inline-flex items-center gap-0.5"
-                            onClick={() =>
-                              setActiveSubModal({
-                                name: 'Update Project Assignment',
-                                schemaName: 'EmployeeAssignmentUpdate',
-                                path: `/api/v1/employees/${realEmpId}/assignments/${item.id}`,
-                                initial: item,
-                              })
-                            }
-                          >
-                            <Edit size={11} /> Edit
-                          </button>
-                        )}
-                      </div>
+                      <span className="text-primary font-semibold">{display(item.status)}</span>
                     </div>
                     <p className="text-muted-foreground text-[11px]">
                       Role: {display(item.role_on_project || 'Member')} · Start:{' '}
@@ -2305,20 +2277,15 @@ function ensureValidUUID(idStr: any): string {
                       <th className="p-2.5">Role</th>
                       <th className="p-2.5">Start Date</th>
                       <th className="p-2.5">Status</th>
-                      <th className="p-2.5 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {assignments.map((item, idx) => (
                       <tr key={item.id || idx} className="border-t hover:bg-muted/30">
                         <td className="p-2.5 font-semibold text-foreground">
-                          <button
-                            type="button"
-                            className="hover:text-primary transition-colors text-left font-semibold"
-                            onClick={() => setViewingAssignment(item)}
-                          >
+                          <span>
                             {item.project_name || item.assignment_number || '—'}
-                          </button>
+                          </span>
                           {item.project_name && item.assignment_number && (
                             <p className="text-[10px] text-muted-foreground font-mono font-normal">{item.assignment_number}</p>
                           )}
@@ -2326,31 +2293,6 @@ function ensureValidUUID(idStr: any): string {
                         <td className="p-2.5">{display(item.role_on_project || 'Member')}</td>
                         <td className="p-2.5">{display(item.start_date)}</td>
                         <td className="p-2.5">{display(item.status)}</td>
-                        <td className="p-2.5 text-right">
-                          <button
-                            type="button"
-                            className="text-xs text-primary font-600 hover:underline inline-flex items-center gap-1 mr-3"
-                            onClick={() => setViewingAssignment(item)}
-                          >
-                            <Eye size={12} /> View
-                          </button>
-                          {item.id && (
-                            <button
-                              type="button"
-                              className="text-xs text-primary font-600 hover:underline inline-flex items-center gap-1"
-                              onClick={() =>
-                                setActiveSubModal({
-                                  name: 'Update Project Assignment',
-                                  schemaName: 'EmployeeAssignmentUpdate',
-                                  path: `/api/v1/employees/${realEmpId}/assignments/${item.id}`,
-                                  initial: item,
-                                })
-                              }
-                            >
-                              <Edit size={12} /> Edit
-                            </button>
-                          )}
-                        </td>
                       </tr>
                     ))}
                   </tbody>
