@@ -20,6 +20,8 @@ export default function ActionTrackerWizard({ projectId, assets, employees, reco
   const [data, setData] = useState<any>(() => ({ action_date: today, equipment_area: '', issue_finding: '', action_taken: '', parts_required: '', responsible_name: '', priority: 'MEDIUM', status: 'OPEN', completion_date: '', remarks: '', ...record }));
   const [customEquipment, setCustomEquipment] = useState(Boolean(record?.equipment_area && !record?.asset_id));
   const [customResponsible, setCustomResponsible] = useState(Boolean(record?.responsible_name && !record?.responsible_employee_id));
+  const [customStatus, setCustomStatus] = useState(Boolean(record?.status && !['OPEN', 'IN_PROGRESS', 'COMPLETED', 'ON_HOLD', 'CANCELLED'].includes(record.status)));
+  const [customPriority, setCustomPriority] = useState(Boolean(record?.priority && !['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].includes(record.priority)));
   const [saving, setSaving] = useState(false); const [error, setError] = useState('');
   const set = (key: string, value: any) => setData((old: any) => ({ ...old, [key]: value }));
   const assetOptions = [{ value: '__CUSTOM__', label: 'Enter a custom equipment / area…' }, ...assets.map((a) => ({ value: String(a.id), label: a.name || a.asset_name || a.asset_number || 'Equipment', sublabel: a.asset_number || '' }))];
@@ -35,12 +37,14 @@ export default function ActionTrackerWizard({ projectId, assets, employees, reco
     finally { setSaving(false); }
   }
   const priorityOptions = [
+    { value: '__CUSTOM__', label: 'Enter a custom priority…' },
     { value: 'LOW', label: 'LOW' },
     { value: 'MEDIUM', label: 'MEDIUM' },
     { value: 'HIGH', label: 'HIGH' },
     { value: 'CRITICAL', label: 'CRITICAL' },
   ];
   const statusOptions = [
+    { value: '__CUSTOM__', label: 'Enter a custom status…' },
     { value: 'OPEN', label: 'OPEN' },
     { value: 'IN_PROGRESS', label: 'IN PROGRESS' },
     { value: 'COMPLETED', label: 'COMPLETED' },
@@ -58,12 +62,78 @@ export default function ActionTrackerWizard({ projectId, assets, employees, reco
           value={data[key] || ''}
           onChange={(e) => set(key, e.target.value)}
         />
-      ) : (key === 'priority' || key === 'status') && mode === 'ASSISTED' ? (
-        <SearchableSelect
-          options={key === 'priority' ? priorityOptions : statusOptions}
-          value={data[key] || (key === 'priority' ? 'MEDIUM' : 'OPEN')}
-          onChange={(val) => set(key, val)}
-        />
+      ) : key === 'status' && mode === 'ASSISTED' ? (
+        customStatus ? (
+          <div className="space-y-1">
+            <input
+              autoFocus
+              className="input-field w-full rounded-none border-slate-300 focus-visible:ring-2 focus-visible:ring-[#184877]"
+              value={data.status || ''}
+              placeholder="Enter custom status"
+              onChange={(e) => set('status', e.target.value)}
+            />
+            <button
+              type="button"
+              className="text-xs text-primary underline"
+              onClick={() => {
+                setCustomStatus(false);
+                set('status', 'OPEN');
+              }}
+            >
+              Choose a listed status
+            </button>
+          </div>
+        ) : (
+          <SearchableSelect
+            options={statusOptions}
+            value={data.status || 'OPEN'}
+            onChange={(val) => {
+              if (val === '__CUSTOM__') {
+                setCustomStatus(true);
+                set('status', '');
+              } else {
+                set('status', val);
+              }
+            }}
+            placeholder="Select status or enter custom"
+          />
+        )
+      ) : key === 'priority' && mode === 'ASSISTED' ? (
+        customPriority ? (
+          <div className="space-y-1">
+            <input
+              autoFocus
+              className="input-field w-full rounded-none border-slate-300 focus-visible:ring-2 focus-visible:ring-[#184877]"
+              value={data.priority || ''}
+              placeholder="Enter custom priority"
+              onChange={(e) => set('priority', e.target.value)}
+            />
+            <button
+              type="button"
+              className="text-xs text-primary underline"
+              onClick={() => {
+                setCustomPriority(false);
+                set('priority', 'MEDIUM');
+              }}
+            >
+              Choose a listed priority
+            </button>
+          </div>
+        ) : (
+          <SearchableSelect
+            options={priorityOptions}
+            value={data.priority || 'MEDIUM'}
+            onChange={(val) => {
+              if (val === '__CUSTOM__') {
+                setCustomPriority(true);
+                set('priority', '');
+              } else {
+                set('priority', val);
+              }
+            }}
+            placeholder="Select priority or enter custom"
+          />
+        )
       ) : (
         <input
           className="input-field w-full rounded-none border-slate-300 opacity-100 font-medium focus-visible:ring-2 focus-visible:ring-[#184877]"
