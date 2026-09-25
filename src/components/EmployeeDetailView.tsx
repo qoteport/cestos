@@ -211,7 +211,7 @@ export default function EmployeeDetailView({
   const [error, setError] = useState('');
   const { data: locations } = useData<Row[]>('/api/v1/locations');
   const profilePermissions = employeePermissions(auth.access);
-  const canManageContracts = profilePermissions.contracts;
+  const canManageContracts = profilePermissions.contracts && !isFieldAdminUser;
   const canDownloadDocs = auth.can('documents.download') || auth.access?.is_superuser;
 
   // Active tab state
@@ -1556,7 +1556,7 @@ function ensureValidUUID(idStr: any): string {
                 automated alert rules notify management before contract expiration.
               </p>
             </div>
-            {canManageContracts && !readOnly && (
+            {canManageContracts && !readOnly && !isFieldAdminUser && (
               <button
                 className="btn-primary text-xs bg-indigo-700 hover:bg-indigo-800"
                 onClick={() => setShowContractModal(true)}
@@ -1579,9 +1579,11 @@ function ensureValidUUID(idStr: any): string {
                 <p className="text-sm font-semibold text-foreground">
                   No contract documents uploaded yet
                 </p>
-                <p className="text-xs">
-                  Click "Upload New Contract Document" to attach an employment contract.
-                </p>
+                {!isFieldAdminUser && (
+                  <p className="text-xs">
+                    Click "Upload New Contract Document" to attach an employment contract.
+                  </p>
+                )}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -2652,7 +2654,7 @@ function ensureValidUUID(idStr: any): string {
       )}
 
       {/* CUSTOM MODAL: Upload Contract Document */}
-      {showContractModal && (
+      {showContractModal && !isFieldAdminUser && (
         <Modal
           name="Upload Employment Contract Document"
           onClose={() => setShowContractModal(false)}
