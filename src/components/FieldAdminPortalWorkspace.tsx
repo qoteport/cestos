@@ -3103,15 +3103,15 @@ Signed: Field Operations Administration
                   </div>
 
                   <div className="bg-white dark:bg-slate-900 border rounded-xl p-4 space-y-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Claims</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total claims</span>
                     <p className="text-xl font-black text-slate-900 dark:text-white">
                       {expenseIntelligenceMetrics.count}
                     </p>
-                    <span className="text-[11px] text-slate-500 font-medium">Operational Expense Claims</span>
+                    <span className="text-[11px] text-slate-500 font-medium">Operational expense claims</span>
                   </div>
 
                   <div className="bg-white dark:bg-slate-900 border rounded-xl p-4 space-y-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Average Claim Value</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Average claim value</span>
                     <p className="text-xl font-black text-emerald-600">
                       ${expenseIntelligenceMetrics.avgClaim.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>

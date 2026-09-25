@@ -18,6 +18,10 @@ export function printElement(element: HTMLElement, title: string): void {
   };
   copyStyles(element, clone);
 
+  clone.querySelectorAll('section').forEach((section) => {
+    const heading = section.querySelector('h1, h2, h3, h4');
+    if (heading?.textContent?.trim().toLowerCase() === 'attachments') section.remove();
+  });
   clone.querySelectorAll('.no-print, button, input, select, textarea, style, script').forEach((node) => node.remove());
   clone.style.setProperty('position', 'static', 'important');
   clone.style.setProperty('inset', 'auto', 'important');
@@ -32,7 +36,7 @@ export function printElement(element: HTMLElement, title: string): void {
   const doc = popup.document;
   doc.open();
   doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>
-    @page { size: A4 portrait; margin: 10mm; }
+    @page { size: A4 portrait; margin: 0; }
     html, body { margin: 0; padding: 0; background: #fff; color: #111827; }
     body { padding: 10mm; font-family: Arial, sans-serif; }
     *, *::before, *::after { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -42,6 +46,7 @@ export function printElement(element: HTMLElement, title: string): void {
     .print-root th, .print-root td { vertical-align: top; }
     @media print { body { padding: 0; } }
   </style></head><body></body></html>`);
+  doc.title = title;
   doc.body.appendChild(clone);
   clone.classList.add('print-root');
   popup.onload = () => {

@@ -2359,22 +2359,22 @@ Signed: Finance & Procurement Administration
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
               <div className="lg:col-span-4 flex flex-col justify-between gap-3.5">
               <div className="p-4 bg-card border rounded-2xl shadow-xs space-y-1">
-                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Total Expenditure</span>
+                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Total expenditure</span>
                 <p className="text-2xl font-black text-violet-600">${totalExp.toLocaleString()}</p>
                 <span className="text-[10px] text-muted-foreground">All recorded vouchers</span>
               </div>
               <div className="p-4 bg-card border rounded-2xl shadow-xs space-y-1">
-                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Total Claims</span>
+                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Total claims</span>
                 <p className="text-2xl font-black text-foreground">{count}</p>
-                <span className="text-[10px] text-muted-foreground">Operational Expense Claims</span>
+                <span className="text-[10px] text-muted-foreground">Operational expense claims</span>
               </div>
               <div className="p-4 bg-card border rounded-2xl shadow-xs space-y-1">
-                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Average Claim Value</span>
+                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Average claim value</span>
                 <p className="text-2xl font-black text-emerald-600">${avgClaim.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 <span className="text-[10px] text-muted-foreground">Mean expenditure per claim</span>
               </div>
               <div className="p-4 bg-card border rounded-2xl shadow-xs space-y-1">
-                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Line Items Purchased</span>
+                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Line items purchased</span>
                 <p className="text-2xl font-black text-amber-600">{totalItemsCount}</p>
                 <span className="text-[10px] text-muted-foreground">Purchased items count</span>
               </div>

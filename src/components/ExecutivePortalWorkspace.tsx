@@ -1570,17 +1570,17 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                   <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">
                     ${scopedExpenses.reduce((acc, e) => acc + Number(e.total_cost || e.amount || 0), 0).toLocaleString()}
                   </p>
-                  <p className="text-[11px] text-indigo-600 font-bold mt-1">All Recorded Vouchers</p>
+                  <p className="text-[11px] text-indigo-600 font-bold mt-1">All recorded vouchers</p>
                 </div>
 
                 <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex-1 flex flex-col justify-center">
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Claims</p>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total claims</p>
                   <p className="text-2xl font-black text-indigo-600 mt-1">{scopedExpenses.length}</p>
-                  <p className="text-[11px] text-indigo-600 font-bold mt-1">Operational Expense Claims</p>
+                  <p className="text-[11px] text-indigo-600 font-bold mt-1">Operational expense claims</p>
                 </div>
 
                 <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex-1 flex flex-col justify-center">
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Average Claim Value</p>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Average claim value</p>
                   <p className="text-2xl font-black text-emerald-600 mt-1">
                     ${(scopedExpenses.length > 0 ? scopedExpenses.reduce((acc, e) => acc + Number(e.total_cost || e.amount || 0), 0) / scopedExpenses.length : 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
@@ -1588,7 +1588,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                 </div>
 
                 <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex-1 flex flex-col justify-center">
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pending Approvals</p>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pending approvals</p>
                   <p className="text-2xl font-black text-amber-600 mt-1">
                     $
                     {scopedExpenses
