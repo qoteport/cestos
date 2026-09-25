@@ -2733,7 +2733,7 @@ Signed: Finance & Procurement Administration
       {/* ─── Thin Quick-Action Left Sidebar (Large Screens Only) ─────────────────── */}
       <aside
         aria-label="Priority Quick Action Forms Sidebar"
-        className="hidden lg:flex flex-col items-center py-4 px-2 bg-slate-900 dark:bg-slate-950 text-slate-100 w-14 border-r border-slate-800 shrink-0 sticky top-0 z-40 h-screen select-none no-print"
+        className="hidden lg:flex flex-col items-center py-4 px-2 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-200 w-14 border-r border-slate-200 dark:border-slate-800 shrink-0 sticky top-0 z-40 h-screen select-none shadow-xs no-print"
       >
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white flex items-center justify-center shadow-md mb-2 group relative cursor-default shrink-0" title="Quick Priority Action Forms">
           <Zap size={20} className="animate-pulse" />
@@ -2741,12 +2741,12 @@ Signed: Finance & Procurement Administration
             Priority Action Forms
           </span>
         </div>
-        <div className="w-8 h-px bg-slate-800 shrink-0 my-1" />
+        <div className="w-8 h-px bg-slate-200 dark:bg-slate-800 shrink-0 my-1" />
         <div className="flex flex-col items-center space-y-3 flex-1 overflow-y-auto scrollbar-none w-full py-1">
           <button
             type="button"
             onClick={() => setShowAddPoModal(true)}
-            className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-violet-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-violet-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
             aria-label="Issue Purchase Order Form"
           >
             <ShoppingCart size={18} />
@@ -2758,7 +2758,7 @@ Signed: Finance & Procurement Administration
           <button
             type="button"
             onClick={() => setShowExpenseModal(true)}
-            className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-violet-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-violet-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
             aria-label="Submit Expense Claim Form"
           >
             <DollarSign size={18} />
@@ -2770,7 +2770,7 @@ Signed: Finance & Procurement Administration
           <button
             type="button"
             onClick={() => setShowFuelBoughtModal(true)}
-            className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-violet-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-violet-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
             aria-label="Register Bulk Fuel Delivery Form"
           >
             <Fuel size={18} />
@@ -2782,7 +2782,7 @@ Signed: Finance & Procurement Administration
           <button
             type="button"
             onClick={() => setShowFuelAllocModal(true)}
-            className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-violet-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-violet-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
             aria-label="Issue Fuel Dispense Ticket"
           >
             <Droplet size={18} />
@@ -2794,7 +2794,7 @@ Signed: Finance & Procurement Administration
           <button
             type="button"
             onClick={() => setActiveTab('VENDORS')}
-            className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-violet-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-violet-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
             aria-label="Manage Vendors & Suppliers"
           >
             <Building2 size={18} />

@@ -139,7 +139,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
         <form onSubmit={submit} className="flex flex-col h-full overflow-hidden">
           <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6 text-xs">
             {error && <p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3 text-red-800">{error}</p>}
-            <section className="grid gap-3 rounded-xl border bg-slate-50 p-3 dark:bg-slate-800/40 sm:grid-cols-2">
+            <section className="grid gap-3 rounded-xl border p-3 sm:grid-cols-2">
               <label className="block space-y-1 font-semibold sm:col-span-2">
                 <span className="block">Approved purchase order (optional)</span>
                 <SearchableSelect
