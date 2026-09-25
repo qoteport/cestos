@@ -13,7 +13,7 @@ interface AppLogoProps {
 }
 
 const AppLogo = memo(function AppLogo({
-  src = 'https://cestos-global-reach--cestos-global-reach.us-central1.hosted.app/assets/cestos-logo-with-company-name-no-bg-BQ8Mdlo4.jpg',
+  src = '/assets/cestos-logo-with-company-name-no-bg.jpg',
   iconName = 'SparklesIcon',
   size = 64,
   className = '',

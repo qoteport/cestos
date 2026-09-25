@@ -18,10 +18,10 @@ export const metadata: Metadata = {
   manifest: '/manifest.webmanifest',
   icons: {
     icon: [
-      { url: 'https://cestos-global-reach--cestos-global-reach.us-central1.hosted.app/assets/cestos-logo-with-company-name-no-bg-BQ8Mdlo4.jpg', type: 'image/jpeg' },
+      { url: '/assets/cestos-logo-with-company-name-no-bg.jpg', type: 'image/jpeg' },
     ],
     apple: [
-      { url: 'https://cestos-global-reach--cestos-global-reach.us-central1.hosted.app/assets/cestos-logo-with-company-name-no-bg-BQ8Mdlo4.jpg', type: 'image/jpeg' },
+      { url: '/assets/cestos-logo-with-company-name-no-bg.jpg', type: 'image/jpeg' },
     ],
   },
 };
