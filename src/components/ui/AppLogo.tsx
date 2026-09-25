@@ -1,48 +1,42 @@
 'use client';
 
-import React, { memo, useMemo } from 'react';
-import AppIcon from './AppIcon';
-import AppImage from './AppImage';
+import React, { memo } from 'react';
 
 interface AppLogoProps {
-  src?: string; // Image source (optional)
-  iconName?: string; // Icon name when no image
-  size?: number; // Size for icon/image
-  className?: string; // Additional classes
-  onClick?: () => void; // Click handler
+  src?: string;
+  size?: number;
+  className?: string;
+  onClick?: () => void;
 }
 
 const AppLogo = memo(function AppLogo({
-  src = '/assets/cestos-logo-with-company-name-no-bg.jpg',
-  iconName = 'SparklesIcon',
-  size = 64,
+  src = '/assets/images/app_logo.png',
+  size = 42,
   className = '',
   onClick,
 }: AppLogoProps) {
-  // Memoize className calculation
-  const containerClassName = useMemo(() => {
-    const classes = ['flex items-center'];
-    if (onClick) classes.push('cursor-pointer hover:opacity-80 transition-opacity');
-    if (className) classes.push(className);
-    return classes.join(' ');
-  }, [onClick, className]);
-
   return (
-    <div className={containerClassName} onClick={onClick}>
-      {/* Show image if src provided, otherwise show icon */}
-      {src ? (
-        <AppImage
-          src={src}
-          alt="Logo" 
-          width={size}
-          height={size}
-          className="flex-shrink-0"
-          priority={true}
-          unoptimized={src.endsWith('.svg')}
-        />
-      ) : (
-        <AppIcon name={iconName} size={size} className="flex-shrink-0" />
-      )}
+    <div
+      className={`flex items-center justify-center shrink-0 bg-transparent ${onClick ? 'cursor-pointer' : ''} ${className}`}
+      onClick={onClick}
+    >
+      <img
+        src={src}
+        alt="Cestos Logo"
+        width={size}
+        height={size}
+        style={{ width: size, height: size }}
+        className="object-contain shrink-0 block"
+        loading="eager"
+        decoding="sync"
+        onError={(e) => {
+          const target = e.currentTarget;
+          if (!target.dataset.fallback) {
+            target.dataset.fallback = 'true';
+            target.src = '/assets/cestos-logo-with-company-name-no-bg.jpg';
+          }
+        }}
+      />
     </div>
   );
 });

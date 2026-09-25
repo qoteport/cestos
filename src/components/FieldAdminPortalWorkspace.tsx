@@ -16,6 +16,8 @@ import { useAuth } from '@/components/AuthProvider';
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import BreakdownJobCardWizard from './BreakdownJobCardWizard';
 import PreventiveMaintenanceWizard from './PreventiveMaintenanceWizard';
+import MaintenanceAssessmentReportWizard from './MaintenanceAssessmentReportWizard';
+import MaintenanceAssessmentReportDetailsModal from './MaintenanceAssessmentReportDetailsModal';
 import EquipmentMaintenanceScheduleModal from './EquipmentMaintenanceScheduleModal';
 import OperationalExpenseSubmissionModal from './OperationalExpenseSubmissionModal';
 import SearchableSelect from './SearchableSelect';
@@ -128,6 +130,7 @@ export default function FieldAdminPortalWorkspace() {
   const [workOrders, setWorkOrders] = useState<any[]>([]);
   const [preventiveJobCards, setPreventiveJobCards] = useState<any[]>([]);
   const [breakdownJobCards, setBreakdownJobCards] = useState<any[]>([]);
+  const [maintenanceAssessments, setMaintenanceAssessments] = useState<any[]>([]);
   const [fuelDeliveries, setFuelDeliveries] = useState<any[]>([]);
   const [fuelAllocations, setFuelAllocations] = useState<any[]>([]);
   const [projectSites, setProjectSites] = useState<any[]>([]);
@@ -146,11 +149,14 @@ export default function FieldAdminPortalWorkspace() {
   const [editingBreakdown, setEditingBreakdown] = useState<any | null>(null);
   const [editingPreventive, setEditingPreventive] = useState<any | null>(null);
   const [showPmModal, setShowPmModal] = useState(false);
+  const [showAssessmentModal, setShowAssessmentModal] = useState(false);
+  const [editingAssessment, setEditingAssessment] = useState<any | null>(null);
+  const [viewingAssessment, setViewingAssessment] = useState<any | null>(null);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showHseModal, setShowHseModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [selectedMaintenanceRecord, setSelectedMaintenanceRecord] = useState<{ record: any; kind: 'work_order' | 'preventive' | 'breakdown'; startEditing: boolean } | null>(null);
-  const [maintFilter, setMaintFilter] = useState<'ALL' | 'SCHEDULES' | 'BREAKDOWN' | 'PREVENTIVE'>('ALL');
+  const [maintFilter, setMaintFilter] = useState<'ALL' | 'SCHEDULES' | 'BREAKDOWN' | 'PREVENTIVE' | 'ASSESSMENTS'>('ALL');
 
   // Equipment state
   const [showAddAssetModal, setShowAddAssetModal] = useState(false);
@@ -397,7 +403,7 @@ export default function FieldAdminPortalWorkspace() {
       if (!activeProject) {
         const firstProjectId = pItems[0]?.id ? String(pItems[0].id) : '';
         setSelectedProjectId(firstProjectId);
-        setAssets([]); setEmployees([]); setWorkOrders([]); setPreventiveJobCards([]); setBreakdownJobCards([]); setFuelDeliveries([]); setFuelAllocations([]);
+        setAssets([]); setEmployees([]); setWorkOrders([]); setPreventiveJobCards([]); setBreakdownJobCards([]); setMaintenanceAssessments([]); setFuelDeliveries([]); setFuelAllocations([]);
         setProjectSites([]);
         setIncidents([]); setNotifications([]); setDownloadRequests([]); setExpenses([]); setProjectMetrics({});
         if (!firstProjectId) setBanner({ type: 'info', message: 'No assigned project sites are available for this account.' });
@@ -419,7 +425,7 @@ export default function FieldAdminPortalWorkspace() {
       const allAssetsUrl = '/api/v1/assets?page_size=100';
       const allEmpUrl = '/api/v1/employees?page_size=100';
 
-      const [aRes, fpARes, allARes, eRes, allERes, wRes, fdRes, faRes, sitesRes, iRes, nRes, drRes, cRes, metricsRes, pmCardsRes, breakdownCardsRes] = await Promise.all([
+      const [aRes, fpARes, allARes, eRes, allERes, wRes, fdRes, faRes, sitesRes, iRes, nRes, drRes, cRes, metricsRes, pmCardsRes, breakdownCardsRes, assessmentRes] = await Promise.all([
         apiFetch<any>(assetUrl).catch(() => ({ items: [] })),
         apiFetch<any>(fpAssetUrl).catch(() => []),
         apiFetch<any>(allAssetsUrl).catch(() => ({ items: [] })),
@@ -445,6 +451,10 @@ export default function FieldAdminPortalWorkspace() {
           setBanner({ type: 'error', message: err?.message || 'Could not load breakdown job cards.' });
           return [];
         }),
+        apiFetch<any>('/api/v1/maintenance-assessments').catch((err: any) => {
+          setBanner({ type: 'error', message: err?.message || 'Could not load maintenance assessments.' });
+          return [];
+        }),
       ]);
 
       const projAssetItems = Array.isArray(aRes) ? aRes : aRes?.items || [];
@@ -467,12 +477,14 @@ export default function FieldAdminPortalWorkspace() {
       const metricItems = Array.isArray(metricsRes) ? metricsRes : metricsRes?.items || [];
       const pmItems = Array.isArray(pmCardsRes) ? pmCardsRes : pmCardsRes?.items || [];
       const breakdownItems = Array.isArray(breakdownCardsRes) ? breakdownCardsRes : breakdownCardsRes?.items || [];
+      const assessmentItems = Array.isArray(assessmentRes) ? assessmentRes : assessmentRes?.items || [];
 
       setAssets(aItems);
       setEmployees(eItems);
       setWorkOrders(wItems);
       setPreventiveJobCards(pmItems);
       setBreakdownJobCards(breakdownItems);
+      setMaintenanceAssessments(assessmentItems);
       setFuelDeliveries(fdItems);
       setFuelAllocations(faItems);
       setProjectSites(siteItems);
@@ -602,6 +614,14 @@ export default function FieldAdminPortalWorkspace() {
       display_title: row.job_control?.equipment || row.job_card_number,
       display_type: 'CORRECTIVE',
       description: row.reported_failure || row.corrective_action || 'Breakdown maintenance job card',
+    })),
+    ...filterByProj(maintenanceAssessments).filter((row) => isWithinDateFilter(row.report_date || row.created_at)).map((row) => ({
+      ...row,
+      record_kind: 'Maintenance assessment',
+      record_category: 'assessment' as const,
+      display_title: row.report_number || 'Maintenance assessment report',
+      display_type: 'ASSESSMENT',
+      description: row.executive_summary || row.conclusion || 'Fleet maintenance assessment and action report',
     })),
   ];
   const scopedFuelDeliveries = (rows: any[]) => rows.filter((row) => {
@@ -1565,9 +1585,9 @@ Signed: Field Operations Administration
         aria-label="Priority Quick Action Forms Sidebar"
         className="hidden lg:flex flex-col items-center py-4 px-2 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-200 w-14 border-r border-slate-200 dark:border-slate-800 shrink-0 sticky top-0 z-40 h-screen select-none shadow-xs no-print"
       >
-        <Link href="/" className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700/60 flex items-center justify-center shadow-xs mb-2 group relative shrink-0 transition-all duration-200" title="Cestos Operations">
-          <AppLogo size={28} className="rounded-lg shrink-0" />
-          <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+        <Link href="/" className="w-11 h-11 flex items-center justify-center mb-2 group relative shrink-0" title="Cestos Operations">
+          <AppLogo size={42} className="shrink-0" />
+          <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-[100000] flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
             Cestos Operations
           </span>
@@ -2635,6 +2655,12 @@ Signed: Field Operations Administration
                     >
                       <Sparkles size={15} /> 2. Preventive Maintenance Job Card
                     </button>
+                    <button
+                      onClick={() => setShowAssessmentModal(true)}
+                      className="flex items-center gap-1.5 bg-blue-800 hover:bg-blue-900 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition"
+                    >
+                      <FileText size={15} /> Maintenance Assessment Report
+                    </button>
                   </div>
                 </div>
 
@@ -2689,6 +2715,17 @@ Signed: Field Operations Administration
                       >
                         <Sparkles size={13} /> Preventive Cards ({filteredMaintenanceRecords.filter((r) => r.record_category === 'preventive').length})
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setMaintFilter('ASSESSMENTS')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                          maintFilter === 'ASSESSMENTS'
+                            ? 'bg-blue-800 text-white shadow-xs'
+                            : 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300'
+                        }`}
+                      >
+                        <FileText size={13} /> Assessments ({filteredMaintenanceRecords.filter((r) => r.record_category === 'assessment').length})
+                      </button>
                     </div>
                   </div>
 
@@ -2697,6 +2734,7 @@ Signed: Field Operations Administration
                       if (maintFilter === 'SCHEDULES') return rec.record_category === 'work_order';
                       if (maintFilter === 'BREAKDOWN') return rec.record_category === 'breakdown';
                       if (maintFilter === 'PREVENTIVE') return rec.record_category === 'preventive';
+                      if (maintFilter === 'ASSESSMENTS') return rec.record_category === 'assessment';
                       return true;
                     });
 
@@ -2714,26 +2752,28 @@ Signed: Field Operations Administration
                       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {displayedRecords.map((wo: any) => {
                           const assetObj = assets.find((a) => String(a.id) === String(wo.asset_id));
+                          const isAssessment = wo.record_category === 'assessment';
+                          const canEditAssessment = isEditableWithin10Days(wo.created_at);
                           return (
                             <div key={wo.id} className="bg-slate-50 dark:bg-slate-800/40 rounded-lg border p-4 space-y-2">
                               <div className="flex items-start justify-between gap-2">
                                 <div>
-                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${wo.display_type === 'PREVENTIVE' ? 'bg-purple-100 text-purple-800' : 'bg-orange-100 text-orange-800'}`}>
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${wo.display_type === 'PREVENTIVE' ? 'bg-purple-100 text-purple-800' : isAssessment ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}`}>
                                     {wo.record_kind}
                                   </span>
                                   <h4 className="font-bold text-sm text-slate-900 dark:text-white mt-1">{wo.display_title || wo.title || wo.job_card_number}</h4>
                                 </div>
                                 <StatusBadge status={wo.status || 'OPEN'} />
                               </div>
-                              <p className="text-xs text-slate-500 font-medium">Equipment: {assetObj ? `${assetObj.name} (${assetObj.asset_number || 'Unit'})` : wo.pm_control?.fleet_unit_id || wo.job_control?.fleet_unit_id || '—'}</p>
+                              <p className="text-xs text-slate-500 font-medium">{isAssessment ? `Reporting period: ${wo.reporting_period_start || '—'} to ${wo.reporting_period_end || '—'}` : `Equipment: ${assetObj ? `${assetObj.name} (${assetObj.asset_number || 'Unit'})` : wo.pm_control?.fleet_unit_id || wo.job_control?.fleet_unit_id || '—'}`}</p>
                               <p className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-line line-clamp-3">{wo.description || wo.reported_failure || wo.corrective_action || 'No notes provided.'}</p>
                               <div className="flex items-center justify-between border-t pt-2 text-[11px] text-slate-500">
-                                <span>{wo.scheduled_date ? 'Scheduled' : 'Created'}: {wo.scheduled_date || wo.created_at?.slice(0, 10) || '—'}</span>
+                                <span>{isAssessment ? 'Report date' : wo.scheduled_date ? 'Scheduled' : 'Created'}: {(isAssessment ? wo.report_date : wo.scheduled_date || wo.created_at)?.slice?.(0, 10) || '—'}</span>
                                 <span className="font-semibold text-orange-600">{wo.priority || wo.job_card_number || ''}</span>
                               </div>
                               <div className="flex flex-wrap gap-2 pt-1">
-                                <button type="button" onClick={() => setSelectedMaintenanceRecord({ record: wo, kind: wo.record_category, startEditing: false })} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-semibold hover:bg-white dark:hover:bg-slate-700"><FileText size={13} /> View details</button>
-                                <button type="button" disabled={!isEditableWithin10Days(wo.created_at)} title={isEditableWithin10Days(wo.created_at) ? 'Edit this maintenance record' : 'Maintenance records can only be edited within 10 days of creation'} onClick={() => wo.record_category === 'breakdown' ? setEditingBreakdown(wo) : wo.record_category === 'preventive' ? setEditingPreventive(wo) : setSelectedMaintenanceRecord({ record: wo, kind: wo.record_category, startEditing: true })} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-semibold enabled:hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 dark:enabled:hover:bg-slate-700"><Pencil size={13} /> {isEditableWithin10Days(wo.created_at) ? 'Edit' : 'Edit locked'}</button>
+                                <button type="button" onClick={() => isAssessment ? setViewingAssessment(wo) : setSelectedMaintenanceRecord({ record: wo, kind: wo.record_category, startEditing: false })} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-semibold hover:bg-white dark:hover:bg-slate-700"><FileText size={13} /> View details</button>
+                                <button type="button" disabled={isAssessment ? !canEditAssessment : !isEditableWithin10Days(wo.created_at)} title={(isAssessment ? canEditAssessment : isEditableWithin10Days(wo.created_at)) ? 'Edit this maintenance record' : 'Maintenance records can only be edited within 10 days of creation'} onClick={() => isAssessment ? setEditingAssessment(wo) : wo.record_category === 'breakdown' ? setEditingBreakdown(wo) : wo.record_category === 'preventive' ? setEditingPreventive(wo) : setSelectedMaintenanceRecord({ record: wo, kind: wo.record_category, startEditing: true })} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-semibold enabled:hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 dark:enabled:hover:bg-slate-700"><Pencil size={13} /> {(isAssessment ? canEditAssessment : isEditableWithin10Days(wo.created_at)) ? 'Edit' : 'Edit locked'}</button>
                               </div>
                             </div>
                           );
@@ -4079,6 +4119,28 @@ Signed: Field Operations Administration
           onClose={() => { setShowPmModal(false); setEditingPreventive(null); }}
           onSaved={reloadData}
           record={editingPreventive || undefined}
+        />
+      )}
+
+      {(showAssessmentModal || editingAssessment) && (
+        <MaintenanceAssessmentReportWizard
+          assets={filteredAssets}
+          employees={filteredEmployees}
+          sites={projectSites}
+          projects={projects}
+          projectId={selectedProjectId}
+          record={editingAssessment || undefined}
+          onClose={() => { setShowAssessmentModal(false); setEditingAssessment(null); }}
+          onSaved={() => { void reloadData(); setBanner({ type: 'success', message: 'Maintenance assessment report saved.' }); }}
+        />
+      )}
+
+      {viewingAssessment && (
+        <MaintenanceAssessmentReportDetailsModal
+          record={viewingAssessment}
+          editable={isEditableWithin10Days(viewingAssessment.created_at)}
+          onClose={() => setViewingAssessment(null)}
+          onEdit={() => { setEditingAssessment(viewingAssessment); setViewingAssessment(null); }}
         />
       )}
 

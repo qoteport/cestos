@@ -66,9 +66,9 @@ function makeInitial(record: Row | undefined, projectId: string): ReportData {
 }
 
 export default function MaintenanceAssessmentReportWizard({
-  assets, employees, sites = [], projectId, record, onClose, onSaved,
+  assets, employees, sites = [], projects = [], projectId, record, onClose, onSaved,
 }: {
-  assets: Row[]; employees: Row[]; sites?: Row[]; projectId: string; record?: Row;
+  assets: Row[]; employees: Row[]; sites?: Row[]; projects?: Row[]; projectId: string; record?: Row;
   onClose: () => void; onSaved: () => void;
 }) {
   const [data, setData] = useState<ReportData>(() => makeInitial(record, projectId));
@@ -76,7 +76,6 @@ export default function MaintenanceAssessmentReportWizard({
   const [mode, setMode] = useState<'ASSISTED' | 'FREE_FLOW'>('ASSISTED');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [assetSearch, setAssetSearch] = useState('');
 
   const projectSites = useMemo(() => sites.filter((site) => !data.project_id || String(site.project_id) === String(data.project_id)), [sites, data.project_id]);
   const assetOptions = useMemo(() => assets.map((asset) => ({
@@ -89,6 +88,8 @@ export default function MaintenanceAssessmentReportWizard({
     label: [employee.first_name, employee.last_name].filter(Boolean).join(' ') || employee.name || 'Employee',
     sublabel: employee.position_name || employee.job_title || employee.employee_number || '',
   }));
+  const projectOptions = projects.map((project) => ({ value: String(project.id), label: project.name || project.project_name || project.project_number }));
+  const siteOptions = projectSites.map((site) => ({ value: String(site.id), label: site.name || site.site_name || site.code || 'Site' }));
 
   const patch = (key: string, value: any) => setData((old) => ({ ...old, [key]: value }));
   const patchRow = (section: string, index: number, key: string, value: string) => setData((old) => ({
@@ -111,8 +112,8 @@ export default function MaintenanceAssessmentReportWizard({
       <label className="space-y-1"><span className="block font-medium">Reporting period start *</span><input className="input-field" type="date" value={data.reporting_period_start} onChange={(e) => patch('reporting_period_start', e.target.value)} required /></label>
       <label className="space-y-1"><span className="block font-medium">Reporting period end *</span><input className="input-field" type="date" value={data.reporting_period_end} onChange={(e) => patch('reporting_period_end', e.target.value)} required /></label>
       <label className="space-y-1"><span className="block font-medium">Report date *</span><input className="input-field" type="date" value={data.report_date} onChange={(e) => patch('report_date', e.target.value)} required /></label>
-      <label className="space-y-1"><span className="block font-medium">Project</span><select className="input-field" value={data.project_id} onChange={(e) => { patch('project_id', e.target.value); patch('site_location_id', ''); }}><option value="">Select project</option>{Array.from(new Map(sites.map((site) => [String(site.project_id), site.project_name || site.project?.name || 'Project'])).entries()).map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
-      <label className="space-y-1"><span className="block font-medium">Site / work location</span><select className="input-field" value={data.site_location_id} onChange={(e) => patch('site_location_id', e.target.value)}><option value="">Select site</option>{projectSites.map((site) => <option key={site.id} value={site.id}>{site.name || site.site_name || site.code}</option>)}</select></label>
+      <label className="space-y-1"><span className="block font-medium">Project</span><SearchableSelect options={projectOptions} value={data.project_id} onChange={(value) => { patch('project_id', value); patch('site_location_id', ''); }} placeholder="Search projects" /></label>
+      <label className="space-y-1"><span className="block font-medium">Site / work location</span><SearchableSelect options={siteOptions} value={data.site_location_id} onChange={(value) => patch('site_location_id', value)} placeholder="Search sites" /></label>
       <label className="space-y-1"><span className="block font-medium">Prepared by *</span><SearchableSelect options={employeeOptions} value={data.prepared_by_employee_id} onChange={(value, option) => { patch('prepared_by_employee_id', value); if (option) { const employee = employees.find((row) => String(row.id) === String(value)); const name = [employee?.first_name, employee?.last_name].filter(Boolean).join(' ') || employee?.name || option.label; patch('prepared_by_name', name); patch('prepared_by_position', employee?.position_name || employee?.job_title || data.prepared_by_position); } }} placeholder="Search employees or enter name below" /></label>
       <label className="space-y-1"><span className="block font-medium">Preparer name *</span><input className="input-field" value={data.prepared_by_name} onChange={(e) => patch('prepared_by_name', e.target.value)} required maxLength={200} /></label>
       <label className="space-y-1"><span className="block font-medium">Position</span><input className="input-field" value={data.prepared_by_position || ''} onChange={(e) => patch('prepared_by_position', e.target.value)} maxLength={150} /></label>
@@ -170,7 +171,6 @@ export default function MaintenanceAssessmentReportWizard({
       {error && <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-red-800">{error}</div>}
       {mode === 'ASSISTED' && <div className="flex flex-wrap gap-1.5">{steps.map((item, index) => <button key={item.title} type="button" onClick={() => setStep(index)} className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${step === index ? 'border-blue-800 bg-blue-800 text-white' : 'text-muted-foreground'}`}>{index + 1}. {item.title}</button>)}</div>}
       <div className="max-h-[64vh] space-y-6 overflow-y-auto p-1">{mode === 'ASSISTED' ? steps[step].body : steps.map((item) => <section key={item.title} className="space-y-4"><h2 className="text-sm font-bold text-blue-900">{item.title}</h2>{item.body}</section>)}</div>
-      <span className="sr-only">{assetSearch}</span>
     </div>
   </Modal>;
 }
