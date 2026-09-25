@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { apiFetch, apiFetchBlob, downloadBlob, receivePurchaseOrderGoods } from '@/lib/api';
 import { Eye, Download, FileText, Paperclip, X, Plus, CheckCircle2, ShoppingCart, Truck, PackageCheck, RefreshCw } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
@@ -248,286 +249,562 @@ export default function FieldPurchaseOrdersPanel({ projectId, projectName }: { p
         </tbody>
       </table>
     </div>
-    {showForm && <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/70 p-3"><form onSubmit={submit} className="max-h-[94vh] w-full max-w-4xl space-y-4 overflow-y-auto rounded-xl border bg-white p-5 shadow-2xl dark:bg-slate-900">
-      <div className="flex items-start justify-between"><div><h3 className="text-lg font-bold">{editing ? `Edit Purchase Order ${editing.po_number}` : 'Create Purchase Order'}</h3><p className="text-xs text-slate-500">{formStep === 'PREVIEW' ? 'Review the details before sending this request.' : 'Save a draft or preview your purchase order before sending it.'}</p></div><button type="button" onClick={() => { setShowForm(false); setFormStep('EDIT'); }} className="px-2 text-xl text-slate-500">×</button></div>
-      {formStep === 'EDIT' ? <>
-        <div className="grid gap-3 sm:grid-cols-2"><label className="space-y-1 text-xs font-semibold"><span className="block">Supplier *</span><SearchableSelect value={supplier} onChange={setSupplier} options={[...supplierOptions, ...(supplier && !supplierOptions.some((o) => o.value.toLowerCase() === supplier.toLowerCase()) ? [{ value: supplier, label: `Use ${supplier}` }] : [])]} placeholder="Search or enter supplier name" /><input className={input} value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Or type a new supplier name" /></label><label className="space-y-1 text-xs font-semibold"><span className="block">Project</span><input readOnly className={`${input} bg-slate-100`} value={editing && editing.project_id !== projectId ? (editing.project_name || 'Original assigned project') : (projectName || 'Selected project')} /></label><label className="space-y-1 text-xs font-semibold"><span className="block">Category (optional)</span><PurchaseOrderCategoryField value={category} onChange={setCategory} className={input} /></label><label className="space-y-1 text-xs font-semibold"><span className="block">Currency *</span><select className={input} value={currency} onChange={(e) => setCurrency(e.target.value)}><option value="USD">USD ($)</option><option value="EUR">EUR (€)</option><option value="GBP">GBP (£)</option><option value="ZAR">ZAR (R)</option></select></label><label className="space-y-1 text-xs font-semibold"><span className="block">Quotation / supporting file</span><input type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx" className={input} onChange={(e) => setQuotation(e.target.files?.[0] || null)} />{existingQuotation && <span className="block text-slate-500">Current file: {existingQuotation}</span>}</label><label className="space-y-1 text-xs font-semibold sm:col-span-2"><span className="block">Notes / specifications</span><textarea rows={3} className={input} value={notes} onChange={(e) => setNotes(e.target.value)} /></label></div>
-        <section className="space-y-2"><div className="flex items-center justify-between"><div><h4 className="text-sm font-bold">Purchase Order Line Items <span className="font-normal text-slate-500">(optional)</span></h4><p className="text-[11px] text-slate-500">Leave blank and enter a total below if you do not need itemized lines.</p></div><button type="button" onClick={() => setLines((rows) => [...rows, blankLine()])} className="text-xs font-bold text-orange-700">+ Add item</button></div>{lines.map((line, index) => <div key={index} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-12"><label className="space-y-1 text-xs font-semibold lg:col-span-3"><span className="block">Item / service</span><input className={input} value={line.item_name} onChange={(e) => setLines((rows) => rows.map((r, i) => i === index ? { ...r, item_name: e.target.value } : r))} /></label><label className="space-y-1 text-xs font-semibold lg:col-span-5"><span className="block">Description</span><textarea rows={1} maxLength={255} className={input} value={line.description} onChange={(e) => setLines((rows) => rows.map((r, i) => i === index ? { ...r, description: e.target.value } : r))} /></label><label className="space-y-1 text-xs font-semibold lg:col-span-1"><span className="block">Quantity</span><input min="0.001" step="0.001" type="number" className={input} value={line.quantity_ordered} onChange={(e) => setLines((rows) => rows.map((r, i) => i === index ? { ...r, quantity_ordered: e.target.value } : r))} /></label><label className="space-y-1 text-xs font-semibold lg:col-span-2"><span className="block">Unit price</span><input min="0" step="0.01" type="number" className={input} value={line.unit_price} onChange={(e) => setLines((rows) => rows.map((r, i) => i === index ? { ...r, unit_price: e.target.value } : r))} /></label><button type="button" onClick={() => setLines((rows) => rows.filter((_, i) => i !== index))} className="self-center rounded-lg border px-2 py-2 text-xs text-red-700 lg:col-span-1">Remove</button></div>)}</section>
-        <div className="flex flex-wrap items-center justify-between border-t pt-3"><label className="flex items-center gap-2 text-sm font-bold">Total: {currency}{lineTotal > 0 ? <span>{lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> : <input aria-label="Purchase order total" type="number" min="0" step="0.01" value={manualTotal} onChange={(event) => setManualTotal(event.target.value)} className="w-40 rounded-lg border bg-background p-2 text-sm font-semibold" />}</label><div className="flex flex-wrap justify-end gap-2"><button type="button" onClick={() => { setShowForm(false); setFormStep('EDIT'); }} className="rounded-lg border px-4 py-2 text-xs font-semibold">Cancel</button>{(!editing || editing.status === 'DRAFT') && <button type="button" disabled={busy} onClick={() => void saveOrder(true)} className="rounded-lg border border-orange-300 px-4 py-2 text-xs font-bold text-orange-800 disabled:opacity-50">{busy ? 'Saving…' : 'Save as draft'}</button>}<button type="submit" disabled={busy} className="rounded-lg bg-orange-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">Preview Purchase Order</button></div></div>
-      </> : <>
-        <div className="grid gap-3 rounded-xl border bg-slate-50 p-4 text-sm dark:bg-slate-800/40 sm:grid-cols-2"><div><span className="block text-[10px] font-bold uppercase text-slate-500">Supplier</span><strong>{supplier}</strong></div><div><span className="block text-[10px] font-bold uppercase text-slate-500">Category</span><strong>{purchaseOrderCategoryLabel(category)}</strong></div><div><span className="block text-[10px] font-bold uppercase text-slate-500">Project</span><strong>{editing && editing.project_id !== projectId ? (editing.project_name || 'Original assigned project') : (projectName || 'Selected project')}</strong></div><div><span className="block text-[10px] font-bold uppercase text-slate-500">Currency</span><strong>{currency}</strong></div><div><span className="block text-[10px] font-bold uppercase text-slate-500">Quotation</span><strong>{quotation?.name || existingQuotation || 'None attached'}</strong></div><div className="sm:col-span-2"><span className="block text-[10px] font-bold uppercase text-slate-500">Notes</span><p className="whitespace-pre-wrap">{notes || '—'}</p></div></div>
-        <div className="overflow-x-auto rounded-xl border"><table className="w-full text-left text-xs"><thead className="bg-slate-50 text-slate-500 dark:bg-slate-800"><tr><th className="p-3">Item / service</th><th className="p-3">Description</th><th className="p-3">Quantity</th><th className="p-3">Unit price</th><th className="p-3 text-right">Line total</th></tr></thead><tbody className="divide-y">{lines.map((line, index) => <tr key={index}><td className="p-3">{line.item_name || '—'}</td><td className="p-3">{line.description}</td><td className="p-3">{line.quantity_ordered}</td><td className="p-3">{currency} {Number(line.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td><td className="p-3 text-right font-semibold">{currency} {(Number(line.quantity_ordered || 0) * Number(line.unit_price || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td></tr>)}</tbody></table></div>
-        <div className="flex flex-wrap items-center justify-between border-t pt-3"><strong className="text-base">Total: {currency} {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong><div className="flex flex-wrap justify-end gap-2"><button type="button" onClick={() => setFormStep('EDIT')} className="rounded-lg border px-4 py-2 text-xs font-semibold">Back to edit</button>{editing?.status === 'WAITING_APPROVAL' ? <button type="button" disabled={busy} onClick={() => void saveOrder(false)} className="rounded-lg bg-orange-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{busy ? 'Saving…' : 'Save changes'}</button> : <button type="button" disabled={busy} onClick={() => void saveOrder(false)} className="rounded-lg bg-orange-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{busy ? 'Submitting…' : 'Submit for Executive approval'}</button>}</div></div>
-      </>}
-    </form></div>}
-    {/* VIEW PO DETAILS MODAL */}
-      {viewDetailPO && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/75 p-0 sm:p-4 overflow-hidden">
-          <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-4xl border-0 sm:border border-slate-200 dark:border-slate-800 rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+    {showForm && createPortal(
+      <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-0 sm:p-4 overflow-hidden" onClick={(e) => { if (e.target === e.currentTarget) { setShowForm(false); setFormStep('EDIT'); } }}>
+        <div className="w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-4xl rounded-none sm:rounded-2xl border-0 sm:border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl flex flex-col overflow-hidden">
+          <form onSubmit={submit} className="flex flex-col h-full overflow-hidden">
             {/* Sticky Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-950/40 text-orange-600 flex items-center justify-center font-bold">
-                  <ShoppingCart size={18} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base text-slate-900 dark:text-white">
-                    Purchase Order Details
-                  </h3>
-                  <p className="text-xs text-slate-500 font-mono">
-                    PO #: {viewDetailPO.po_number || viewDetailPO.id}
-                  </p>
-                </div>
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-4 py-3.5 sm:px-6 sm:py-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 sticky top-0 z-10">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                  {editing ? `Edit Purchase Order ${editing.po_number}` : 'Create Purchase Order'}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {formStep === 'PREVIEW' ? 'Review the details before sending this request.' : 'Save a draft or preview your purchase order before sending it.'}
+                </p>
               </div>
               <button
                 type="button"
-                onClick={() => setViewDetailPO(null)}
+                onClick={() => { setShowForm(false); setFormStep('EDIT'); }}
                 className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"
               >
                 <X size={20} />
               </button>
             </div>
 
-            {/* Content Body */}
-            {(() => {
-              const poItems = Array.isArray(viewDetailPO.items) ? viewDetailPO.items : [];
-              const totalOrdered = poItems.reduce((sum: number, item: any) => sum + (Number(item.quantity_ordered || item.quantity || 0) * Number(item.unit_price || item.price || 0)), 0) || Number(viewDetailPO.total_amount || 0);
-              const totalReceived = poItems.reduce((sum: number, item: any) => sum + (Number(item.quantity_received || 0) * Number(item.unit_price || item.price || 0)), 0);
-              const remaining = Math.max(0, totalOrdered - totalReceived);
-              const siteName = viewDetailPO.project_name || projectName || 'Assigned Site';
-              const poNotes = viewDetailPO.notes ? String(viewDetailPO.notes).replace(/\[Attached Docket:\s*([^\]]+)\]/gi, '').trim() : '';
-
-              return (
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-white dark:bg-slate-900">
-                  {/* Summary Header Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
-                    {/* Left Column (User specified layout) */}
-                    <div className="space-y-3.5">
+            {/* Scrollable Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+              {formStep === 'EDIT' ? (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="space-y-1 text-xs font-semibold">
+                      <span className="block">Supplier *</span>
+                      <SearchableSelect
+                        value={supplier}
+                        onChange={setSupplier}
+                        options={[...supplierOptions, ...(supplier && !supplierOptions.some((o) => o.value.toLowerCase() === supplier.toLowerCase()) ? [{ value: supplier, label: `Use ${supplier}` }] : [])]}
+                        placeholder="Search or enter supplier name"
+                      />
+                      <input className={input} value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Or type a new supplier name" />
+                    </label>
+                    <label className="space-y-1 text-xs font-semibold">
+                      <span className="block">Project</span>
+                      <input readOnly className={`${input} bg-slate-100 dark:bg-slate-800`} value={editing && editing.project_id !== projectId ? (editing.project_name || 'Original assigned project') : (projectName || 'Selected project')} />
+                    </label>
+                    <label className="space-y-1 text-xs font-semibold">
+                      <span className="block">Category (optional)</span>
+                      <PurchaseOrderCategoryField value={category} onChange={setCategory} className={input} />
+                    </label>
+                    <label className="space-y-1 text-xs font-semibold">
+                      <span className="block">Currency *</span>
+                      <select className={input} value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                        <option value="USD">USD ($)</option>
+                        <option value="EUR">EUR (€)</option>
+                        <option value="GBP">GBP (£)</option>
+                        <option value="ZAR">ZAR (R)</option>
+                      </select>
+                    </label>
+                    <label className="space-y-1 text-xs font-semibold">
+                      <span className="block">Quotation / supporting file</span>
+                      <input type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx" className={input} onChange={(e) => setQuotation(e.target.files?.[0] || null)} />
+                      {existingQuotation && <span className="block text-slate-500">Current file: {existingQuotation}</span>}
+                    </label>
+                    <label className="space-y-1 text-xs font-semibold sm:col-span-2">
+                      <span className="block">Notes / specifications</span>
+                      <textarea rows={3} className={input} value={notes} onChange={(e) => setNotes(e.target.value)} />
+                    </label>
+                  </div>
+                  <section className="space-y-2">
+                    <div className="flex items-center justify-between">
                       <div>
-                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Supplier</span>
-                        <h4 className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
-                          {viewDetailPO.supplier_name || viewDetailPO.vendor_name || viewDetailPO.vendor || viewDetailPO.supplier || 'Site Vendor'}
-                        </h4>
+                        <h4 className="text-sm font-bold">Purchase Order Line Items <span className="font-normal text-slate-500">(optional)</span></h4>
+                        <p className="text-[11px] text-slate-500">Leave blank and enter a total below if you do not need itemized lines.</p>
                       </div>
+                      <button type="button" onClick={() => setLines((rows) => [...rows, blankLine()])} className="text-xs font-bold text-orange-700 dark:text-orange-400">+ Add item</button>
+                    </div>
+                    {lines.map((line, index) => (
+                      <div key={index} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-12 bg-slate-50/50 dark:bg-slate-800/40">
+                        <label className="space-y-1 text-xs font-semibold lg:col-span-3">
+                          <span className="block">Item / service</span>
+                          <input className={input} value={line.item_name} onChange={(e) => setLines((rows) => rows.map((r, i) => i === index ? { ...r, item_name: e.target.value } : r))} />
+                        </label>
+                        <label className="space-y-1 text-xs font-semibold lg:col-span-5">
+                          <span className="block">Description</span>
+                          <textarea rows={1} maxLength={255} className={input} value={line.description} onChange={(e) => setLines((rows) => rows.map((r, i) => i === index ? { ...r, description: e.target.value } : r))} />
+                        </label>
+                        <label className="space-y-1 text-xs font-semibold lg:col-span-1">
+                          <span className="block">Quantity</span>
+                          <input min="0.001" step="0.001" type="number" className={input} value={line.quantity_ordered} onChange={(e) => setLines((rows) => rows.map((r, i) => i === index ? { ...r, quantity_ordered: e.target.value } : r))} />
+                        </label>
+                        <label className="space-y-1 text-xs font-semibold lg:col-span-2">
+                          <span className="block">Unit price</span>
+                          <input min="0" step="0.01" type="number" className={input} value={line.unit_price} onChange={(e) => setLines((rows) => rows.map((r, i) => i === index ? { ...r, unit_price: e.target.value } : r))} />
+                        </label>
+                        <button type="button" onClick={() => setLines((rows) => rows.filter((_, i) => i !== index))} className="self-center rounded-lg border px-2 py-2 text-xs text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 lg:col-span-1">Remove</button>
+                      </div>
+                    ))}
+                  </section>
+                </>
+              ) : (
+                <>
+                  <div className="grid gap-3 rounded-xl border bg-slate-50 p-4 text-sm dark:bg-slate-800/40 sm:grid-cols-2">
+                    <div><span className="block text-[10px] font-bold uppercase text-slate-500">Supplier</span><strong>{supplier}</strong></div>
+                    <div><span className="block text-[10px] font-bold uppercase text-slate-500">Category</span><strong>{purchaseOrderCategoryLabel(category)}</strong></div>
+                    <div><span className="block text-[10px] font-bold uppercase text-slate-500">Project</span><strong>{editing && editing.project_id !== projectId ? (editing.project_name || 'Original assigned project') : (projectName || 'Selected project')}</strong></div>
+                    <div><span className="block text-[10px] font-bold uppercase text-slate-500">Currency</span><strong>{currency}</strong></div>
+                    <div><span className="block text-[10px] font-bold uppercase text-slate-500">Quotation</span><strong>{quotation?.name || existingQuotation || 'None attached'}</strong></div>
+                    <div className="sm:col-span-2"><span className="block text-[10px] font-bold uppercase text-slate-500">Notes</span><p className="whitespace-pre-wrap">{notes || '—'}</p></div>
+                  </div>
+                  <div className="overflow-x-auto rounded-xl border">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 text-slate-500 dark:bg-slate-800">
+                        <tr>
+                          <th className="p-3">Item / service</th>
+                          <th className="p-3">Description</th>
+                          <th className="p-3">Quantity</th>
+                          <th className="p-3">Unit price</th>
+                          <th className="p-3 text-right">Line total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {lines.map((line, index) => (
+                          <tr key={index}>
+                            <td className="p-3">{line.item_name || '—'}</td>
+                            <td className="p-3">{line.description}</td>
+                            <td className="p-3">{line.quantity_ordered}</td>
+                            <td className="p-3">{currency} {Number(line.unit_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                            <td className="p-3 text-right font-semibold">{currency} {(Number(line.quantity_ordered || 0) * Number(line.unit_price || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </div>
 
-                      <div>
-                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Project</span>
-                        <span className="text-sm font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{siteName}</span>
-                      </div>
+            {/* Sticky Action Footer */}
+            <div className="sticky bottom-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 p-3.5 sm:px-6 sm:py-4 shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 z-10">
+              <label className="flex items-center gap-2 text-sm font-bold">
+                Total: {currency}
+                {formStep === 'EDIT' ? (
+                  lineTotal > 0 ? (
+                    <span>{lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  ) : (
+                    <input aria-label="Purchase order total" type="number" min="0" step="0.01" value={manualTotal} onChange={(event) => setManualTotal(event.target.value)} className="w-32 sm:w-40 rounded-lg border bg-background p-2 text-sm font-semibold" />
+                  )
+                ) : (
+                  <span>{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                )}
+              </label>
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
+                {formStep === 'EDIT' ? (
+                  <>
+                    <button type="button" onClick={() => { setShowForm(false); setFormStep('EDIT'); }} className="rounded-lg border px-4 py-2 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition w-full sm:w-auto">
+                      Cancel
+                    </button>
+                    {(!editing || editing.status === 'DRAFT') && (
+                      <button type="button" disabled={busy} onClick={() => void saveOrder(true)} className="rounded-lg border border-orange-300 px-4 py-2 text-xs font-bold text-orange-800 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/30 disabled:opacity-50 transition w-full sm:w-auto">
+                        {busy ? 'Saving…' : 'Save as draft'}
+                      </button>
+                    )}
+                    <button type="submit" disabled={busy} className="rounded-lg bg-orange-600 px-4 py-2 text-xs font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto">
+                      Preview Purchase Order
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" onClick={() => setFormStep('EDIT')} className="rounded-lg border px-4 py-2 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition w-full sm:w-auto">
+                      Back to edit
+                    </button>
+                    {editing?.status === 'WAITING_APPROVAL' ? (
+                      <button type="button" disabled={busy} onClick={() => void saveOrder(false)} className="rounded-lg bg-orange-600 px-4 py-2 text-xs font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto">
+                        {busy ? 'Saving…' : 'Save changes'}
+                      </button>
+                    ) : (
+                      <button type="button" disabled={busy} onClick={() => void saveOrder(false)} className="rounded-lg bg-orange-600 px-4 py-2 text-xs font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto">
+                        {busy ? 'Submitting…' : 'Submit for Executive approval'}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>,
+      document.body
+    )}
 
-                      <div>
-                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Category</span>
-                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-0.5 block">{purchaseOrderCategoryLabel(viewDetailPO.category)}</span>
-                      </div>
+    {/* VIEW PO DETAILS MODAL */}
+    {viewDetailPO && createPortal(
+      <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-0 sm:p-4 overflow-hidden" onClick={(e) => { if (e.target === e.currentTarget) setViewDetailPO(null); }}>
+        <div className="bg-white dark:bg-slate-900 w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-4xl border-0 sm:border border-slate-200 dark:border-slate-800 rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+          {/* Sticky Header */}
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-4 py-3.5 sm:px-6 sm:py-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 sticky top-0 z-10">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-950/40 text-orange-600 flex items-center justify-center font-bold">
+                <ShoppingCart size={18} />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                  Purchase Order Details
+                </h3>
+                <p className="text-xs text-slate-500 font-mono">
+                  PO #: {viewDetailPO.po_number || viewDetailPO.id}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setViewDetailPO(null)}
+              className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"
+            >
+              <X size={20} />
+            </button>
+          </div>
 
-                      <div>
-                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Total Amount</span>
-                        <span className="text-lg font-black text-emerald-600 mt-0.5 block">
-                          {viewDetailPO.currency || 'USD'} {Number(totalOrdered).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                      </div>
+          {/* Content Body */}
+          {(() => {
+            const poItems = Array.isArray(viewDetailPO.items) ? viewDetailPO.items : [];
+            const totalOrdered = poItems.reduce((sum: number, item: any) => sum + (Number(item.quantity_ordered || item.quantity || 0) * Number(item.unit_price || item.price || 0)), 0) || Number(viewDetailPO.total_amount || 0);
+            const totalReceived = poItems.reduce((sum: number, item: any) => sum + (Number(item.quantity_received || 0) * Number(item.unit_price || item.price || 0)), 0);
+            const remaining = Math.max(0, totalOrdered - totalReceived);
+            const siteName = viewDetailPO.project_name || projectName || 'Assigned Site';
+            const poNotes = viewDetailPO.notes ? String(viewDetailPO.notes).replace(/\[Attached Docket:\s*([^\]]+)\]/gi, '').trim() : '';
 
-                      <div>
-                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block mb-1">Status</span>
-                        <span className={`inline-flex px-2.5 py-1 rounded-md text-[10px] font-bold ${
-                          viewDetailPO.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' :
-                          viewDetailPO.status === 'WAITING_APPROVAL' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' :
-                          'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
-                        }`}>
-                          {String(viewDetailPO.status).replaceAll('_', ' ')}
-                        </span>
-                      </div>
+            return (
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-white dark:bg-slate-900">
+                {/* Summary Header Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+                  {/* Left Column */}
+                  <div className="space-y-3.5">
+                    <div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Supplier</span>
+                      <h4 className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                        {viewDetailPO.supplier_name || viewDetailPO.vendor_name || viewDetailPO.vendor || viewDetailPO.supplier || 'Site Vendor'}
+                      </h4>
                     </div>
 
-                    {/* Right Column */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm">
-                      <div>
-                        <span className="block text-[10px] uppercase font-bold text-slate-400">PO Number</span>
-                        <span className="font-mono font-medium text-slate-700 dark:text-slate-200">{viewDetailPO.po_number || viewDetailPO.id}</span>
-                      </div>
-                      <div>
-                        <span className="block text-[10px] uppercase font-bold text-slate-400">Requested By</span>
-                        <span className="font-medium text-slate-700 dark:text-slate-200">{viewDetailPO.created_by_name || '—'}</span>
-                      </div>
-                      <div>
-                        <span className="block text-[10px] uppercase font-bold text-slate-400">Order Date</span>
-                        <span className="font-medium text-slate-700 dark:text-slate-200">{viewDetailPO.created_at ? new Date(viewDetailPO.created_at).toLocaleString() : '—'}</span>
-                      </div>
-                      <div>
-                        <span className="block text-[10px] uppercase font-bold text-slate-400">Goods Received</span>
-                        <span className="font-bold text-emerald-600">{viewDetailPO.currency || 'USD'} {totalReceived.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                      <div className="sm:col-span-2">
-                        <span className="block text-[10px] uppercase font-bold text-slate-400">Remaining Open</span>
-                        <span className="font-bold text-amber-600">{viewDetailPO.currency || 'USD'} {remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                      {poNotes && (
-                        <div className="sm:col-span-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                          <span className="block text-[10px] uppercase font-bold text-slate-400">Notes / Specifications</span>
-                          <span className="font-medium text-slate-700 dark:text-slate-200 whitespace-pre-wrap">{poNotes}</span>
-                        </div>
-                      )}
+                    <div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Project</span>
+                      <span className="text-sm font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">{siteName}</span>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Category</span>
+                      <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-0.5 block">{purchaseOrderCategoryLabel(viewDetailPO.category)}</span>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block">Total Amount</span>
+                      <span className="text-lg font-black text-emerald-600 mt-0.5 block">
+                        {viewDetailPO.currency || 'USD'} {Number(totalOrdered).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 block mb-1">Status</span>
+                      <span className={`inline-flex px-2.5 py-1 rounded-md text-[10px] font-bold ${
+                        viewDetailPO.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' :
+                        viewDetailPO.status === 'WAITING_APPROVAL' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' :
+                        'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
+                      }`}>
+                        {String(viewDetailPO.status).replaceAll('_', ' ')}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Finance Payment History Section */}
-                  {viewDetailPO.expense_raised && (
-                    <section className="space-y-2 rounded-xl border border-blue-100 dark:border-blue-900 bg-white dark:bg-slate-900 p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                          <h4 className="font-bold text-xs uppercase tracking-wider text-slate-900 dark:text-white">Finance payment history</h4>
-                          <p className="mt-1 text-[11px] text-slate-600 dark:text-slate-300">Paid {viewDetailPO.currency || 'USD'} {Number(viewDetailPO.expense_paid_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} of {viewDetailPO.currency || 'USD'} {Number(viewDetailPO.expense_total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · Balance {viewDetailPO.currency || 'USD'} {Number(viewDetailPO.expense_balance_due || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                        </div>
-                        {hasExpense(viewDetailPO) && <ExpensePaymentBadge status={viewDetailPO.expense_status} />}
+                  {/* Right Column */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm">
+                    <div>
+                      <span className="block text-[10px] uppercase font-bold text-slate-400">PO Number</span>
+                      <span className="font-mono font-medium text-slate-700 dark:text-slate-200">{viewDetailPO.po_number || viewDetailPO.id}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase font-bold text-slate-400">Requested By</span>
+                      <span className="font-medium text-slate-700 dark:text-slate-200">{viewDetailPO.created_by_name || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase font-bold text-slate-400">Order Date</span>
+                      <span className="font-medium text-slate-700 dark:text-slate-200">{viewDetailPO.created_at ? new Date(viewDetailPO.created_at).toLocaleString() : '—'}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase font-bold text-slate-400">Goods Received</span>
+                      <span className="font-bold text-emerald-600">{viewDetailPO.currency || 'USD'} {totalReceived.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <span className="block text-[10px] uppercase font-bold text-slate-400">Remaining Open</span>
+                      <span className="font-bold text-amber-600">{viewDetailPO.currency || 'USD'} {remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    {poNotes && (
+                      <div className="sm:col-span-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                        <span className="block text-[10px] uppercase font-bold text-slate-400">Notes / Specifications</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-200 whitespace-pre-wrap">{poNotes}</span>
                       </div>
-                      {(viewDetailPO.expense_payments || []).length ? (
-                        <div className="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
-                          <table className="w-full text-left text-xs">
-                            <thead className="bg-white dark:bg-slate-900 text-[10px] uppercase text-slate-400 font-extrabold border-b border-slate-100 dark:border-slate-800">
-                              <tr>
-                                <th className="p-2.5">Payment date</th>
-                                <th className="p-2.5">Expense</th>
-                                <th className="p-2.5">Amount paid</th>
-                                <th className="p-2.5">Reference</th>
-                                <th className="p-2.5">Receipt</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                              {viewDetailPO.expense_payments.map((payment: Row) => (
-                                <tr key={payment.id}>
-                                  <td className="p-2.5">{payment.payment_date ? new Date(`${payment.payment_date}T00:00:00`).toLocaleDateString() : '—'}</td>
-                                  <td className="p-2.5 font-mono">{payment.expense_number || 'Operational expense'}</td>
-                                  <td className="p-2.5 font-semibold">{viewDetailPO.currency || 'USD'} {Number(payment.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                  <td className="p-2.5">{payment.reference || '—'}</td>
-                                  <td className="p-2.5">
-                                    {payment.receipt_name ? (
-                                      <div className="flex items-center gap-2">
-                                        <button type="button" onClick={() => void handleViewPaymentReceipt(payment)} className="inline-flex items-center gap-1 font-semibold text-blue-700 underline"><Eye size={12} />View</button>
-                                        <button type="button" onClick={() => void handleDownloadPaymentReceipt(payment)} className="inline-flex items-center gap-1 font-semibold text-slate-600 hover:text-blue-700"><Download size={12} />Download</button>
-                                        <span className="max-w-40 truncate text-[10px] text-slate-500">{payment.receipt_name}</span>
-                                      </div>
-                                    ) : (
-                                      <span className="text-slate-400">No receipt attached</span>
-                                    )}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : (
-                        <p className="rounded-lg bg-white p-3 text-xs text-slate-500 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">No finance payments have been recorded yet.</p>
-                      )}
-                    </section>
-                  )}
-
-                  {/* Line Items Breakdown Table */}
-                  <div className="rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900">
-                    <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-300">
-                      Order Line Items Breakdown
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs">
-                        <thead className="border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-400 font-extrabold text-[10px] uppercase">
-                          <tr>
-                            <th className="px-4 py-2.5">Item / Service</th>
-                            <th className="px-4 py-2.5">Description</th>
-                            <th className="px-4 py-2.5 text-center">Ordered</th>
-                            <th className="px-4 py-2.5 text-center">Received</th>
-                            <th className="px-4 py-2.5 text-right">Unit Price</th>
-                            <th className="px-4 py-2.5 text-right">Line Total</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {poItems.map((item: any, idx: number) => {
-                            const qtyOrd = Number(item.quantity_ordered || item.quantity || 1);
-                            const qtyRec = Number(item.quantity_received || 0);
-                            const price = Number(item.unit_price || item.price || 0);
-                            return (
-                              <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
-                                <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-200">{item.item_name || item.description || 'Line Item'}</td>
-                                <td className="px-4 py-3 font-medium text-slate-600 dark:text-slate-400 whitespace-pre-wrap">{item.description || '—'}</td>
-                                <td className="px-4 py-3 font-mono text-center text-slate-700 dark:text-slate-300">{qtyOrd}</td>
-                                <td className="px-4 py-3 font-mono text-center text-emerald-600 font-bold">{qtyRec}</td>
-                                <td className="px-4 py-3 font-mono text-right text-slate-700 dark:text-slate-300">${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                <td className="px-4 py-3 font-mono text-right font-bold text-slate-900 dark:text-white">${(qtyOrd * price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                              </tr>
-                            );
-                          })}
-                          {poItems.length === 0 && (
-                            <tr>
-                              <td colSpan={6} className="px-4 py-6 text-center text-slate-400 italic">No line items recorded.</td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
+                    )}
                   </div>
                 </div>
-              );
-            })()}
 
-            {/* Sticky Footer */}
-            <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 px-4 py-3 sm:px-6 bg-white dark:bg-slate-900 shrink-0">
-              <span className="text-xs text-slate-400 font-mono">Status: {viewDetailPO.status || 'PENDING'}</span>
-              <div className="flex items-center gap-2">
-                {viewDetailPO.attachment_file_name ? (
-                  <button
-                    type="button"
-                    onClick={() => void handleViewPOAttachment(viewDetailPO.id)}
-                    className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 transition"
-                  >
-                    <Eye size={14} /> View Quotation / Supporting Document
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => void handleDownloadPOAttachment(viewDetailPO.id, 'docket.pdf')}
-                    className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 transition"
-                  >
-                    <Eye size={14} /> View Generated PO Docket
-                  </button>
+                {/* Finance Payment History Section */}
+                {viewDetailPO.expense_raised && (
+                  <section className="space-y-2 rounded-xl border border-blue-100 dark:border-blue-900 bg-white dark:bg-slate-900 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <h4 className="font-bold text-xs uppercase tracking-wider text-slate-900 dark:text-white">Finance payment history</h4>
+                        <p className="mt-1 text-[11px] text-slate-600 dark:text-slate-300">Paid {viewDetailPO.currency || 'USD'} {Number(viewDetailPO.expense_paid_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} of {viewDetailPO.currency || 'USD'} {Number(viewDetailPO.expense_total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · Balance {viewDetailPO.currency || 'USD'} {Number(viewDetailPO.expense_balance_due || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                      </div>
+                      {hasExpense(viewDetailPO) && <ExpensePaymentBadge status={viewDetailPO.expense_status} />}
+                    </div>
+                    {(viewDetailPO.expense_payments || []).length ? (
+                      <div className="overflow-x-auto rounded-lg border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-white dark:bg-slate-900 text-[10px] uppercase text-slate-400 font-extrabold border-b border-slate-100 dark:border-slate-800">
+                            <tr>
+                              <th className="p-2.5">Payment date</th>
+                              <th className="p-2.5">Expense</th>
+                              <th className="p-2.5">Amount paid</th>
+                              <th className="p-2.5">Reference</th>
+                              <th className="p-2.5">Receipt</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {viewDetailPO.expense_payments.map((payment: Row) => (
+                              <tr key={payment.id}>
+                                <td className="p-2.5">{payment.payment_date ? new Date(`${payment.payment_date}T00:00:00`).toLocaleDateString() : '—'}</td>
+                                <td className="p-2.5 font-mono">{payment.expense_number || 'Operational expense'}</td>
+                                <td className="p-2.5 font-semibold">{viewDetailPO.currency || 'USD'} {Number(payment.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                <td className="p-2.5">{payment.reference || '—'}</td>
+                                <td className="p-2.5">
+                                  {payment.receipt_name ? (
+                                    <div className="flex items-center gap-2">
+                                      <button type="button" onClick={() => void handleViewPaymentReceipt(payment)} className="inline-flex items-center gap-1 font-semibold text-blue-700 underline"><Eye size={12} />View</button>
+                                      <button type="button" onClick={() => void handleDownloadPaymentReceipt(payment)} className="inline-flex items-center gap-1 font-semibold text-slate-600 hover:text-blue-700"><Download size={12} />Download</button>
+                                      <span className="max-w-40 truncate text-[10px] text-slate-500">{payment.receipt_name}</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-slate-400">No receipt attached</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="rounded-lg bg-white p-3 text-xs text-slate-500 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">No finance payments have been recorded yet.</p>
+                    )}
+                  </section>
                 )}
-                {canReceive(viewDetailPO) && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const targetPo = viewDetailPO;
-                      setViewDetailPO(null);
-                      openReceive(targetPo);
-                    }}
-                    className="px-3.5 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition flex items-center gap-1"
-                  >
-                    <Truck size={13} /> Receive Goods
-                  </button>
-                )}
-                {viewDetailPO.status === 'APPROVED' && !hasExpense(viewDetailPO) && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const poToExpense = viewDetailPO;
-                      setViewDetailPO(null);
-                      setExpensePO(poToExpense);
-                    }}
-                    className="px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition"
-                  >
-                    Raise Expense
-                  </button>
-                )}
+
+                {/* Line Items Breakdown Table */}
+                <div className="rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900">
+                  <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-300">
+                    Order Line Items Breakdown
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-400 font-extrabold text-[10px] uppercase">
+                        <tr>
+                          <th className="px-4 py-2.5">Item / Service</th>
+                          <th className="px-4 py-2.5">Description</th>
+                          <th className="px-4 py-2.5 text-center">Ordered</th>
+                          <th className="px-4 py-2.5 text-center">Received</th>
+                          <th className="px-4 py-2.5 text-right">Unit Price</th>
+                          <th className="px-4 py-2.5 text-right">Line Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {poItems.map((item: any, idx: number) => {
+                          const qtyOrd = Number(item.quantity_ordered || item.quantity || 1);
+                          const qtyRec = Number(item.quantity_received || 0);
+                          const price = Number(item.unit_price || item.price || 0);
+                          return (
+                            <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
+                              <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-200">{item.item_name || item.description || 'Line Item'}</td>
+                              <td className="px-4 py-3 font-medium text-slate-600 dark:text-slate-400 whitespace-pre-wrap">{item.description || '—'}</td>
+                              <td className="px-4 py-3 font-mono text-center text-slate-700 dark:text-slate-300">{qtyOrd}</td>
+                              <td className="px-4 py-3 font-mono text-center text-emerald-600 font-bold">{qtyRec}</td>
+                              <td className="px-4 py-3 font-mono text-right text-slate-700 dark:text-slate-300">${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                              <td className="px-4 py-3 font-mono text-right font-bold text-slate-900 dark:text-white">${(qtyOrd * price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            </tr>
+                          );
+                        })}
+                        {poItems.length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="px-4 py-6 text-center text-slate-400 italic">No line items recorded.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Sticky Footer */}
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between border-t border-slate-100 dark:border-slate-800 px-4 py-3 sm:px-6 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 gap-3 sticky bottom-0 z-10">
+            <span className="text-xs text-slate-400 font-mono text-center sm:text-left">Status: {viewDetailPO.status || 'PENDING'}</span>
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+              {viewDetailPO.attachment_file_name ? (
                 <button
                   type="button"
-                  onClick={() => setViewDetailPO(null)}
-                  className="px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+                  onClick={() => void handleViewPOAttachment(viewDetailPO.id)}
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 transition w-full sm:w-auto"
                 >
-                  Close
+                  <Eye size={14} /> View Quotation / Supporting Document
                 </button>
-              </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void handleDownloadPOAttachment(viewDetailPO.id, 'docket.pdf')}
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 transition w-full sm:w-auto"
+                >
+                  <Eye size={14} /> View Generated PO Docket
+                </button>
+              )}
+              {canReceive(viewDetailPO) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const targetPo = viewDetailPO;
+                    setViewDetailPO(null);
+                    openReceive(targetPo);
+                  }}
+                  className="px-3.5 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition flex items-center justify-center gap-1 w-full sm:w-auto"
+                >
+                  <Truck size={13} /> Receive Goods
+                </button>
+              )}
+              {viewDetailPO.status === 'APPROVED' && !hasExpense(viewDetailPO) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const poToExpense = viewDetailPO;
+                    setViewDetailPO(null);
+                    setExpensePO(poToExpense);
+                  }}
+                  className="px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition w-full sm:w-auto"
+                >
+                  Raise Expense
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setViewDetailPO(null)}
+                className="px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition w-full sm:w-auto"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
-      )}
+      </div>,
+      document.body
+    )}
 
-    {receivingPO && <div className="fixed inset-0 z-[10010] flex items-center justify-center bg-slate-950/70 p-3"><form onSubmit={submitReceipt} className="max-h-[92vh] w-full max-w-4xl space-y-4 overflow-y-auto rounded-xl border bg-white p-5 shadow-2xl dark:bg-slate-900"><div className="flex items-start justify-between border-b pb-3"><div><h3 className="flex items-center gap-2 text-lg font-bold"><PackageCheck size={18} className="text-emerald-600" />Receive Goods: {receivingPO.po_number}</h3><p className="mt-1 text-xs text-slate-500">Select the items received at the site and enter quantities. Unselected items remain outstanding.</p></div><button type="button" onClick={() => setReceivingPO(null)} className="px-2 text-xl text-slate-500">×</button></div><div className="overflow-x-auto rounded-lg border"><table className="w-full min-w-[650px] text-left text-xs"><thead className="bg-slate-50 text-slate-500"><tr><th className="p-3">Select</th><th className="p-3">Item / description</th><th className="p-3 text-right">Ordered</th><th className="p-3 text-right">Received</th><th className="p-3 text-right">Outstanding</th><th className="p-3 text-right">Receive now</th></tr></thead><tbody className="divide-y">{(receivingPO.items || []).map((item: Row) => { const id = String(item.id); const outstanding = Math.max(0, Number(item.quantity_ordered || 0) - Number(item.quantity_received || 0)); const checked = selectedReceiptItemIds.includes(id); return <tr key={id} className={checked ? 'bg-emerald-50/70 dark:bg-emerald-950/20' : ''}><td className="p-3"><input aria-label={`Select ${item.item_name || item.description}`} type="checkbox" checked={checked} disabled={outstanding <= 0} onChange={(event) => setSelectedReceiptItemIds((current) => event.target.checked ? [...current, id] : current.filter((value) => value !== id))} className="h-4 w-4 accent-emerald-600" /></td><td className="p-3"><span className="font-semibold">{item.item_name || item.description}</span>{item.item_name && <span className="block text-slate-500">{item.description}</span>}{outstanding <= 0 && <span className="mt-1 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">Fully received</span>}</td><td className="p-3 text-right font-mono">{Number(item.quantity_ordered || 0).toLocaleString()}</td><td className="p-3 text-right font-mono">{Number(item.quantity_received || 0).toLocaleString()}</td><td className="p-3 text-right font-mono font-bold text-amber-700">{outstanding.toLocaleString()}</td><td className="p-3 text-right"><input aria-label={`Quantity received for ${item.item_name || item.description}`} type="number" min="0.001" max={outstanding} step="0.001" disabled={!checked || outstanding <= 0} value={checked ? (receiptQuantities[id] ?? outstanding) : 0} onChange={(event) => setReceiptQuantities((current) => ({ ...current, [id]: Math.min(outstanding, Math.max(0, Number(event.target.value) || 0)) }))} className="w-24 rounded-lg border bg-white p-2 text-right font-mono disabled:opacity-40 dark:bg-slate-950" /></td></tr>; })}{!(receivingPO.items || []).length && <tr><td colSpan={6} className="p-8 text-center text-slate-500">This purchase order has no line items.</td></tr>}</tbody></table></div><div className="flex justify-end gap-2 border-t pt-3"><button type="button" onClick={() => setReceivingPO(null)} className="rounded-lg border px-4 py-2 text-xs font-semibold">Cancel</button><button type="submit" disabled={receivingBusy || selectedReceiptItemIds.length === 0 || selectedReceiptItemIds.some((id) => Number(receiptQuantities[id]) <= 0)} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{receivingBusy ? 'Saving…' : <><PackageCheck size={14} />Save Goods Receipt</>}</button></div></form></div>}
+    {receivingPO && createPortal(
+      <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-0 sm:p-4 overflow-hidden" onClick={(e) => { if (e.target === e.currentTarget) setReceivingPO(null); }}>
+        <div className="w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-4xl rounded-none sm:rounded-2xl border-0 sm:border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl flex flex-col overflow-hidden">
+          <form onSubmit={submitReceipt} className="flex flex-col h-full overflow-hidden">
+            {/* Sticky Header */}
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-4 py-3.5 sm:px-6 sm:py-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 sticky top-0 z-10">
+              <div>
+                <h3 className="flex items-center gap-2 text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                  <PackageCheck size={18} className="text-emerald-600" />
+                  Receive Goods: {receivingPO.po_number}
+                </h3>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Select the items received at the site and enter quantities. Unselected items remain outstanding.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReceivingPO(null)}
+                className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Scrollable Table Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+              <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
+                <table className="w-full min-w-[650px] text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 dark:bg-slate-800">
+                    <tr>
+                      <th className="p-3">Select</th>
+                      <th className="p-3">Item / description</th>
+                      <th className="p-3 text-right">Ordered</th>
+                      <th className="p-3 text-right">Received</th>
+                      <th className="p-3 text-right">Outstanding</th>
+                      <th className="p-3 text-right">Receive now</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {(receivingPO.items || []).map((item: Row) => {
+                      const id = String(item.id);
+                      const outstanding = Math.max(0, Number(item.quantity_ordered || 0) - Number(item.quantity_received || 0));
+                      const checked = selectedReceiptItemIds.includes(id);
+                      return (
+                        <tr key={id} className={checked ? 'bg-emerald-50/70 dark:bg-emerald-950/20' : ''}>
+                          <td className="p-3">
+                            <input
+                              aria-label={`Select ${item.item_name || item.description}`}
+                              type="checkbox"
+                              checked={checked}
+                              disabled={outstanding <= 0}
+                              onChange={(event) => setSelectedReceiptItemIds((current) => event.target.checked ? [...current, id] : current.filter((value) => value !== id))}
+                              className="h-4 w-4 accent-emerald-600"
+                            />
+                          </td>
+                          <td className="p-3">
+                            <span className="font-semibold">{item.item_name || item.description}</span>
+                            {item.item_name && <span className="block text-slate-500">{item.description}</span>}
+                            {outstanding <= 0 && <span className="mt-1 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">Fully received</span>}
+                          </td>
+                          <td className="p-3 text-right font-mono">{Number(item.quantity_ordered || 0).toLocaleString()}</td>
+                          <td className="p-3 text-right font-mono">{Number(item.quantity_received || 0).toLocaleString()}</td>
+                          <td className="p-3 text-right font-mono font-bold text-amber-700">{outstanding.toLocaleString()}</td>
+                          <td className="p-3 text-right">
+                            <input
+                              aria-label={`Quantity received for ${item.item_name || item.description}`}
+                              type="number"
+                              min="0.001"
+                              max={outstanding}
+                              step="0.001"
+                              disabled={!checked || outstanding <= 0}
+                              value={checked ? (receiptQuantities[id] ?? outstanding) : 0}
+                              onChange={(event) => setReceiptQuantities((current) => ({ ...current, [id]: Math.min(outstanding, Math.max(0, Number(event.target.value) || 0)) }))}
+                              className="w-24 rounded-lg border bg-white p-2 text-right font-mono disabled:opacity-40 dark:bg-slate-950"
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {!(receivingPO.items || []).length && (
+                      <tr><td colSpan={6} className="p-8 text-center text-slate-500">This purchase order has no line items.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Sticky Action Footer */}
+            <div className="sticky bottom-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 p-3.5 sm:px-6 sm:py-4 shrink-0 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3 z-10">
+              <button type="button" onClick={() => setReceivingPO(null)} className="rounded-lg border px-4 py-2 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition w-full sm:w-auto">
+                Cancel
+              </button>
+              <button type="submit" disabled={receivingBusy || selectedReceiptItemIds.length === 0 || selectedReceiptItemIds.some((id) => Number(receiptQuantities[id]) <= 0)} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition disabled:opacity-50 w-full sm:w-auto">
+                {receivingBusy ? 'Saving…' : <><PackageCheck size={14} />Save Goods Receipt</>}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>,
+      document.body
+    )}
     {expensePO && <OperationalExpenseSubmissionModal projectId={String(expensePO.project_id || projectId || '')} initialPurchaseOrder={expensePO} onClose={() => setExpensePO(null)} onSubmitted={async (expense) => { const poNumber = expensePO.po_number; const poId = String(expensePO.id); setRaisedPurchaseOrderIds((current) => new Set(current).add(poId)); setExpensePO(null); setMessage(`${expense.expense_number || 'Expense'} submitted to Finance for ${poNumber}.`); await reload(); }} />}
     <UniversalFileViewerModal isOpen={viewerState.isOpen} onClose={() => setViewerState({ isOpen: false })} fileUrl={viewerState.fileUrl} blob={viewerState.blob} fileName={viewerState.fileName} title={viewerState.title} />
   </section>;

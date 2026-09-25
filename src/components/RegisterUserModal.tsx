@@ -351,19 +351,19 @@ export default function RegisterUserModal({ onClose, onSaved }: RegisterUserModa
         </div>
 
         {/* Footer Actions */}
-        <div className="flex justify-end gap-3 pt-4 border-t">
+        <div className="sticky bottom-0 -mx-4 -mb-4 sm:-mx-6 sm:-mb-6 p-3.5 sm:px-6 sm:py-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 z-10 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3 mt-4">
           <button
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="px-4 py-2 text-sm font-semibold rounded-md border hover:bg-muted transition-colors"
+            className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg border hover:bg-muted transition-colors w-full sm:w-auto"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={busy}
-            className="px-5 py-2 text-sm font-semibold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-2"
+            className="px-5 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 w-full sm:w-auto"
           >
             {busy && <RefreshCw size={14} className="animate-spin" />}
             {busy ? 'Registering User...' : 'Register User & Assign Access'}

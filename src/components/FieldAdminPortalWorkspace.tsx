@@ -3496,8 +3496,8 @@ Signed: Field Operations Administration
         )}
       
       {/* BOOK LEAVE MODAL */}
-      {showBookLeaveModal && (
-        <div className="fixed inset-0 bg-slate-950/70 z-[9999] flex items-center justify-center p-4 overflow-hidden">
+      {showBookLeaveModal && createPortal(
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-4 overflow-hidden">
           <div className="bg-white dark:bg-slate-900 w-full max-w-lg border rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b px-6 py-4 bg-white dark:bg-slate-900">
               <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
@@ -3600,7 +3600,8 @@ Signed: Field Operations Administration
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </main>
@@ -3608,8 +3609,8 @@ Signed: Field Operations Administration
       {/* ─── ENLARGED MODALS (MATCHING FIELD PORTAL FORM DESIGN & FIELDS) ─────────────────────────────── */}
 
       {/* 1. Log Fuel Delivery Purchased Modal (ENLARGED & MATCHING FIELD PORTAL FIELDS) */}
-      {showFuelBoughtModal && (
-        <div className="fixed inset-0 bg-slate-950/70 z-[9999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
+      {showFuelBoughtModal && createPortal(
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
           <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-2xl border-0 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
               <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
@@ -3829,12 +3830,13 @@ Signed: Field Operations Administration
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* 2. Allocate Fuel to Asset Modal (ENLARGED & RICH FORM) */}
-      {showFuelAllocModal && (
-        <div className="fixed inset-0 bg-slate-950/70 z-[9999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
+      {showFuelAllocModal && createPortal(
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
           <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-xl border-0 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
               <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
@@ -3930,7 +3932,8 @@ Signed: Field Operations Administration
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* 3. Daily Maintenance / Breakdown Repair Job Card Wizard */}
@@ -3980,8 +3983,8 @@ Signed: Field Operations Administration
       )}
 
       {/* 5. HSE Incident Modal */}
-      {showHseModal && (
-        <div className="fixed inset-0 bg-slate-950/70 z-[9999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
+      {showHseModal && createPortal(
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
           <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-3xl border-0 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
               <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
@@ -4203,12 +4206,13 @@ Signed: Field Operations Administration
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Employee Profile & Document Request Modal */}
-      {selectedEmployee && (
-        <div className="fixed inset-0 bg-slate-950/70 z-[9999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
+      {selectedEmployee && createPortal(
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
           <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-lg border-0 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
               <div>
@@ -4291,12 +4295,13 @@ Signed: Field Operations Administration
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Download Request Confirmation Modal */}
-      {requestDownloadDoc && (
-        <div className="fixed inset-0 bg-slate-950/70 z-[9999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
+      {requestDownloadDoc && createPortal(
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
           <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-md border-0 sm:border rounded-none sm:rounded-2xl shadow-xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
               <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
@@ -4327,12 +4332,13 @@ Signed: Field Operations Administration
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Upload Employment Contract Modal */}
-      {showContractModal && contractEmp && (
-        <div className="fixed inset-0 bg-slate-950/70 z-[9999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
+      {showContractModal && contractEmp && createPortal(
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
           <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-xl border-0 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
               <div>
@@ -4426,11 +4432,12 @@ Signed: Field Operations Administration
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       {/* Edit Fuel Delivery Modal (Enforces 2-Day Edit Rule) */}
-      {showEditFuelModal && editingFuelDelivery && (
-        <div className="fixed inset-0 bg-slate-950/70 z-[9999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
+      {showEditFuelModal && editingFuelDelivery && createPortal(
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
           <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-xl border-0 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
               <div>
@@ -4624,12 +4631,13 @@ Signed: Field Operations Administration
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Edit Fuel Allocation Modal (Enforces 1-Day Edit Rule) */}
-      {showEditFuelAllocModal && editingFuelAlloc && (
-        <div className="fixed inset-0 bg-slate-950/70 z-[9999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
+      {showEditFuelAllocModal && editingFuelAlloc && createPortal(
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
           <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-xl border-0 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
               <div>
@@ -4746,12 +4754,13 @@ Signed: Field Operations Administration
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* View Fuel Delivery Receipt & Docket Modal */}
-      {viewingReceiptDelivery && (
-        <div className="fixed inset-0 bg-slate-950/75 z-[9999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
+      {viewingReceiptDelivery && createPortal(
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
           <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-4xl border-0 sm:border border-slate-200 dark:border-slate-800 rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             {/* Sticky Header */}
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
@@ -4883,12 +4892,13 @@ Signed: Field Operations Administration
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* View Operational Expense Voucher Modal */}
-      {viewingExpense && (
-        <div className="fixed inset-0 bg-slate-950/75 z-[9999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
+      {viewingExpense && createPortal(
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
           <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-4xl border-0 sm:border border-slate-200 dark:border-slate-800 rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             {/* Sticky Header */}
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
@@ -5074,12 +5084,13 @@ Signed: Field Operations Administration
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Edit Operational Expense Modal */}
-      {showEditExpenseModal && editingExpense && (
-        <div className="fixed inset-0 bg-slate-950/75 z-[9999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
+      {showEditExpenseModal && editingExpense && createPortal(
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
           <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-xl border-0 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             {/* Sticky Header */}
             <div className="flex items-center justify-between border-b px-4 py-3.5 sm:px-6 sm:py-4 bg-slate-50 dark:bg-slate-900 shrink-0 sticky top-0 z-10">
@@ -5177,7 +5188,8 @@ Signed: Field Operations Administration
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* View HSE Safety Incident Details Modal */}

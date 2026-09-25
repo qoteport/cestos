@@ -89,9 +89,9 @@ export default function FieldWorkEditModal({ work, employees, onClose, onSaved }
             <input type="number" required min={1} max={365} value={form.recurrence_interval_days} onChange={e => setForm({ ...form, recurrence_interval_days: e.target.value })} className="w-full mt-1 rounded-lg border bg-background px-3 py-2" />
           </label>}
         </div>}
-        <div className="flex justify-end gap-2 border-t pt-4">
-          <button type="button" disabled={saving} className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={saving || !form.title.trim() || !canEditFieldWork(work)} className="btn-primary">{saving ? 'Saving…' : 'Save changes'}</button>
+        <div className="sticky bottom-0 -mx-4 -mb-4 sm:-mx-6 sm:-mb-6 p-3.5 sm:px-6 sm:py-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 z-10 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3 mt-4">
+          <button type="button" disabled={saving} className="btn-secondary w-full sm:w-auto text-xs sm:text-sm" onClick={onClose}>Cancel</button>
+          <button type="submit" disabled={saving || !form.title.trim() || !canEditFieldWork(work)} className="btn-primary w-full sm:w-auto text-xs sm:text-sm">{saving ? 'Saving…' : 'Save changes'}</button>
         </div>
       </form>
     </Modal>

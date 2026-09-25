@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, ShieldCheck, ShieldAlert, AlertTriangle, Info, Calendar, MapPin, User, FileText, Printer, Pencil, Save } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
@@ -134,8 +135,8 @@ export default function IncidentDetailModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-slate-950/80 z-[9999] flex items-center justify-center p-0 sm:p-6 overflow-hidden backdrop-blur-sm print:bg-white print:p-0">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/70 z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden backdrop-blur-xs print:bg-white print:p-0" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <style>{`
         @media print {
           @page {
@@ -438,19 +439,20 @@ export default function IncidentDetailModal({
         </div>
 
         {/* Sticky Footer */}
-        <div className="flex items-center justify-between border-t px-4 py-3 sm:px-6 bg-slate-50 dark:bg-slate-900 shrink-0 print:hidden">
-          <p className="text-xs text-slate-500 font-mono">
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between border-t border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-6 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 gap-3 sticky bottom-0 z-10 print:hidden">
+          <p className="text-xs text-slate-500 font-mono text-center sm:text-left">
             {isEditable ? `Editable (${10 - daysOld} days remaining in edit window)` : 'Read Only (10-day edit window expired)'}
           </p>
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-semibold rounded-xl text-sm shadow-sm transition"
+            className="px-6 py-2.5 bg-slate-800 hover:bg-slate-900 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-semibold rounded-xl text-xs sm:text-sm shadow-sm transition w-full sm:w-auto"
           >
             Close Report
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
