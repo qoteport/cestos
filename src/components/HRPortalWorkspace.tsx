@@ -4,6 +4,7 @@ import IncidentDetailModal from './IncidentDetailModal';
 import React, { useState, useEffect, useMemo } from 'react';
 import SearchableSelect from './SearchableSelect';
 import AppDateTimePicker from './ui/AppDateTimePicker';
+import AppLogo from './ui/AppLogo';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -854,12 +855,13 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
         aria-label="Priority Quick Action Forms Sidebar"
         className="hidden lg:flex flex-col items-center py-4 px-2 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-200 w-14 border-r border-slate-200 dark:border-slate-800 shrink-0 sticky top-0 z-40 h-screen select-none shadow-xs no-print"
       >
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-md mb-2 group relative cursor-default shrink-0" title="Quick Priority Action Forms">
-          <Zap size={20} className="animate-pulse" />
-          <span className="absolute left-14 bg-slate-900 text-white text-[11px] font-bold px-2.5 py-1 rounded-md shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700">
-            Priority Action Forms
+        <Link href="/" className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700/60 flex items-center justify-center shadow-xs mb-2 group relative shrink-0 transition-all duration-200" title="Cestos Operations">
+          <AppLogo size={28} className="rounded-lg shrink-0" />
+          <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            Cestos Operations
           </span>
-        </div>
+        </Link>
         <div className="w-8 h-px bg-slate-200 dark:bg-slate-800 shrink-0 my-1" />
         <div className="flex flex-col items-center space-y-3 flex-1 overflow-y-auto scrollbar-none w-full py-1">
           <button
