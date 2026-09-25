@@ -21,7 +21,9 @@ async function checkApiBackend(force = false): Promise<boolean> {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 4_000);
   backendHealthCheck = fetch(`${BASE_URL}/api/v1/health`, { method: 'GET', cache: 'no-store', signal: controller.signal })
-    .then((response) => response.ok)
+    // Any HTTP response proves the API is reachable. A missing health route
+    // must not make login or other online requests enter the offline queue.
+    .then((response) => response.status < 500)
     .catch(() => false)
     .then((reachable) => {
       backendIsReachable = reachable;

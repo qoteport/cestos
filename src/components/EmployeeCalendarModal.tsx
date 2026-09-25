@@ -383,7 +383,7 @@ export default function EmployeeCalendarModal({
                 </h4>
               </div>
 
-              <div className="space-y-4 max-h-[380px] overflow-y-auto scrollbar-thin pr-1">
+              <div className="space-y-4 max-h-[380px] overflow-y-auto scrollbar-none scrollbar-hide pr-1 [&::-webkit-scrollbar]:hidden">
                 {/* Project Assignments Section */}
                 <div className="space-y-2">
                   <h5 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5">

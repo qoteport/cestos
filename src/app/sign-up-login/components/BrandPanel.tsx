@@ -22,7 +22,7 @@ export default function BrandPanel() {
       <div className="relative z-10 flex flex-col h-full p-10 xl:p-12">
         {/* Logo */}
         <div className="flex items-center gap-3 mb-12">
-          <AppLogo size={36} />
+          <AppLogo size={70} />
           <div>
             <p className="text-lg font-bold leading-tight">Cestos Operations</p>
             <p className="text-xs text-blue-200 font-400">Field Operations Command Platform</p>

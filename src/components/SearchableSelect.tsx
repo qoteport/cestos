@@ -286,7 +286,7 @@ export default function SearchableSelect({
           )}
 
           {/* Options List */}
-          <div className="overflow-y-auto flex-1 scrollbar-thin p-1.5 space-y-0.5 max-h-60">
+          <div className="overflow-y-auto flex-1 scrollbar-none scrollbar-hide p-1.5 space-y-0.5 max-h-60 [&::-webkit-scrollbar]:hidden">
             {filteredOptions.length === 0 ? (
               <div className="p-4 text-center text-xs sm:text-sm text-muted-foreground italic font-medium">
                 No matching options found
@@ -575,7 +575,7 @@ export function MultiSearchableSelect({
             )}
           </div>
 
-          <div className="overflow-y-auto flex-1 scrollbar-thin p-1.5 space-y-0.5 max-h-60">
+          <div className="overflow-y-auto flex-1 scrollbar-none scrollbar-hide p-1.5 space-y-0.5 max-h-60 [&::-webkit-scrollbar]:hidden">
             {filteredOptions.length === 0 ? (
               <div className="p-4 text-center text-xs sm:text-sm text-muted-foreground italic font-medium">
                 No matching options found

@@ -124,17 +124,20 @@ export default function AppDateTimePicker({
     const spaceBelow = window.innerHeight - rect.bottom;
     const spaceAbove = rect.top;
 
-    const estimatedHeight = mode === 'time' ? 220 : mode === 'datetime' ? 420 : 360;
+    const estimatedHeight = mode === 'time' ? 240 : mode === 'datetime' ? 460 : 400;
     const openUpwards = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
+
+    const availableHeight = openUpwards ? spaceAbove - 16 : spaceBelow - 16;
+    const targetHeight = Math.min(estimatedHeight, Math.max(280, availableHeight));
 
     let top: number;
     if (openUpwards) {
-      top = Math.max(8, rect.top - estimatedHeight - 4);
+      top = Math.max(8, rect.top - targetHeight - 4);
     } else {
       top = rect.bottom + 4;
     }
 
-    const popoverWidth = Math.min(window.innerWidth - 24, 350);
+    const popoverWidth = Math.min(window.innerWidth - 24, 360);
     let left = rect.left;
     if (left + popoverWidth > window.innerWidth - 12) {
       left = Math.max(12, window.innerWidth - popoverWidth - 12);
@@ -145,7 +148,7 @@ export default function AppDateTimePicker({
       top: `${top}px`,
       left: `${left}px`,
       width: `${popoverWidth}px`,
-      maxHeight: `${Math.min(480, openUpwards ? spaceAbove - 16 : spaceBelow - 16)}px`,
+      maxHeight: `${Math.min(560, Math.max(280, availableHeight))}px`,
       zIndex: 2147483647,
     });
   }, [mode]);
@@ -484,11 +487,15 @@ export default function AppDateTimePicker({
       {isOpen && isMounted && createPortal(
         <div
           ref={popoverRef}
-          style={popoverStyle}
+          style={{
+            ...popoverStyle,
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+          }}
           role="dialog"
           aria-label="Date and time picker dialog"
           onKeyDown={handleKeyDown}
-          className="bg-background dark:bg-slate-900 border border-border shadow-2xl rounded-2xl overflow-hidden animate-in fade-in-50 zoom-in-95 p-4 space-y-3.5 text-foreground"
+          className="bg-background dark:bg-slate-900 border border-border shadow-2xl rounded-2xl overflow-y-auto overflow-x-hidden scrollbar-none scrollbar-hide animate-in fade-in-50 zoom-in-95 p-4 space-y-3.5 text-foreground [&::-webkit-scrollbar]:hidden"
         >
           {/* Presets Header */}
           {showPresets && mode !== 'time' && (
