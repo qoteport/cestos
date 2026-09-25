@@ -187,8 +187,10 @@ export default function FieldPurchaseOrdersPanel({
   const openCreate = () => {
     setEditing(null); setOrderProjectId(projectId); setFormStep('EDIT'); setSupplier(''); setCurrency('USD'); setCategory(''); setNotes(''); setLines([]); setManualTotal('0'); setQuotation(null); setExistingQuotation(''); setShowForm(true);
   };
+  const lastHandledCreateSignal = useRef(openCreateSignal);
   useEffect(() => {
-    if (openCreateSignal && openCreateSignal > 0) {
+    if (openCreateSignal && openCreateSignal > lastHandledCreateSignal.current) {
+      lastHandledCreateSignal.current = openCreateSignal;
       openCreate();
     }
   }, [openCreateSignal]);

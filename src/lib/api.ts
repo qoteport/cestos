@@ -10,7 +10,41 @@ export class ApiError extends Error {
 export class OfflineQueuedError extends ApiError {
   constructor(public queueId: string) { super(0, 'Cestos is unreachable. This change is saved on this device and will sync when the server is available.'); this.name = 'OfflineQueuedError'; }
 }
-type ApiFetchPolicy = { queueWhenOffline?: boolean; cacheOfflineRead?: boolean; cacheResponse?: boolean };
+type ApiFetchPolicy = { queueWhenOffline?: boolean; cacheOfflineRead?: boolean; cacheResponse?: boolean; memoryCache?: boolean };
+type MemoryApiEntry = { value: unknown; savedAt: number };
+const MEMORY_API_TTL_MS = 45_000;
+const MEMORY_CACHE_INVALIDATED_EVENT = 'cestos:api-cache-invalidated';
+const MEMORY_CACHE_CHANNEL = 'cestos-api-cache-invalidation';
+const memoryApiCache = new Map<string, MemoryApiEntry>();
+let invalidationChannel: BroadcastChannel | null = null;
+let cacheInvalidationConfigured = false;
+
+function memoryCacheKey(path: string, token = getAccessToken()) { return `${token || 'anonymous'}::${path}`; }
+
+export function peekMemoryApiResponse<T>(path: string, authenticated = true): T | undefined {
+  if (typeof window === 'undefined') return undefined;
+  return memoryApiCache.get(memoryCacheKey(path, authenticated ? getAccessToken() : null))?.value as T | undefined;
+}
+
+function setupCacheInvalidation() {
+  if (typeof window === 'undefined' || cacheInvalidationConfigured) return;
+  cacheInvalidationConfigured = true;
+  try {
+    if ('BroadcastChannel' in window) {
+      invalidationChannel = new BroadcastChannel(MEMORY_CACHE_CHANNEL);
+      invalidationChannel.onmessage = () => { memoryApiCache.clear(); window.dispatchEvent(new Event(MEMORY_CACHE_INVALIDATED_EVENT)); };
+    }
+  } catch { /* In-tab invalidation still works. */ }
+  window.addEventListener('cestos:session-expired', () => memoryApiCache.clear());
+}
+
+export function invalidateMemoryApiCache() {
+  memoryApiCache.clear();
+  if (typeof window === 'undefined') return;
+  setupCacheInvalidation();
+  window.dispatchEvent(new Event(MEMORY_CACHE_INVALIDATED_EVENT));
+  try { invalidationChannel?.postMessage({ changedAt: Date.now() }); } catch { /* Cache will revalidate when its short lifetime expires. */ }
+}
 let backendHealthCheckedAt = 0;
 let backendIsReachable = false;
 let backendHealthCheck: Promise<boolean> | null = null;
@@ -92,6 +126,11 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, authe
   const method = (options.method || 'GET').toUpperCase();
   const isRead = method === 'GET' || method === 'HEAD';
   const token = authenticated ? getAccessToken() : null;
+  setupCacheInvalidation();
+  const cacheKey = memoryCacheKey(path, token);
+  const memoryCacheable = isRead && policy.memoryCache !== false && policy.cacheResponse !== false && !/\/notifications(?:\/|$)/i.test(path);
+  const memoryEntry = memoryCacheable ? memoryApiCache.get(cacheKey) : undefined;
+  if (memoryEntry && (Date.now() - memoryEntry.savedAt < MEMORY_API_TTL_MS || navigator.onLine === false)) return memoryEntry.value as T;
   const offlineScope = await currentOfflineScope(token);
   if (isRead && navigator.onLine === false) {
     if (policy.cacheOfflineRead !== false && offlineScope) {
@@ -109,6 +148,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, authe
   let response: Response;
   try { response = await fetch(`${BASE_URL}${path}`, {...options, headers, cache:'no-store'}); }
   catch {
+    if (isRead && memoryEntry) return memoryEntry.value as T;
     if (isRead && policy.cacheOfflineRead !== false && offlineScope) {
       const cached = await readCachedApiResponse<T>(offlineScope, path);
       if (cached !== undefined) return cached;
@@ -136,6 +176,10 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, authe
     return enqueueRequest(path, options, method, authenticated, offlineScope);
   }
   const result = await readResponse<T>(response);
+  if (memoryCacheable && policy.cacheResponse !== false && response.headers.get('content-type')?.includes('application/json')) {
+    memoryApiCache.set(memoryCacheKey(path, authenticated ? getAccessToken() : null), { value: result, savedAt: Date.now() });
+  }
+  if (!isRead && method !== 'OPTIONS') invalidateMemoryApiCache();
   if (isRead && policy.cacheResponse !== false && response.headers.get('content-type')?.includes('application/json') && offlineScope) {
     await cacheApiResponse(offlineScope, path, result);
   }

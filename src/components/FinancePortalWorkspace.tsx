@@ -2355,7 +2355,9 @@ Signed: Finance & Procurement Administration
             </div>
 
             {/* KPI Summary Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* KPI Summary Cards & Graph 2-Column Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+              <div className="lg:col-span-4 flex flex-col justify-between gap-3.5">
               <div className="p-4 bg-card border rounded-2xl shadow-xs space-y-1">
                 <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Total Expenditure</span>
                 <p className="text-2xl font-black text-violet-600">${totalExp.toLocaleString()}</p>
@@ -2376,10 +2378,11 @@ Signed: Finance & Procurement Administration
                 <p className="text-2xl font-black text-amber-600">{totalItemsCount}</p>
                 <span className="text-[10px] text-muted-foreground">Purchased items count</span>
               </div>
-            </div>
+              </div>
+
 
             {/* 1. Operational Expenditure & Expense Trend (Full Row FIRST) */}
-            <div className="p-5 bg-card border rounded-2xl shadow-sm space-y-3">
+            <div className="lg:col-span-8 p-5 bg-card border rounded-2xl shadow-sm space-y-3 flex flex-col justify-between min-h-[280px]">
               <div className="flex items-center justify-between border-b pb-3 border-border">
                 <div className="flex items-center gap-2">
                   <div className="p-2 rounded-xl bg-violet-100 dark:bg-violet-950 text-violet-600">
@@ -2395,7 +2398,7 @@ Signed: Finance & Procurement Administration
               {expenseTimeSeriesData.length === 0 ? (
                 <EmptyState message="No expense time-series data available for the selected range." />
               ) : (
-                <div className="h-72 w-full pt-2">
+                <div className="h-72 w-full pt-2 flex-1">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={expenseTimeSeriesData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border opacity-40" />
@@ -2413,6 +2416,7 @@ Signed: Finance & Procurement Administration
                 </div>
               )}
             </div>
+          </div>
 
             {/* 2. Purchasing Intelligence Bar Charts Grid (Collapsible, Collapsed by Default) */}
             <div className="mb-6 space-y-3">
@@ -2749,7 +2753,7 @@ Signed: Finance & Procurement Administration
           <button
             type="button"
             onClick={() => setShowAddPoModal(true)}
-            className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-violet-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            className="relative group w-10 h-10 rounded-xl hover:bg-violet-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
             aria-label="Issue Purchase Order Form"
           >
             <ShoppingCart size={18} />
@@ -2761,7 +2765,7 @@ Signed: Finance & Procurement Administration
           <button
             type="button"
             onClick={() => setShowExpenseModal(true)}
-            className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-violet-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            className="relative group w-10 h-10 rounded-xl hover:bg-violet-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
             aria-label="Submit Expense Claim Form"
           >
             <DollarSign size={18} />
@@ -2773,7 +2777,7 @@ Signed: Finance & Procurement Administration
           <button
             type="button"
             onClick={() => setShowFuelBoughtModal(true)}
-            className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-violet-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            className="relative group w-10 h-10 rounded-xl hover:bg-violet-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
             aria-label="Register Bulk Fuel Delivery Form"
           >
             <Fuel size={18} />
@@ -2785,7 +2789,7 @@ Signed: Finance & Procurement Administration
           <button
             type="button"
             onClick={() => setShowFuelAllocModal(true)}
-            className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-violet-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            className="relative group w-10 h-10 rounded-xl hover:bg-violet-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
             aria-label="Issue Fuel Dispense Ticket"
           >
             <Droplet size={18} />
@@ -2797,7 +2801,7 @@ Signed: Finance & Procurement Administration
           <button
             type="button"
             onClick={() => setActiveTab('VENDORS')}
-            className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-violet-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            className="relative group w-10 h-10 rounded-xl hover:bg-violet-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
             aria-label="Manage Vendors & Suppliers"
           >
             <Building2 size={18} />
@@ -2811,7 +2815,7 @@ Signed: Finance & Procurement Administration
         <button
           type="button"
           onClick={() => void signOut()}
-          className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-red-600 dark:hover:bg-red-600 text-slate-600 dark:text-slate-400 hover:text-white dark:hover:text-white flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 shrink-0"
+          className="relative group w-10 h-10 rounded-xl hover:bg-red-600 dark:hover:bg-red-600 text-slate-600 dark:text-slate-400 hover:text-white dark:hover:text-white flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 shrink-0"
           aria-label="Sign Out"
         >
           <LogOut size={18} />

@@ -18,6 +18,9 @@ import BreakdownJobCardWizard from './BreakdownJobCardWizard';
 import PreventiveMaintenanceWizard from './PreventiveMaintenanceWizard';
 import MaintenanceAssessmentReportWizard from './MaintenanceAssessmentReportWizard';
 import MaintenanceAssessmentReportDetailsModal from './MaintenanceAssessmentReportDetailsModal';
+import ActionTrackerWizard, { ActionTrackerDetails } from './ActionTrackerWizard';
+import PMTrackerWizard, { PMTrackerDetails } from './PMTrackerWizard';
+import EquipmentRegisterWizard, { EquipmentRegisterDetails } from './EquipmentRegisterWizard';
 import EquipmentMaintenanceScheduleModal from './EquipmentMaintenanceScheduleModal';
 import OperationalExpenseSubmissionModal from './OperationalExpenseSubmissionModal';
 import SearchableSelect from './SearchableSelect';
@@ -131,6 +134,9 @@ export default function FieldAdminPortalWorkspace() {
   const [preventiveJobCards, setPreventiveJobCards] = useState<any[]>([]);
   const [breakdownJobCards, setBreakdownJobCards] = useState<any[]>([]);
   const [maintenanceAssessments, setMaintenanceAssessments] = useState<any[]>([]);
+  const [actionTrackerRecords, setActionTrackerRecords] = useState<any[]>([]);
+  const [pmTrackerRecords, setPmTrackerRecords] = useState<any[]>([]);
+  const [equipmentRegisterRecords, setEquipmentRegisterRecords] = useState<any[]>([]);
   const [fuelDeliveries, setFuelDeliveries] = useState<any[]>([]);
   const [fuelAllocations, setFuelAllocations] = useState<any[]>([]);
   const [projectSites, setProjectSites] = useState<any[]>([]);
@@ -152,11 +158,20 @@ export default function FieldAdminPortalWorkspace() {
   const [showAssessmentModal, setShowAssessmentModal] = useState(false);
   const [editingAssessment, setEditingAssessment] = useState<any | null>(null);
   const [viewingAssessment, setViewingAssessment] = useState<any | null>(null);
+  const [showActionTracker, setShowActionTracker] = useState(false);
+  const [editingActionTracker, setEditingActionTracker] = useState<any | null>(null);
+  const [viewingActionTracker, setViewingActionTracker] = useState<any | null>(null);
+  const [showPmTracker, setShowPmTracker] = useState(false);
+  const [editingPmTracker, setEditingPmTracker] = useState<any | null>(null);
+  const [viewingPmTracker, setViewingPmTracker] = useState<any | null>(null);
+  const [showEquipmentRegister, setShowEquipmentRegister] = useState(false);
+  const [editingEquipmentRegister, setEditingEquipmentRegister] = useState<any | null>(null);
+  const [viewingEquipmentRegister, setViewingEquipmentRegister] = useState<any | null>(null);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showHseModal, setShowHseModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [selectedMaintenanceRecord, setSelectedMaintenanceRecord] = useState<{ record: any; kind: 'work_order' | 'preventive' | 'breakdown'; startEditing: boolean } | null>(null);
-  const [maintFilter, setMaintFilter] = useState<'ALL' | 'SCHEDULES' | 'BREAKDOWN' | 'PREVENTIVE' | 'ASSESSMENTS'>('ALL');
+  const [maintFilter, setMaintFilter] = useState<'ALL' | 'SCHEDULES' | 'BREAKDOWN' | 'PREVENTIVE' | 'ASSESSMENTS' | 'ACTIONS' | 'PM_TRACKER' | 'EQUIPMENT_REGISTER'>('ALL');
 
   // Equipment state
   const [showAddAssetModal, setShowAddAssetModal] = useState(false);
@@ -403,7 +418,7 @@ export default function FieldAdminPortalWorkspace() {
       if (!activeProject) {
         const firstProjectId = pItems[0]?.id ? String(pItems[0].id) : '';
         setSelectedProjectId(firstProjectId);
-        setAssets([]); setEmployees([]); setWorkOrders([]); setPreventiveJobCards([]); setBreakdownJobCards([]); setMaintenanceAssessments([]); setFuelDeliveries([]); setFuelAllocations([]);
+        setAssets([]); setEmployees([]); setWorkOrders([]); setPreventiveJobCards([]); setBreakdownJobCards([]); setMaintenanceAssessments([]); setActionTrackerRecords([]); setPmTrackerRecords([]); setEquipmentRegisterRecords([]); setFuelDeliveries([]); setFuelAllocations([]);
         setProjectSites([]);
         setIncidents([]); setNotifications([]); setDownloadRequests([]); setExpenses([]); setProjectMetrics({});
         if (!firstProjectId) setBanner({ type: 'info', message: 'No assigned project sites are available for this account.' });
@@ -425,7 +440,7 @@ export default function FieldAdminPortalWorkspace() {
       const allAssetsUrl = '/api/v1/assets?page_size=100';
       const allEmpUrl = '/api/v1/employees?page_size=100';
 
-      const [aRes, fpARes, allARes, eRes, allERes, wRes, fdRes, faRes, sitesRes, iRes, nRes, drRes, cRes, metricsRes, pmCardsRes, breakdownCardsRes, assessmentRes] = await Promise.all([
+      const [aRes, fpARes, allARes, eRes, allERes, wRes, fdRes, faRes, sitesRes, iRes, nRes, drRes, cRes, metricsRes, pmCardsRes, breakdownCardsRes, assessmentRes, actionTrackerRes, pmTrackerRes, equipmentRegisterRes] = await Promise.all([
         apiFetch<any>(assetUrl).catch(() => ({ items: [] })),
         apiFetch<any>(fpAssetUrl).catch(() => []),
         apiFetch<any>(allAssetsUrl).catch(() => ({ items: [] })),
@@ -455,6 +470,18 @@ export default function FieldAdminPortalWorkspace() {
           setBanner({ type: 'error', message: err?.message || 'Could not load maintenance assessments.' });
           return [];
         }),
+        apiFetch<any>('/api/v1/action-tracker').catch((err: any) => {
+          setBanner({ type: 'error', message: err?.message || 'Could not load action tracker records.' });
+          return [];
+        }),
+        apiFetch<any>(`/api/v1/pm-tracker?project_id=${activeProject.id}`).catch((err: any) => {
+          setBanner({ type: 'error', message: err?.message || 'Could not load PM tracker records.' });
+          return [];
+        }),
+        apiFetch<any>(`/api/v1/equipment-register?project_id=${activeProject.id}`).catch((err: any) => {
+          setBanner({ type: 'error', message: err?.message || 'Could not load equipment register entries.' });
+          return [];
+        }),
       ]);
 
       const projAssetItems = Array.isArray(aRes) ? aRes : aRes?.items || [];
@@ -478,6 +505,9 @@ export default function FieldAdminPortalWorkspace() {
       const pmItems = Array.isArray(pmCardsRes) ? pmCardsRes : pmCardsRes?.items || [];
       const breakdownItems = Array.isArray(breakdownCardsRes) ? breakdownCardsRes : breakdownCardsRes?.items || [];
       const assessmentItems = Array.isArray(assessmentRes) ? assessmentRes : assessmentRes?.items || [];
+      const actionItems = Array.isArray(actionTrackerRes) ? actionTrackerRes : actionTrackerRes?.items || [];
+      const pmTrackerItems = Array.isArray(pmTrackerRes) ? pmTrackerRes : pmTrackerRes?.items || [];
+      const equipmentRegisterItems = Array.isArray(equipmentRegisterRes) ? equipmentRegisterRes : equipmentRegisterRes?.items || [];
 
       setAssets(aItems);
       setEmployees(eItems);
@@ -485,6 +515,9 @@ export default function FieldAdminPortalWorkspace() {
       setPreventiveJobCards(pmItems);
       setBreakdownJobCards(breakdownItems);
       setMaintenanceAssessments(assessmentItems);
+      setActionTrackerRecords(actionItems);
+      setPmTrackerRecords(pmTrackerItems);
+      setEquipmentRegisterRecords(equipmentRegisterItems);
       setFuelDeliveries(fdItems);
       setFuelAllocations(faItems);
       setProjectSites(siteItems);
@@ -619,9 +652,33 @@ export default function FieldAdminPortalWorkspace() {
       ...row,
       record_kind: 'Maintenance assessment',
       record_category: 'assessment' as const,
-      display_title: row.report_number || 'Maintenance assessment report',
+      display_title: 'Two-week maintenance assessment',
       display_type: 'ASSESSMENT',
       description: row.executive_summary || row.conclusion || 'Fleet maintenance assessment and action report',
+    })),
+    ...filterByProj(actionTrackerRecords).filter((row) => isWithinDateFilter(row.action_date || row.created_at)).map((row) => ({
+      ...row,
+      record_kind: 'Action tracker',
+      record_category: 'action_tracker' as const,
+      display_title: row.equipment_area || 'Action tracker entry',
+      display_type: row.priority || 'MEDIUM',
+      description: row.issue_finding || row.action_taken || 'Operational action tracker entry',
+    })),
+    ...filterByProj(pmTrackerRecords).filter((row) => isWithinDateFilter(row.due_date || row.created_at)).map((row) => ({
+      ...row,
+      record_kind: 'PM tracker',
+      record_category: 'pm_tracker' as const,
+      display_title: row.equipment || 'PM tracker entry',
+      display_type: row.planned_actual || 'PLANNED',
+      description: `${row.service_type || 'Preventive maintenance'}${row.pm_completed ? ' · Completed' : ''}`,
+    })),
+    ...filterByProj(equipmentRegisterRecords).map((row) => ({
+      ...row,
+      record_kind: 'Equipment register',
+      record_category: 'equipment_register' as const,
+      display_title: row.equipment || 'Equipment register entry',
+      display_type: row.status || 'Operational / Monitoring',
+      description: row.open_defects || row.action_required || 'Equipment register entry',
     })),
   ];
   const scopedFuelDeliveries = (rows: any[]) => rows.filter((row) => {
@@ -1600,7 +1657,7 @@ Signed: Field Operations Administration
               setActiveTab('PURCHASE_ORDERS');
               setPoFormSignal((s) => s + 1);
             }}
-            className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-orange-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+            className="relative group w-10 h-10 rounded-xl hover:bg-orange-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
             aria-label="Create Purchase Order Form"
           >
             <ShoppingCart size={18} />
@@ -1612,7 +1669,7 @@ Signed: Field Operations Administration
           <button
             type="button"
             onClick={() => setShowExpenseModal(true)}
-            className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-orange-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+            className="relative group w-10 h-10 rounded-xl hover:bg-orange-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
             aria-label="Submit Operational Expense Claim Form"
           >
             <DollarSign size={18} />
@@ -1624,7 +1681,7 @@ Signed: Field Operations Administration
           <button
             type="button"
             onClick={() => setShowFuelBoughtModal(true)}
-            className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-orange-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+            className="relative group w-10 h-10 rounded-xl hover:bg-orange-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
             aria-label="Register Bulk Fuel Delivery Form"
           >
             <Fuel size={18} />
@@ -1636,7 +1693,7 @@ Signed: Field Operations Administration
           <button
             type="button"
             onClick={() => setShowWOModal(true)}
-            className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-orange-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+            className="relative group w-10 h-10 rounded-xl hover:bg-orange-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
             aria-label="Breakdown Work Order Form"
           >
             <Wrench size={18} />
@@ -1648,7 +1705,7 @@ Signed: Field Operations Administration
           <button
             type="button"
             onClick={() => setShowHseModal(true)}
-            className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-orange-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+            className="relative group w-10 h-10 rounded-xl hover:bg-orange-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
             aria-label="Report HSE / Safety Incident"
           >
             <ShieldAlert size={18} />
@@ -1660,7 +1717,7 @@ Signed: Field Operations Administration
           <button
             type="button"
             onClick={() => setShowBookLeaveModal(true)}
-            className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-orange-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+            className="relative group w-10 h-10 rounded-xl hover:bg-orange-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
             aria-label="Book Personnel Leave Request"
           >
             <UserCheck size={18} />
@@ -1672,7 +1729,7 @@ Signed: Field Operations Administration
           <button
             type="button"
             onClick={() => setShowAddAssetModal(true)}
-            className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-orange-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+            className="relative group w-10 h-10 rounded-xl hover:bg-orange-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
             aria-label="Register Equipment Asset Form"
           >
             <Truck size={18} />
@@ -1686,7 +1743,7 @@ Signed: Field Operations Administration
         <button
           type="button"
           onClick={() => void signOut()}
-          className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-red-600 dark:hover:bg-red-600 text-slate-600 dark:text-slate-400 hover:text-white dark:hover:text-white flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 shrink-0"
+          className="relative group w-10 h-10 rounded-xl hover:bg-red-600 dark:hover:bg-red-600 text-slate-600 dark:text-slate-400 hover:text-white dark:hover:text-white flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 shrink-0"
           aria-label="Sign Out"
         >
           <LogOut size={18} />
@@ -2661,6 +2718,24 @@ Signed: Field Operations Administration
                     >
                       <FileText size={15} /> New Maintenance Assessment Report
                     </button>
+                    <button
+                      onClick={() => setShowActionTracker(true)}
+                      className="flex items-center gap-1.5 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition"
+                    >
+                      <CheckCircle2 size={15} /> New Action Tracker
+                    </button>
+                    <button
+                      onClick={() => setShowPmTracker(true)}
+                      className="flex items-center gap-1.5 bg-indigo-700 hover:bg-indigo-800 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition"
+                    >
+                      <Calendar size={15} /> New PM Tracker
+                    </button>
+                    <button
+                      onClick={() => setShowEquipmentRegister(true)}
+                      className="flex items-center gap-1.5 bg-sky-700 hover:bg-sky-800 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition"
+                    >
+                      <Truck size={15} /> New Equipment Register
+                    </button>
                   </div>
                 </div>
 
@@ -2726,6 +2801,27 @@ Signed: Field Operations Administration
                       >
                         <FileText size={13} /> Assessments ({filteredMaintenanceRecords.filter((r) => r.record_category === 'assessment').length})
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setMaintFilter('ACTIONS')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${maintFilter === 'ACTIONS' ? 'bg-teal-700 text-white shadow-xs' : 'bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 text-teal-800 dark:text-teal-300'}`}
+                      >
+                        <CheckCircle2 size={13} /> Action Tracker ({filteredMaintenanceRecords.filter((r) => r.record_category === 'action_tracker').length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMaintFilter('PM_TRACKER')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${maintFilter === 'PM_TRACKER' ? 'bg-indigo-700 text-white shadow-xs' : 'bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300'}`}
+                      >
+                        <Calendar size={13} /> PM Tracker ({filteredMaintenanceRecords.filter((r) => r.record_category === 'pm_tracker').length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMaintFilter('EQUIPMENT_REGISTER')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${maintFilter === 'EQUIPMENT_REGISTER' ? 'bg-sky-700 text-white shadow-xs' : 'bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/40 text-sky-800 dark:text-sky-300'}`}
+                      >
+                        <Truck size={13} /> Equipment Register ({filteredMaintenanceRecords.filter((r) => r.record_category === 'equipment_register').length})
+                      </button>
                     </div>
                   </div>
 
@@ -2735,6 +2831,9 @@ Signed: Field Operations Administration
                       if (maintFilter === 'BREAKDOWN') return rec.record_category === 'breakdown';
                       if (maintFilter === 'PREVENTIVE') return rec.record_category === 'preventive';
                       if (maintFilter === 'ASSESSMENTS') return rec.record_category === 'assessment';
+                      if (maintFilter === 'ACTIONS') return rec.record_category === 'action_tracker';
+                      if (maintFilter === 'PM_TRACKER') return rec.record_category === 'pm_tracker';
+                      if (maintFilter === 'EQUIPMENT_REGISTER') return rec.record_category === 'equipment_register';
                       return true;
                     });
 
@@ -2753,27 +2852,30 @@ Signed: Field Operations Administration
                         {displayedRecords.map((wo: any) => {
                           const assetObj = assets.find((a) => String(a.id) === String(wo.asset_id));
                           const isAssessment = wo.record_category === 'assessment';
+                          const isActionTracker = wo.record_category === 'action_tracker';
+                          const isPmTracker = wo.record_category === 'pm_tracker';
+                          const isEquipmentRegister = wo.record_category === 'equipment_register';
                           const canEditAssessment = isEditableWithin10Days(wo.created_at);
                           return (
                             <div key={wo.id} className="bg-slate-50 dark:bg-slate-800/40 rounded-lg border p-4 space-y-2">
                               <div className="flex items-start justify-between gap-2">
                                 <div>
-                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${wo.display_type === 'PREVENTIVE' ? 'bg-purple-100 text-purple-800' : isAssessment ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}`}>
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${wo.display_type === 'PREVENTIVE' ? 'bg-purple-100 text-purple-800' : isAssessment ? 'bg-blue-100 text-blue-800' : isActionTracker ? 'bg-teal-100 text-teal-800' : isPmTracker ? 'bg-indigo-100 text-indigo-800' : isEquipmentRegister ? 'bg-sky-100 text-sky-800' : 'bg-orange-100 text-orange-800'}`}>
                                     {wo.record_kind}
                                   </span>
                                   <h4 className="font-bold text-sm text-slate-900 dark:text-white mt-1">{wo.display_title || wo.title || wo.job_card_number}</h4>
                                 </div>
                                 <StatusBadge status={wo.status || 'OPEN'} />
                               </div>
-                              <p className="text-xs text-slate-500 font-medium">{isAssessment ? `Reporting period: ${wo.reporting_period_start || '—'} to ${wo.reporting_period_end || '—'}` : `Equipment: ${assetObj ? `${assetObj.name} (${assetObj.asset_number || 'Unit'})` : wo.pm_control?.fleet_unit_id || wo.job_control?.fleet_unit_id || '—'}`}</p>
+                              <p className="text-xs text-slate-500 font-medium">{isAssessment ? `Reporting period: ${wo.reporting_period_start || '—'} to ${wo.reporting_period_end || '—'}` : isActionTracker ? `Date: ${wo.action_date || '—'} · Responsible: ${wo.responsible_name || '—'}` : isPmTracker ? `Due: ${wo.due_date || '—'} · Technician: ${wo.technician_name || '—'}` : isEquipmentRegister ? `Unit: ${wo.unit_number || '—'} · Type: ${wo.equipment_type || '—'}` : `Equipment: ${assetObj ? `${assetObj.name} (${assetObj.asset_number || 'Unit'})` : wo.pm_control?.fleet_unit_id || wo.job_control?.fleet_unit_id || '—'}`}</p>
                               <p className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-line line-clamp-3">{wo.description || wo.reported_failure || wo.corrective_action || 'No notes provided.'}</p>
                               <div className="flex items-center justify-between border-t pt-2 text-[11px] text-slate-500">
-                                <span>{isAssessment ? 'Report date' : wo.scheduled_date ? 'Scheduled' : 'Created'}: {(isAssessment ? wo.report_date : wo.scheduled_date || wo.created_at)?.slice?.(0, 10) || '—'}</span>
-                                <span className="font-semibold text-orange-600">{wo.priority || wo.job_card_number || ''}</span>
+                                <span>{isAssessment ? 'Report date' : isActionTracker ? 'Completion' : isPmTracker ? 'Due date' : isEquipmentRegister ? 'Open defects' : wo.scheduled_date ? 'Scheduled' : 'Created'}: {(isAssessment ? wo.report_date : isActionTracker ? wo.completion_date : isPmTracker ? wo.due_date : wo.scheduled_date || wo.created_at)?.slice?.(0, 10) || (isEquipmentRegister ? wo.open_defects || '—' : '—')}</span>
+                                <span className="font-semibold text-orange-600">{isActionTracker || isEquipmentRegister ? wo.priority : isPmTracker ? (wo.pm_completed ? 'COMPLETED' : wo.planned_actual) : wo.priority || wo.job_card_number || ''}</span>
                               </div>
                               <div className="flex flex-wrap gap-2 pt-1">
-                                <button type="button" onClick={() => isAssessment ? setViewingAssessment(wo) : setSelectedMaintenanceRecord({ record: wo, kind: wo.record_category, startEditing: false })} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-semibold hover:bg-white dark:hover:bg-slate-700"><FileText size={13} /> View details</button>
-                                <button type="button" disabled={isAssessment ? !canEditAssessment : !isEditableWithin10Days(wo.created_at)} title={(isAssessment ? canEditAssessment : isEditableWithin10Days(wo.created_at)) ? 'Edit this maintenance record' : 'Maintenance records can only be edited within 10 days of creation'} onClick={() => isAssessment ? setEditingAssessment(wo) : wo.record_category === 'breakdown' ? setEditingBreakdown(wo) : wo.record_category === 'preventive' ? setEditingPreventive(wo) : setSelectedMaintenanceRecord({ record: wo, kind: wo.record_category, startEditing: true })} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-semibold enabled:hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 dark:enabled:hover:bg-slate-700"><Pencil size={13} /> {(isAssessment ? canEditAssessment : isEditableWithin10Days(wo.created_at)) ? 'Edit' : 'Edit locked'}</button>
+                                <button type="button" onClick={() => isAssessment ? setViewingAssessment(wo) : isActionTracker ? setViewingActionTracker(wo) : isPmTracker ? setViewingPmTracker(wo) : isEquipmentRegister ? setViewingEquipmentRegister(wo) : setSelectedMaintenanceRecord({ record: wo, kind: wo.record_category, startEditing: false })} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-semibold hover:bg-white dark:hover:bg-slate-700"><FileText size={13} /> View details</button>
+                                <button type="button" disabled={!isActionTracker && !isPmTracker && !isEquipmentRegister && (isAssessment ? !canEditAssessment : !isEditableWithin10Days(wo.created_at))} title={isActionTracker || isPmTracker || isEquipmentRegister || (isAssessment ? canEditAssessment : isEditableWithin10Days(wo.created_at)) ? 'Edit this maintenance record' : 'Maintenance records can only be edited within 10 days of creation'} onClick={() => isActionTracker ? setEditingActionTracker(wo) : isPmTracker ? setEditingPmTracker(wo) : isEquipmentRegister ? setEditingEquipmentRegister(wo) : isAssessment ? setEditingAssessment(wo) : wo.record_category === 'breakdown' ? setEditingBreakdown(wo) : setEditingPreventive(wo)} className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-semibold enabled:hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 dark:enabled:hover:bg-slate-700"><Pencil size={13} /> {isActionTracker || isPmTracker || isEquipmentRegister || (isAssessment ? canEditAssessment : isEditableWithin10Days(wo.created_at)) ? 'Edit' : 'Edit locked'}</button>
                               </div>
                             </div>
                           );
@@ -2990,7 +3092,8 @@ Signed: Field Operations Administration
                 </div>
 
                 {/* Expense KPI & Intelligence Summary Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+                  <div className="lg:col-span-4 flex flex-col justify-between gap-3.5">
                   <div className="bg-white dark:bg-slate-900 border rounded-xl p-4 space-y-1">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Expenditure</span>
                     <p className="text-xl font-black text-orange-600">
@@ -3022,10 +3125,11 @@ Signed: Field Operations Administration
                     </p>
                     <span className="text-[11px] text-slate-500 font-medium">Purchased items count</span>
                   </div>
-                </div>
+                  </div>
+
 
                 {/* 1. Operational Expenditure & Expense Trend Line Chart (FULL-WIDTH ROW FIRST) */}
-                <div className="bg-white dark:bg-slate-900 rounded-xl border p-4 space-y-3">
+                <div className="lg:col-span-8 bg-white dark:bg-slate-900 rounded-xl border p-4 space-y-3 flex flex-col justify-between min-h-[280px]">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div>
                       <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
@@ -3040,7 +3144,7 @@ Signed: Field Operations Administration
                       No daily expense trend data available for the selected range.
                     </div>
                   ) : (
-                    <div className="h-64 w-full pt-2">
+                    <div className="h-64 w-full pt-2 flex-1">
                       <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart data={expenseTimeSeriesData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
                           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
@@ -3058,6 +3162,7 @@ Signed: Field Operations Administration
                     </div>
                   )}
                 </div>
+              </div>
 
                 {/* 2. Expense Purchasing Intelligence Bar Charts Grid (Collapsible, Collapsed by Default) */}
                 <div className="mb-6 space-y-3">
@@ -4126,7 +4231,6 @@ Signed: Field Operations Administration
         <MaintenanceAssessmentReportWizard
           assets={filteredAssets}
           employees={filteredEmployees}
-          sites={projectSites}
           projects={projects}
           projectId={selectedProjectId}
           record={editingAssessment || undefined}
@@ -4140,9 +4244,64 @@ Signed: Field Operations Administration
           record={viewingAssessment}
           editable={isEditableWithin10Days(viewingAssessment.created_at)}
           projects={projects}
-          sites={projectSites}
           onClose={() => setViewingAssessment(null)}
           onEdit={() => { setEditingAssessment(viewingAssessment); setViewingAssessment(null); }}
+        />
+      )}
+
+      {(showActionTracker || editingActionTracker) && (
+        <ActionTrackerWizard
+          projectId={selectedProjectId}
+          assets={filteredAssets}
+          employees={filteredEmployees}
+          record={editingActionTracker || undefined}
+          onClose={() => { setShowActionTracker(false); setEditingActionTracker(null); }}
+          onSaved={() => { void reloadData(); setBanner({ type: 'success', message: 'Action tracker entry saved.' }); }}
+        />
+      )}
+
+      {viewingActionTracker && (
+        <ActionTrackerDetails
+          record={viewingActionTracker}
+          onClose={() => setViewingActionTracker(null)}
+          onEdit={() => { setEditingActionTracker(viewingActionTracker); setViewingActionTracker(null); }}
+        />
+      )}
+
+      {(showPmTracker || editingPmTracker) && (
+        <PMTrackerWizard
+          projectId={selectedProjectId}
+          assets={filteredAssets}
+          employees={filteredEmployees}
+          record={editingPmTracker || undefined}
+          onClose={() => { setShowPmTracker(false); setEditingPmTracker(null); }}
+          onSaved={() => { void reloadData(); setBanner({ type: 'success', message: 'PM tracker entry saved.' }); }}
+        />
+      )}
+
+      {viewingPmTracker && (
+        <PMTrackerDetails
+          record={viewingPmTracker}
+          onClose={() => setViewingPmTracker(null)}
+          onEdit={() => { setEditingPmTracker(viewingPmTracker); setViewingPmTracker(null); }}
+        />
+      )}
+
+      {(showEquipmentRegister || editingEquipmentRegister) && (
+        <EquipmentRegisterWizard
+          projectId={selectedProjectId}
+          assets={filteredAssets}
+          record={editingEquipmentRegister || undefined}
+          onClose={() => { setShowEquipmentRegister(false); setEditingEquipmentRegister(null); }}
+          onSaved={() => { void reloadData(); setBanner({ type: 'success', message: 'Equipment register entry saved.' }); }}
+        />
+      )}
+
+      {viewingEquipmentRegister && (
+        <EquipmentRegisterDetails
+          record={viewingEquipmentRegister}
+          onClose={() => setViewingEquipmentRegister(null)}
+          onEdit={() => { setEditingEquipmentRegister(viewingEquipmentRegister); setViewingEquipmentRegister(null); }}
         />
       )}
 

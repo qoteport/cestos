@@ -54,6 +54,7 @@ import {
   Filter,
   Briefcase,
   Truck,
+  Sparkles,
   ShoppingBag } from 'lucide-react';
 import EmployeeDetailView from './EmployeeDetailView';
 import ExecutiveEmployeeDetailView from './ExecutiveEmployeeDetailView';
@@ -79,6 +80,8 @@ import OperationalExpensesWorkspace from './OperationalExpensesWorkspace';
 import ExpiringDocumentsWorkspace from './ExpiringDocumentsWorkspace';
 import useNotificationData from './useNotificationData';
 import MaintenanceJobCardDetailsModal from './MaintenanceJobCardDetailsModal';
+import MaintenanceAssessmentReportDetailsModal from './MaintenanceAssessmentReportDetailsModal';
+import TrackerDetailsModal from './TrackerDetailsModal';
 import { PurchaseOrderCategoryField, purchaseOrderCategoryLabel } from './PurchaseOrderCategoryField';
 import PurchaseOrderCategoryChart from './PurchaseOrderCategoryChart';
 import { useOperationalDataSync } from '@/lib/operationalDataSync';
@@ -150,6 +153,9 @@ function StatusBadge({ status }: { status: string }) {
     CANCELLED: 'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300',
     COMPLETED: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300',
     RECEIVED: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300',
+    OPEN: 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300',
+    IN_PROGRESS: 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300',
+    ON_HOLD: 'bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-300',
   };
   return (
     <span
@@ -194,6 +200,7 @@ export default function ExecutivePortalWorkspace() {
   const [activeTab, setActiveTab] = useState<ExecutiveTab>('EXPENSES');
   const handledRecordLink = useRef('');
   const [equipmentTab, setEquipmentTab] = useState<'ASSETS' | 'MAINTENANCE'>('ASSETS');
+  const [maintFilter, setMaintFilter] = useState<string>('ALL');
   useEffect(() => {
     const tabParam = new URLSearchParams(window.location.search).get('tab') as ExecutiveTab;
     if (tabParam) {
@@ -225,7 +232,13 @@ export default function ExecutivePortalWorkspace() {
   const [workOrders, setWorkOrders] = useState<any[]>([]);
   const [preventiveJobCards, setPreventiveJobCards] = useState<any[]>([]);
   const [breakdownJobCards, setBreakdownJobCards] = useState<any[]>([]);
+  const [maintenanceAssessments, setMaintenanceAssessments] = useState<any[]>([]);
+  const [actionTrackerRecords, setActionTrackerRecords] = useState<any[]>([]);
+  const [pmTrackerRecords, setPmTrackerRecords] = useState<any[]>([]);
+  const [equipmentRegisterRecords, setEquipmentRegisterRecords] = useState<any[]>([]);
   const [selectedMaintenanceRecord, setSelectedMaintenanceRecord] = useState<{ record: any; kind: 'work_order' | 'preventive' | 'breakdown' } | null>(null);
+  const [viewingMaintenanceTracker, setViewingMaintenanceTracker] = useState<any | null>(null);
+  const [viewingMaintenanceAssessment, setViewingMaintenanceAssessment] = useState<any | null>(null);
   const [viewingIncident, setViewingIncident] = useState<any>(null);
   const [newPoForm, setNewPoForm] = useState({
     supplier_name: '',
@@ -348,7 +361,7 @@ export default function ExecutivePortalWorkspace() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [empRes, expRes, poRes, fuelRes, allocRes, astRes, locRes, incRes, projRes, woRes, pmRes, breakdownRes] = await Promise.all([
+      const [empRes, expRes, poRes, fuelRes, allocRes, astRes, locRes, incRes, projRes, woRes, pmRes, breakdownRes, assessmentsRes, actionTrackerRes, pmTrackerRes, equipmentRegisterRes] = await Promise.all([
         apiFetch<any>('/api/v1/employees?page_size=100').catch(() => []),
         apiFetch<any>('/api/v1/operational-expenses').catch(() => []),
         apiFetch<any>('/api/v1/procurement/purchase-orders').catch(() => []),
@@ -361,6 +374,10 @@ export default function ExecutivePortalWorkspace() {
         apiFetch<any>('/api/v1/maintenance/work-orders?page_size=100').catch(() => []),
         apiFetch<any>('/api/v1/pm-job-cards?page_size=100').catch(() => []),
         apiFetch<any>('/api/v1/pm-job-cards/breakdown?page_size=100').catch(() => []),
+        apiFetch<any>('/api/v1/maintenance-assessments').catch(() => []),
+        apiFetch<any>('/api/v1/action-tracker').catch(() => []),
+        apiFetch<any>('/api/v1/pm-tracker').catch(() => []),
+        apiFetch<any>('/api/v1/equipment-register').catch(() => []),
       ]);
 
       const empList = Array.isArray(empRes) ? empRes : empRes?.items || [];
@@ -375,6 +392,10 @@ export default function ExecutivePortalWorkspace() {
       const woList = Array.isArray(woRes) ? woRes : woRes?.items || [];
       const pmList = Array.isArray(pmRes) ? pmRes : pmRes?.items || [];
       const breakdownList = Array.isArray(breakdownRes) ? breakdownRes : breakdownRes?.items || [];
+      const assessmentsList = Array.isArray(assessmentsRes) ? assessmentsRes : assessmentsRes?.items || [];
+      const actionTrackerList = Array.isArray(actionTrackerRes) ? actionTrackerRes : actionTrackerRes?.items || [];
+      const pmTrackerList = Array.isArray(pmTrackerRes) ? pmTrackerRes : pmTrackerRes?.items || [];
+      const equipmentRegisterList = Array.isArray(equipmentRegisterRes) ? equipmentRegisterRes : equipmentRegisterRes?.items || [];
 
       setEmployees(empList);
       setExpenses(expList);
@@ -389,6 +410,10 @@ export default function ExecutivePortalWorkspace() {
       setWorkOrders(woList);
       setPreventiveJobCards(pmList);
       setBreakdownJobCards(breakdownList);
+      setMaintenanceAssessments(assessmentsList);
+      setActionTrackerRecords(actionTrackerList);
+      setPmTrackerRecords(pmTrackerList);
+      setEquipmentRegisterRecords(equipmentRegisterList);
     } catch (e: any) {
       setBanner({ message: e?.message || 'Failed to load executive portal data', type: 'error' });
     } finally {
@@ -719,15 +744,22 @@ Signed: Executive Operations Administration
 
   const scopedMaintenanceRecords = useMemo(() => {
     const inScope = (row: any) => {
-      if (selectedProjectId && row.project_id && String(row.project_id) !== String(selectedProjectId)) return false;
-      return isWithinDateFilter(row.scheduled_date || row.created_at);
+      const linkedSite = locations.find((site: any) => String(site.id) === String(row.site_location_id));
+      const linkedAsset = assets.find((asset: any) => String(asset.id) === String(row.asset_id));
+      const projectId = row.project_id || linkedSite?.project_id || linkedAsset?.project_id || linkedAsset?.assigned_project_id;
+      if (selectedProjectId && String(projectId || '') !== String(selectedProjectId)) return false;
+      return isWithinDateFilter(row.scheduled_date || row.due_date || row.action_date || row.report_date || row.created_at);
     };
     return [
       ...workOrders.filter(inScope).map((row) => ({ ...row, record_kind: 'Work order', record_category: 'work_order' as const, display_title: row.title, display_type: row.work_type || 'CORRECTIVE' })),
       ...preventiveJobCards.filter(inScope).map((row) => ({ ...row, record_kind: 'Preventive job card', record_category: 'preventive' as const, display_title: row.pm_control?.equipment || row.job_card_number, display_type: 'PREVENTIVE', description: row.pm_control?.pm_interval ? `PM interval: ${row.pm_control.pm_interval}` : 'Preventive maintenance job card' })),
       ...breakdownJobCards.filter(inScope).map((row) => ({ ...row, record_kind: 'Breakdown job card', record_category: 'breakdown' as const, display_title: row.job_control?.equipment || row.job_card_number, display_type: 'CORRECTIVE', description: row.reported_failure || row.corrective_action || 'Breakdown maintenance job card' })),
-    ].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
-  }, [workOrders, preventiveJobCards, breakdownJobCards, selectedProjectId, datePreset, customStartDate, customEndDate]);
+      ...maintenanceAssessments.filter(inScope).map((row) => ({ ...row, record_kind: 'Maintenance assessment', record_category: 'assessment' as const, display_title: row.report_number || 'Maintenance assessment report', display_type: 'ASSESSMENT', description: row.executive_summary || row.conclusion || 'Maintenance assessment report' })),
+      ...actionTrackerRecords.filter(inScope).map((row) => ({ ...row, record_kind: 'Action tracker', record_category: 'action_tracker' as const, display_title: row.equipment_area || 'Action tracker entry', display_type: row.priority || 'MEDIUM', description: row.issue_finding || row.action_taken || 'Action tracker entry' })),
+      ...pmTrackerRecords.filter(inScope).map((row) => ({ ...row, record_kind: 'PM tracker', record_category: 'pm_tracker' as const, display_title: row.equipment || 'PM tracker entry', display_type: 'PREVENTIVE', description: [row.service_type, row.defects_found].filter(Boolean).join(' · ') || 'Preventive maintenance tracker entry' })),
+      ...equipmentRegisterRecords.filter(inScope).map((row) => ({ ...row, record_kind: 'Equipment register', record_category: 'equipment_register' as const, display_title: row.equipment || 'Equipment register entry', display_type: 'EQUIPMENT_REGISTER', description: row.open_defects || row.action_required || 'Equipment register entry' })),
+    ].sort((a, b) => new Date(b.scheduled_date || b.due_date || b.action_date || b.report_date || b.created_at || 0).getTime() - new Date(a.scheduled_date || a.due_date || a.action_date || a.report_date || a.created_at || 0).getTime());
+  }, [workOrders, preventiveJobCards, breakdownJobCards, maintenanceAssessments, actionTrackerRecords, pmTrackerRecords, equipmentRegisterRecords, assets, locations, selectedProjectId, datePreset, customStartDate, customEndDate]);
 
   const hseTimeSeriesData = useMemo(() => {
     const dateMap: Record<string, { date: string; fullDate: string; totalIncidents: number; criticalCount: number; nearMissCount: number }> = {};
@@ -1131,7 +1163,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
           <button
             type="button"
             onClick={() => setShowAddPoModal(true)}
-            className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-indigo-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            className="relative group w-10 h-10 rounded-xl hover:bg-indigo-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             aria-label="Issue Purchase Order Form"
           >
             <ShoppingCart size={18} />
@@ -1143,7 +1175,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
           <button
             type="button"
             onClick={() => setShowExpenseModal(true)}
-            className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-indigo-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            className="relative group w-10 h-10 rounded-xl hover:bg-indigo-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             aria-label="Submit Expense Claim Form"
           >
             <DollarSign size={18} />
@@ -1152,24 +1184,13 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
               Submit Expense Claim Form
             </span>
           </button>
-          <button
-            type="button"
-            onClick={() => setShowRegisterUserModal(true)}
-            className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-indigo-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-            aria-label="Register Personnel / User Form"
-          >
-            <UserPlus size={18} />
-            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-              Register Personnel / User Form
-            </span>
-          </button>
+
         </div>
         <div className="w-8 h-px bg-slate-200 dark:bg-slate-800 shrink-0 my-2" />
         <button
           type="button"
           onClick={() => void signOut()}
-          className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-red-600 dark:hover:bg-red-600 text-slate-600 dark:text-slate-400 hover:text-white dark:hover:text-white flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 shrink-0"
+          className="relative group w-10 h-10 rounded-xl hover:bg-red-600 dark:hover:bg-red-600 text-slate-600 dark:text-slate-400 hover:text-white dark:hover:text-white flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 shrink-0"
           aria-label="Sign Out"
         >
           <LogOut size={18} />
@@ -1541,78 +1562,79 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                 Expenditure tracking, vendor analytics, frequency intelligence, and expense claim management.
               </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Expenditure</p>
-                <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">
-                  ${scopedExpenses.reduce((acc, e) => acc + Number(e.total_cost || e.amount || 0), 0).toLocaleString()}
-                </p>
-                <p className="text-[11px] text-indigo-600 font-bold mt-1">All Recorded Vouchers</p>
-              </div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+              {/* Stacked Metrics Column */}
+              <div className="lg:col-span-4 flex flex-col justify-between gap-3.5">
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex-1 flex flex-col justify-center">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Expenditure</p>
+                  <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">
+                    ${scopedExpenses.reduce((acc, e) => acc + Number(e.total_cost || e.amount || 0), 0).toLocaleString()}
+                  </p>
+                  <p className="text-[11px] text-indigo-600 font-bold mt-1">All Recorded Vouchers</p>
+                </div>
 
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Claims</p>
-                <p className="text-2xl font-black text-indigo-600 mt-1">{scopedExpenses.length}</p>
-                <p className="text-[11px] text-indigo-600 font-bold mt-1">Operational Expense Claims</p>
-              </div>
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex-1 flex flex-col justify-center">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Claims</p>
+                  <p className="text-2xl font-black text-indigo-600 mt-1">{scopedExpenses.length}</p>
+                  <p className="text-[11px] text-indigo-600 font-bold mt-1">Operational Expense Claims</p>
+                </div>
 
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Average Claim Value</p>
-                <p className="text-2xl font-black text-emerald-600 mt-1">
-                  ${(scopedExpenses.length > 0 ? scopedExpenses.reduce((acc, e) => acc + Number(e.total_cost || e.amount || 0), 0) / scopedExpenses.length : 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-                <p className="text-[11px] text-emerald-600 font-bold mt-1">Mean expenditure per claim</p>
-              </div>
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex-1 flex flex-col justify-center">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Average Claim Value</p>
+                  <p className="text-2xl font-black text-emerald-600 mt-1">
+                    ${(scopedExpenses.length > 0 ? scopedExpenses.reduce((acc, e) => acc + Number(e.total_cost || e.amount || 0), 0) / scopedExpenses.length : 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-[11px] text-emerald-600 font-bold mt-1">Mean expenditure per claim</p>
+                </div>
 
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pending Approvals</p>
-                <p className="text-2xl font-black text-amber-600 mt-1">
-                  $
-                  {scopedExpenses
-                    .filter((e) => (e.status || '').toUpperCase() === 'SUBMITTED' || (e.status || '').toUpperCase() === 'PENDING')
-                    .reduce((acc, e) => acc + Number(e.total_cost || e.amount || 0), 0)
-                    .toLocaleString()}
-                </p>
-                <p className="text-[11px] text-amber-600 font-bold mt-1">{unresolvedClaimsCount} Unresolved Claims</p>
-              </div>
-            </div>
-
-            {/* Expenses Read Only Component */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
-                          {/* 1. Operational Expenditure & Expense Trend (Full Row FIRST) */}
-            <div className="p-5 bg-card border rounded-2xl shadow-sm space-y-3">
-              <div className="flex items-center justify-between border-b pb-3 border-border">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-violet-100 dark:bg-violet-950 text-violet-600">
-                    <TrendingUp size={18} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-sm text-foreground">Operational Expenditure &amp; Expense Trend ($)</h3>
-                    <p className="text-[11px] text-muted-foreground">Daily breakdown of total operational expenses ($) and approved expenditure</p>
-                  </div>
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex-1 flex flex-col justify-center">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pending Approvals</p>
+                  <p className="text-2xl font-black text-amber-600 mt-1">
+                    $
+                    {scopedExpenses
+                      .filter((e) => (e.status || '').toUpperCase() === 'SUBMITTED' || (e.status || '').toUpperCase() === 'PENDING')
+                      .reduce((acc, e) => acc + Number(e.total_cost || e.amount || 0), 0)
+                      .toLocaleString()}
+                  </p>
+                  <p className="text-[11px] text-amber-600 font-bold mt-1">{unresolvedClaimsCount} Unresolved Claims</p>
                 </div>
               </div>
 
-              {expenseTimeSeriesData.length === 0 ? (
-                <div className="p-8 text-center text-slate-500 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl my-4">No expense time-series data available for the selected range.</div>
-              ) : (
-                <div className="h-72 w-full pt-2">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={expenseTimeSeriesData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border opacity-40" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                      <YAxis stroke="#8b5cf6" tick={{ fontSize: 11 }} />
-                      <Tooltip
-                        contentStyle={{ backgroundColor: 'var(--background)', borderRadius: '12px', border: '1px solid var(--border)' }}
-                        formatter={(val: any) => [`$${Number(val).toLocaleString()}`]}
-                      />
-                      <Legend />
-                      <Line type="monotone" dataKey="totalCost" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4 }} name="Total Expense Requested ($)" />
-                      <Line type="monotone" dataKey="approvedCost" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} name="Approved Expenditure ($)" />
-                    </ComposedChart>
-                  </ResponsiveContainer>
+              {/* Trend Graph Column */}
+              <div className="lg:col-span-8 p-5 bg-card border rounded-2xl shadow-sm space-y-3 flex flex-col justify-between">
+                <div className="flex items-center justify-between border-b pb-3 border-border">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-xl bg-violet-100 dark:bg-violet-950 text-violet-600">
+                      <TrendingUp size={18} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm text-foreground">Operational Expenditure &amp; Expense Trend ($)</h3>
+                      <p className="text-[11px] text-muted-foreground">Daily breakdown of total operational expenses ($) and approved expenditure</p>
+                    </div>
+                  </div>
                 </div>
-              )}
+
+                {expenseTimeSeriesData.length === 0 ? (
+                  <div className="p-8 text-center text-slate-500 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl my-auto">No expense time-series data available for the selected range.</div>
+                ) : (
+                  <div className="h-full min-h-[280px] w-full pt-2">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={expenseTimeSeriesData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border opacity-40" />
+                        <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                        <YAxis stroke="#8b5cf6" tick={{ fontSize: 11 }} />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: 'var(--background)', borderRadius: '12px', border: '1px solid var(--border)' }}
+                          formatter={(val: any) => [`$${Number(val).toLocaleString()}`]}
+                        />
+                        <Legend />
+                        <Line type="monotone" dataKey="totalCost" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4 }} name="Total Expense Requested ($)" />
+                        <Line type="monotone" dataKey="approvedCost" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} name="Approved Expenditure ($)" />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* 2. Purchasing Intelligence Bar Charts Grid (Collapsible, Collapsed by Default) */}
@@ -1740,8 +1762,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
               })()}
             </div>
 
-              <OperationalExpensesWorkspace readOnly={true} />
-            </div>
+            <OperationalExpensesWorkspace readOnly={true} />
           </div>
         )}
 
@@ -2001,56 +2022,158 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                 {renderFilterBar()}
                 <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-200 pb-4 dark:border-slate-800">
                   <div>
-                    <h3 className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-white"><Wrench size={19} className="text-indigo-600" /> Maintenance Records</h3>
+                    <h3 className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-white"><Wrench size={19} className="text-indigo-600" /> Active Site Work Orders &amp; PM Cards</h3>
                     <p className="mt-1 text-xs text-slate-500">Read-only work orders, breakdown repair cards, preventive maintenance cards, and supporting files.</p>
                   </div>
-                  <span className="text-xs font-semibold text-slate-500">{scopedMaintenanceRecords.length} records</span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => { setMaintFilter('ALL'); setScopedmaintenancerecordspage(1); }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                        maintFilter === 'ALL'
+                          ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
+                          : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      All Records ({scopedMaintenanceRecords.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setMaintFilter('SCHEDULES'); setScopedmaintenancerecordspage(1); }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                        maintFilter === 'SCHEDULES'
+                          ? 'bg-slate-700 text-white shadow-xs'
+                          : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <Calendar size={13} /> Schedules Only ({scopedMaintenanceRecords.filter((r) => r.record_category === 'work_order').length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setMaintFilter('BREAKDOWN'); setScopedmaintenancerecordspage(1); }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                        maintFilter === 'BREAKDOWN'
+                          ? 'bg-orange-600 text-white shadow-xs'
+                          : 'bg-orange-50 hover:bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300'
+                      }`}
+                    >
+                      <Wrench size={13} /> Breakdown Cards ({scopedMaintenanceRecords.filter((r) => r.record_category === 'breakdown').length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setMaintFilter('PREVENTIVE'); setScopedmaintenancerecordspage(1); }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                        maintFilter === 'PREVENTIVE'
+                          ? 'bg-purple-700 text-white shadow-xs'
+                          : 'bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300'
+                      }`}
+                    >
+                      <Sparkles size={13} /> Preventive Cards ({scopedMaintenanceRecords.filter((r) => r.record_category === 'preventive').length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setMaintFilter('ASSESSMENTS'); setScopedmaintenancerecordspage(1); }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                        maintFilter === 'ASSESSMENTS'
+                          ? 'bg-blue-800 text-white shadow-xs'
+                          : 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300'
+                      }`}
+                    >
+                      <FileText size={13} /> Assessments ({scopedMaintenanceRecords.filter((r) => r.record_category === 'assessment').length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setMaintFilter('ACTIONS'); setScopedmaintenancerecordspage(1); }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${maintFilter === 'ACTIONS' ? 'bg-teal-700 text-white shadow-xs' : 'bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 text-teal-800 dark:text-teal-300'}`}
+                    >
+                      <CheckCircle2 size={13} /> Action Tracker ({scopedMaintenanceRecords.filter((r) => r.record_category === 'action_tracker').length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setMaintFilter('PM_TRACKER'); setScopedmaintenancerecordspage(1); }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${maintFilter === 'PM_TRACKER' ? 'bg-indigo-700 text-white shadow-xs' : 'bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300'}`}
+                    >
+                      <Calendar size={13} /> PM Tracker ({scopedMaintenanceRecords.filter((r) => r.record_category === 'pm_tracker').length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setMaintFilter('EQUIPMENT_REGISTER'); setScopedmaintenancerecordspage(1); }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${maintFilter === 'EQUIPMENT_REGISTER' ? 'bg-sky-700 text-white shadow-xs' : 'bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/40 text-sky-800 dark:text-sky-300'}`}
+                    >
+                      <Truck size={13} /> Equipment Register ({scopedMaintenanceRecords.filter((r) => r.record_category === 'equipment_register').length})
+                    </button>
+                  </div>
                 </div>
-                {scopedMaintenanceRecords.length === 0 ? (
-                  <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900">
-                    No work orders or maintenance job cards are available for this project and date range.
-                  </div>
-                ) : (
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {scopedMaintenanceRecords.slice((scopedMaintenanceRecordsPage - 1) * 15, scopedMaintenanceRecordsPage * 15).map((record: any) => {
-                      const asset = assets.find((item: any) => String(item.id) === String(record.asset_id));
-                      const equipment = asset
-                        ? [asset.asset_number || asset.code, asset.name || asset.title || asset.model].filter(Boolean).join(' — ')
-                        : record.pm_control?.equipment || record.job_control?.equipment || record.pm_control?.fleet_unit_id || record.job_control?.fleet_unit_id || '—';
-                      const date = record.scheduled_date || record.created_at;
-                      return (
-                        <article key={`${record.record_category}-${record.id}`} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <span className={`inline-flex border px-2 py-0.5 text-[10px] font-bold uppercase ${record.display_type === 'PREVENTIVE' ? 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300' : 'border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300'}`}>{record.record_kind}</span>
-                              <h4 className="mt-2 truncate text-sm font-bold text-slate-900 dark:text-white">{record.display_title || record.title || record.job_card_number || record.wo_number || 'Maintenance record'}</h4>
-                            </div>
-                            <StatusBadge status={record.status || 'OPEN'} />
+                {(() => {
+                  const filteredRecords = scopedMaintenanceRecords.filter((rec: any) => {
+                    if (maintFilter === 'SCHEDULES') return rec.record_category === 'work_order';
+                    if (maintFilter === 'BREAKDOWN') return rec.record_category === 'breakdown';
+                    if (maintFilter === 'PREVENTIVE') return rec.record_category === 'preventive';
+                    if (maintFilter === 'ASSESSMENTS') return rec.record_category === 'assessment';
+                    if (maintFilter === 'ACTIONS') return rec.record_category === 'action_tracker';
+                    if (maintFilter === 'PM_TRACKER') return rec.record_category === 'pm_tracker';
+                    if (maintFilter === 'EQUIPMENT_REGISTER') return rec.record_category === 'equipment_register';
+                    return true;
+                  });
+
+                  if (filteredRecords.length === 0) {
+                    return (
+                      <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900">
+                        {scopedMaintenanceRecords.length === 0
+                          ? 'No work orders or maintenance job cards are available for this project and date range.'
+                          : 'No maintenance records match the selected filter.'}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <>
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {filteredRecords.slice((scopedMaintenanceRecordsPage - 1) * 15, scopedMaintenanceRecordsPage * 15).map((record: any) => {
+                          const asset = assets.find((item: any) => String(item.id) === String(record.asset_id));
+                          const equipment = asset
+                            ? [asset.asset_number || asset.code, asset.name || asset.title || asset.model].filter(Boolean).join(' — ')
+                            : record.equipment || record.equipment_area || record.pm_control?.equipment || record.job_control?.equipment || record.pm_control?.fleet_unit_id || record.job_control?.fleet_unit_id || '—';
+                          const date = record.scheduled_date || record.due_date || record.action_date || record.report_date || record.created_at;
+                          const badgeStatus = record.record_category === 'pm_tracker' ? (record.pm_completed ? 'COMPLETED' : record.planned_actual || 'PLANNED') : record.status || 'OPEN';
+                          const recordDateLabel = record.scheduled_date ? 'Scheduled' : record.due_date ? 'Due' : record.action_date ? 'Action date' : record.report_date ? 'Report date' : 'Created';
+                          return (
+                            <article key={`${record.record_category}-${record.id}`} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <span className={`inline-flex border px-2 py-0.5 text-[10px] font-bold uppercase ${record.display_type === 'PREVENTIVE' ? 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300' : record.record_category === 'assessment' ? 'border-indigo-200 bg-indigo-50 text-indigo-800 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300' : record.record_category === 'action_tracker' ? 'border-teal-200 bg-teal-50 text-teal-800 dark:border-teal-900 dark:bg-teal-950/40 dark:text-teal-300' : record.record_category === 'equipment_register' ? 'border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300' : 'border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300'}`}>{record.record_kind}</span>
+                                  <h4 className="mt-2 truncate text-sm font-bold text-slate-900 dark:text-white">{record.display_title || record.title || record.job_card_number || record.wo_number || 'Maintenance record'}</h4>
+                                </div>
+                                <StatusBadge status={badgeStatus} />
+                              </div>
+                              <p className="text-xs text-slate-600 dark:text-slate-400">Equipment: <span className="font-semibold">{equipment}</span></p>
+                              <p className="line-clamp-3 min-h-10 whitespace-pre-line text-xs text-slate-600 dark:text-slate-400">{record.description || record.reported_failure || record.corrective_action || record.notes || 'No notes provided.'}</p>
+                              <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-[11px] text-slate-500 dark:border-slate-800">
+                                <span>{recordDateLabel}: {date ? new Date(date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</span>
+                                <span>{record.priority || record.job_card_number || record.wo_number || ''}</span>
+                              </div>
+                              <button type="button" onClick={() => record.record_category === 'assessment' ? setViewingMaintenanceAssessment(record) : ['action_tracker', 'pm_tracker', 'equipment_register'].includes(record.record_category) ? setViewingMaintenanceTracker(record) : setSelectedMaintenanceRecord({ record, kind: record.record_category })} className="inline-flex items-center gap-1.5 border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+                                <Eye size={14} /> View details and files
+                              </button>
+                            </article>
+                          );
+                        })}
+                      </div>
+                      {filteredRecords.length > 15 && (
+                        <div className="flex items-center justify-between border-t border-slate-200 pt-3 dark:border-slate-800">
+                          <span className="text-xs text-slate-500 font-medium">
+                            Showing {Math.min(1 + (scopedMaintenanceRecordsPage - 1) * 15, filteredRecords.length)} - {Math.min(scopedMaintenanceRecordsPage * 15, filteredRecords.length)} of {filteredRecords.length} records
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <button type="button" onClick={() => setScopedmaintenancerecordspage((page) => Math.max(1, page - 1))} disabled={scopedMaintenanceRecordsPage === 1} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:hover:bg-slate-800">Prev</button>
+                            <span className="px-2 text-xs font-bold">Page {scopedMaintenanceRecordsPage} of {Math.max(1, Math.ceil(filteredRecords.length / 15))}</span>
+                            <button type="button" onClick={() => setScopedmaintenancerecordspage((page) => Math.min(Math.ceil(filteredRecords.length / 15), page + 1))} disabled={scopedMaintenanceRecordsPage >= Math.ceil(filteredRecords.length / 15)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:hover:bg-slate-800">Next</button>
                           </div>
-                          <p className="text-xs text-slate-600 dark:text-slate-400">Equipment: <span className="font-semibold">{equipment}</span></p>
-                          <p className="line-clamp-3 min-h-10 whitespace-pre-line text-xs text-slate-600 dark:text-slate-400">{record.description || record.reported_failure || record.corrective_action || record.notes || 'No notes provided.'}</p>
-                          <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-[11px] text-slate-500 dark:border-slate-800">
-                            <span>{record.scheduled_date ? 'Scheduled' : 'Created'}: {date ? new Date(date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</span>
-                            <span>{record.priority || record.job_card_number || record.wo_number || ''}</span>
-                          </div>
-                          <button type="button" onClick={() => setSelectedMaintenanceRecord({ record, kind: record.record_category })} className="inline-flex items-center gap-1.5 border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
-                            <Eye size={14} /> View details and files
-                          </button>
-                        </article>
-                      );
-                    })}
-                  </div>
-                )}
-                {scopedMaintenanceRecords.length > 15 && <div className="flex items-center justify-between border-t border-slate-200 pt-3 dark:border-slate-800">
-                  <span className="text-xs text-slate-500 font-medium">
-                    Showing {Math.min(1 + (scopedMaintenanceRecordsPage - 1) * 15, scopedMaintenanceRecords.length)} - {Math.min(scopedMaintenanceRecordsPage * 15, scopedMaintenanceRecords.length)} of {scopedMaintenanceRecords.length} records
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => setScopedmaintenancerecordspage((page) => Math.max(1, page - 1))} disabled={scopedMaintenanceRecordsPage === 1} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:hover:bg-slate-800">Prev</button>
-                    <span className="px-2 text-xs font-bold">Page {scopedMaintenanceRecordsPage} of {Math.max(1, Math.ceil(scopedMaintenanceRecords.length / 15))}</span>
-                    <button type="button" onClick={() => setScopedmaintenancerecordspage((page) => Math.min(Math.ceil(scopedMaintenanceRecords.length / 15), page + 1))} disabled={scopedMaintenanceRecordsPage >= Math.ceil(scopedMaintenanceRecords.length / 15)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:hover:bg-slate-800">Next</button>
-                  </div>
-                </div>}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
                 {selectedMaintenanceRecord && (
                   <MaintenanceJobCardDetailsModal
                     record={selectedMaintenanceRecord.record}
@@ -2060,6 +2183,18 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                     onSaved={() => undefined}
                   />
                 )}
+                {viewingMaintenanceAssessment && <MaintenanceAssessmentReportDetailsModal record={viewingMaintenanceAssessment} projects={projects} editable={false} onEdit={() => undefined} onClose={() => setViewingMaintenanceAssessment(null)} />}
+                {viewingMaintenanceTracker && <TrackerDetailsModal
+                  title={viewingMaintenanceTracker.record_category === 'action_tracker' ? 'Action tracker details' : viewingMaintenanceTracker.record_category === 'pm_tracker' ? 'PM tracker details' : 'Equipment register details'}
+                  fields={viewingMaintenanceTracker.record_category === 'action_tracker' ? [
+                    ['Date', viewingMaintenanceTracker.action_date], ['Equipment / area', viewingMaintenanceTracker.equipment_area], ['Issue / finding', viewingMaintenanceTracker.issue_finding], ['Action taken', viewingMaintenanceTracker.action_taken], ['Parts required', viewingMaintenanceTracker.parts_required], ['Responsible', viewingMaintenanceTracker.responsible_name], ['Priority', viewingMaintenanceTracker.priority], ['Status', viewingMaintenanceTracker.status], ['Completion date', viewingMaintenanceTracker.completion_date], ['Remarks', viewingMaintenanceTracker.remarks],
+                  ] : viewingMaintenanceTracker.record_category === 'pm_tracker' ? [
+                    ['Equipment', viewingMaintenanceTracker.equipment], ['Service type', viewingMaintenanceTracker.service_type], ['Due date', viewingMaintenanceTracker.due_date], ['Planned/actual', viewingMaintenanceTracker.planned_actual], ['PM completed', viewingMaintenanceTracker.pm_completed ? 'Yes' : 'No'], ['Defects found', viewingMaintenanceTracker.defects_found], ['Parts required', viewingMaintenanceTracker.parts_required], ['Technician', viewingMaintenanceTracker.technician_name], ['Remarks', viewingMaintenanceTracker.remarks],
+                  ] : [
+                    ['Equipment', viewingMaintenanceTracker.equipment], ['Unit no.', viewingMaintenanceTracker.unit_number], ['Type', viewingMaintenanceTracker.equipment_type], ['Status', viewingMaintenanceTracker.status], ['Open defects', viewingMaintenanceTracker.open_defects], ['Action required', viewingMaintenanceTracker.action_required], ['Priority', viewingMaintenanceTracker.priority], ['Remarks', viewingMaintenanceTracker.remarks],
+                  ]}
+                  readOnly onClose={() => setViewingMaintenanceTracker(null)}
+                />}
               </div>
             )}
           </div>

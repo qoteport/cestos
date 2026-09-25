@@ -71,7 +71,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         aria-live="polite"
       >
         <div className="flex flex-col items-center gap-4">
-          <AppLogo size={48} className="animate-pulse" />
+          <AppLogo size={80} className="animate-pulse" />
           <div className="flex items-center gap-2.5 text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
             <span>Restoring your workspace…</span>
