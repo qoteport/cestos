@@ -117,24 +117,25 @@ export default function AppDateTimePicker({
     }
   }, [effectiveValue, parsedValue, mode]);
 
-  // Calculate popover positioning dynamically (smart portal + flip)
+  // Calculate popover positioning dynamically (smart portal + flip + zero overlap)
   const updatePosition = useCallback(() => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
+    const spaceBelow = window.innerHeight - rect.bottom - 12;
+    const spaceAbove = rect.top - 12;
 
-    const estimatedHeight = mode === 'time' ? 240 : mode === 'datetime' ? 460 : 400;
+    const estimatedHeight = mode === 'time' ? 240 : mode === 'datetime' ? 440 : 380;
     const openUpwards = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
 
-    const availableHeight = openUpwards ? spaceAbove - 16 : spaceBelow - 16;
-    const targetHeight = Math.min(estimatedHeight, Math.max(280, availableHeight));
-
     let top: number;
+    let maxHeight: number;
+
     if (openUpwards) {
-      top = Math.max(8, rect.top - targetHeight - 4);
+      maxHeight = Math.min(estimatedHeight, Math.max(160, spaceAbove));
+      top = Math.max(8, rect.top - maxHeight - 6);
     } else {
-      top = rect.bottom + 4;
+      maxHeight = Math.min(estimatedHeight, Math.max(160, spaceBelow));
+      top = rect.bottom + 6;
     }
 
     const popoverWidth = Math.min(window.innerWidth - 24, 360);
@@ -148,7 +149,7 @@ export default function AppDateTimePicker({
       top: `${top}px`,
       left: `${left}px`,
       width: `${popoverWidth}px`,
-      maxHeight: `${Math.min(560, Math.max(280, availableHeight))}px`,
+      maxHeight: `${maxHeight}px`,
       zIndex: 2147483647,
     });
   }, [mode]);

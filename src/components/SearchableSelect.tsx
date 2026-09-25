@@ -70,21 +70,25 @@ export default function SearchableSelect({
     return lbl.includes(q) || sub.includes(q) || val.includes(q);
   });
 
-  // Calculate dropdown positioning dynamically (smart portal + flip)
+  // Calculate dropdown positioning dynamically (smart portal + flip + zero overlap)
   const updatePosition = useCallback(() => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
+    const spaceBelow = window.innerHeight - rect.bottom - 12;
+    const spaceAbove = rect.top - 12;
 
-    const estimatedHeight = Math.min(300, Math.max(120, filteredOptions.length * 38 + (shouldShowSearch ? 50 : 10)));
+    const estimatedHeight = Math.min(280, Math.max(120, filteredOptions.length * 38 + (shouldShowSearch ? 50 : 10)));
     const openUpwards = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
 
     let top: number;
+    let maxHeight: number;
+
     if (openUpwards) {
-      top = Math.max(8, rect.top - estimatedHeight - 4);
+      maxHeight = Math.min(estimatedHeight, Math.max(120, spaceAbove));
+      top = Math.max(8, rect.top - maxHeight - 6);
     } else {
-      top = rect.bottom + 4;
+      maxHeight = Math.min(estimatedHeight, Math.max(120, spaceBelow));
+      top = rect.bottom + 6;
     }
 
     const popoverWidth = Math.max(rect.width, 220);
@@ -98,7 +102,7 @@ export default function SearchableSelect({
       top: `${top}px`,
       left: `${left}px`,
       width: `${popoverWidth}px`,
-      maxHeight: `${Math.min(320, openUpwards ? spaceAbove - 16 : spaceBelow - 16)}px`,
+      maxHeight: `${maxHeight}px`,
       zIndex: 2147483647,
     });
   }, [filteredOptions.length, shouldShowSearch]);
@@ -390,17 +394,21 @@ export function MultiSearchableSelect({
   const updatePosition = useCallback(() => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
+    const spaceBelow = window.innerHeight - rect.bottom - 12;
+    const spaceAbove = rect.top - 12;
 
-    const estimatedHeight = Math.min(300, Math.max(140, filteredOptions.length * 38 + 50));
+    const estimatedHeight = Math.min(280, Math.max(140, filteredOptions.length * 38 + 50));
     const openUpwards = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
 
     let top: number;
+    let maxHeight: number;
+
     if (openUpwards) {
-      top = Math.max(8, rect.top - estimatedHeight - 4);
+      maxHeight = Math.min(estimatedHeight, Math.max(120, spaceAbove));
+      top = Math.max(8, rect.top - maxHeight - 6);
     } else {
-      top = rect.bottom + 4;
+      maxHeight = Math.min(estimatedHeight, Math.max(120, spaceBelow));
+      top = rect.bottom + 6;
     }
 
     const popoverWidth = Math.max(rect.width, 240);
@@ -414,7 +422,7 @@ export function MultiSearchableSelect({
       top: `${top}px`,
       left: `${left}px`,
       width: `${popoverWidth}px`,
-      maxHeight: `${Math.min(320, openUpwards ? spaceAbove - 16 : spaceBelow - 16)}px`,
+      maxHeight: `${maxHeight}px`,
       zIndex: 2147483647,
     });
   }, [filteredOptions.length]);
