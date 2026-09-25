@@ -8,6 +8,7 @@ import { apiFetch, apiFetchBlob } from '@/lib/api';
 import { useAuth } from './AuthProvider';
 import { Row, title, rows, display, useData, State, Table, Facts, Modal } from './DataUI';
 import RecordForm from './RecordForm';
+import SearchableSelect from './SearchableSelect';
 import AssetDetailView from './AssetDetailView';
 import EmployeeDetailView from './EmployeeDetailView';
 import EmployeeWizardForm from './EmployeeWizardForm';
@@ -471,54 +472,60 @@ function ResourceList({ resource, readOnly }: { resource: string; readOnly?: boo
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search employee name, number, email..."
                 />
-                <select
-                  aria-label="Filter by department"
-                  className="input-field w-auto min-w-[150px] bg-background text-xs"
-                  value={deptFilter}
-                  onChange={(e) => {
-                    setDeptFilter(e.target.value);
-                    setPage(1);
-                  }}
-                >
-                  <option value="">All Departments</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Filter by position"
-                  className="input-field w-auto min-w-[150px] bg-background text-xs"
-                  value={posFilter}
-                  onChange={(e) => {
-                    setPosFilter(e.target.value);
-                    setPage(1);
-                  }}
-                >
-                  <option value="">All Positions</option>
-                  {positions.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.title || p.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Filter by user role"
-                  className="input-field w-auto min-w-[150px] bg-background text-xs"
-                  value={roleFilter}
-                  onChange={(e) => {
-                    setRoleFilter(e.target.value);
-                    setPage(1);
-                  }}
-                >
-                  <option value="">All User Roles</option>
-                  {roles.map((r) => (
-                    <option key={r.id || r.code || r.name} value={r.name || r.code || r.id}>
-                      {r.name || r.title || r.code}
-                    </option>
-                  ))}
-                </select>
+                <div className="w-44">
+                  <SearchableSelect
+                    ariaLabel="Filter by department"
+                    value={deptFilter}
+                    onChange={(val) => {
+                      setDeptFilter(val);
+                      setPage(1);
+                    }}
+                    options={[
+                      { value: '', label: 'All Departments' },
+                      ...departments.map((d) => ({
+                        value: String(d.id),
+                        label: d.name,
+                      })),
+                    ]}
+                    searchable={departments.length > 5}
+                  />
+                </div>
+                <div className="w-44">
+                  <SearchableSelect
+                    ariaLabel="Filter by position"
+                    value={posFilter}
+                    onChange={(val) => {
+                      setPosFilter(val);
+                      setPage(1);
+                    }}
+                    options={[
+                      { value: '', label: 'All Positions' },
+                      ...positions.map((p) => ({
+                        value: String(p.id),
+                        label: p.title || p.name,
+                      })),
+                    ]}
+                    searchable={positions.length > 5}
+                  />
+                </div>
+                <div className="w-44">
+                  <SearchableSelect
+                    ariaLabel="Filter by user role"
+                    value={roleFilter}
+                    onChange={(val) => {
+                      setRoleFilter(val);
+                      setPage(1);
+                    }}
+                    options={[
+                      { value: '', label: 'All User Roles' },
+                      ...roles.map((r) => ({
+                        value: String(r.name || r.code || r.id),
+                        label: String(r.name || r.title || r.code),
+                      })),
+                    ]}
+                    searchable={roles.length > 5}
+                  />
+                </div>
               
                 {(search || deptFilter || posFilter || roleFilter) && (
                   <button

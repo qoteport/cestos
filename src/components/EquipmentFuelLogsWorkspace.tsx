@@ -7,6 +7,8 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianG
 import { apiFetch } from '@/lib/api';
 import { Row, display, Modal } from './DataUI';
 import RecordForm from './RecordForm';
+import SearchableSelect from './SearchableSelect';
+import AppDateTimePicker from './ui/AppDateTimePicker';
 
 export default function EquipmentFuelLogsWorkspace() {
   const [loading, setLoading] = useState(true);
@@ -397,28 +399,35 @@ export default function EquipmentFuelLogsWorkspace() {
 
           <div className="flex items-center gap-2">
             <Filter size={14} className="text-muted-foreground shrink-0" />
-            <select
-              value={assetFilter}
-              onChange={(e) => setAssetFilter(e.target.value)}
-              className="input-field text-xs py-1.5 w-48 bg-background"
-            >
-              <option value="ALL">All Equipment Fleet</option>
-              {assets.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.asset_number ? `${a.asset_number} — ` : ''}{a.name}
-                </option>
-              ))}
-            </select>
+            <div className="w-48">
+              <SearchableSelect
+                value={assetFilter}
+                onChange={(val) => setAssetFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Equipment Fleet' },
+                  ...assets.map((a) => ({
+                    value: String(a.id),
+                    label: `${a.asset_number ? `${a.asset_number} — ` : ''}${a.name}`,
+                  })),
+                ]}
+                searchable={assets.length > 5}
+                ariaLabel="Filter Equipment Fleet"
+              />
+            </div>
 
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="input-field text-xs py-1.5 w-36 bg-background"
-            >
-              <option value="ALL">All Fuel Types</option>
-              <option value="DIESEL">Diesel</option>
-              <option value="PETROL">Petrol</option>
-            </select>
+            <div className="w-36">
+              <SearchableSelect
+                value={typeFilter}
+                onChange={(val) => setTypeFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Fuel Types' },
+                  { value: 'DIESEL', label: 'Diesel' },
+                  { value: 'PETROL', label: 'Petrol' },
+                ]}
+                searchable={false}
+                ariaLabel="Filter Fuel Type"
+              />
+            </div>
 
             <button
               type="button"
@@ -632,11 +641,11 @@ export default function EquipmentFuelLogsWorkspace() {
                   </div>
                   <div>
                     <label className="text-[11px] font-semibold block mb-1">Recorded At</label>
-                    <input
-                      type="datetime-local"
+                    <AppDateTimePicker
+                      mode="datetime"
                       value={subRecordedAt}
-                      onChange={(e) => setSubRecordedAt(e.target.value)}
-                      className="input-field text-xs"
+                      onChange={(val) => setSubRecordedAt(val)}
+                      placeholder="Select date & time"
                     />
                   </div>
                   <div>

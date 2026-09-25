@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { Plus, Download, SlidersHorizontal, Filter, X } from 'lucide-react';
 import { Modal, useData, rows } from '@/components/DataUI';
+import SearchableSelect from '@/components/SearchableSelect';
+import AppDateTimePicker from '@/components/ui/AppDateTimePicker';
 
 interface ProjectsPageHeaderProps {
   onAddProject?: () => void;
@@ -163,70 +165,73 @@ export default function ProjectsPageHeader({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold mb-1 text-foreground">Start Date (Date From)</label>
-                <input
-                  type="date"
-                  className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+                <AppDateTimePicker
+                  mode="date"
                   value={draftDateFrom}
-                  onChange={(e) => setDraftDateFrom(e.target.value)}
+                  onChange={setDraftDateFrom}
+                  placeholder="Select start date"
                 />
               </div>
               <div>
                 <label className="block font-semibold mb-1 text-foreground">End Date (Date To)</label>
-                <input
-                  type="date"
-                  className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+                <AppDateTimePicker
+                  mode="date"
                   value={draftDateTo}
-                  onChange={(e) => setDraftDateTo(e.target.value)}
+                  onChange={setDraftDateTo}
+                  placeholder="Select end date"
                 />
               </div>
             </div>
 
             <div>
               <label className="block font-semibold mb-1 text-foreground">Project Operational Status</label>
-              <select
-                className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'All Operational Statuses' },
+                  { value: 'ACTIVE', label: 'Active' },
+                  { value: 'MOBILIZING', label: 'Mobilizing' },
+                  { value: 'PLANNING', label: 'Planning' },
+                  { value: 'PAUSED', label: 'Paused' },
+                  { value: 'COMPLETED', label: 'Completed' },
+                ]}
                 value={draftStatus}
-                onChange={(e) => setDraftStatus(e.target.value)}
-              >
-                <option value="">All Operational Statuses</option>
-                <option value="ACTIVE">Active</option>
-                <option value="MOBILIZING">Mobilizing</option>
-                <option value="PLANNING">Planning</option>
-                <option value="PAUSED">Paused</option>
-                <option value="COMPLETED">Completed</option>
-              </select>
+                onChange={setDraftStatus}
+                searchable={false}
+              />
             </div>
 
             <div>
               <label className="block font-semibold mb-1 text-foreground">Client Organization</label>
-              <select
-                className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'All Client Accounts' },
+                  ...clientList.map((c: any) => ({
+                    value: c.id,
+                    label: `${c.name}${c.code ? ` (${c.code})` : ''}`,
+                  })),
+                ]}
                 value={draftClientId}
-                onChange={(e) => setDraftClientId(e.target.value)}
-              >
-                <option value="">All Client Accounts</option>
-                {clientList.map((c: any) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} {c.code ? `(${c.code})` : ''}
-                  </option>
-                ))}
-              </select>
+                onChange={setDraftClientId}
+                searchable={clientList.length > 5}
+                placeholder="Select client..."
+              />
             </div>
 
             <div>
               <label className="block font-semibold mb-1 text-foreground">Site Location / Territory</label>
-              <select
-                className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'All Site Locations' },
+                  ...locationList.map((loc: any) => ({
+                    value: loc.id,
+                    label: `${loc.name}${loc.code ? ` (${loc.code})` : ''}`,
+                  })),
+                ]}
                 value={draftLocationId}
-                onChange={(e) => setDraftLocationId(e.target.value)}
-              >
-                <option value="">All Site Locations</option>
-                {locationList.map((loc: any) => (
-                  <option key={loc.id} value={loc.id}>
-                    {loc.name} {loc.code ? `(${loc.code})` : ''}
-                  </option>
-                ))}
-              </select>
+                onChange={setDraftLocationId}
+                searchable={locationList.length > 5}
+                placeholder="Select location..."
+              />
             </div>
 
             <div className="flex justify-end gap-2 pt-3 border-t">

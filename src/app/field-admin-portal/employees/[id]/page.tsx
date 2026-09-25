@@ -21,17 +21,14 @@ export default function FieldAdminEmployeeDetailPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-6 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-4">
-        <div className="flex items-center justify-between border-b pb-3 border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-start border-b pb-3 border-slate-200 dark:border-slate-800">
           <button
             type="button"
             onClick={() => router.push('/field-admin-portal')}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 transition"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 transition text-left justify-start"
           >
             <ArrowLeft size={16} /> Back to Field Admin Portal
           </button>
-          <span className="text-xs font-bold bg-orange-50 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 px-3 py-1 rounded-full border border-orange-200 dark:border-orange-800">
-            Field Admin Operations View
-          </span>
         </div>
 
         <EmployeeDetailView employeeId={id} isFieldAdmin={true} hideBackButton={true} />

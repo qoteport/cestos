@@ -6,6 +6,7 @@ import { Users, Calendar, Clock, Briefcase, Filter, Search, RefreshCw, CheckCirc
 import { apiFetch } from '@/lib/api';
 import { Row, display, Modal } from './DataUI';
 import RecordForm from './RecordForm';
+import SearchableSelect from './SearchableSelect';
 
 function getEmployeeFullName(emp: Row): string {
   if (!emp) return 'Employee';
@@ -261,26 +262,35 @@ export default function EmployeeAvailabilityWorkspace() {
 
           <div className="flex items-center gap-2">
             <Filter size={14} className="text-muted-foreground shrink-0" />
-            <select
-              value={deptFilter}
-              onChange={e => setDeptFilter(e.target.value)}
-              className="input-field text-xs py-1.5 w-44 bg-background"
-            >
-              <option value="ALL">All Departments</option>
-              {departments.map(d => (
-                <option key={d.id} value={d.id}>{d.name || d.title}</option>
-              ))}
-            </select>
+            <div className="w-44">
+              <SearchableSelect
+                value={deptFilter}
+                onChange={(val) => setDeptFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Departments' },
+                  ...departments.map((d) => ({
+                    value: String(d.id),
+                    label: String(d.name || d.title || 'Department'),
+                  })),
+                ]}
+                searchable={departments.length > 5}
+                ariaLabel="Filter Department"
+              />
+            </div>
 
-            <select
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value as any)}
-              className="input-field text-xs py-1.5 w-44 bg-background"
-            >
-              <option value="ALL">All Availability Statuses</option>
-              <option value="AVAILABLE">Available Only</option>
-              <option value="ON_LEAVE">On Leave / Unavailable</option>
-            </select>
+            <div className="w-48">
+              <SearchableSelect
+                value={statusFilter}
+                onChange={(val) => setStatusFilter(val as any)}
+                options={[
+                  { value: 'ALL', label: 'All Availability Statuses' },
+                  { value: 'AVAILABLE', label: 'Available Only' },
+                  { value: 'ON_LEAVE', label: 'On Leave / Unavailable' },
+                ]}
+                searchable={false}
+                ariaLabel="Filter Availability Status"
+              />
+            </div>
 
             {(searchQuery || deptFilter !== 'ALL' || statusFilter !== 'ALL') && (
               <button

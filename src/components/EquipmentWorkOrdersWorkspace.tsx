@@ -8,6 +8,8 @@ import { FileText, ArrowLeft, RefreshCw, Plus, Search, Filter, CheckCircle, Cloc
 import { apiFetch } from '@/lib/api';
 import { Row, display, Modal } from './DataUI';
 import RecordForm from './RecordForm';
+import SearchableSelect from './SearchableSelect';
+import AppDateTimePicker from './ui/AppDateTimePicker';
 
 export default function EquipmentWorkOrdersWorkspace() {
   const { notify } = useAppFeedback();
@@ -269,41 +271,52 @@ export default function EquipmentWorkOrdersWorkspace() {
 
           <div className="flex items-center gap-2">
             <Filter size={14} className="text-muted-foreground shrink-0" />
-            <select
-              value={assetFilter}
-              onChange={(e) => setAssetFilter(e.target.value)}
-              className="input-field text-xs py-1.5 w-44 bg-background"
-            >
-              <option value="ALL">All Equipment Fleet</option>
-              {assets.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.asset_number ? `${a.asset_number} — ` : ''}{a.name}
-                </option>
-              ))}
-            </select>
+            <div className="w-44">
+              <SearchableSelect
+                value={assetFilter}
+                onChange={(val) => setAssetFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Equipment Fleet' },
+                  ...assets.map((a) => ({
+                    value: String(a.id),
+                    label: `${a.asset_number ? `${a.asset_number} — ` : ''}${a.name}`,
+                  })),
+                ]}
+                searchable={assets.length > 5}
+                ariaLabel="Filter Equipment Fleet"
+              />
+            </div>
 
-            <select
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
-              className="input-field text-xs py-1.5 w-36 bg-background"
-            >
-              <option value="ALL">All Priorities</option>
-              <option value="LOW">Low</option>
-              <option value="NORMAL">Normal</option>
-              <option value="HIGH">High</option>
-              <option value="CRITICAL">Critical</option>
-            </select>
+            <div className="w-36">
+              <SearchableSelect
+                value={priorityFilter}
+                onChange={(val) => setPriorityFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Priorities' },
+                  { value: 'LOW', label: 'Low' },
+                  { value: 'NORMAL', label: 'Normal' },
+                  { value: 'HIGH', label: 'High' },
+                  { value: 'CRITICAL', label: 'Critical' },
+                ]}
+                searchable={false}
+                ariaLabel="Filter Priority"
+              />
+            </div>
 
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="input-field text-xs py-1.5 w-40 bg-background"
-            >
-              <option value="ALL">All Statuses</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="SCHEDULED">Scheduled</option>
-              <option value="COMPLETED">Completed</option>
-            </select>
+            <div className="w-40">
+              <SearchableSelect
+                value={statusFilter}
+                onChange={(val) => setStatusFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Statuses' },
+                  { value: 'IN_PROGRESS', label: 'In Progress' },
+                  { value: 'SCHEDULED', label: 'Scheduled' },
+                  { value: 'COMPLETED', label: 'Completed' },
+                ]}
+                searchable={false}
+                ariaLabel="Filter Status"
+              />
+            </div>
 
             {(search || assetFilter !== 'ALL' || priorityFilter !== 'ALL' || statusFilter !== 'ALL') && (
               <button
@@ -437,18 +450,17 @@ export default function EquipmentWorkOrdersWorkspace() {
           <form onSubmit={handleCreateWorkOrder} className="space-y-4 text-xs">
             <div className="space-y-1">
               <label className="font-semibold text-foreground block">Target Equipment Asset *</label>
-              <select
-                value={newWorkOrder.asset_id || (assets[0]?.id || '')}
-                onChange={(e) => setNewWorkOrder({ ...newWorkOrder, asset_id: e.target.value })}
-                className="input-field text-xs bg-background w-full"
+              <SearchableSelect
+                value={newWorkOrder.asset_id || (assets[0]?.id ? String(assets[0]?.id) : '')}
+                onChange={(val) => setNewWorkOrder({ ...newWorkOrder, asset_id: val })}
+                options={assets.map((a) => ({
+                  value: String(a.id),
+                  label: `${a.asset_number ? `${a.asset_number} — ` : ''}${a.name}`,
+                }))}
+                searchable={assets.length > 5}
                 required
-              >
-                {assets.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.asset_number ? `${a.asset_number} — ` : ''}{a.name}
-                  </option>
-                ))}
-              </select>
+                ariaLabel="Target Equipment Asset"
+              />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -466,16 +478,18 @@ export default function EquipmentWorkOrdersWorkspace() {
 
               <div className="space-y-1">
                 <label className="font-semibold text-foreground block">Priority Level</label>
-                <select
+                <SearchableSelect
                   value={newWorkOrder.priority}
-                  onChange={(e) => setNewWorkOrder({ ...newWorkOrder, priority: e.target.value })}
-                  className="input-field text-xs bg-background w-full"
-                >
-                  <option value="LOW">Low Priority</option>
-                  <option value="NORMAL">Normal Priority</option>
-                  <option value="HIGH">High Priority</option>
-                  <option value="CRITICAL">Critical Priority</option>
-                </select>
+                  onChange={(val) => setNewWorkOrder({ ...newWorkOrder, priority: val })}
+                  options={[
+                    { value: 'LOW', label: 'Low Priority' },
+                    { value: 'NORMAL', label: 'Normal Priority' },
+                    { value: 'HIGH', label: 'High Priority' },
+                    { value: 'CRITICAL', label: 'Critical Priority' },
+                  ]}
+                  searchable={false}
+                  ariaLabel="Priority Level"
+                />
               </div>
             </div>
 
@@ -493,29 +507,29 @@ export default function EquipmentWorkOrdersWorkspace() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="font-semibold text-foreground block">Scheduled Execution Date</label>
-                <input
-                  type="date"
+                <AppDateTimePicker
+                  mode="date"
                   value={newWorkOrder.scheduled_date}
-                  onChange={(e) => setNewWorkOrder({ ...newWorkOrder, scheduled_date: e.target.value })}
-                  className="input-field text-xs w-full"
+                  onChange={(val) => setNewWorkOrder({ ...newWorkOrder, scheduled_date: val })}
+                  placeholder="Select scheduled date"
                 />
               </div>
 
               <div className="space-y-1">
                 <label className="font-semibold text-foreground block">Assigned Lead Technician / Individual</label>
-                <select
+                <SearchableSelect
                   value={newWorkOrder.assigned_employee_id}
-                  onChange={(e) => setNewWorkOrder({ ...newWorkOrder, assigned_employee_id: e.target.value })}
-                  className="input-field text-xs bg-background w-full"
-                >
-                  <option value="">Unassigned / In-house Maintenance Team</option>
-                  {employees.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.first_name ? `${emp.first_name} ${emp.last_name}`.trim() : emp.name || emp.email}
-                      {emp.job_title ? ` (${emp.job_title})` : ''}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setNewWorkOrder({ ...newWorkOrder, assigned_employee_id: val })}
+                  options={[
+                    { value: '', label: 'Unassigned / In-house Maintenance Team' },
+                    ...employees.map((emp) => ({
+                      value: String(emp.id),
+                      label: `${emp.first_name ? `${emp.first_name} ${emp.last_name}`.trim() : emp.name || emp.email}${emp.job_title ? ` (${emp.job_title})` : ''}`,
+                    })),
+                  ]}
+                  searchable={employees.length > 5}
+                  ariaLabel="Assigned Lead Technician"
+                />
               </div>
             </div>
 

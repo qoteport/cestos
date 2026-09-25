@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { X, ShieldCheck, ShieldAlert, AlertTriangle, Info, Calendar, MapPin, User, FileText, Printer, Pencil, Save } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
+import SearchableSelect from './SearchableSelect';
 
 function StatusBadge({ status }: { status: string }) {
   const s = (status || '').toUpperCase();
@@ -253,50 +254,56 @@ export default function IncidentDetailModal({
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Incident Type / Category *
                   </label>
-                  <select
+                  <SearchableSelect
                     value={editForm.incident_type}
-                    onChange={(e) => setEditForm({ ...editForm, incident_type: e.target.value })}
-                    className="w-full border rounded-xl p-2.5 bg-slate-50 dark:bg-slate-800 font-medium text-xs focus:ring-2 focus:ring-orange-500 focus:outline-none"
-                  >
-                    <option value="NEAR_MISS">Near Miss</option>
-                    <option value="INJURY">Injury / First Aid</option>
-                    <option value="HAZARD_OBSERVATION">Hazard Observation</option>
-                    <option value="ENVIRONMENTAL_SPILL">Environmental Spill</option>
-                    <option value="PROPERTY_DAMAGE">Property / Equipment Damage</option>
-                    <option value="SECURITY">Security Incident</option>
-                  </select>
+                    onChange={(val) => setEditForm({ ...editForm, incident_type: val })}
+                    options={[
+                      { value: 'NEAR_MISS', label: 'Near Miss' },
+                      { value: 'INJURY', label: 'Injury / First Aid' },
+                      { value: 'HAZARD_OBSERVATION', label: 'Hazard Observation' },
+                      { value: 'ENVIRONMENTAL_SPILL', label: 'Environmental Spill' },
+                      { value: 'PROPERTY_DAMAGE', label: 'Property / Equipment Damage' },
+                      { value: 'SECURITY', label: 'Security Incident' },
+                    ]}
+                    searchable={false}
+                    ariaLabel="Incident Type / Category"
+                  />
                 </div>
 
                 <div>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Severity Level *
                   </label>
-                  <select
+                  <SearchableSelect
                     value={editForm.severity}
-                    onChange={(e) => setEditForm({ ...editForm, severity: e.target.value })}
-                    className="w-full border rounded-xl p-2.5 bg-slate-50 dark:bg-slate-800 font-medium text-xs focus:ring-2 focus:ring-orange-500 focus:outline-none"
-                  >
-                    <option value="LOW">Low</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="HIGH">High</option>
-                    <option value="CRITICAL">Critical</option>
-                  </select>
+                    onChange={(val) => setEditForm({ ...editForm, severity: val })}
+                    options={[
+                      { value: 'LOW', label: 'Low' },
+                      { value: 'MEDIUM', label: 'Medium' },
+                      { value: 'HIGH', label: 'High' },
+                      { value: 'CRITICAL', label: 'Critical' },
+                    ]}
+                    searchable={false}
+                    ariaLabel="Severity Level"
+                  />
                 </div>
 
                 <div>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Incident Status *
                   </label>
-                  <select
+                  <SearchableSelect
                     value={editForm.status}
-                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                    className="w-full border rounded-xl p-2.5 bg-slate-50 dark:bg-slate-800 font-medium text-xs focus:ring-2 focus:ring-orange-500 focus:outline-none"
-                  >
-                    <option value="OPEN">Open</option>
-                    <option value="UNDER_INVESTIGATION">Under Investigation</option>
-                    <option value="RESOLVED">Resolved</option>
-                    <option value="CLOSED">Closed</option>
-                  </select>
+                    onChange={(val) => setEditForm({ ...editForm, status: val })}
+                    options={[
+                      { value: 'OPEN', label: 'Open' },
+                      { value: 'UNDER_INVESTIGATION', label: 'Under Investigation' },
+                      { value: 'RESOLVED', label: 'Resolved' },
+                      { value: 'CLOSED', label: 'Closed' },
+                    ]}
+                    searchable={false}
+                    ariaLabel="Incident Status"
+                  />
                 </div>
               </div>
 

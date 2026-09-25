@@ -11,6 +11,8 @@ import { apiFetch, CommercialOpportunityRead, updateCommercialOpportunity } from
 import { openUniversalFileViewer } from '@/lib/fileViewer';
 import { Modal, ErrorModal, rows } from '@/components/DataUI';
 import { useAuth } from '@/components/AuthProvider';
+import SearchableSelect from '@/components/SearchableSelect';
+import AppDateTimePicker from '@/components/ui/AppDateTimePicker';
 
 export default function TendersOverviewPage() {
   const auth = useAuth();
@@ -268,20 +270,20 @@ export default function TendersOverviewPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <select
+          <div className="flex items-center gap-2 min-w-[200px]">
+            <SearchableSelect
               value={stageFilter}
-              onChange={(e) => setStageFilter(e.target.value)}
-              className="text-sm border rounded-lg px-3 py-1.5 bg-background"
-            >
-              <option value="">All Tender Stages</option>
-              <option value="PROPOSAL_SENT">Proposal Sent</option>
-              <option value="IN_NEGOTIATION">In Negotiation</option>
-              <option value="CONTRACT_PENDING">Contract Pending</option>
-              <option value="WON">Won</option>
-              <option value="LOST">Lost</option>
-            </select>
-
+              onChange={setStageFilter}
+              options={[
+                { value: '', label: 'All Tender Stages' },
+                { value: 'PROPOSAL_SENT', label: 'Proposal Sent' },
+                { value: 'IN_NEGOTIATION', label: 'In Negotiation' },
+                { value: 'CONTRACT_PENDING', label: 'Contract Pending' },
+                { value: 'WON', label: 'Won' },
+                { value: 'LOST', label: 'Lost' },
+              ]}
+              searchable={false}
+            />
           </div>
         </div>
 
@@ -451,18 +453,21 @@ export default function TendersOverviewPage() {
         <Modal title="Create Commercial Opportunity (Tender)" onClose={() => setShowAddOpp(false)}>
           <form onSubmit={handleCreateOpp} className="space-y-4 text-sm p-1">
             <div>
-              <label className="block text-xs font-medium mb-1">Client</label>
-              <select
+              <label className="block text-xs font-medium mb-1">Client *</label>
+              <SearchableSelect
                 required
                 value={newOpp.client_id}
-                onChange={(e) => setNewOpp({ ...newOpp, client_id: e.target.value })}
-                className="w-full text-xs border rounded p-2 bg-background"
-              >
-                <option value="">Select Client...</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+                onChange={(val) => setNewOpp({ ...newOpp, client_id: val })}
+                options={[
+                  { value: '', label: 'Select Client...' },
+                  ...clients.map((c) => ({
+                    value: c.id,
+                    label: c.name,
+                  })),
+                ]}
+                placeholder="Select client..."
+                searchable={clients.length > 5}
+              />
             </div>
 
             <div>
@@ -479,17 +484,18 @@ export default function TendersOverviewPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium mb-1">Tender Stage</label>
-                <select
+                <SearchableSelect
                   value={newOpp.tender_stage}
-                  onChange={(e) => setNewOpp({ ...newOpp, tender_stage: e.target.value })}
-                  className="w-full text-xs border rounded p-2 bg-background"
-                >
-                  <option value="PROPOSAL_SENT">PROPOSAL_SENT</option>
-                  <option value="IN_NEGOTIATION">IN_NEGOTIATION</option>
-                  <option value="CONTRACT_PENDING">CONTRACT_PENDING</option>
-                  <option value="WON">WON</option>
-                  <option value="LOST">LOST</option>
-                </select>
+                  onChange={(val) => setNewOpp({ ...newOpp, tender_stage: val })}
+                  options={[
+                    { value: 'PROPOSAL_SENT', label: 'Proposal Sent' },
+                    { value: 'IN_NEGOTIATION', label: 'In Negotiation' },
+                    { value: 'CONTRACT_PENDING', label: 'Contract Pending' },
+                    { value: 'WON', label: 'Won' },
+                    { value: 'LOST', label: 'Lost' },
+                  ]}
+                  searchable={false}
+                />
               </div>
 
               <div>
@@ -517,11 +523,11 @@ export default function TendersOverviewPage() {
 
               <div>
                 <label className="block text-xs font-medium mb-1">Expected Close Date</label>
-                <input
-                  type="date"
+                <AppDateTimePicker
+                  mode="date"
                   value={newOpp.expected_close_date}
-                  onChange={(e) => setNewOpp({ ...newOpp, expected_close_date: e.target.value })}
-                  className="w-full text-xs border rounded p-2 bg-background"
+                  onChange={(val) => setNewOpp({ ...newOpp, expected_close_date: val })}
+                  placeholder="Select close date"
                 />
               </div>
             </div>
@@ -586,17 +592,18 @@ export default function TendersOverviewPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium mb-1">Tender Stage</label>
-                <select
+                <SearchableSelect
                   value={editOppForm.tender_stage}
-                  onChange={(e) => setEditOppForm({ ...editOppForm, tender_stage: e.target.value })}
-                  className="w-full text-xs border rounded p-2 bg-background"
-                >
-                  <option value="PROPOSAL_SENT">PROPOSAL_SENT</option>
-                  <option value="IN_NEGOTIATION">IN_NEGOTIATION</option>
-                  <option value="CONTRACT_PENDING">CONTRACT_PENDING</option>
-                  <option value="WON">WON</option>
-                  <option value="LOST">LOST</option>
-                </select>
+                  onChange={(val) => setEditOppForm({ ...editOppForm, tender_stage: val })}
+                  options={[
+                    { value: 'PROPOSAL_SENT', label: 'Proposal Sent' },
+                    { value: 'IN_NEGOTIATION', label: 'In Negotiation' },
+                    { value: 'CONTRACT_PENDING', label: 'Contract Pending' },
+                    { value: 'WON', label: 'Won' },
+                    { value: 'LOST', label: 'Lost' },
+                  ]}
+                  searchable={false}
+                />
               </div>
 
               <div>
@@ -624,11 +631,11 @@ export default function TendersOverviewPage() {
 
               <div>
                 <label className="block text-xs font-medium mb-1">Expected Close Date</label>
-                <input
-                  type="date"
+                <AppDateTimePicker
+                  mode="date"
                   value={editOppForm.expected_close_date}
-                  onChange={(e) => setEditOppForm({ ...editOppForm, expected_close_date: e.target.value })}
-                  className="w-full text-xs border rounded p-2 bg-background"
+                  onChange={(val) => setEditOppForm({ ...editOppForm, expected_close_date: val })}
+                  placeholder="Select close date"
                 />
               </div>
             </div>

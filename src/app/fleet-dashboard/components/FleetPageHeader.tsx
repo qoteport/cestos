@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { Plus, RefreshCw, SlidersHorizontal, Filter, X } from 'lucide-react';
 import { Modal, useData, rows } from '@/components/DataUI';
+import SearchableSelect from '@/components/SearchableSelect';
+import AppDateTimePicker from '@/components/ui/AppDateTimePicker';
 
 interface FleetPageHeaderProps {
   onAddAsset?: () => void;
@@ -181,87 +183,91 @@ export default function FleetPageHeader({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold mb-1 text-foreground">Start Date (Date From)</label>
-                <input
-                  type="date"
-                  className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+                <AppDateTimePicker
+                  mode="date"
                   value={draftDateFrom}
-                  onChange={(e) => setDraftDateFrom(e.target.value)}
+                  onChange={setDraftDateFrom}
+                  placeholder="Select start date"
                 />
               </div>
               <div>
                 <label className="block font-semibold mb-1 text-foreground">End Date (Date To)</label>
-                <input
-                  type="date"
-                  className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+                <AppDateTimePicker
+                  mode="date"
                   value={draftDateTo}
-                  onChange={(e) => setDraftDateTo(e.target.value)}
+                  onChange={setDraftDateTo}
+                  placeholder="Select end date"
                 />
               </div>
             </div>
 
             <div>
               <label className="block font-semibold mb-1 text-foreground">Asset Operational Status</label>
-              <select
-                className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'All Operational Statuses' },
+                  { value: 'OPERATING', label: 'Operating' },
+                  { value: 'AVAILABLE', label: 'Available' },
+                  { value: 'STANDBY', label: 'Standby' },
+                  { value: 'BREAKDOWN', label: 'Breakdown' },
+                  { value: 'UNDER_MAINTENANCE', label: 'Under Maintenance' },
+                  { value: 'OUT_OF_SERVICE', label: 'Out of Service' },
+                ]}
                 value={draftStatus}
-                onChange={(e) => setDraftStatus(e.target.value)}
-              >
-                <option value="">All Operational Statuses</option>
-                <option value="OPERATING">Operating</option>
-                <option value="AVAILABLE">Available</option>
-                <option value="STANDBY">Standby</option>
-                <option value="BREAKDOWN">Breakdown</option>
-                <option value="UNDER_MAINTENANCE">Under Maintenance</option>
-                <option value="OUT_OF_SERVICE">Out of Service</option>
-              </select>
+                onChange={setDraftStatus}
+                searchable={false}
+              />
             </div>
 
             <div>
               <label className="block font-semibold mb-1 text-foreground">Equipment Category</label>
-              <select
-                className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'All Categories' },
+                  ...catList.map((c: any) => ({
+                    value: c.id,
+                    label: `${c.name}${c.code ? ` (${c.code})` : ''}`,
+                  })),
+                ]}
                 value={draftCategory}
-                onChange={(e) => setDraftCategory(e.target.value)}
-              >
-                <option value="">All Categories</option>
-                {catList.map((c: any) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} {c.code ? `(${c.code})` : ''}
-                  </option>
-                ))}
-              </select>
+                onChange={setDraftCategory}
+                searchable={catList.length > 5}
+                placeholder="Select category..."
+              />
             </div>
 
             <div>
               <label className="block font-semibold mb-1 text-foreground">Site Location</label>
-              <select
-                className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'All Locations' },
+                  ...locList.map((l: any) => ({
+                    value: l.id,
+                    label: `${l.name}${l.code ? ` (${l.code})` : ''}`,
+                  })),
+                ]}
                 value={draftLocation}
-                onChange={(e) => setDraftLocation(e.target.value)}
-              >
-                <option value="">All Locations</option>
-                {locList.map((l: any) => (
-                  <option key={l.id} value={l.id}>
-                    {l.name} {l.code ? `(${l.code})` : ''}
-                  </option>
-                ))}
-              </select>
+                onChange={setDraftLocation}
+                searchable={locList.length > 5}
+                placeholder="Select location..."
+              />
             </div>
 
             <div>
               <label className="block font-semibold mb-1 text-foreground">Assigned Project</label>
-              <select
-                className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'All Projects' },
+                  ...projList.map((p: any) => ({
+                    value: p.id,
+                    label: `${p.name}${p.code ? ` (${p.code})` : ''}`,
+                  })),
+                ]}
                 value={draftProject}
-                onChange={(e) => setDraftProject(e.target.value)}
-              >
-                <option value="">All Projects</option>
-                {projList.map((p: any) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} {p.code ? `(${p.code})` : ''}
-                  </option>
-                ))}
-              </select>
+                onChange={setDraftProject}
+                searchable={projList.length > 5}
+                placeholder="Select project..."
+              />
             </div>
 
             <div className="flex justify-end gap-2 pt-3 border-t">

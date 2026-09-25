@@ -5,6 +5,7 @@ import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import { openUniversalFileViewer } from '@/lib/fileViewer';
 import { Modal } from './DataUI';
 import { Download, Eye, Printer } from 'lucide-react';
+import SearchableSelect from './SearchableSelect';
 
 type Kind = 'work_order' | 'preventive' | 'breakdown';
 type Field = { key: string; label: string; json?: boolean };
@@ -207,7 +208,16 @@ export default function MaintenanceJobCardDetailsModal({
         </div>
       </div>
       {editing ? <>
-        <label className="block space-y-1 font-semibold"><span>Status</span><select className="w-full rounded-lg border bg-background p-2.5" value={status} onChange={(event) => setStatus(event.target.value)}>{(kind === 'work_order' ? ['OPEN', 'IN_PROGRESS', 'WAITING_PARTS', 'COMPLETED', 'CANCELLED'] : kind === 'preventive' ? ['DRAFT', 'IN_PROGRESS', 'PENDING_SIGNOFF', 'COMPLETED', 'CANCELLED'] : ['DRAFT', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']).map((value) => <option key={value}>{value}</option>)}</select></label>
+        <div className="block space-y-1 font-semibold">
+          <span>Status</span>
+          <SearchableSelect
+            value={status}
+            onChange={(val) => setStatus(val)}
+            options={(kind === 'work_order' ? ['OPEN', 'IN_PROGRESS', 'WAITING_PARTS', 'COMPLETED', 'CANCELLED'] : kind === 'preventive' ? ['DRAFT', 'IN_PROGRESS', 'PENDING_SIGNOFF', 'COMPLETED', 'CANCELLED'] : ['DRAFT', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']).map((value) => ({ value, label: value }))}
+            searchable={false}
+            ariaLabel="Status"
+          />
+        </div>
         {fields.map((field: Field) => <label key={field.key} className="block space-y-1 font-semibold"><span>{field.label}{field.json ? ' (JSON)' : ''}</span><textarea rows={field.json ? 6 : 3} className="w-full rounded-lg border bg-background p-2.5 font-normal" value={values[field.key] ?? ''} onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))} /></label>)}
       </> : <>
         {kind === 'preventive' ? <div className="space-y-4">

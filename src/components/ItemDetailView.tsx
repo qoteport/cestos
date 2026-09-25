@@ -202,7 +202,7 @@ export default function ItemDetailView({ itemId }: { itemId: string }) {
         <div>
           <Link
             href="/workspace/inventory/items"
-            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-1.5 transition"
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-1.5 transition text-left justify-start font-semibold"
           >
             <ArrowLeft size={13} />
             Back to Inventory Catalog

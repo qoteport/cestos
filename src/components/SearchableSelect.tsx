@@ -14,8 +14,9 @@ export interface SearchableSelectOption {
 
 export interface SearchableSelectProps {
   options: SearchableSelectOption[];
-  value: string;
-  onChange: (value: string, option?: SearchableSelectOption) => void;
+  value?: string;
+  defaultValue?: string;
+  onChange?: (value: string, option?: SearchableSelectOption) => void;
   placeholder?: string;
   name?: string;
   required?: boolean;
@@ -28,6 +29,7 @@ export interface SearchableSelectProps {
 export default function SearchableSelect({
   options,
   value,
+  defaultValue,
   onChange,
   placeholder = 'Select option...',
   name,
@@ -37,13 +39,16 @@ export default function SearchableSelect({
   ariaLabel,
   searchable,
 }: SearchableSelectProps) {
+  const [internalVal, setInternalVal] = useState(defaultValue || '');
+  const currentValue = value !== undefined ? value : internalVal;
+
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const shouldShowSearch = searchable !== undefined ? searchable : options.length > 5;
-  const selectedOption = options.find((opt) => String(opt.value) === String(value));
+  const selectedOption = options.find((opt) => String(opt.value) === String(currentValue));
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -78,13 +83,15 @@ export default function SearchableSelect({
 
   const handleSelect = (opt: SearchableSelectOption) => {
     if (opt.disabled) return;
-    onChange(opt.value, opt);
+    setInternalVal(opt.value);
+    onChange?.(opt.value, opt);
     setIsOpen(false);
   };
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onChange('');
+    setInternalVal('');
+    onChange?.('');
     setIsOpen(false);
   };
 
@@ -95,8 +102,8 @@ export default function SearchableSelect({
         <input
           type="hidden"
           name={name}
-          value={value || ''}
-          required={required && !value}
+          value={currentValue || ''}
+          required={required && !currentValue}
         />
       )}
 

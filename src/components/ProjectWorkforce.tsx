@@ -6,6 +6,8 @@ import { ShieldCheck, CheckSquare, Square, Search, UserCheck, Info } from 'lucid
 import { apiFetch } from '@/lib/api';
 import { useAuth } from './AuthProvider';
 import { Modal, Row, State, display, rows, useData } from './DataUI';
+import SearchableSelect from './SearchableSelect';
+import AppDateTimePicker from './ui/AppDateTimePicker';
 
 // ── Unified Searchable Supervisor / Project Selector ─────────────────────────
 function SingleSearchSelect({
@@ -25,45 +27,30 @@ function SingleSearchSelect({
   defaultValue?: string;
   onChange?: (val: string) => void;
 }) {
-  const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState(defaultValue);
-
-  const filtered = options.filter(
-    (opt) =>
-      opt.name.toLowerCase().includes(query.toLowerCase()) ||
-      (opt.subtitle && opt.subtitle.toLowerCase().includes(query.toLowerCase()))
-  );
 
   return (
     <div className="space-y-1.5">
       <label className="block text-sm font-600 text-foreground">{label}</label>
       <input type="hidden" name={name} value={selectedId} required={required} />
-      
-      <div className="space-y-2">
-        <input
-          type="text"
-          className="input-field text-xs py-1.5"
-          placeholder={`Search ${placeholder.toLowerCase()}…`}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <select
-          className="input-field text-sm"
-          value={selectedId}
-          onChange={(e) => {
-            setSelectedId(e.target.value);
-            if (onChange) onChange(e.target.value);
-          }}
-          required={required}
-        >
-          <option value="">{placeholder}</option>
-          {filtered.map((opt) => (
-            <option key={opt.id} value={opt.id} disabled={opt.disabled}>
-              {opt.name} {opt.subtitle ? `(${opt.subtitle})` : ''}
-            </option>
-          ))}
-        </select>
-      </div>
+      <SearchableSelect
+        options={[
+          { value: '', label: placeholder },
+          ...options.map((opt) => ({
+            value: opt.id,
+            label: opt.subtitle ? `${opt.name} (${opt.subtitle})` : opt.name,
+            disabled: opt.disabled,
+          })),
+        ]}
+        value={selectedId}
+        onChange={(val) => {
+          setSelectedId(val);
+          if (onChange) onChange(val);
+        }}
+        placeholder={placeholder}
+        searchable={options.length > 5}
+        required={required}
+      />
     </div>
   );
 }
@@ -298,6 +285,8 @@ function TransferEmployeeModal({
     }));
 
   const defaultRole = employee.job_title || employee.position_name || (typeof employee.position === 'string' ? employee.position : employee.position?.name) || '';
+  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [locationId, setLocationId] = useState('');
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -307,8 +296,8 @@ function TransferEmployeeModal({
     const values = new FormData(e.currentTarget);
     const body: Row = {
       project_id: destination,
-      start_date: values.get('start_date'),
-      location_id: values.get('location_id') || null,
+      start_date: startDate,
+      location_id: locationId || null,
       role_on_project: values.get('role_on_project') || null,
       supervisor_id: values.get('supervisor_id') || null,
       notes: values.get('notes') || null,
@@ -355,7 +344,7 @@ function TransferEmployeeModal({
 
           <div>
             <div className="flex items-center gap-1.5 font-500 text-sm mb-1">
-              <span>Effective start date</span>
+              <span>Effective start date *</span>
               <div className="relative group inline-flex items-center">
                 <Info size={13} className="text-muted-foreground/70 hover:text-primary transition-colors cursor-help" />
                 <div className="absolute left-0 bottom-full mb-1.5 hidden group-hover:block w-64 p-2 bg-slate-900 text-slate-100 text-[11px] leading-tight rounded shadow-xl z-50 pointer-events-none">
@@ -364,13 +353,13 @@ function TransferEmployeeModal({
                 </div>
               </div>
             </div>
-            <input
-              className="input-field"
-              name="start_date"
-              type="date"
+            <AppDateTimePicker
+              mode="date"
               required
               min={current?.start_date}
-              defaultValue={new Date().toISOString().slice(0, 10)}
+              value={startDate}
+              onChange={(val) => setStartDate(val)}
+              placeholder="Select start date"
             />
           </div>
 
@@ -386,16 +375,19 @@ function TransferEmployeeModal({
                   </div>
                 </div>
               </div>
-              <select key={destination} name="location_id" className="input-field">
-                <option value="">No site assigned</option>
-                {rows(sites.data)
-                  .filter((s) => s.is_active)
-                  .map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-              </select>
+              <SearchableSelect
+                key={destination}
+                options={[
+                  { value: '', label: 'No site assigned' },
+                  ...rows(sites.data)
+                    .filter((s) => s.is_active)
+                    .map((s) => ({ value: s.id, label: s.name })),
+                ]}
+                value={locationId}
+                onChange={(val) => setLocationId(val)}
+                placeholder="No site assigned"
+                searchable={rows(sites.data).length > 5}
+              />
             </div>
           </State>
 

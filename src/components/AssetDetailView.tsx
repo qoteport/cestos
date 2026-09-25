@@ -44,6 +44,8 @@ import RecordForm from './RecordForm';
 import AssetAssignmentModal from './AssetAssignmentModal';
 import OperationalUpload from './OperationalUpload';
 import Icon from '@/components/ui/AppIcon';
+import SearchableSelect from './SearchableSelect';
+import AppDateTimePicker from './ui/AppDateTimePicker';
 
 const tabs = [
   ['overview', 'Overview', Activity],
@@ -767,7 +769,7 @@ const assetEditOp = {
   return (
     <div className="space-y-5 fade-in">
       {!shouldHideBack && (
-        <Link className="text-xs text-primary flex gap-1 items-center" href="/workspace/assets">
+        <Link className="text-xs text-primary inline-flex gap-1.5 items-center text-left justify-start hover:underline font-semibold" href="/workspace/assets">
           <ArrowLeft size={13} />
           Back to assets
         </Link>
@@ -1145,18 +1147,22 @@ const assetEditOp = {
                       </div>
                       <div className="flex items-center justify-between flex-wrap gap-2">
                         <div className="flex items-center gap-2">
-                          <label className="text-xs font-semibold text-muted-foreground">Filter Maintenance View:</label>
-                          <select
-                            className="input-field text-xs font-medium max-w-xs"
-                            value={maintenanceFilter}
-                            onChange={(e) => setMaintenanceFilter(e.target.value)}
-                          >
-                            <option value="ALL">All Maintenance Records</option>
-                            <option value="RECURRING">Recurring Maintenance Schedules</option>
-                            <option value="IN_PROGRESS">In Progress Jobs</option>
-                            <option value="SCHEDULED">Scheduled / Open</option>
-                            <option value="COMPLETED">Completed Jobs</option>
-                          </select>
+                          <span className="text-xs font-semibold text-muted-foreground">Filter Maintenance View:</span>
+                          <div className="w-64">
+                            <SearchableSelect
+                              value={maintenanceFilter}
+                              onChange={(val) => setMaintenanceFilter(val)}
+                              options={[
+                                { value: 'ALL', label: 'All Maintenance Records' },
+                                { value: 'RECURRING', label: 'Recurring Maintenance Schedules' },
+                                { value: 'IN_PROGRESS', label: 'In Progress Jobs' },
+                                { value: 'SCHEDULED', label: 'Scheduled / Open' },
+                                { value: 'COMPLETED', label: 'Completed Jobs' },
+                              ]}
+                              searchable={false}
+                              ariaLabel="Filter Maintenance View"
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1164,27 +1170,24 @@ const assetEditOp = {
                   {tab === 'assignments' && rows(records.data).length > 0 && (
                     <div className="p-4 border-b bg-muted/30 space-y-4">
                       <div className="flex items-center gap-3 flex-wrap">
-                        <label className="text-xs font-semibold text-muted-foreground">
+                        <span className="text-xs font-semibold text-muted-foreground">
                           Filter operational costs by assignment:
-                        </label>
-                        <select
-                          className="input-field text-xs max-w-md"
-                          value={selectedAssignmentId}
-                          onChange={(e) => setSelectedAssignmentId(e.target.value)}
-                        >
-                          <option value="">All assignments (Select to view site costs)</option>
-                          {rows(records.data).map((a: Row) => (
-                            <option key={a.id} value={a.id}>
-                              {a.project_name || a.project?.name || 'Project Assignment'}
-                              {a.location_name || a.location?.name ? ` · ${a.location_name || a.location?.name}` : ''} (
-                              {a.assigned_at ? new Date(a.assigned_at).toLocaleDateString() : ''} -{' '}
-                              {a.returned_at
-                                ? new Date(a.returned_at).toLocaleDateString()
-                                : 'Present'}
-                              )
-                            </option>
-                          ))}
-                        </select>
+                        </span>
+                        <div className="w-80">
+                          <SearchableSelect
+                            value={selectedAssignmentId}
+                            onChange={(val) => setSelectedAssignmentId(val)}
+                            options={[
+                              { value: '', label: 'All assignments (Select to view site costs)' },
+                              ...rows(records.data).map((a: Row) => ({
+                                value: String(a.id),
+                                label: `${a.project_name || a.project?.name || 'Project Assignment'}${a.location_name || a.location?.name ? ` · ${a.location_name || a.location?.name}` : ''} (${a.assigned_at ? new Date(a.assigned_at).toLocaleDateString() : ''} - ${a.returned_at ? new Date(a.returned_at).toLocaleDateString() : 'Present'})`,
+                              })),
+                            ]}
+                            searchable={rows(records.data).length > 5}
+                            ariaLabel="Filter operational costs by assignment"
+                          />
+                        </div>
                       </div>
                       {assignmentSummaryData && (
                         <div className="card p-4 bg-white border border-primary/20 space-y-3">
@@ -1841,44 +1844,46 @@ const assetEditOp = {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block font-semibold mb-1">Check Date & Time *</label>
-                        <input
-                          type="datetime-local"
-                          className="input-field text-xs"
+                        <AppDateTimePicker
+                          mode="datetime"
                           required
                           value={subRecordedAt}
-                          onChange={(e) => setSubRecordedAt(e.target.value)}
+                          onChange={(val) => setSubRecordedAt(val)}
+                          placeholder="Select check date & time"
                         />
                       </div>
                       <div>
                         <label className="block font-semibold mb-1">Reason / Check Type</label>
-                        <select
-                          className="input-field text-xs"
+                        <SearchableSelect
                           value={subReason}
-                          onChange={(e) => setSubReason(e.target.value)}
-                        >
-                          <option value="Daily Dip Check">Daily Dip Check</option>
-                          <option value="Shift End Reading">Shift End Reading</option>
-                          <option value="Pre-Operation Inspection">Pre-Operation Inspection</option>
-                          <option value="Weekly Fleet Check">Weekly Fleet Check</option>
-                          <option value="Other">Other</option>
-                        </select>
+                          onChange={(val) => setSubReason(val)}
+                          options={[
+                            { value: 'Daily Dip Check', label: 'Daily Dip Check' },
+                            { value: 'Shift End Reading', label: 'Shift End Reading' },
+                            { value: 'Pre-Operation Inspection', label: 'Pre-Operation Inspection' },
+                            { value: 'Weekly Fleet Check', label: 'Weekly Fleet Check' },
+                            { value: 'Other', label: 'Other' },
+                          ]}
+                          searchable={false}
+                          ariaLabel="Reason / Check Type"
+                        />
                       </div>
                       <div>
                         <label className="block font-semibold mb-1">Date Span Start (Optional)</label>
-                        <input
-                          type="date"
-                          className="input-field text-xs"
+                        <AppDateTimePicker
+                          mode="date"
                           value={subStartDate}
-                          onChange={(e) => setSubStartDate(e.target.value)}
+                          onChange={(val) => setSubStartDate(val)}
+                          placeholder="Select start date"
                         />
                       </div>
                       <div>
                         <label className="block font-semibold mb-1">Date Span End (Optional)</label>
-                        <input
-                          type="date"
-                          className="input-field text-xs"
+                        <AppDateTimePicker
+                          mode="date"
                           value={subEndDate}
-                          onChange={(e) => setSubEndDate(e.target.value)}
+                          onChange={(val) => setSubEndDate(val)}
+                          placeholder="Select end date"
                         />
                       </div>
                     </div>

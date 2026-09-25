@@ -7,6 +7,7 @@ import { Bell, BellRing, Search, LogOut, Zap, Sparkles, X, User, Clock, Calendar
 import { useAuth, canAccessAdministration } from './AuthProvider';
 import { useData, rows } from './DataUI';
 import useNotificationCount from './useNotificationCount';
+import SearchableSelect from './SearchableSelect';
 
 export default function Topbar() {
   const auth = useAuth();
@@ -74,18 +75,19 @@ export default function Topbar() {
         onSubmit={handleSearchSubmit}
       >
         <Search size={16} className="text-muted-foreground flex-shrink-0" />
-        <select
-          aria-label="Search section"
-          className="text-xs bg-transparent border-0 font-600 text-foreground cursor-pointer focus:outline-none max-w-28 border-r border-border pr-2"
-          value={resource}
-          onChange={e => setResource(e?.target?.value)}
-        >
-          {sections?.map(([name, r]) => (
-            <option value={r} key={r}>
-              {name}
-            </option>
-          ))}
-        </select>
+        <div className="w-32 border-r border-border pr-2">
+          <SearchableSelect
+            ariaLabel="Search section"
+            className="border-0 bg-transparent text-xs font-semibold py-1 px-1 shadow-none"
+            value={resource}
+            onChange={(val) => setResource(val)}
+            options={(sections || []).map(([name, r]) => ({
+              value: r,
+              label: name,
+            }))}
+            searchable={false}
+          />
+        </div>
         <input
           className="text-xs bg-transparent outline-none flex-1 min-w-0 px-2 font-500 placeholder:text-muted-foreground"
           aria-label="Search records"

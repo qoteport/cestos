@@ -22,6 +22,7 @@ import {
 import { apiFetch } from '@/lib/api';
 import { useData, State, Row, rows, Modal, display } from './DataUI';
 import SearchableSelect from './SearchableSelect';
+import AppDateTimePicker from './ui/AppDateTimePicker';
 
 function buildSeedLeaveRequests(employees: Row[]): Row[] {
   const getEmp = (idx: number, fallbackName: string, fallbackNum: string, fallbackDept: string) => {
@@ -385,22 +386,23 @@ export default function LeaveManagementWorkspace() {
             </div>
 
             {/* Leave Type Filter Dropdown */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 min-w-[170px]">
               <Filter size={13} className="text-muted-foreground shrink-0" />
-              <select
-                className="input-field text-xs bg-background py-1 px-2.5 border rounded-lg max-w-[180px] font-medium"
+              <SearchableSelect
                 value={leaveTypeFilter}
-                onChange={(e) => setLeaveTypeFilter(e.target.value)}
-              >
-                <option value="ALL">All Leave Types</option>
-                <option value="Annual Leave">Annual Leave</option>
-                <option value="Sick Leave">Sick Leave</option>
-                <option value="Rotational Off-duty">Rotational Off-duty</option>
-                <option value="Maternity / Paternity Leave">Maternity / Paternity Leave</option>
-                <option value="Emergency Leave">Emergency Leave</option>
-                <option value="Study / Exam Leave">Study / Exam Leave</option>
-                <option value="Unpaid Leave">Unpaid Leave</option>
-              </select>
+                onChange={setLeaveTypeFilter}
+                options={[
+                  { value: 'ALL', label: 'All Leave Types' },
+                  { value: 'Annual Leave', label: 'Annual Leave' },
+                  { value: 'Sick Leave', label: 'Sick Leave' },
+                  { value: 'Rotational Off-duty', label: 'Rotational Off-duty' },
+                  { value: 'Maternity / Paternity Leave', label: 'Maternity / Paternity Leave' },
+                  { value: 'Emergency Leave', label: 'Emergency Leave' },
+                  { value: 'Study / Exam Leave', label: 'Study / Exam Leave' },
+                  { value: 'Unpaid Leave', label: 'Unpaid Leave' },
+                ]}
+                searchable={false}
+              />
             </div>
 
             {/* Status Filter Buttons */}
@@ -699,20 +701,20 @@ function CreateLeaveForm({
         <label className="block text-xs font-semibold mb-1">
           Leave Category / Type *
         </label>
-        <select
-          required
-          className="input-field text-xs bg-background"
+        <SearchableSelect
+          options={[
+            { value: 'Annual Leave', label: 'Annual Leave' },
+            { value: 'Sick Leave', label: 'Sick Leave' },
+            { value: 'Rotational Off-duty', label: 'Rotational Off-duty' },
+            { value: 'Maternity / Paternity Leave', label: 'Maternity / Paternity Leave' },
+            { value: 'Emergency Leave', label: 'Emergency Leave' },
+            { value: 'Study / Exam Leave', label: 'Study / Exam Leave' },
+            { value: 'Unpaid Leave', label: 'Unpaid Leave' },
+          ]}
           value={leaveType}
-          onChange={(e) => setLeaveType(e.target.value)}
-        >
-          <option value="Annual Leave">Annual Leave</option>
-          <option value="Sick Leave">Sick Leave</option>
-          <option value="Rotational Off-duty">Rotational Off-duty</option>
-          <option value="Maternity / Paternity Leave">Maternity / Paternity Leave</option>
-          <option value="Emergency Leave">Emergency Leave</option>
-          <option value="Study / Exam Leave">Study / Exam Leave</option>
-          <option value="Unpaid Leave">Unpaid Leave</option>
-        </select>
+          onChange={(val) => setLeaveType(val)}
+          searchable={false}
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -720,12 +722,12 @@ function CreateLeaveForm({
           <label className="block text-xs font-semibold mb-1">
             Start Date *
           </label>
-          <input
+          <AppDateTimePicker
+            mode="date"
             required
-            type="date"
-            className="input-field text-xs"
             value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
+            onChange={(val) => setStartDate(val)}
+            placeholder="Select start date"
           />
         </div>
 
@@ -733,12 +735,12 @@ function CreateLeaveForm({
           <label className="block text-xs font-semibold mb-1">
             End Date *
           </label>
-          <input
+          <AppDateTimePicker
+            mode="date"
             required
-            type="date"
-            className="input-field text-xs"
             value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
+            onChange={(val) => setEndDate(val)}
+            placeholder="Select end date"
           />
         </div>
       </div>

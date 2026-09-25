@@ -6,6 +6,7 @@ import { useAuth } from './AuthProvider';
 import { Modal } from './DataUI';
 import useAppFeedback from './useAppFeedback';
 import { apiFetch } from '@/lib/api';
+import SearchableSelect from './SearchableSelect';
 
 type TeamLeave = {
   id: string;
@@ -66,15 +67,23 @@ export default function FieldTeamLeaveRequests({ projectId, search }: { projectI
           <h3 className="font-bold flex items-center gap-2"><Calendar size={18} /> Team Leave Requests</h3>
           <p className="text-xs text-muted-foreground">Supervisor view · Leave requested by your team in the selected project scope.</p>
         </div>
-        <label className="text-xs flex items-center gap-2">
-          Status
-          <select value={status} onChange={(event) => setStatus(event.target.value)} className="border rounded-lg p-2 bg-background">
-            <option value="ALL">All statuses</option>
-            <option value="PENDING">Pending</option>
-            <option value="APPROVED">Approved</option>
-            <option value="REJECTED">Rejected</option>
-          </select>
-        </label>
+        <div className="text-xs flex items-center gap-2">
+          <span>Status</span>
+          <div className="w-40">
+            <SearchableSelect
+              value={status}
+              onChange={(val) => setStatus(val)}
+              options={[
+                { value: 'ALL', label: 'All statuses' },
+                { value: 'PENDING', label: 'Pending' },
+                { value: 'APPROVED', label: 'Approved' },
+                { value: 'REJECTED', label: 'Rejected' },
+              ]}
+              searchable={false}
+              ariaLabel="Filter status"
+            />
+          </div>
+        </div>
       </div>
       {error ? (
         <div className="text-sm p-4">

@@ -18,6 +18,7 @@ import PreventiveMaintenanceWizard from './PreventiveMaintenanceWizard';
 import EquipmentMaintenanceScheduleModal from './EquipmentMaintenanceScheduleModal';
 import OperationalExpenseSubmissionModal from './OperationalExpenseSubmissionModal';
 import SearchableSelect from './SearchableSelect';
+import AppDateTimePicker from './ui/AppDateTimePicker';
 import NotificationWorkspace from './NotificationWorkspace';
 import useNotificationCount from './useNotificationCount';
 import MaintenanceJobCardDetailsModal from './MaintenanceJobCardDetailsModal';
@@ -1573,18 +1574,17 @@ Signed: Field Operations Administration
 
           <div className="flex items-center gap-3">
             {/* Assigned Project Switcher */}
-            <div className="hidden sm:flex items-center gap-2 bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-900 px-3 py-1.5 rounded-lg">
-              <Building2 size={15} className="text-orange-600 dark:text-orange-400 shrink-0" />
-              <select
+            <div className="hidden sm:flex items-center gap-2">
+              <SearchableSelect
                 value={selectedProjectId}
-                onChange={(e) => setSelectedProjectId(e.target.value)}
+                onChange={(val) => setSelectedProjectId(val)}
                 disabled={!projects.length}
-                className="bg-transparent text-xs font-semibold text-orange-950 dark:text-orange-200 focus:outline-none cursor-pointer pr-1"
-              >
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.code || 'Site'})</option>
-                ))}
-              </select>
+                className="w-48 text-xs"
+                options={projects.map((p) => ({
+                  value: p.id,
+                  label: `${p.name} (${p.code || 'Site'})`,
+                }))}
+              />
             </div>
 
             <button
@@ -1649,16 +1649,16 @@ Signed: Field Operations Administration
 
         {/* Mobile Project Switcher Bar */}
         <div className="sm:hidden px-4 pb-2.5">
-          <select
+          <SearchableSelect
             value={selectedProjectId}
-            onChange={(e) => setSelectedProjectId(e.target.value)}
+            onChange={(val) => setSelectedProjectId(val)}
             disabled={!projects.length}
-            className="w-full bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-900 text-xs font-semibold text-orange-900 dark:text-orange-200 p-2 rounded-lg"
-          >
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>{p.name} ({p.code || 'Site'})</option>
-            ))}
-          </select>
+            className="w-full text-xs"
+            options={projects.map((p) => ({
+              value: p.id,
+              label: `${p.name} (${p.code || 'Site'})`,
+            }))}
+          />
         </div>
 
         {/* Navigation Bar */}
@@ -1862,11 +1862,11 @@ Signed: Field Operations Administration
                     <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                       <Calendar size={13} className="text-orange-600" /> Start Range Date &amp; Time
                     </label>
-                    <input
-                      type="datetime-local"
+                    <AppDateTimePicker
+                      mode="datetime"
                       value={customStartDate}
-                      onChange={(e) => setCustomStartDate(e.target.value)}
-                      className="w-full p-2 border rounded-lg bg-white dark:bg-slate-900 font-mono text-xs focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                      onChange={(val) => setCustomStartDate(val)}
+                      className="w-full text-xs"
                     />
                     <span className="text-[10px] text-slate-500 block">From start boundary</span>
                   </div>
@@ -1876,11 +1876,11 @@ Signed: Field Operations Administration
                     <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                       <Clock size={13} className="text-orange-600" /> End Range Date &amp; Time
                     </label>
-                    <input
-                      type="datetime-local"
+                    <AppDateTimePicker
+                      mode="datetime"
                       value={customEndDate}
-                      onChange={(e) => setCustomEndDate(e.target.value)}
-                      className="w-full p-2 border rounded-lg bg-white dark:bg-slate-900 font-mono text-xs focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                      onChange={(val) => setCustomEndDate(val)}
+                      className="w-full text-xs"
                     />
                     <span className="text-[10px] text-slate-500 block">To end boundary</span>
                   </div>
@@ -1929,17 +1929,14 @@ Signed: Field Operations Administration
           </div>
         ) : viewingEmployeeDetailId ? (
           <div className="space-y-4">
-            <div className="flex items-center justify-between border-b pb-3 border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-start border-b pb-3 border-slate-200 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setViewingEmployeeDetailId(null)}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 transition"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 transition text-left justify-start"
               >
                 <ArrowLeft size={16} /> Back to Assigned Employees Directory
               </button>
-              <span className="text-xs font-bold bg-orange-50 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 px-3 py-1 rounded-full border border-orange-200 dark:border-orange-800">
-                Field Admin Operations View
-              </span>
             </div>
             <EmployeeDetailView
               employeeId={viewingEmployeeDetailId}
@@ -3535,41 +3532,39 @@ Signed: Field Operations Administration
 
               <div>
                 <label className="block font-bold mb-1">Leave Category / Type *</label>
-                <select
+                <SearchableSelect
                   required
                   value={bookLeaveForm.leave_type}
-                  onChange={(e) => setBookLeaveForm({ ...bookLeaveForm, leave_type: e.target.value })}
-                  className="w-full border rounded-xl p-2.5 bg-slate-50 dark:bg-slate-800 font-medium text-xs focus:ring-2 focus:ring-orange-500 focus:outline-none"
-                >
-                  <option value="ANNUAL">Annual Leave</option>
-                  <option value="SICK">Sick Leave</option>
-                  <option value="EMERGENCY">Emergency Leave</option>
-                  <option value="MATERNITY">Maternity / Paternity Leave</option>
-                  <option value="UNPAID">Unpaid Leave</option>
-                  <option value="STUDY">Study / Training Leave</option>
-                </select>
+                  onChange={(val) => setBookLeaveForm({ ...bookLeaveForm, leave_type: val })}
+                  options={[
+                    { value: 'ANNUAL', label: 'Annual Leave' },
+                    { value: 'SICK', label: 'Sick Leave' },
+                    { value: 'EMERGENCY', label: 'Emergency Leave' },
+                    { value: 'MATERNITY', label: 'Maternity / Paternity Leave' },
+                    { value: 'UNPAID', label: 'Unpaid Leave' },
+                    { value: 'STUDY', label: 'Study / Training Leave' },
+                  ]}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold mb-1">Start Date *</label>
-                  <input
-                    type="date"
+                  <AppDateTimePicker
+                    mode="date"
                     required
                     value={bookLeaveForm.start_date}
-                    onChange={(e) => setBookLeaveForm({ ...bookLeaveForm, start_date: e.target.value })}
-                    className="w-full border rounded-xl p-2.5 bg-slate-50 dark:bg-slate-800 font-medium text-xs focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                    onChange={(val) => setBookLeaveForm({ ...bookLeaveForm, start_date: val })}
                   />
                 </div>
 
                 <div>
                   <label className="block font-bold mb-1">End Date *</label>
-                  <input
-                    type="date"
+                  <AppDateTimePicker
+                    mode="date"
                     required
                     value={bookLeaveForm.end_date}
-                    onChange={(e) => setBookLeaveForm({ ...bookLeaveForm, end_date: e.target.value })}
-                    className="w-full border rounded-xl p-2.5 bg-slate-50 dark:bg-slate-800 font-medium text-xs focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                    onChange={(val) => setBookLeaveForm({ ...bookLeaveForm, end_date: val })}
                   />
                 </div>
               </div>
@@ -3634,32 +3629,31 @@ Signed: Field Operations Administration
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block font-bold mb-1">Project Site *</label>
-                    <select
+                    <SearchableSelect
                       required
                       value={fuelBoughtForm.site_location_id}
-                      onChange={(e) => {
-                        const site = projectSites.find((row) => String(row.id) === e.target.value);
-                        setFuelBoughtForm({ ...fuelBoughtForm, site_location_id: e.target.value, project_id: site?.project_id || selectedProjectId });
+                      onChange={(val) => {
+                        const site = projectSites.find((row) => String(row.id) === val);
+                        setFuelBoughtForm({ ...fuelBoughtForm, site_location_id: val, project_id: site?.project_id || selectedProjectId });
                       }}
-                      className="w-full p-2.5 border rounded-lg bg-background font-medium"
-                    >
-                      <option value="">-- Select Project Site --</option>
-                      {projectSites.filter((site) => String(site.project_id) === (fuelBoughtForm.project_id || selectedProjectId)).map((site) => (
-                        <option key={site.id} value={site.id}>{site.name}{site.project_name ? ` | ${site.project_name}` : ''}</option>
-                      ))}
-                    </select>
+                      placeholder="-- Select Project Site --"
+                      options={projectSites.filter((site) => String(site.project_id) === (fuelBoughtForm.project_id || selectedProjectId)).map((site) => ({
+                        value: site.id,
+                        label: `${site.name}${site.project_name ? ` | ${site.project_name}` : ''}`,
+                      }))}
+                    />
                   </div>
                   <div>
                     <label className="block font-bold mb-1">Fuel Grade / Type *</label>
-                    <select
+                    <SearchableSelect
                       value={fuelBoughtForm.fuel_type}
-                      onChange={(e) => setFuelBoughtForm({ ...fuelBoughtForm, fuel_type: e.target.value })}
-                      className="w-full p-2.5 border rounded-lg bg-background font-bold"
-                    >
-                      <option value="DIESEL">Low-Sulfur Diesel (AGO)</option>
-                      <option value="PETROL">Super Unleaded Gasoline (PMS)</option>
-                      <option value="OTHER">Other / Specialty Fuel</option>
-                    </select>
+                      onChange={(val) => setFuelBoughtForm({ ...fuelBoughtForm, fuel_type: val })}
+                      options={[
+                        { value: 'DIESEL', label: 'Low-Sulfur Diesel (AGO)' },
+                        { value: 'PETROL', label: 'Super Unleaded Gasoline (PMS)' },
+                        { value: 'OTHER', label: 'Other / Specialty Fuel' },
+                      ]}
+                    />
                   </div>
                 </div>
               </div>
@@ -3747,23 +3741,22 @@ Signed: Field Operations Administration
                 <div className="grid grid-cols-2 gap-3 pt-1">
                   <div>
                     <label className="block font-bold mb-1">Currency</label>
-                    <select
+                    <SearchableSelect
                       value={fuelBoughtForm.currency}
-                      onChange={(e) => setFuelBoughtForm({ ...fuelBoughtForm, currency: e.target.value })}
-                      className="w-full p-2.5 border rounded-lg bg-background font-bold"
-                    >
-                      <option value="USD">USD ($ - United States Dollar)</option>
-                      <option value="LRD">LRD ($ - Liberian Dollar)</option>
-                      <option value="EUR">EUR (€ - Euro)</option>
-                    </select>
+                      onChange={(val) => setFuelBoughtForm({ ...fuelBoughtForm, currency: val })}
+                      options={[
+                        { value: 'USD', label: 'USD ($ - United States Dollar)' },
+                        { value: 'LRD', label: 'LRD ($ - Liberian Dollar)' },
+                        { value: 'EUR', label: 'EUR (€ - Euro)' },
+                      ]}
+                    />
                   </div>
                   <div>
                     <label className="block font-bold mb-1">Refueling Date & Time</label>
-                    <input
-                      type="datetime-local"
+                    <AppDateTimePicker
+                      mode="datetime"
                       value={fuelBoughtForm.recorded_at}
-                      onChange={(e) => setFuelBoughtForm({ ...fuelBoughtForm, recorded_at: e.target.value })}
-                      className="w-full p-2.5 border rounded-lg bg-background font-mono"
+                      onChange={(val) => setFuelBoughtForm({ ...fuelBoughtForm, recorded_at: val })}
                     />
                   </div>
                 </div>
@@ -4048,35 +4041,35 @@ Signed: Field Operations Administration
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-xs mb-1">Incident Type / Category *</label>
-                  <select
+                  <SearchableSelect
                     required
-                    value={String(hseForm.incident_type || '').replaceAll('_', ' ')}
-                    onChange={(e) => setHseForm({ ...hseForm, incident_type: e.target.value })}
-                    className="w-full border rounded-lg p-2.5 bg-background font-medium"
-                  >
-                    <option value="NEAR_MISS">Near Miss</option>
-                    <option value="INJURY_ILLNESS">Injury / Illness</option>
-                    <option value="PROPERTY_DAMAGE">Property Damage</option>
-                    <option value="ENVIRONMENTAL">Environmental Spill / Impact</option>
-                    <option value="HAZARD_OBSERVATION">Hazard Observation</option>
-                    <option value="SECURITY">Security Incident</option>
-                    <option value="OTHER">Other Safety Event</option>
-                  </select>
+                    value={hseForm.incident_type}
+                    onChange={(val) => setHseForm({ ...hseForm, incident_type: val })}
+                    options={[
+                      { value: 'NEAR_MISS', label: 'Near Miss' },
+                      { value: 'INJURY_ILLNESS', label: 'Injury / Illness' },
+                      { value: 'PROPERTY_DAMAGE', label: 'Property Damage' },
+                      { value: 'ENVIRONMENTAL', label: 'Environmental Spill / Impact' },
+                      { value: 'HAZARD_OBSERVATION', label: 'Hazard Observation' },
+                      { value: 'SECURITY', label: 'Security Incident' },
+                      { value: 'OTHER', label: 'Other Safety Event' },
+                    ]}
+                  />
                 </div>
 
                 <div>
                   <label className="block font-bold text-xs mb-1">Severity Level *</label>
-                  <select
+                  <SearchableSelect
                     required
-                    value={String(hseForm.severity || '').replaceAll('_', ' ')}
-                    onChange={(e) => setHseForm({ ...hseForm, severity: e.target.value })}
-                    className="w-full border rounded-lg p-2.5 bg-background font-bold text-red-600 dark:text-red-400"
-                  >
-                    <option value="LOW">Low (Minor First Aid / Observation)</option>
-                    <option value="MEDIUM">Medium (Moderate Damage / Treatment)</option>
-                    <option value="HIGH">High (Major Damage / Lost Time)</option>
-                    <option value="CRITICAL">Critical (Severe Emergency / Fatality Risk)</option>
-                  </select>
+                    value={hseForm.severity}
+                    onChange={(val) => setHseForm({ ...hseForm, severity: val })}
+                    options={[
+                      { value: 'LOW', label: 'Low (Minor First Aid / Observation)' },
+                      { value: 'MEDIUM', label: 'Medium (Moderate Damage / Treatment)' },
+                      { value: 'HIGH', label: 'High (Major Damage / Lost Time)' },
+                      { value: 'CRITICAL', label: 'Critical (Severe Emergency / Fatality Risk)' },
+                    ]}
+                  />
                 </div>
               </div>
 
@@ -4095,12 +4088,11 @@ Signed: Field Operations Administration
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-xs mb-1">Date & Time *</label>
-                  <input
-                    type="datetime-local"
+                  <AppDateTimePicker
+                    mode="datetime"
                     required
                     value={hseForm.incident_date}
-                    onChange={(e) => setHseForm({ ...hseForm, incident_date: e.target.value })}
-                    className="w-full border rounded-lg p-2.5 bg-background font-mono"
+                    onChange={(val) => setHseForm({ ...hseForm, incident_date: val })}
                   />
                 </div>
 
@@ -4378,22 +4370,20 @@ Signed: Field Operations Administration
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold mb-1 text-slate-700 dark:text-slate-300">Contract Start Date *</label>
-                  <input
-                    type="date"
+                  <AppDateTimePicker
+                    mode="date"
                     required
                     value={contractForm.start_date}
-                    onChange={(e) => setContractForm({ ...contractForm, start_date: e.target.value })}
-                    className="w-full p-2.5 border rounded-lg bg-background"
+                    onChange={(val) => setContractForm({ ...contractForm, start_date: val })}
                   />
                 </div>
                 <div>
                   <label className="block font-bold mb-1 text-slate-700 dark:text-slate-300">Contract End Date *</label>
-                  <input
-                    type="date"
+                  <AppDateTimePicker
+                    mode="date"
                     required
                     value={contractForm.end_date}
-                    onChange={(e) => setContractForm({ ...contractForm, end_date: e.target.value })}
-                    className="w-full p-2.5 border rounded-lg bg-background"
+                    onChange={(val) => setContractForm({ ...contractForm, end_date: val })}
                   />
                 </div>
               </div>
@@ -4472,25 +4462,24 @@ Signed: Field Operations Administration
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold mb-1">Recorded Date & Time *</label>
-                  <input
-                    type="datetime-local"
+                  <AppDateTimePicker
+                    mode="datetime"
                     required
                     value={editFuelForm.recorded_at}
-                    onChange={(e) => setEditFuelForm({ ...editFuelForm, recorded_at: e.target.value })}
-                    className="w-full p-2.5 border rounded-lg bg-background font-mono"
+                    onChange={(val) => setEditFuelForm({ ...editFuelForm, recorded_at: val })}
                   />
                 </div>
                 <div>
                   <label className="block font-bold mb-1">Fuel Type *</label>
-                  <select
+                  <SearchableSelect
                     value={editFuelForm.fuel_type}
-                    onChange={(e) => setEditFuelForm({ ...editFuelForm, fuel_type: e.target.value })}
-                    className="w-full p-2.5 border rounded-lg bg-background font-bold"
-                  >
-                    <option value="DIESEL">DIESEL</option>
-                    <option value="PETROL">PETROL</option>
-                    <option value="OTHER">OTHER</option>
-                  </select>
+                    onChange={(val) => setEditFuelForm({ ...editFuelForm, fuel_type: val })}
+                    options={[
+                      { value: 'DIESEL', label: 'DIESEL' },
+                      { value: 'PETROL', label: 'PETROL' },
+                      { value: 'OTHER', label: 'OTHER' },
+                    ]}
+                  />
                 </div>
               </div>
 
@@ -4718,12 +4707,11 @@ Signed: Field Operations Administration
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold mb-1">Allocation Date &amp; Time *</label>
-                  <input
-                    type="datetime-local"
+                  <AppDateTimePicker
+                    mode="datetime"
                     required
                     value={editAllocForm.allocated_at}
-                    onChange={(e) => setEditAllocForm({ ...editAllocForm, allocated_at: e.target.value })}
-                    className="w-full p-2.5 border rounded-lg bg-background font-mono"
+                    onChange={(val) => setEditAllocForm({ ...editAllocForm, allocated_at: val })}
                   />
                 </div>
                 <div>
@@ -5147,12 +5135,11 @@ Signed: Field Operations Administration
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold mb-1">Expense Date *</label>
-                  <input
-                    type="date"
+                  <AppDateTimePicker
+                    mode="date"
                     required
                     value={editExpenseForm.expense_date}
-                    onChange={(e) => setEditExpenseForm({ ...editExpenseForm, expense_date: e.target.value })}
-                    className="w-full p-2.5 border rounded-lg bg-background"
+                    onChange={(val) => setEditExpenseForm({ ...editExpenseForm, expense_date: val })}
                   />
                 </div>
 
@@ -5172,17 +5159,17 @@ Signed: Field Operations Administration
 
               <div>
                 <label className="block font-bold mb-1">Payment Method</label>
-                <select
+                <SearchableSelect
                   value={editExpenseForm.payment_method}
-                  onChange={(e) => setEditExpenseForm({ ...editExpenseForm, payment_method: e.target.value })}
-                  className="w-full p-2.5 border rounded-lg bg-background"
-                >
-                  <option value="MOBILE_MONEY">Phone / Mobile Money</option>
-                  <option value="BANK_TRANSFER">Bank Transfer</option>
-                  <option value="CASH">Cash</option>
-                  <option value="CARD">Card</option>
-                  <option value="OTHER">Other</option>
-                </select>
+                  onChange={(val) => setEditExpenseForm({ ...editExpenseForm, payment_method: val })}
+                  options={[
+                    { value: 'MOBILE_MONEY', label: 'Phone / Mobile Money' },
+                    { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+                    { value: 'CASH', label: 'Cash' },
+                    { value: 'CARD', label: 'Card' },
+                    { value: 'OTHER', label: 'Other' },
+                  ]}
+                />
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t">

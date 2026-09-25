@@ -10,6 +10,7 @@ import {
 } from '@/lib/api';
 import { Modal, SearchableProjectSelect, rows } from './DataUI';
 import SearchableSelect, { SearchableSelectOption } from './SearchableSelect';
+import AppDateTimePicker from './ui/AppDateTimePicker';
 import { useAuth } from './AuthProvider';
 
 export interface ShiftIntervalForm {
@@ -1384,44 +1385,43 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
 
               <div className="col-span-2">
                 <label className="block text-xs font-medium mb-1">Drilling Program (Optional)</label>
-                <select
+                <SearchableSelect
                   value={newShift.program_id}
-                  onChange={(e) => setNewShift({ ...newShift, program_id: e.target.value })}
-                  className="w-full text-sm border rounded p-2 bg-background"
-                >
-                  <option value="">Select Drilling Program...</option>
-                  {getSortedPrograms(newShift.project_id).map((p) => {
-                    const isMatch = newShift.project_id && p.project_id === newShift.project_id;
-                    return (
-                      <option key={p.id} value={p.id}>
-                        {isMatch ? '⭐ ' : ''}{String(p.name || p.program_name)} ({String(p.drilling_type || 'RC')}) — Target: {String(p.target_metres ?? 0)}m
-                      </option>
-                    );
-                  })}
-                </select>
+                  onChange={(val) => setNewShift({ ...newShift, program_id: val })}
+                  placeholder="Select Drilling Program..."
+                  options={[
+                    { value: '', label: 'Select Drilling Program...' },
+                    ...getSortedPrograms(newShift.project_id).map((p) => {
+                      const isMatch = newShift.project_id && p.project_id === newShift.project_id;
+                      return {
+                        value: p.id,
+                        label: `${isMatch ? '⭐ ' : ''}${String(p.name || p.program_name)} (${String(p.drilling_type || 'RC')}) — Target: ${String(p.target_metres ?? 0)}m`,
+                      };
+                    }),
+                  ]}
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-medium mb-1">Shift Date</label>
-                <input
-                  type="date"
+                <AppDateTimePicker
+                  mode="date"
                   required
                   value={newShift.date || newShift.shift_date}
-                  onChange={(e) => setNewShift({ ...newShift, date: e.target.value, shift_date: e.target.value })}
-                  className="w-full text-sm border rounded p-2 bg-background"
+                  onChange={(val) => setNewShift({ ...newShift, date: val, shift_date: val })}
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-medium mb-1">Shift Type</label>
-                <select
+                <SearchableSelect
                   value={newShift.shift_type}
-                  onChange={(e) => setNewShift({ ...newShift, shift_type: e.target.value })}
-                  className="w-full text-sm border rounded p-2 bg-background"
-                >
-                  <option value="DAY">DAY</option>
-                  <option value="NIGHT">NIGHT</option>
-                </select>
+                  onChange={(val) => setNewShift({ ...newShift, shift_type: val })}
+                  options={[
+                    { value: 'DAY', label: 'DAY' },
+                    { value: 'NIGHT', label: 'NIGHT' },
+                  ]}
+                />
               </div>
 
               <div>
@@ -1535,27 +1535,26 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
                       <div className="grid grid-cols-12 gap-2 text-xs">
                         <div className="col-span-12 sm:col-span-4">
                           <label className="block text-[10px] text-muted-foreground font-medium mb-0.5">Drill Hole</label>
-                          <select
+                          <SearchableSelect
                             value={interval.drill_hole_id}
-                            onChange={(e) => {
-                              const val = e.target.value;
+                            onChange={(val) => {
                               setShiftIntervals((prev) => {
                                 const next = [...prev];
                                 next[idx] = { ...next[idx], drill_hole_id: val };
                                 return next;
                               });
                             }}
-                            className="w-full text-xs border rounded p-1.5 bg-background"
-                          >
-                            <option value="">Select Hole...</option>
-                            {(Array.isArray(holes) ? holes : [])
-                              .filter((h) => !newShift.project_id || h.project_id === newShift.project_id)
-                              .map((h) => (
-                                <option key={h.id} value={h.id}>
-                                  {h.hole_number} ({String(h.drilling_method || 'RC')})
-                                </option>
-                              ))}
-                          </select>
+                            placeholder="Select Hole..."
+                            options={[
+                              { value: '', label: 'Select Hole...' },
+                              ...(Array.isArray(holes) ? holes : [])
+                                .filter((h) => !newShift.project_id || h.project_id === newShift.project_id)
+                                .map((h) => ({
+                                  value: h.id,
+                                  label: `${h.hole_number} (${String(h.drilling_method || 'RC')})`,
+                                })),
+                            ]}
+                          />
                         </div>
                         <div className="col-span-6 sm:col-span-2">
                           <label className="block text-[10px] text-muted-foreground font-medium mb-0.5">From (m)</label>
@@ -1614,23 +1613,22 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
                         </div>
                         <div className="col-span-6 sm:col-span-2">
                           <label className="block text-[10px] text-muted-foreground font-medium mb-0.5">Method</label>
-                          <select
+                          <SearchableSelect
                             value={interval.drilling_method || 'RC'}
-                            onChange={(e) => {
-                              const val = e.target.value;
+                            onChange={(val) => {
                               setShiftIntervals((prev) => {
                                 const next = [...prev];
                                 next[idx] = { ...next[idx], drilling_method: val };
                                 return next;
                               });
                             }}
-                            className="w-full text-xs border rounded p-1.5 bg-background"
-                          >
-                            <option value="RC">RC</option>
-                            <option value="DIAMOND_CORE">Diamond Core</option>
-                            <option value="RAB">RAB</option>
-                            <option value="AIR_CORE">Air Core</option>
-                          </select>
+                            options={[
+                              { value: 'RC', label: 'RC' },
+                              { value: 'DIAMOND_CORE', label: 'Diamond Core' },
+                              { value: 'RAB', label: 'RAB' },
+                              { value: 'AIR_CORE', label: 'Air Core' },
+                            ]}
+                          />
                         </div>
                       </div>
                     </div>
@@ -1748,16 +1746,16 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium mb-1">Drilling Method</label>
-                <select
+                <SearchableSelect
                   value={newProgram.drilling_type}
-                  onChange={(e) => setNewProgram({ ...newProgram, drilling_type: e.target.value })}
-                  className="w-full text-sm border rounded p-2 bg-background"
-                >
-                  <option value="RC">Reverse Circulation (RC)</option>
-                  <option value="DIAMOND_CORE">Diamond Core (DD)</option>
-                  <option value="RAB">RAB</option>
-                  <option value="AIR_CORE">Air Core</option>
-                </select>
+                  onChange={(val) => setNewProgram({ ...newProgram, drilling_type: val })}
+                  options={[
+                    { value: 'RC', label: 'Reverse Circulation (RC)' },
+                    { value: 'DIAMOND_CORE', label: 'Diamond Core (DD)' },
+                    { value: 'RAB', label: 'RAB' },
+                    { value: 'AIR_CORE', label: 'Air Core' },
+                  ]}
+                />
               </div>
 
               <div>
@@ -1821,20 +1819,20 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
 
               <div>
                 <label className="block text-xs font-semibold mb-1">Drilling Program (Optional)</label>
-                <select
+                <SearchableSelect
                   value={newHoleBatch.program_id}
-                  onChange={(e) => setNewHoleBatch({ ...newHoleBatch, program_id: e.target.value })}
-                  className="w-full text-sm border rounded p-2 bg-background"
-                >
-                  <option value="">Select Drilling Program...</option>
-                  {(Array.isArray(programs) ? programs : [])
-                    .filter((p) => !newHoleBatch.project_id || p.project_id === newHoleBatch.project_id)
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {String(p.name || p.program_name)} ({String(p.drilling_type || 'RC')}) — Target: {String(p.target_metres ?? 0)}m
-                      </option>
-                    ))}
-                </select>
+                  onChange={(val) => setNewHoleBatch({ ...newHoleBatch, program_id: val })}
+                  placeholder="Select Drilling Program..."
+                  options={[
+                    { value: '', label: 'Select Drilling Program...' },
+                    ...(Array.isArray(programs) ? programs : [])
+                      .filter((p) => !newHoleBatch.project_id || p.project_id === newHoleBatch.project_id)
+                      .map((p) => ({
+                        value: p.id,
+                        label: `${String(p.name || p.program_name)} (${String(p.drilling_type || 'RC')}) — Target: ${String(p.target_metres ?? 0)}m`,
+                      })),
+                  ]}
+                />
               </div>
             </div>
 
@@ -1957,23 +1955,23 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
 
                       <div className="col-span-6 sm:col-span-3">
                         <label className="block text-[11px] font-medium mb-0.5">Method</label>
-                        <select
+                        <SearchableSelect
+                          options={[
+                            { value: 'RC', label: 'RC' },
+                            { value: 'DIAMOND_CORE', label: 'Diamond Core' },
+                            { value: 'RAB', label: 'RAB' },
+                            { value: 'AIR_CORE', label: 'Air Core' },
+                          ]}
                           value={item.drilling_method || 'RC'}
-                          onChange={(e) => {
-                            const val = e.target.value;
+                          onChange={(val) => {
                             setNewHoleList((prev) => {
                               const next = [...prev];
                               next[idx] = { ...next[idx], drilling_method: val };
                               return next;
                             });
                           }}
-                          className="w-full text-xs border rounded p-1.5 bg-background"
-                        >
-                          <option value="RC">RC</option>
-                          <option value="DIAMOND_CORE">Diamond Core</option>
-                          <option value="RAB">RAB</option>
-                          <option value="AIR_CORE">Air Core</option>
-                        </select>
+                          placeholder="Select Method..."
+                        />
                       </div>
 
                       <div className="col-span-6 sm:col-span-3">
@@ -2468,43 +2466,41 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
 
               <div className="col-span-2">
                 <label className="block text-xs font-medium mb-1">Drilling Program (Optional)</label>
-                <select
-                  value={(editingShift as any).program_id || ''}
-                  onChange={(e) => setEditingShift({ ...editingShift, program_id: e.target.value } as any)}
-                  className="w-full text-sm border rounded p-2 bg-background"
-                >
-                  <option value="">Select Drilling Program...</option>
-                  {(Array.isArray(programs) ? programs : [])
+                <SearchableSelect
+                  options={(Array.isArray(programs) ? programs : [])
                     .filter((p) => !editingShift.project_id || p.project_id === editingShift.project_id)
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {String(p.name || p.program_name)} ({String(p.drilling_type || 'RC')}) — Target: {String(p.target_metres ?? 0)}m
-                      </option>
-                    ))}
-                </select>
+                    .map((p) => ({
+                      value: p.id,
+                      label: `${String(p.name || p.program_name)} (${String(p.drilling_type || 'RC')}) — Target: ${String(p.target_metres ?? 0)}m`,
+                    }))}
+                  value={(editingShift as any).program_id || ''}
+                  onChange={(val) => setEditingShift({ ...editingShift, program_id: val } as any)}
+                  placeholder="Select Drilling Program..."
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-medium mb-1">Shift Date</label>
-                <input
-                  type="date"
+                <AppDateTimePicker
+                  mode="date"
                   required
                   value={(editingShift as any).date || editingShift.shift_date || ''}
-                  onChange={(e) => setEditingShift({ ...editingShift, shift_date: e.target.value, date: e.target.value } as any)}
-                  className="w-full text-sm border rounded p-2 bg-background"
+                  onChange={(val) => setEditingShift({ ...editingShift, shift_date: val, date: val } as any)}
+                  placeholder="Select Shift Date"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-medium mb-1">Shift Type</label>
-                <select
+                <SearchableSelect
+                  options={[
+                    { value: 'DAY', label: 'DAY' },
+                    { value: 'NIGHT', label: 'NIGHT' },
+                  ]}
                   value={editingShift.shift_type || 'DAY'}
-                  onChange={(e) => setEditingShift({ ...editingShift, shift_type: e.target.value as any })}
-                  className="w-full text-sm border rounded p-2 bg-background"
-                >
-                  <option value="DAY">DAY</option>
-                  <option value="NIGHT">NIGHT</option>
-                </select>
+                  onChange={(val) => setEditingShift({ ...editingShift, shift_type: val as any })}
+                  placeholder="Select Shift Type..."
+                />
               </div>
 
               <div>
@@ -2625,27 +2621,23 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
                       <div className="grid grid-cols-12 gap-2 text-xs">
                         <div className="col-span-12 sm:col-span-4">
                           <label className="block text-[10px] text-muted-foreground font-medium mb-0.5">Drill Hole</label>
-                          <select
+                          <SearchableSelect
+                            options={(Array.isArray(holes) ? holes : [])
+                              .filter((h) => !editingShift.project_id || h.project_id === editingShift.project_id)
+                              .map((h) => ({
+                                value: h.id,
+                                label: `${h.hole_number} (${String(h.drilling_method || 'RC')})`,
+                              }))}
                             value={interval.drill_hole_id}
-                            onChange={(e) => {
-                              const val = e.target.value;
+                            onChange={(val) => {
                               setEditShiftIntervals((prev) => {
                                 const next = [...prev];
                                 next[idx] = { ...next[idx], drill_hole_id: val };
                                 return next;
                               });
                             }}
-                            className="w-full text-xs border rounded p-1.5 bg-background"
-                          >
-                            <option value="">Select Hole...</option>
-                            {(Array.isArray(holes) ? holes : [])
-                              .filter((h) => !editingShift.project_id || h.project_id === editingShift.project_id)
-                              .map((h) => (
-                                <option key={h.id} value={h.id}>
-                                  {h.hole_number} ({String(h.drilling_method || 'RC')})
-                                </option>
-                              ))}
-                          </select>
+                            placeholder="Select Hole..."
+                          />
                         </div>
                         <div className="col-span-6 sm:col-span-2">
                           <label className="block text-[10px] text-muted-foreground font-medium mb-0.5">From (m)</label>
@@ -2700,23 +2692,23 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
                         </div>
                         <div className="col-span-6 sm:col-span-2">
                           <label className="block text-[10px] text-muted-foreground font-medium mb-0.5">Method</label>
-                          <select
+                          <SearchableSelect
+                            options={[
+                              { value: 'RC', label: 'RC' },
+                              { value: 'DIAMOND_CORE', label: 'Diamond Core' },
+                              { value: 'RAB', label: 'RAB' },
+                              { value: 'AIR_CORE', label: 'Air Core' },
+                            ]}
                             value={interval.drilling_method || 'RC'}
-                            onChange={(e) => {
-                              const val = e.target.value;
+                            onChange={(val) => {
                               setEditShiftIntervals((prev) => {
                                 const next = [...prev];
                                 next[idx] = { ...next[idx], drilling_method: val };
                                 return next;
                               });
                             }}
-                            className="w-full text-xs border rounded p-1.5 bg-background"
-                          >
-                            <option value="RC">RC</option>
-                            <option value="DIAMOND_CORE">Diamond Core</option>
-                            <option value="RAB">RAB</option>
-                            <option value="AIR_CORE">Air Core</option>
-                          </select>
+                            placeholder="Select Method..."
+                          />
                         </div>
                       </div>
                     </div>
@@ -2932,20 +2924,17 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
 
             <div>
               <label className="block text-xs font-medium mb-1">Drilling Program (Optional)</label>
-              <select
-                value={(editingHole as any).program_id || ''}
-                onChange={(e) => setEditingHole({ ...editingHole, program_id: e.target.value } as any)}
-                className="w-full text-sm border rounded p-2 bg-background"
-              >
-                <option value="">Select Drilling Program...</option>
-                {(Array.isArray(programs) ? programs : [])
+              <SearchableSelect
+                options={(Array.isArray(programs) ? programs : [])
                   .filter((p) => !editingHole.project_id || p.project_id === editingHole.project_id)
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {String(p.name || p.program_name)} ({String(p.drilling_type || 'RC')}) — Target: {String(p.target_metres ?? 0)}m
-                    </option>
-                  ))}
-              </select>
+                  .map((p) => ({
+                    value: p.id,
+                    label: `${String(p.name || p.program_name)} (${String(p.drilling_type || 'RC')}) — Target: ${String(p.target_metres ?? 0)}m`,
+                  }))}
+                value={(editingHole as any).program_id || ''}
+                onChange={(val) => setEditingHole({ ...editingHole, program_id: val } as any)}
+                placeholder="Select Drilling Program..."
+              />
             </div>
 
             <div>
@@ -2962,16 +2951,17 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium mb-1">Method</label>
-                <select
+                <SearchableSelect
+                  options={[
+                    { value: 'RC', label: 'RC' },
+                    { value: 'DIAMOND_CORE', label: 'Diamond Core' },
+                    { value: 'RAB', label: 'RAB' },
+                    { value: 'AIR_CORE', label: 'Air Core' },
+                  ]}
                   value={(editingHole as any).drilling_method || (editingHole as any).drilling_type || 'RC'}
-                  onChange={(e) => setEditingHole({ ...editingHole, drilling_method: e.target.value } as any)}
-                  className="w-full text-sm border rounded p-2 bg-background"
-                >
-                  <option value="RC">RC</option>
-                  <option value="DIAMOND_CORE">Diamond Core</option>
-                  <option value="RAB">RAB</option>
-                  <option value="AIR_CORE">Air Core</option>
-                </select>
+                  onChange={(val) => setEditingHole({ ...editingHole, drilling_method: val } as any)}
+                  placeholder="Select Method..."
+                />
               </div>
 
               <div>
@@ -3025,16 +3015,17 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
 
               <div>
                 <label className="block text-xs font-medium mb-1">Status</label>
-                <select
+                <SearchableSelect
+                  options={[
+                    { value: 'PLANNED', label: 'PLANNED' },
+                    { value: 'IN_PROGRESS', label: 'IN_PROGRESS' },
+                    { value: 'COMPLETED', label: 'COMPLETED' },
+                    { value: 'ABANDONED', label: 'ABANDONED' },
+                  ]}
                   value={editingHole.status || 'PLANNED'}
-                  onChange={(e) => setEditingHole({ ...editingHole, status: e.target.value as any })}
-                  className="w-full text-sm border rounded p-2 bg-background font-semibold"
-                >
-                  <option value="PLANNED">PLANNED</option>
-                  <option value="IN_PROGRESS">IN_PROGRESS</option>
-                  <option value="COMPLETED">COMPLETED</option>
-                  <option value="ABANDONED">ABANDONED</option>
-                </select>
+                  onChange={(val) => setEditingHole({ ...editingHole, status: val as any })}
+                  placeholder="Select Status..."
+                />
               </div>
             </div>
 
@@ -3191,44 +3182,42 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
 
                   <div className="col-span-2">
                     <label className="block text-xs font-medium mb-1">Drilling Program (Optional)</label>
-                    <select
-                      value={newShift.program_id}
-                      onChange={(e) => setNewShift({ ...newShift, program_id: e.target.value })}
-                      className="w-full text-sm border rounded p-2 bg-background"
-                    >
-                      <option value="">Select Drilling Program...</option>
-                      {getSortedPrograms(newShift.project_id).map((p) => {
+                    <SearchableSelect
+                      options={getSortedPrograms(newShift.project_id).map((p) => {
                         const isMatch = newShift.project_id && p.project_id === newShift.project_id;
-                        return (
-                          <option key={p.id} value={p.id}>
-                            {isMatch ? '⭐ ' : ''}{String(p.name || p.program_name)} ({String(p.drilling_type || 'RC')}) — Target: {String(p.target_metres ?? 0)}m
-                          </option>
-                        );
+                        return {
+                          value: p.id,
+                          label: `${isMatch ? '⭐ ' : ''}${String(p.name || p.program_name)} (${String(p.drilling_type || 'RC')}) — Target: ${String(p.target_metres ?? 0)}m`,
+                        };
                       })}
-                    </select>
+                      value={newShift.program_id}
+                      onChange={(val) => setNewShift({ ...newShift, program_id: val })}
+                      placeholder="Select Drilling Program..."
+                    />
                   </div>
 
                   <div>
                     <label className="block text-xs font-medium mb-1">Shift Date</label>
-                    <input
-                      type="date"
+                    <AppDateTimePicker
+                      mode="date"
                       required
                       value={newShift.date || newShift.shift_date}
-                      onChange={(e) => setNewShift({ ...newShift, date: e.target.value, shift_date: e.target.value })}
-                      className="w-full text-sm border rounded p-2 bg-background"
+                      onChange={(val) => setNewShift({ ...newShift, date: val, shift_date: val })}
+                      placeholder="Select Shift Date"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-medium mb-1">Shift Type</label>
-                    <select
+                    <SearchableSelect
+                      options={[
+                        { value: 'DAY', label: 'DAY' },
+                        { value: 'NIGHT', label: 'NIGHT' },
+                      ]}
                       value={newShift.shift_type}
-                      onChange={(e) => setNewShift({ ...newShift, shift_type: e.target.value })}
-                      className="w-full text-sm border rounded p-2 bg-background"
-                    >
-                      <option value="DAY">DAY</option>
-                      <option value="NIGHT">NIGHT</option>
-                    </select>
+                      onChange={(val) => setNewShift({ ...newShift, shift_type: val })}
+                      placeholder="Select Shift Type..."
+                    />
                   </div>
 
                   <div>
@@ -3314,27 +3303,23 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
                         <div key={idx} className="p-2 border rounded-md bg-background grid grid-cols-12 gap-2 text-xs">
                           <div className="col-span-12 sm:col-span-4">
                             <label className="block text-[10px] text-muted-foreground font-medium mb-0.5">Drill Hole</label>
-                            <select
+                            <SearchableSelect
+                              options={(Array.isArray(holes) ? holes : [])
+                                .filter((h) => !newShift.project_id || h.project_id === newShift.project_id)
+                                .map((h) => ({
+                                  value: h.id,
+                                  label: `${h.hole_number} (${String(h.drilling_method || 'RC')})`,
+                                }))}
                               value={interval.drill_hole_id}
-                              onChange={(e) => {
-                                const val = e.target.value;
+                              onChange={(val) => {
                                 setShiftIntervals((prev) => {
                                   const next = [...prev];
                                   next[idx] = { ...next[idx], drill_hole_id: val };
                                   return next;
                                 });
                               }}
-                              className="w-full text-xs border rounded p-1 bg-background"
-                            >
-                              <option value="">Select Hole...</option>
-                              {(Array.isArray(holes) ? holes : [])
-                                .filter((h) => !newShift.project_id || h.project_id === newShift.project_id)
-                                .map((h) => (
-                                  <option key={h.id} value={h.id}>
-                                    {h.hole_number} ({String(h.drilling_method || 'RC')})
-                                  </option>
-                                ))}
-                            </select>
+                              placeholder="Select Hole..."
+                            />
                           </div>
                           <div className="col-span-6 sm:col-span-2">
                             <label className="block text-[10px] text-muted-foreground font-medium mb-0.5">From (m)</label>
@@ -3393,23 +3378,23 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
                           </div>
                           <div className="col-span-6 sm:col-span-2">
                             <label className="block text-[10px] text-muted-foreground font-medium mb-0.5">Method</label>
-                            <select
+                            <SearchableSelect
+                              options={[
+                                { value: 'RC', label: 'RC' },
+                                { value: 'DIAMOND_CORE', label: 'Diamond Core' },
+                                { value: 'RAB', label: 'RAB' },
+                                { value: 'AIR_CORE', label: 'Air Core' },
+                              ]}
                               value={interval.drilling_method || 'RC'}
-                              onChange={(e) => {
-                                const val = e.target.value;
+                              onChange={(val) => {
                                 setShiftIntervals((prev) => {
                                   const next = [...prev];
                                   next[idx] = { ...next[idx], drilling_method: val };
                                   return next;
                                 });
                               }}
-                              className="w-full text-xs border rounded p-1 bg-background"
-                            >
-                              <option value="RC">RC</option>
-                              <option value="DIAMOND_CORE">Diamond Core</option>
-                              <option value="RAB">RAB</option>
-                              <option value="AIR_CORE">Air Core</option>
-                            </select>
+                              placeholder="Select Method..."
+                            />
                           </div>
                         </div>
                       ))}
@@ -3468,16 +3453,17 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
 
                   <div>
                     <label className="block text-xs font-medium mb-1">Severity Level</label>
-                    <select
+                    <SearchableSelect
+                      options={[
+                        { value: 'LOW', label: 'LOW — Minor issue' },
+                        { value: 'MEDIUM', label: 'MEDIUM — Moderate wear / fault' },
+                        { value: 'HIGH', label: 'HIGH — Major breakdown' },
+                        { value: 'CRITICAL', label: 'CRITICAL — Emergency rig stoppage' },
+                      ]}
                       value={form360Defect.severity}
-                      onChange={(e) => setForm360Defect({ ...form360Defect, severity: e.target.value })}
-                      className="w-full text-sm border rounded p-2 bg-background font-semibold"
-                    >
-                      <option value="LOW">LOW — Minor issue</option>
-                      <option value="MEDIUM">MEDIUM — Moderate wear / fault</option>
-                      <option value="HIGH">HIGH — Major breakdown</option>
-                      <option value="CRITICAL">CRITICAL — Emergency rig stoppage</option>
-                    </select>
+                      onChange={(val) => setForm360Defect({ ...form360Defect, severity: val })}
+                      placeholder="Select Severity..."
+                    />
                   </div>
 
                   <div className="col-span-2">
@@ -3613,12 +3599,12 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
 
                     <div>
                       <label className="block text-xs font-medium mb-1">Date</label>
-                      <input
-                        type="date"
+                      <AppDateTimePicker
+                        mode="date"
                         required
                         value={form360Fuel.date}
-                        onChange={(e) => setForm360Fuel({ ...form360Fuel, date: e.target.value })}
-                        className="w-full text-sm border rounded p-2 bg-background"
+                        onChange={(val) => setForm360Fuel({ ...form360Fuel, date: val })}
+                        placeholder="Select Date"
                       />
                     </div>
 
@@ -3673,26 +3659,22 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
 
                     <div className="col-span-2">
                       <label className="block text-xs font-medium mb-1">Select Fuel Receipt Entry / Delivery Batch *</label>
-                      <select
-                        value={form360FuelReduction.fuel_log_id}
-                        onChange={(e) => {
-                          const logId = e.target.value;
-                          setForm360FuelReduction({ ...form360FuelReduction, fuel_log_id: logId });
-                        }}
-                        className="w-full text-sm border rounded p-2 bg-background font-mono"
-                      >
-                        <option value="">-- Choose Fuel Receipt / Tanker Refill Log --</option>
-                        {projectFuelReceipts.map((r: any) => {
+                      <SearchableSelect
+                        options={projectFuelReceipts.map((r: any) => {
                           const rDate = r.date || (r.created_at ? String(r.created_at).slice(0, 10) : 'N/A');
                           const rVendor = r.supplier || r.vendor || 'Fuel Delivery';
                           const rLitres = r.quantity_litres ?? r.fuel_quantity ?? 0;
-                          return (
-                            <option key={r.id} value={r.id}>
-                              {rDate} - {rVendor} - {rLitres} Litres (Log #{String(r.id).slice(0, 8)})
-                            </option>
-                          );
+                          return {
+                            value: r.id,
+                            label: `${rDate} - ${rVendor} - ${rLitres} Litres (Log #${String(r.id).slice(0, 8)})`,
+                          };
                         })}
-                      </select>
+                        value={form360FuelReduction.fuel_log_id}
+                        onChange={(val) => {
+                          setForm360FuelReduction({ ...form360FuelReduction, fuel_log_id: val });
+                        }}
+                        placeholder="-- Choose Fuel Receipt / Tanker Refill Log --"
+                      />
                       {projectFuelReceipts.length === 0 && (
                         <p className="text-[11px] text-amber-600 mt-1">
                           No main fuel receipts logged for this equipment yet. You can log a receipt entry under &quot;Receipt Entry&quot; above.
@@ -3860,18 +3842,19 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
 
                   <div>
                     <label className="block text-xs font-medium mb-1">Incident Type *</label>
-                    <select
+                    <SearchableSelect
+                      options={[
+                        { value: 'NEAR_MISS', label: 'NEAR MISS — Safety hazard observed' },
+                        { value: 'FIRST_AID', label: 'FIRST AID — Minor injury handled on site' },
+                        { value: 'MEDICAL_TREATMENT', label: 'MEDICAL TREATMENT — Clinic visit required' },
+                        { value: 'LOST_TIME', label: 'LOST TIME INCIDENT (LTI)' },
+                        { value: 'PROPERTY_DAMAGE', label: 'PROPERTY DAMAGE — Equipment impact' },
+                        { value: 'ENVIRONMENTAL', label: 'ENVIRONMENTAL — Oil / chemical spill' },
+                      ]}
                       value={form360Hse.incident_type}
-                      onChange={(e) => setForm360Hse({ ...form360Hse, incident_type: e.target.value })}
-                      className="w-full text-sm border rounded p-2 bg-background font-semibold"
-                    >
-                      <option value="NEAR_MISS">NEAR MISS — Safety hazard observed</option>
-                      <option value="FIRST_AID">FIRST AID — Minor injury handled on site</option>
-                      <option value="MEDICAL_TREATMENT">MEDICAL TREATMENT — Clinic visit required</option>
-                      <option value="LOST_TIME">LOST TIME INCIDENT (LTI)</option>
-                      <option value="PROPERTY_DAMAGE">PROPERTY DAMAGE — Equipment impact</option>
-                      <option value="ENVIRONMENTAL">ENVIRONMENTAL — Oil / chemical spill</option>
-                    </select>
+                      onChange={(val) => setForm360Hse({ ...form360Hse, incident_type: val })}
+                      placeholder="Select Incident Type..."
+                    />
                   </div>
 
                   <div>
@@ -3888,12 +3871,12 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
 
                   <div>
                     <label className="block text-xs font-medium mb-1">Incident Date</label>
-                    <input
-                      type="date"
+                    <AppDateTimePicker
+                      mode="date"
                       required
                       value={form360Hse.incident_date}
-                      onChange={(e) => setForm360Hse({ ...form360Hse, incident_date: e.target.value })}
-                      className="w-full text-sm border rounded p-2 bg-background"
+                      onChange={(val) => setForm360Hse({ ...form360Hse, incident_date: val })}
+                      placeholder="Select Incident Date"
                     />
                   </div>
 
@@ -3999,19 +3982,16 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
 
                   <div>
                     <label className="block text-xs font-medium mb-1">Store / Warehouse Location *</label>
-                    <select
-                      required
+                    <SearchableSelect
+                      options={inventoryStores.map((s: any) => ({
+                        value: s.id,
+                        label: `${s.name || s.code || s.location_name} ${s.code ? `(${s.code})` : ''}`,
+                      }))}
                       value={form360Store.store_id}
-                      onChange={(e) => setForm360Store({ ...form360Store, store_id: e.target.value })}
-                      className="w-full text-sm border rounded p-2 bg-background font-medium"
-                    >
-                      <option value="">Select Store / Warehouse...</option>
-                      {inventoryStores.map((s: any) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name || s.code || s.location_name} {s.code ? `(${s.code})` : ''}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => setForm360Store({ ...form360Store, store_id: val })}
+                      placeholder="Select Store / Warehouse..."
+                      required
+                    />
                   </div>
                 </div>
 
@@ -4132,25 +4112,25 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
                             <label className="block text-[10px] text-muted-foreground font-medium mb-0.5">
                               Unit of Measure (Auto-Filled)
                             </label>
-                            <select
+                            <SearchableSelect
+                              options={[
+                                { value: 'PCS', label: 'PCS — Pieces' },
+                                { value: 'BAGS', label: 'BAGS — 25kg Bags' },
+                                { value: 'DRUMS', label: 'DRUMS — 200L Drums' },
+                                { value: 'METRES', label: 'METRES' },
+                                { value: 'KG', label: 'KG — Kilograms' },
+                                { value: 'LITRES', label: 'LITRES' },
+                              ]}
                               value={itemRow.unit}
-                              onChange={(e) => {
-                                const val = e.target.value;
+                              onChange={(val) => {
                                 setStoreItemsList((prev) => {
                                   const next = [...prev];
                                   next[idx] = { ...next[idx], unit: val };
                                   return next;
                                 });
                               }}
-                              className="w-full text-xs border rounded p-1.5 bg-background font-semibold"
-                            >
-                              <option value="PCS">PCS — Pieces</option>
-                              <option value="BAGS">BAGS — 25kg Bags</option>
-                              <option value="DRUMS">DRUMS — 200L Drums</option>
-                              <option value="METRES">METRES</option>
-                              <option value="KG">KG — Kilograms</option>
-                              <option value="LITRES">LITRES</option>
-                            </select>
+                              placeholder="Select Unit..."
+                            />
                           </div>
                         </div>
                       </div>

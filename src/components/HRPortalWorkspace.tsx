@@ -2,6 +2,8 @@
 import { purchaseOrderCategoryLabel } from './PurchaseOrderCategoryField';
 import IncidentDetailModal from './IncidentDetailModal';
 import React, { useState, useEffect, useMemo } from 'react';
+import SearchableSelect from './SearchableSelect';
+import AppDateTimePicker from './ui/AppDateTimePicker';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -732,21 +734,25 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
           </div>
           <div className="flex-1 min-w-[200px]">
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Project Scope</label>
-            <select
+            <SearchableSelect
               value={selectedProjectId}
-              onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
-            >
-              <option value="">All Projects (Organisation-Wide)</option>
-              {projects.map((p: any) => (
-                <option key={p.id} value={p.id}>{p.name} {p.code ? `(${p.code})` : ''}</option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedProjectId(val)}
+              options={[
+                { value: '', label: 'All Projects (Organisation-Wide)' },
+                ...projects.map((p: any) => ({
+                  value: p.id,
+                  label: `${p.name}${p.code ? ` (${p.code})` : ''}`,
+                })),
+              ]}
+              placeholder="All Projects (Organisation-Wide)"
+              searchable={projects.length > 5}
+            />
           </div>
         </div>
         {/* Right: Date Presets */}
-        <div className="flex items-center flex-wrap gap-1.5 w-full sm:w-auto">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mr-1 w-full sm:w-auto">Date Range:</span>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 w-full sm:w-auto">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mr-1 mb-0.5 sm:mb-0 block">Date Range:</span>
+          <div className="flex items-center flex-wrap gap-1.5">
           {(['ALL', 'TODAY', '10_DAYS', '30_DAYS'] as const).map((preset) => (
             <button
               key={preset}
@@ -768,6 +774,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
           >
             <Clock size={13} /> Custom Range <ChevronRight size={13} className={`transition-transform duration-200 ${showCustomDatePopover ? 'rotate-90' : ''}`} />
           </button>
+          </div>
         </div>
       </div>
 
@@ -793,11 +800,21 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="p-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800/50 space-y-2">
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5"><Calendar size={13} className="text-emerald-600" /> Start Date &amp; Time</label>
-              <input type="datetime-local" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 font-mono text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
+              <AppDateTimePicker
+                mode="datetime"
+                value={customStartDate}
+                onChange={(val) => setCustomStartDate(val)}
+                placeholder="Select start date & time"
+              />
             </div>
             <div className="p-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800/50 space-y-2">
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5"><Calendar size={13} className="text-emerald-600" /> End Date &amp; Time</label>
-              <input type="datetime-local" value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)} className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 font-mono text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none" />
+              <AppDateTimePicker
+                mode="datetime"
+                value={customEndDate}
+                onChange={(val) => setCustomEndDate(val)}
+                placeholder="Select end date & time"
+              />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
@@ -1016,49 +1033,40 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                   />
                 </div>
 
-                <div>
-                  <select
+                <div className="min-w-[150px]">
+                  <SearchableSelect
                     value={deptFilter}
-                    onChange={(e) => setDeptFilter(e.target.value)}
-                    className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  >
-                    <option value="ALL">All Departments</option>
-                    {departmentsList.map((d) => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setDeptFilter(val)}
+                    options={[
+                      { value: 'ALL', label: 'All Departments' },
+                      ...departmentsList.map((d) => ({ value: d, label: d })),
+                    ]}
+                    searchable={departmentsList.length > 5}
+                  />
                 </div>
 
-                <div>
-                  <select
+                <div className="min-w-[150px]">
+                  <SearchableSelect
                     value={posFilter}
-                    onChange={(e) => setPosFilter(e.target.value)}
-                    className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  >
-                    <option value="ALL">All Positions</option>
-                    {positionsList.map((p) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setPosFilter(val)}
+                    options={[
+                      { value: 'ALL', label: 'All Positions' },
+                      ...positionsList.map((p) => ({ value: p, label: p })),
+                    ]}
+                    searchable={positionsList.length > 5}
+                  />
                 </div>
 
-                <div>
-                  <select
+                <div className="min-w-[150px]">
+                  <SearchableSelect
                     value={roleFilter}
-                    onChange={(e) => setRoleFilter(e.target.value)}
-                    className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  >
-                    <option value="ALL">All User Roles</option>
-                    {rolesList.map((r) => (
-                      <option key={r} value={r}>
-                        {r}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setRoleFilter(val)}
+                    options={[
+                      { value: 'ALL', label: 'All User Roles' },
+                      ...rolesList.map((r) => ({ value: r, label: r })),
+                    ]}
+                    searchable={rolesList.length > 5}
+                  />
                 </div>
               </div>
             </div>
@@ -1696,16 +1704,28 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                 <label className="space-y-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">Vendor / Supplier *
                   <input required maxLength={200} value={editPoForm.supplier_name} onChange={(event) => setEditPoForm({ ...editPoForm, supplier_name: event.target.value })} className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-950 text-sm" />
                 </label>
-                <label className="space-y-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">Project
-                  <select value={editPoForm.project_id} onChange={(event) => setEditPoForm({ ...editPoForm, project_id: event.target.value })} className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-950 text-sm">
-                    <option value="">Organization-wide</option>{projects.map((project: any) => <option key={project.id} value={project.id}>{project.name}</option>)}
-                  </select>
-                </label>
-                <label className="space-y-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">Currency
-                  <select value={editPoForm.currency} onChange={(event) => setEditPoForm({ ...editPoForm, currency: event.target.value })} className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-950 text-sm">
-                    {['USD', 'EUR', 'GBP', 'ZAR'].map((currency) => <option key={currency}>{currency}</option>)}
-                  </select>
-                </label>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Project</label>
+                  <SearchableSelect
+                    value={editPoForm.project_id}
+                    onChange={(val) => setEditPoForm({ ...editPoForm, project_id: val })}
+                    options={[
+                      { value: '', label: 'Organization-wide' },
+                      ...projects.map((project: any) => ({ value: project.id, label: project.name })),
+                    ]}
+                    placeholder="Organization-wide"
+                    searchable={projects.length > 5}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Currency</label>
+                  <SearchableSelect
+                    value={editPoForm.currency}
+                    onChange={(val) => setEditPoForm({ ...editPoForm, currency: val })}
+                    options={['USD', 'EUR', 'GBP', 'ZAR'].map((c) => ({ value: c, label: c }))}
+                    searchable={false}
+                  />
+                </div>
                 <label className="space-y-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">Notes
                   <textarea rows={2} value={editPoForm.notes} onChange={(event) => setEditPoForm({ ...editPoForm, notes: event.target.value })} className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-950 text-sm resize-y" />
                 </label>

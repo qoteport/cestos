@@ -6,6 +6,7 @@ import { ShieldCheck, ArrowLeft, RefreshCw, Plus, Search, Filter, CheckCircle, A
 import { apiFetch } from '@/lib/api';
 import { Row, display, Modal } from './DataUI';
 import RecordForm from './RecordForm';
+import SearchableSelect from './SearchableSelect';
 
 export default function EquipmentInspectionsWorkspace() {
   const [loading, setLoading] = useState(true);
@@ -170,28 +171,35 @@ export default function EquipmentInspectionsWorkspace() {
 
           <div className="flex items-center gap-2">
             <Filter size={14} className="text-muted-foreground shrink-0" />
-            <select
-              value={assetFilter}
-              onChange={(e) => setAssetFilter(e.target.value)}
-              className="input-field text-xs py-1.5 w-48 bg-background"
-            >
-              <option value="ALL">All Equipment Fleet</option>
-              {assets.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.asset_number ? `${a.asset_number} — ` : ''}{a.name}
-                </option>
-              ))}
-            </select>
+            <div className="w-48">
+              <SearchableSelect
+                value={assetFilter}
+                onChange={(val) => setAssetFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Equipment Fleet' },
+                  ...assets.map((a) => ({
+                    value: String(a.id),
+                    label: `${a.asset_number ? `${a.asset_number} — ` : ''}${a.name}`,
+                  })),
+                ]}
+                searchable={assets.length > 5}
+                ariaLabel="Filter Equipment Fleet"
+              />
+            </div>
 
-            <select
-              value={resultFilter}
-              onChange={(e) => setResultFilter(e.target.value)}
-              className="input-field text-xs py-1.5 w-36 bg-background"
-            >
-              <option value="ALL">All Results</option>
-              <option value="PASSED">Passed</option>
-              <option value="FAILED">Failed</option>
-            </select>
+            <div className="w-36">
+              <SearchableSelect
+                value={resultFilter}
+                onChange={(val) => setResultFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Results' },
+                  { value: 'PASSED', label: 'Passed' },
+                  { value: 'FAILED', label: 'Failed' },
+                ]}
+                searchable={false}
+                ariaLabel="Filter Results"
+              />
+            </div>
 
             {(search || assetFilter !== 'ALL' || resultFilter !== 'ALL') && (
               <button

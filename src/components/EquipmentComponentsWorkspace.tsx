@@ -7,6 +7,7 @@ import { apiFetch } from '@/lib/api';
 import { openUniversalFileViewer } from '@/lib/fileViewer';
 import { toast } from 'sonner';
 import { Row, display, Modal } from './DataUI';
+import SearchableSelect from './SearchableSelect';
 
 export default function EquipmentComponentsWorkspace() {
   const [loading, setLoading] = useState(true);
@@ -310,30 +311,37 @@ export default function EquipmentComponentsWorkspace() {
 
           <div className="flex items-center gap-2">
             <Filter size={14} className="text-muted-foreground shrink-0" />
-            <select
-              value={assetFilter}
-              onChange={(e) => setAssetFilter(e.target.value)}
-              className="input-field text-xs py-1.5 w-48 bg-background"
-            >
-              <option value="ALL">All Equipment Fleet</option>
-              {assets.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.asset_number ? `${a.asset_number} — ` : ''}{a.name}
-                </option>
-              ))}
-            </select>
+            <div className="w-48">
+              <SearchableSelect
+                value={assetFilter}
+                onChange={(val) => setAssetFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Equipment Fleet' },
+                  ...assets.map((a) => ({
+                    value: String(a.id),
+                    label: `${a.asset_number ? `${a.asset_number} — ` : ''}${a.name}`,
+                  })),
+                ]}
+                searchable={assets.length > 5}
+                ariaLabel="Filter Equipment Fleet"
+              />
+            </div>
 
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="input-field text-xs py-1.5 w-44 bg-background"
-            >
-              <option value="ALL">All Component Statuses</option>
-              <option value="INSTALLED">Installed</option>
-              <option value="UNDER_REPAIR">Under Repair</option>
-              <option value="REMOVED">Removed</option>
-              <option value="REPLACED">Replaced</option>
-            </select>
+            <div className="w-44">
+              <SearchableSelect
+                value={statusFilter}
+                onChange={(val) => setStatusFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Component Statuses' },
+                  { value: 'INSTALLED', label: 'Installed' },
+                  { value: 'UNDER_REPAIR', label: 'Under Repair' },
+                  { value: 'REMOVED', label: 'Removed' },
+                  { value: 'REPLACED', label: 'Replaced' },
+                ]}
+                searchable={false}
+                ariaLabel="Filter Component Status"
+              />
+            </div>
 
             {(search || assetFilter !== 'ALL' || statusFilter !== 'ALL') && (
               <button
@@ -489,18 +497,17 @@ export default function EquipmentComponentsWorkspace() {
 
             <div>
               <label className="text-[11px] font-semibold block mb-1">Target Equipment Asset *</label>
-              <select
+              <SearchableSelect
                 value={targetAssetId}
-                onChange={(e) => setTargetAssetId(e.target.value)}
-                className="input-field text-xs w-full"
+                onChange={(val) => setTargetAssetId(val)}
+                options={assets.map((a) => ({
+                  value: String(a.id),
+                  label: `${a.asset_number ? `${a.asset_number} — ` : ''}${a.name}`,
+                }))}
+                searchable={assets.length > 5}
                 required
-              >
-                {assets.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.asset_number ? `${a.asset_number} — ` : ''}{a.name}
-                  </option>
-                ))}
-              </select>
+                ariaLabel="Target Equipment Asset"
+              />
             </div>
 
             <div>
@@ -553,16 +560,18 @@ export default function EquipmentComponentsWorkspace() {
 
               <div>
                 <label className="text-[11px] font-semibold block mb-1">Status *</label>
-                <select
+                <SearchableSelect
                   value={compStatus}
-                  onChange={(e) => setCompStatus(e.target.value)}
-                  className="input-field text-xs w-full"
-                >
-                  <option value="INSTALLED">Installed & Active</option>
-                  <option value="UNDER_REPAIR">Under Repair</option>
-                  <option value="REMOVED">Removed</option>
-                  <option value="REPLACED">Replaced</option>
-                </select>
+                  onChange={(val) => setCompStatus(val)}
+                  options={[
+                    { value: 'INSTALLED', label: 'Installed & Active' },
+                    { value: 'UNDER_REPAIR', label: 'Under Repair' },
+                    { value: 'REMOVED', label: 'Removed' },
+                    { value: 'REPLACED', label: 'Replaced' },
+                  ]}
+                  searchable={false}
+                  ariaLabel="Status"
+                />
               </div>
             </div>
 
@@ -738,16 +747,18 @@ export default function EquipmentComponentsWorkspace() {
 
               <div>
                 <label className="text-[11px] font-semibold block mb-1">Status *</label>
-                <select
+                <SearchableSelect
                   value={editCompStatus}
-                  onChange={(e) => setEditCompStatus(e.target.value)}
-                  className="input-field text-xs w-full"
-                >
-                  <option value="INSTALLED">Installed & Active</option>
-                  <option value="UNDER_REPAIR">Under Repair</option>
-                  <option value="REMOVED">Removed</option>
-                  <option value="REPLACED">Replaced</option>
-                </select>
+                  onChange={(val) => setEditCompStatus(val)}
+                  options={[
+                    { value: 'INSTALLED', label: 'Installed & Active' },
+                    { value: 'UNDER_REPAIR', label: 'Under Repair' },
+                    { value: 'REMOVED', label: 'Removed' },
+                    { value: 'REPLACED', label: 'Replaced' },
+                  ]}
+                  searchable={false}
+                  ariaLabel="Status"
+                />
               </div>
             </div>
 

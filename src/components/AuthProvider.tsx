@@ -37,10 +37,12 @@ export function AuthProvider({children}:{children:ReactNode}) {
  const reload=useCallback(async()=>{setLoading(true);setError('');try {
   if (!getAccessToken() && !getRefreshToken()) {setUser(null);setAccess(null);return;}
   const profile=await getMe(); const permissions=await apiFetch<Access>('/api/v1/auth/access');
+  if (profile?.portal_type) localStorage.setItem('cestos_portal_type', profile.portal_type.toUpperCase());
+  if (profile?.is_superuser) localStorage.setItem('cestos_is_superuser', 'true'); else localStorage.removeItem('cestos_is_superuser');
   setUser(profile);setAccess(permissions);
- }catch(e){if(e instanceof ApiError && e.status===401){setUser(null);setAccess(null);}else setError(e instanceof Error?e.message:'Could not restore session.');}finally{setLoading(false);}},[]);
- useEffect(()=>{if(window.location.hash.startsWith('#reset=')&&window.location.pathname!=='/sign-up-login'){window.location.replace('/sign-up-login'+window.location.hash);return;}void reload();const expired=()=>{setUser(null);setAccess(null);setLoading(false);};const changed=(e:StorageEvent)=>{if(e.key?.startsWith('cestos_'))void reload();};window.addEventListener('cestos:session-expired',expired);window.addEventListener('storage',changed);return()=>{window.removeEventListener('cestos:session-expired',expired);window.removeEventListener('storage',changed);};},[reload]);
- const signOut=async()=>{try {await logout();}finally{setUser(null);setAccess(null);window.location.assign('/sign-up-login');}};
+ }catch(e){if(e instanceof ApiError && e.status===401){setUser(null);setAccess(null);localStorage.removeItem('cestos_portal_type');localStorage.removeItem('cestos_is_superuser');}else setError(e instanceof Error?e.message:'Could not restore session.');}finally{setLoading(false);}},[]);
+ useEffect(()=>{if(window.location.hash.startsWith('#reset=')&&window.location.pathname!=='/sign-up-login'){window.location.replace('/sign-up-login'+window.location.hash);return;}void reload();const expired=()=>{setUser(null);setAccess(null);setLoading(false);localStorage.removeItem('cestos_portal_type');localStorage.removeItem('cestos_is_superuser');};const changed=(e:StorageEvent)=>{if(e.key?.startsWith('cestos_'))void reload();};window.addEventListener('cestos:session-expired',expired);window.addEventListener('storage',changed);return()=>{window.removeEventListener('cestos:session-expired',expired);window.removeEventListener('storage',changed);};},[reload]);
+ const signOut=async()=>{try {localStorage.removeItem('cestos_portal_type');localStorage.removeItem('cestos_is_superuser');await logout();}finally{setUser(null);setAccess(null);window.location.assign('/sign-up-login');}};
   const can = (code: string) => {
     if (typeof code !== 'string' || !access) return false;
     if (access.is_superuser) return true;

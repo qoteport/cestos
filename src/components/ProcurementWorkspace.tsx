@@ -8,6 +8,7 @@ import { apiFetch, PurchaseOrderRead, receivePurchaseOrderGoods } from '@/lib/ap
 import { Modal, rows } from './DataUI';
 import { PurchaseOrderCategoryField, purchaseOrderCategoryLabel } from './PurchaseOrderCategoryField';
 import { useOperationalDataSync } from '@/lib/operationalDataSync';
+import SearchableSelect from './SearchableSelect';
 
 export default function ProcurementWorkspace({ subResource }: { subResource?: string }) {
   const [loading, setLoading] = useState(true);
@@ -266,31 +267,34 @@ export default function ProcurementWorkspace({ subResource }: { subResource?: st
           <form onSubmit={handleCreatePo} className="space-y-4">
             <div>
               <label className="block text-xs font-medium mb-1">Supplier</label>
-              <select
-                required
+              <SearchableSelect
                 value={newPo.supplier_id}
-                onChange={(e) => setNewPo({ ...newPo, supplier_id: e.target.value })}
-                className="w-full text-sm border rounded p-2 bg-background"
-              >
-                <option value="">Select Supplier...</option>
-                {(Array.isArray(suppliers) ? suppliers : []).map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
+                onChange={(val) => setNewPo({ ...newPo, supplier_id: val })}
+                placeholder="Select Supplier..."
+                options={(Array.isArray(suppliers) ? suppliers : []).map((s) => ({
+                  value: String(s.id),
+                  label: s.name,
+                }))}
+                required
+                ariaLabel="Supplier"
+              />
             </div>
 
             <div>
               <label className="block text-xs font-medium mb-1">Project</label>
-              <select
+              <SearchableSelect
                 value={newPo.project_id}
-                onChange={(e) => setNewPo({ ...newPo, project_id: e.target.value })}
-                className="w-full text-sm border rounded p-2 bg-background"
-              >
-                <option value="">Select Project...</option>
-                {(Array.isArray(projects) ? projects : []).map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
+                onChange={(val) => setNewPo({ ...newPo, project_id: val })}
+                placeholder="Select Project..."
+                options={[
+                  { value: '', label: 'Select Project...' },
+                  ...(Array.isArray(projects) ? projects : []).map((p) => ({
+                    value: String(p.id),
+                    label: p.name,
+                  })),
+                ]}
+                ariaLabel="Project"
+              />
             </div>
 
             <div>

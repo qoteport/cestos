@@ -25,6 +25,7 @@ import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import { openUniversalFileViewer } from '@/lib/fileViewer';
 import { useAuth } from './AuthProvider';
 import SearchableSelect from './SearchableSelect';
+import AppDateTimePicker from './ui/AppDateTimePicker';
 import { useOperationalDataSync } from '@/lib/operationalDataSync';
 
 type Row = Record<string, any>;
@@ -389,12 +390,12 @@ export default function OperationalExpensesWorkspace({ readOnly = false }: { rea
               <label className="block text-xs font-bold text-foreground mb-1 flex items-center gap-1.5">
                 <Calendar size={13} className="text-violet-600" /> Expense Claim Date *
               </label>
-              <input
+              <AppDateTimePicker
+                mode="date"
                 required
-                type="date"
-                className="w-full border rounded-xl p-2.5 bg-background text-xs font-medium focus:ring-2 focus:ring-violet-500 focus:outline-none"
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={(val) => setDate(val)}
+                placeholder="Select expense claim date"
               />
             </div>
 
@@ -402,18 +403,13 @@ export default function OperationalExpensesWorkspace({ readOnly = false }: { rea
               <label className="block text-xs font-bold text-foreground mb-1 flex items-center gap-1.5">
                 <CreditCard size={13} className="text-violet-600" /> Payment Disbursement Method *
               </label>
-              <select
+              <SearchableSelect
                 required
-                className="w-full border rounded-xl p-2.5 bg-background text-xs font-bold focus:ring-2 focus:ring-violet-500 focus:outline-none"
+                options={methods.map(([v, l]) => ({ value: v, label: l }))}
                 value={method}
-                onChange={(e) => setMethod(e.target.value)}
-              >
-                {methods.map(([v, l]) => (
-                  <option key={v} value={v}>
-                    {l}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setMethod(val)}
+                searchable={false}
+              />
             </div>
           </div>
 
@@ -777,9 +773,16 @@ export default function OperationalExpensesWorkspace({ readOnly = false }: { rea
                 <label className="block text-xs font-bold">Amount paid now
                   <input type="number" min="0.01" max={Math.max(0, Number(payingRow.total_cost || 0) - paidToDate)} step="0.01" required value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm" />
                 </label>
-                <label className="block text-xs font-bold">Payment date
-                  <input type="date" required value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm" />
-                </label>
+                <div>
+                  <label className="block text-xs font-bold mb-1">Payment date</label>
+                  <AppDateTimePicker
+                    mode="date"
+                    required
+                    value={paymentDate}
+                    onChange={(val) => setPaymentDate(val)}
+                    placeholder="Select payment date"
+                  />
+                </div>
               </div>
 
               {/* Payment Receipt Upload Box */}

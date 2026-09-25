@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { apiFetch, getProjects, getProjectOverview, type ProjectOverview } from '@/lib/api';
 import { Modal, useData, rows, display } from '@/components/DataUI';
 import SearchableSelect, { SearchableSelectOption } from '@/components/SearchableSelect';
+import AppDateTimePicker from '@/components/ui/AppDateTimePicker';
 
 function formatDate(d?: string): string {
   if (!d) return '—';
@@ -377,70 +378,73 @@ export default function ProjectHeader() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold mb-1 text-foreground">Start Date (Date From)</label>
-                <input
-                  type="date"
-                  className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+                <AppDateTimePicker
+                  mode="date"
                   value={draftDateFrom}
-                  onChange={(e) => setDraftDateFrom(e.target.value)}
+                  onChange={setDraftDateFrom}
+                  placeholder="Select start date"
                 />
               </div>
               <div>
                 <label className="block font-semibold mb-1 text-foreground">End Date (Date To)</label>
-                <input
-                  type="date"
-                  className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+                <AppDateTimePicker
+                  mode="date"
                   value={draftDateTo}
-                  onChange={(e) => setDraftDateTo(e.target.value)}
+                  onChange={setDraftDateTo}
+                  placeholder="Select end date"
                 />
               </div>
             </div>
 
             <div>
               <label className="block font-semibold mb-1 text-foreground">Select Project</label>
-              <select
-                className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'Default Active Project' },
+                  ...projectList.map((p: any) => ({
+                    value: p.id,
+                    label: `${p.name}${p.code ? ` (${p.code})` : ''}`,
+                  })),
+                ]}
                 value={draftProject}
-                onChange={(e) => setDraftProject(e.target.value)}
-              >
-                <option value="">Default Active Project</option>
-                {projectList.map((p: any) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} {p.code ? `(${p.code})` : ''}
-                  </option>
-                ))}
-              </select>
+                onChange={setDraftProject}
+                searchable={projectList.length > 5}
+                placeholder="Select project..."
+              />
             </div>
 
             <div>
               <label className="block font-semibold mb-1 text-foreground">Project Operational Status</label>
-              <select
-                className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'All Operational Statuses' },
+                  { value: 'ACTIVE', label: 'Active' },
+                  { value: 'MOBILIZING', label: 'Mobilizing' },
+                  { value: 'PLANNING', label: 'Planning' },
+                  { value: 'PAUSED', label: 'Paused' },
+                  { value: 'COMPLETED', label: 'Completed' },
+                ]}
                 value={draftStatus}
-                onChange={(e) => setDraftStatus(e.target.value)}
-              >
-                <option value="">All Operational Statuses</option>
-                <option value="ACTIVE">Active</option>
-                <option value="MOBILIZING">Mobilizing</option>
-                <option value="PLANNING">Planning</option>
-                <option value="PAUSED">Paused</option>
-                <option value="COMPLETED">Completed</option>
-              </select>
+                onChange={setDraftStatus}
+                searchable={false}
+              />
             </div>
 
             <div>
               <label className="block font-semibold mb-1 text-foreground">Client Organization</label>
-              <select
-                className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'All Client Accounts' },
+                  ...clientList.map((c: any) => ({
+                    value: c.id,
+                    label: `${c.name}${c.code ? ` (${c.code})` : ''}`,
+                  })),
+                ]}
                 value={draftClient}
-                onChange={(e) => setDraftClient(e.target.value)}
-              >
-                <option value="">All Client Accounts</option>
-                {clientList.map((c: any) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} {c.code ? `(${c.code})` : ''}
-                  </option>
-                ))}
-              </select>
+                onChange={setDraftClient}
+                searchable={clientList.length > 5}
+                placeholder="Select client..."
+              />
             </div>
 
             <div className="flex justify-end gap-2 pt-3 border-t">
@@ -480,18 +484,19 @@ export default function ProjectHeader() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold mb-1 text-foreground">Operational Status *</label>
-                <select
-                  className="w-full px-3 py-2 border rounded-lg bg-background text-xs font-medium"
+                <SearchableSelect
+                  options={[
+                    { value: 'ACTIVE', label: 'Active' },
+                    { value: 'MOBILIZING', label: 'Mobilizing' },
+                    { value: 'PLANNING', label: 'Planning' },
+                    { value: 'PAUSED', label: 'Paused' },
+                    { value: 'COMPLETED', label: 'Completed' },
+                    { value: 'CLOSED', label: 'Closed' },
+                  ]}
                   value={editForm.status}
-                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                >
-                  <option value="ACTIVE">Active</option>
-                  <option value="MOBILIZING">Mobilizing</option>
-                  <option value="PLANNING">Planning</option>
-                  <option value="PAUSED">Paused</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="CLOSED">Closed</option>
-                </select>
+                  onChange={(val) => setEditForm({ ...editForm, status: val })}
+                  searchable={false}
+                />
               </div>
 
               <div>
@@ -519,21 +524,21 @@ export default function ProjectHeader() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold mb-1 text-foreground">Start Date</label>
-                <input
-                  type="date"
-                  className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+                <AppDateTimePicker
+                  mode="date"
                   value={editForm.start_date}
-                  onChange={(e) => setEditForm({ ...editForm, start_date: e.target.value })}
+                  onChange={(val) => setEditForm({ ...editForm, start_date: val })}
+                  placeholder="Select start date"
                 />
               </div>
 
               <div>
                 <label className="block font-semibold mb-1 text-foreground">Target End Date</label>
-                <input
-                  type="date"
-                  className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+                <AppDateTimePicker
+                  mode="date"
                   value={editForm.end_date}
-                  onChange={(e) => setEditForm({ ...editForm, end_date: e.target.value })}
+                  onChange={(val) => setEditForm({ ...editForm, end_date: val })}
+                  placeholder="Select target end date"
                 />
               </div>
             </div>

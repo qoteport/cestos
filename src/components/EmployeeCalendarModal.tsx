@@ -275,7 +275,7 @@ export default function EmployeeCalendarModal({
   const selectedEvents = getEventsForDate(selectedDate);
 
   return (
-    <Modal name={`Schedule & Performance Calendar â€” ${employeeName}`} onClose={onClose}>
+    <Modal name={`Schedule and Activity — ${employeeName}`} onClose={onClose}>
       <div className="space-y-6">
         {/* KPI Performance Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 border-b pb-4">

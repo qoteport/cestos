@@ -5,6 +5,8 @@ import { Filter, RefreshCw, SlidersHorizontal, X } from 'lucide-react';
 import { getProjects, getDateRangeFromPreset, type ProjectRead } from '@/lib/api';
 import { Modal } from '@/components/DataUI';
 import { useAuth } from '@/components/AuthProvider';
+import SearchableSelect from '@/components/SearchableSelect';
+import AppDateTimePicker from '@/components/ui/AppDateTimePicker';
 
 interface DashboardHeaderProps {
   timeframe: string;
@@ -201,79 +203,81 @@ export default function DashboardHeader({
 
             <div>
               <label className="block font-semibold mb-1 text-foreground">Timeframe Preset</label>
-              <select
-                className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+              <SearchableSelect
+                options={[
+                  { value: 'all_time', label: 'All Time' },
+                  { value: 'today', label: 'Today' },
+                  { value: 'this_week', label: 'This Week' },
+                  { value: 'this_month', label: 'This Month' },
+                  { value: 'this_quarter', label: 'This Quarter' },
+                  { value: 'ytd', label: 'Year to Date (YTD)' },
+                  { value: 'custom', label: 'Custom Date Range' },
+                ]}
                 value={draftTimeframe}
-                onChange={(e) => handleTimeframeChange(e.target.value)}
-              >
-                <option value="all_time">All Time</option>
-                <option value="today">Today</option>
-                <option value="this_week">This Week</option>
-                <option value="this_month">This Month</option>
-                <option value="this_quarter">This Quarter</option>
-                <option value="ytd">Year to Date (YTD)</option>
-                <option value="custom">Custom Date Range</option>
-              </select>
+                onChange={handleTimeframeChange}
+                searchable={false}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold mb-1 text-foreground">Start Date (Date From)</label>
-                <input
-                  type="date"
-                  className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+                <AppDateTimePicker
+                  mode="date"
                   value={draftDateFrom}
-                  onChange={(e) => {
-                    setDraftDateFrom(e.target.value);
+                  onChange={(val) => {
+                    setDraftDateFrom(val);
                     setDraftTimeframe('custom');
                   }}
+                  placeholder="Select start date"
                 />
               </div>
               <div>
                 <label className="block font-semibold mb-1 text-foreground">End Date (Date To)</label>
-                <input
-                  type="date"
-                  className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+                <AppDateTimePicker
+                  mode="date"
                   value={draftDateTo}
-                  onChange={(e) => {
-                    setDraftDateTo(e.target.value);
+                  onChange={(val) => {
+                    setDraftDateTo(val);
                     setDraftTimeframe('custom');
                   }}
+                  placeholder="Select end date"
                 />
               </div>
             </div>
 
             <div>
               <label className="block font-semibold mb-1 text-foreground">Target Operational Project</label>
-              <select
-                className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'All Projects & Work Sites' },
+                  ...projects.map((p) => ({
+                    value: p.id,
+                    label: p.project_number ? `${p.project_number} - ${p.name}` : p.name,
+                  })),
+                ]}
                 value={draftProjectId}
-                onChange={(e) => setDraftProjectId(e.target.value)}
-              >
-                <option value="">All Projects & Work Sites</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.project_number ? `${p.project_number} - ` : ''}
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setDraftProjectId}
+                searchable={true}
+                placeholder="Select project..."
+              />
             </div>
 
             <div>
               <label className="block font-semibold mb-1 text-foreground">Project Operational Status</label>
-              <select
-                className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'All Operational Statuses' },
+                  { value: 'ACTIVE', label: 'Active Deployment' },
+                  { value: 'MOBILIZING', label: 'Mobilizing / Site Prep' },
+                  { value: 'PLANNING', label: 'Planning Phase' },
+                  { value: 'PAUSED', label: 'Paused / Standby' },
+                  { value: 'COMPLETED', label: 'Completed' },
+                ]}
                 value={draftStatus}
-                onChange={(e) => setDraftStatus(e.target.value)}
-              >
-                <option value="">All Operational Statuses</option>
-                <option value="ACTIVE">Active Deployment</option>
-                <option value="MOBILIZING">Mobilizing / Site Prep</option>
-                <option value="PLANNING">Planning Phase</option>
-                <option value="PAUSED">Paused / Standby</option>
-                <option value="COMPLETED">Completed</option>
-              </select>
+                onChange={setDraftStatus}
+                searchable={false}
+              />
             </div>
 
             <div className="flex justify-end gap-2 pt-3 border-t">

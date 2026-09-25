@@ -6,6 +6,7 @@ import { RotateCcw, Calendar, Clock, Plus, Filter, Search, RefreshCw, ArrowLeft,
 import { apiFetch } from '@/lib/api';
 import { Row, display, Modal } from './DataUI';
 import SearchableSelect from './SearchableSelect';
+import AppDateTimePicker from './ui/AppDateTimePicker';
 
 
 export default function RotationsWorkspace() {
@@ -402,21 +403,21 @@ function CreateRotationForm({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-semibold mb-1">Start Date *</label>
-          <input
+          <AppDateTimePicker
+            mode="date"
             required
-            type="date"
-            className="input-field text-xs"
             value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
+            onChange={(val) => setStartDate(val)}
+            placeholder="Select start date"
           />
         </div>
         <div>
           <label className="block text-xs font-semibold mb-1">End / Next Swap Date</label>
-          <input
-            type="date"
-            className="input-field text-xs"
+          <AppDateTimePicker
+            mode="date"
             value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
+            onChange={(val) => setEndDate(val)}
+            placeholder="Select end/swap date"
           />
         </div>
       </div>

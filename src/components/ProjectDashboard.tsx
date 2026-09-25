@@ -8,6 +8,7 @@ import { useAuth } from './AuthProvider';
 import { useData, rows, State, Table, Row } from './DataUI';
 import RecordForm from './RecordForm';
 import { operation } from './ResourceWorkspace';
+import SearchableSelect from './SearchableSelect';
 
 export const number = (value: unknown) =>
   value == null ? '—' : Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -151,31 +152,36 @@ export function ProjectRegister({ dashboard = false, onSelectProject, readOnly }
             )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <label className="text-xs">
-              Status
-              <select
-                className="input-field mt-1"
+            <div>
+              <span className="block text-xs mb-1">Status</span>
+              <SearchableSelect
                 value={status}
-                onChange={(e) => { setStatus(e.target.value); setPage(1); }}
-              >
-                <option value="">All statuses</option>
-                {PROJECT_STATUSES.map((s) => (
-                  <option key={s} value={s}>{s.charAt(0) + s.slice(1).toLowerCase()}</option>
-                ))}
-              </select>
-            </label>
-            <label className="text-xs">
-              Sort this page
-              <select
-                className="input-field mt-1"
+                onChange={(val) => { setStatus(val); setPage(1); }}
+                options={[
+                  { value: '', label: 'All statuses' },
+                  ...PROJECT_STATUSES.map((s) => ({
+                    value: s,
+                    label: s.charAt(0) + s.slice(1).toLowerCase(),
+                  })),
+                ]}
+                searchable={false}
+                ariaLabel="Status"
+              />
+            </div>
+            <div>
+              <span className="block text-xs mb-1">Sort this page</span>
+              <SearchableSelect
                 value={sort}
-                onChange={(e) => setSort(e.target.value)}
-              >
-                <option value="name">Name</option>
-                <option value="expected_end_date">Expected end date</option>
-                <option value="status">Status</option>
-              </select>
-            </label>
+                onChange={(val) => setSort(val)}
+                options={[
+                  { value: 'name', label: 'Name' },
+                  { value: 'expected_end_date', label: 'Expected end date' },
+                  { value: 'status', label: 'Status' },
+                ]}
+                searchable={false}
+                ariaLabel="Sort this page"
+              />
+            </div>
           </div>
         </div>
       )}

@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import { apiFetch, SupervisorScorecardRead } from '@/lib/api';
 import { Modal, ErrorModal, rows } from '@/components/DataUI';
+import SearchableSelect from '@/components/SearchableSelect';
+import AppDateTimePicker from '@/components/ui/AppDateTimePicker';
 
 export default function FieldLeadershipOverviewPage() {
   const router = useRouter();
@@ -213,18 +215,21 @@ export default function FieldLeadershipOverviewPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <select
-              value={gradeFilter}
-              onChange={(e) => setGradeFilter(e.target.value)}
-              className="text-sm border rounded-lg px-3 py-1.5 bg-background"
-            >
-              <option value="">All Performance Grades</option>
-              <option value="A">Grade A (90%+)</option>
-              <option value="B">Grade B (80%-89%)</option>
-              <option value="C">Grade C (70%-79%)</option>
-              <option value="D">Grade D (60%-69%)</option>
-              <option value="F">Grade F (&lt;60%)</option>
-            </select>
+            <div className="min-w-[180px]">
+              <SearchableSelect
+                value={gradeFilter}
+                onChange={setGradeFilter}
+                options={[
+                  { value: '', label: 'All Performance Grades' },
+                  { value: 'A', label: 'Grade A (90%+)' },
+                  { value: 'B', label: 'Grade B (80%-89%)' },
+                  { value: 'C', label: 'Grade C (70%-79%)' },
+                  { value: 'D', label: 'Grade D (60%-69%)' },
+                  { value: 'F', label: 'Grade F (<60%)' },
+                ]}
+                searchable={false}
+              />
+            </div>
 
             <button
               onClick={() => router.push('/workspace/control-tower/scorecards')}
@@ -411,71 +416,64 @@ export default function FieldLeadershipOverviewPage() {
           <form onSubmit={handleCreateScorecard} className="space-y-4 text-sm p-1">
             {/* Supervisor Searchable Select */}
             <div>
-              <label className="block text-xs font-medium mb-1">Supervisor Selection</label>
-              <div className="relative mb-1">
-                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Filter supervisors by name or position..."
-                  value={supervisorSearch}
-                  onChange={(e) => setSupervisorSearch(e.target.value)}
-                  className="w-full text-xs border rounded pl-8 pr-3 py-1.5 bg-background"
-                />
-              </div>
-
-              <select
+              <label className="block text-xs font-medium mb-1">Supervisor Selection *</label>
+              <SearchableSelect
                 required
                 value={newScorecard.supervisor_id}
-                onChange={(e) => setNewScorecard({ ...newScorecard, supervisor_id: e.target.value })}
-                className="w-full text-xs border rounded p-2 bg-background font-medium"
-              >
-                <option value="">Select Supervisor ({filteredSupervisorsForForm.length} available)...</option>
-                {filteredSupervisorsForForm.map((e) => {
-                  const labelName = `${e.first_name || ''} ${e.last_name || ''}`.trim() || e.job_title || `Employee (${e.id.slice(0, 6)})`;
-                  const extra = e.job_title ? ` — ${e.job_title}` : '';
-                  return (
-                    <option key={e.id} value={e.id}>
-                      {labelName}{extra}
-                    </option>
-                  );
-                })}
-              </select>
+                onChange={(val) => setNewScorecard({ ...newScorecard, supervisor_id: val })}
+                options={[
+                  { value: '', label: `Select Supervisor (${employees.length} available)...` },
+                  ...employees.map((e) => {
+                    const labelName = `${e.first_name || ''} ${e.last_name || ''}`.trim() || e.job_title || `Employee (${e.id.slice(0, 6)})`;
+                    const extra = e.job_title ? ` — ${e.job_title}` : '';
+                    return {
+                      value: e.id,
+                      label: `${labelName}${extra}`,
+                    };
+                  }),
+                ]}
+                placeholder="Select supervisor..."
+                searchable={true}
+              />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-medium mb-1">Project / Site</label>
-                <select
+                <SearchableSelect
                   value={newScorecard.project_id}
-                  onChange={(e) => setNewScorecard({ ...newScorecard, project_id: e.target.value })}
-                  className="w-full text-xs border rounded p-2 bg-background"
-                >
-                  <option value="">Select Project (Optional)...</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium mb-1">Audit Start Date</label>
-                <input
-                  type="date"
-                  required
-                  value={newScorecard.period_start}
-                  onChange={(e) => setNewScorecard({ ...newScorecard, period_start: e.target.value })}
-                  className="w-full text-xs border rounded p-2 bg-background"
+                  onChange={(val) => setNewScorecard({ ...newScorecard, project_id: val })}
+                  options={[
+                    { value: '', label: 'Select Project (Optional)...' },
+                    ...projects.map((p) => ({
+                      value: p.id,
+                      label: p.name,
+                    })),
+                  ]}
+                  placeholder="Select project..."
+                  searchable={projects.length > 5}
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium mb-1">Audit End Date</label>
-                <input
-                  type="date"
+                <label className="block text-xs font-medium mb-1">Audit Start Date *</label>
+                <AppDateTimePicker
+                  mode="date"
+                  required
+                  value={newScorecard.period_start}
+                  onChange={(val) => setNewScorecard({ ...newScorecard, period_start: val })}
+                  placeholder="Select start date"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium mb-1">Audit End Date *</label>
+                <AppDateTimePicker
+                  mode="date"
                   required
                   value={newScorecard.period_end}
-                  onChange={(e) => setNewScorecard({ ...newScorecard, period_end: e.target.value })}
-                  className="w-full text-xs border rounded p-2 bg-background"
+                  onChange={(val) => setNewScorecard({ ...newScorecard, period_end: val })}
+                  placeholder="Select end date"
                 />
               </div>
             </div>

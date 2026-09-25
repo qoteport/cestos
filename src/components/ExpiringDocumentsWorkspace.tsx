@@ -93,7 +93,7 @@ export default function ExpiringDocumentsWorkspace({ baseRoute = '/workspace' }:
       {/* Header Bar */}
       <div className="flex flex-wrap justify-between items-center gap-4 border-b pb-4">
         <div>
-          <Link href={baseRoute === '/workspace' ? '/workforce-overview' : baseRoute} className="text-xs text-primary flex items-center gap-1 mb-2 hover:underline">
+          <Link href={baseRoute === '/workspace' ? '/workforce-overview' : baseRoute} className="text-xs text-primary inline-flex items-center gap-1.5 mb-2 hover:underline text-left justify-start font-semibold">
             <ArrowLeft size={12} /> {baseRoute === '/workspace' ? 'Workforce Overview' : 'Back to Portal'}
           </Link>
           <h1 className="text-2xl font-bold text-foreground">Expiring Employee Documents & Licences</h1>

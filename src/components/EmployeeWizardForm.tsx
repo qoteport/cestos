@@ -7,6 +7,8 @@ import { useAuth } from './AuthProvider';
 import { employeePermissions } from '@/lib/employeePermissions';
 import { apiFetch } from '@/lib/api';
 import { Modal, Row } from './DataUI';
+import SearchableSelect from './SearchableSelect';
+import AppDateTimePicker from './ui/AppDateTimePicker';
 
 interface LookupOption {
   id: string;
@@ -471,17 +473,20 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1">Gender</label>
-                  <select
-                    className="input-field"
+                  <SearchableSelect
                     value={personal.gender}
-                    onChange={e => setPersonal({ ...personal, gender: e.target.value })}
-                  >
-                    <option value="">Select gender...</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                    <option value="Prefer Not To Say">Prefer Not To Say</option>
-                  </select>
+                    onChange={(val) => setPersonal({ ...personal, gender: val })}
+                    placeholder="Select gender..."
+                    options={[
+                      { value: '', label: 'Select gender...' },
+                      { value: 'Male', label: 'Male' },
+                      { value: 'Female', label: 'Female' },
+                      { value: 'Other', label: 'Other' },
+                      { value: 'Prefer Not To Say', label: 'Prefer Not To Say' },
+                    ]}
+                    searchable={false}
+                    ariaLabel="Gender"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1">Date of Birth</label>
@@ -498,18 +503,21 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1">Marital Status</label>
-                  <select
-                    className="input-field"
+                  <SearchableSelect
                     value={personal.marital_status}
-                    onChange={e => setPersonal({ ...personal, marital_status: e.target.value })}
-                  >
-                    <option value="">Select status...</option>
-                    <option value="SINGLE">Single</option>
-                    <option value="MARRIED">Married</option>
-                    <option value="DIVORCED">Divorced</option>
-                    <option value="WIDOWED">Widowed</option>
-                    <option value="SEPARATED">Separated</option>
-                  </select>
+                    onChange={(val) => setPersonal({ ...personal, marital_status: val })}
+                    placeholder="Select status..."
+                    options={[
+                      { value: '', label: 'Select status...' },
+                      { value: 'SINGLE', label: 'Single' },
+                      { value: 'MARRIED', label: 'Married' },
+                      { value: 'DIVORCED', label: 'Divorced' },
+                      { value: 'WIDOWED', label: 'Widowed' },
+                      { value: 'SEPARATED', label: 'Separated' },
+                    ]}
+                    searchable={false}
+                    ariaLabel="Marital Status"
+                  />
                 </div>
               </div>
 
@@ -597,29 +605,37 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold mb-1">Department</label>
-                  <select
-                    className="input-field"
+                  <SearchableSelect
                     value={employment.department_id}
-                    onChange={e => setEmployment({ ...employment, department_id: e.target.value })}
-                  >
-                    <option value="">Select department...</option>
-                    {departments.map(d => (
-                      <option key={d.id} value={d.id}>{d.name || d.code}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setEmployment({ ...employment, department_id: val })}
+                    placeholder="Select department..."
+                    options={[
+                      { value: '', label: 'Select department...' },
+                      ...departments.map((d) => ({
+                        value: String(d.id),
+                        label: d.name || d.code,
+                      })),
+                    ]}
+                    searchable={departments.length > 5}
+                    ariaLabel="Department"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1">Position</label>
-                  <select
-                    className="input-field"
+                  <SearchableSelect
                     value={employment.position_id}
-                    onChange={e => setEmployment({ ...employment, position_id: e.target.value })}
-                  >
-                    <option value="">Select position...</option>
-                    {positions.map(p => (
-                      <option key={p.id} value={p.id}>{p.title}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setEmployment({ ...employment, position_id: val })}
+                    placeholder="Select position..."
+                    options={[
+                      { value: '', label: 'Select position...' },
+                      ...positions.map((p) => ({
+                        value: String(p.id),
+                        label: p.title || p.name || `Position ${p.id}`,
+                      })),
+                    ]}
+                    searchable={positions.length > 5}
+                    ariaLabel="Position"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1">Job Title</label>
@@ -632,112 +648,123 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1">Employment Type</label>
-                  <select
-                    className="input-field"
+                  <SearchableSelect
                     value={employment.employment_type}
-                    onChange={e => setEmployment({ ...employment, employment_type: e.target.value })}
-                  >
-                    <option value="FULL_TIME">Full Time</option>
-                    <option value="PART_TIME">Part Time</option>
-                    <option value="CONTRACT">Contract</option>
-                    <option value="CASUAL">Casual</option>
-                    <option value="TEMPORARY">Temporary</option>
-                    <option value="CONSULTANT">Consultant</option>
-                    <option value="INTERN">Intern</option>
-                  </select>
+                    onChange={(val) => setEmployment({ ...employment, employment_type: val })}
+                    options={[
+                      { value: 'FULL_TIME', label: 'Full Time' },
+                      { value: 'PART_TIME', label: 'Part Time' },
+                      { value: 'CONTRACT', label: 'Contract' },
+                      { value: 'CASUAL', label: 'Casual' },
+                      { value: 'TEMPORARY', label: 'Temporary' },
+                      { value: 'CONSULTANT', label: 'Consultant' },
+                      { value: 'INTERN', label: 'Intern' },
+                    ]}
+                    searchable={false}
+                    ariaLabel="Employment Type"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1">Employment Status</label>
-                  <select
-                    className="input-field"
+                  <SearchableSelect
                     value={employment.employment_status}
-                    onChange={e => setEmployment({ ...employment, employment_status: e.target.value })}
-                  >
-                    <option value="ACTIVE">Active</option>
-                    <option value="ON_LEAVE">On Leave</option>
-                    <option value="OFF_ROTATION">Off Rotation</option>
-                    <option value="SUSPENDED">Suspended</option>
-                    <option value="EXITED">Exited</option>
-                    <option value="RESIGNED">Resigned</option>
-                    <option value="TERMINATED">Terminated</option>
-                  </select>
+                    onChange={(val) => setEmployment({ ...employment, employment_status: val })}
+                    options={[
+                      { value: 'ACTIVE', label: 'Active' },
+                      { value: 'ON_LEAVE', label: 'On Leave' },
+                      { value: 'OFF_ROTATION', label: 'Off Rotation' },
+                      { value: 'SUSPENDED', label: 'Suspended' },
+                      { value: 'EXITED', label: 'Exited' },
+                      { value: 'RESIGNED', label: 'Resigned' },
+                      { value: 'TERMINATED', label: 'Terminated' },
+                    ]}
+                    searchable={false}
+                    ariaLabel="Employment Status"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1">Availability Status</label>
-                  <select
-                    className="input-field"
+                  <SearchableSelect
                     value={employment.availability_status}
-                    onChange={e => setEmployment({ ...employment, availability_status: e.target.value })}
-                  >
-                    <option value="AVAILABLE">Available</option>
-                    <option value="ASSIGNED">Assigned</option>
-                    <option value="ON_LEAVE">On Leave</option>
-                    <option value="OFF_ROTATION">Off Rotation</option>
-                    <option value="TRAINING">Training</option>
-                    <option value="UNAVAILABLE">Unavailable</option>
-                  </select>
+                    onChange={(val) => setEmployment({ ...employment, availability_status: val })}
+                    options={[
+                      { value: 'AVAILABLE', label: 'Available' },
+                      { value: 'ASSIGNED', label: 'Assigned' },
+                      { value: 'ON_LEAVE', label: 'On Leave' },
+                      { value: 'OFF_ROTATION', label: 'Off Rotation' },
+                      { value: 'TRAINING', label: 'Training' },
+                      { value: 'UNAVAILABLE', label: 'Unavailable' },
+                    ]}
+                    searchable={false}
+                    ariaLabel="Availability Status"
+                  />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold mb-1">Supervisor</label>
-                  <select
-                    className="input-field"
+                  <SearchableSelect
                     value={employment.supervisor_id}
-                    onChange={e => setEmployment({ ...employment, supervisor_id: e.target.value })}
-                  >
-                    <option value="">Select supervisor...</option>
-                    {supervisors.map(s => (
-                      <option key={s.id} value={s.id}>
-                        {s.first_name || s.last_name ? `${s.first_name || ''} ${s.last_name || ''}`.trim() : s.id}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setEmployment({ ...employment, supervisor_id: val })}
+                    placeholder="Select supervisor..."
+                    options={[
+                      { value: '', label: 'Select supervisor...' },
+                      ...supervisors.map((s) => ({
+                        value: String(s.id),
+                        label: s.first_name || s.last_name ? `${s.first_name || ''} ${s.last_name || ''}`.trim() : s.id,
+                      })),
+                    ]}
+                    searchable={supervisors.length > 5}
+                    ariaLabel="Supervisor"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1">Work Location</label>
-                  <select
-                    className="input-field"
+                  <SearchableSelect
                     value={employment.home_location_id}
-                    onChange={e => setEmployment({ ...employment, home_location_id: e.target.value })}
-                  >
-                    <option value="">Select work location...</option>
-                    {locations.map(l => (
-                      <option key={l.id} value={l.id}>{l.name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setEmployment({ ...employment, home_location_id: val })}
+                    placeholder="Select work location..."
+                    options={[
+                      { value: '', label: 'Select work location...' },
+                      ...locations.map((l) => ({
+                        value: String(l.id),
+                        label: l.name || `Location ${l.id}`,
+                      })),
+                    ]}
+                    searchable={locations.length > 5}
+                    ariaLabel="Work Location"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1">Hire Date</label>
-                  <input
-                    type="date"
-                    className="input-field"
+                  <AppDateTimePicker
+                    mode="date"
                     value={employment.hire_date}
-                    onChange={e => {
-                      const newHireDate = e.target.value;
+                    onChange={(newHireDate) => {
                       setEmployment(prev => ({
                         ...prev,
                         hire_date: newHireDate,
                         contract_start_date: prev.contract_start_date || newHireDate,
                       }));
                     }}
+                    placeholder="Select hire date"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1">Contract Start Date</label>
-                  <input
-                    type="date"
-                    className="input-field"
+                  <AppDateTimePicker
+                    mode="date"
                     value={employment.contract_start_date || employment.hire_date}
-                    onChange={e => setEmployment({ ...employment, contract_start_date: e.target.value })}
+                    onChange={(val) => setEmployment({ ...employment, contract_start_date: val })}
+                    placeholder="Select start date"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1">Contract End Date</label>
-                  <input
-                    type="date"
-                    className="input-field"
+                  <AppDateTimePicker
+                    mode="date"
                     value={employment.contract_end_date}
-                    onChange={e => setEmployment({ ...employment, contract_end_date: e.target.value })}
+                    onChange={(val) => setEmployment({ ...employment, contract_end_date: val })}
+                    placeholder="Select end date"
                   />
                 </div>
                 {canAttachContract && <div className="md:col-span-2 border rounded p-4 space-y-3 bg-muted/20">
@@ -933,24 +960,26 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                         </div>
                         <div>
                           <label className="block text-[11px] font-semibold mb-1">Relationship *</label>
-                          <select
-                            required
-                            className="input-field text-xs"
+                          <SearchableSelect
                             value={contact.relationship}
-                            onChange={e => updateEmergencyContact(index, 'relationship', e.target.value)}
-                          >
-                            <option value="">Select relationship...</option>
-                            <option value="Spouse">Spouse</option>
-                            <option value="Parent">Parent</option>
-                            <option value="Sibling">Sibling</option>
-                            <option value="Child">Child</option>
-                            <option value="Partner">Partner</option>
-                            <option value="Relative">Relative</option>
-                            <option value="Friend">Friend</option>
-                            <option value="Guardian">Guardian</option>
-                            <option value="Colleague">Colleague</option>
-                            <option value="Other">Other</option>
-                          </select>
+                            onChange={(val) => updateEmergencyContact(index, 'relationship', val)}
+                            placeholder="Select relationship..."
+                            options={[
+                              { value: 'Spouse', label: 'Spouse' },
+                              { value: 'Parent', label: 'Parent' },
+                              { value: 'Sibling', label: 'Sibling' },
+                              { value: 'Child', label: 'Child' },
+                              { value: 'Partner', label: 'Partner' },
+                              { value: 'Relative', label: 'Relative' },
+                              { value: 'Friend', label: 'Friend' },
+                              { value: 'Guardian', label: 'Guardian' },
+                              { value: 'Colleague', label: 'Colleague' },
+                              { value: 'Other', label: 'Other' },
+                            ]}
+                            searchable={false}
+                            required
+                            ariaLabel="Relationship"
+                          />
                         </div>
                         <div>
                           <label className="block text-[11px] font-semibold mb-1">Primary Phone *</label>

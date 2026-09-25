@@ -45,6 +45,8 @@ import EmployeeCalendarModal from './EmployeeCalendarModal';
 import AssignmentDetailsModal from './AssignmentDetailsModal';
 import AuthorizationDetailsModal from './AuthorizationDetailsModal';
 import { useAuth } from './AuthProvider';
+import SearchableSelect from './SearchableSelect';
+import AppDateTimePicker from './ui/AppDateTimePicker';
 import contract from '@/lib/contract.json';
 import Icon from '@/components/ui/AppIcon';
 
@@ -290,6 +292,41 @@ export default function EmployeeDetailView({
     kind: 'time' | 'leave' | 'contract' | 'doc';
     row: Row;
   } | null>(null);
+
+  // Modal controlled states
+  const [contractStartDate, setContractStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [contractEndDate, setContractEndDate] = useState('');
+  const [docCat, setDocCat] = useState('MEDICAL_CERTIFICATE');
+  const [docExpiry, setDocExpiry] = useState('');
+  const [leaveType, setLeaveType] = useState('ANNUAL');
+  const [leaveStart, setLeaveStart] = useState(new Date().toISOString().slice(0, 10));
+  const [leaveEnd, setLeaveEnd] = useState(new Date().toISOString().slice(0, 10));
+  const [logMode, setLogMode] = useState('SINGLE');
+  const [logStart, setLogStart] = useState(new Date().toISOString().slice(0, 10));
+  const [logEnd, setLogEnd] = useState(new Date().toISOString().slice(0, 10));
+  const [logCheckin, setLogCheckin] = useState('08:00');
+  const [logCheckout, setLogCheckout] = useState('17:00');
+
+  const [editDate, setEditDate] = useState('');
+  const [editCheckin, setEditCheckin] = useState('08:00');
+  const [editCheckout, setEditCheckout] = useState('17:00');
+  const [editLeaveType, setEditLeaveType] = useState('ANNUAL');
+  const [editStart, setEditStart] = useState('');
+  const [editEnd, setEditEnd] = useState('');
+
+  useEffect(() => {
+    if (editingItem) {
+      if (editingItem.kind === 'time') {
+        setEditDate(editingItem.row.date ? String(editingItem.row.date).slice(0, 10) : '');
+        setEditCheckin(editingItem.row.check_in ? String(editingItem.row.check_in).slice(11, 16) : '08:00');
+        setEditCheckout(editingItem.row.check_out ? String(editingItem.row.check_out).slice(11, 16) : '17:00');
+      } else {
+        setEditLeaveType(editingItem.row.leave_type || 'ANNUAL');
+        setEditStart(editingItem.row.start_date ? String(editingItem.row.start_date).slice(0, 10) : '');
+        setEditEnd(editingItem.row.end_date ? String(editingItem.row.end_date).slice(0, 10) : '');
+      }
+    }
+  }, [editingItem]);
 
   const [viewingAssignment, setViewingAssignment] = useState<Row | null>(null);
   const [viewingAuthorization, setViewingAuthorization] = useState<Row | null>(null);
@@ -824,21 +861,21 @@ function ensureValidUUID(idStr: any): string {
               <button
                 type="button"
                 onClick={onClose}
-                className="text-xs text-primary flex gap-1 items-center mb-2 hover:underline font-semibold"
+                className="text-xs text-primary inline-flex gap-1.5 items-center mb-2 hover:underline font-semibold text-left justify-start"
               >
                 <ArrowLeft size={14} /> Close Profile
               </button>
             ) : auth.user?.is_field_portal_only ? (
               <Link
                 href="/field-portal"
-                className="text-xs text-primary flex gap-1 items-center mb-2 hover:underline font-semibold"
+                className="text-xs text-primary inline-flex gap-1.5 items-center mb-2 hover:underline font-semibold text-left justify-start"
               >
                 <ArrowLeft size={14} /> Back to Field Operations Portal
               </Link>
             ) : (
               <Link
                 href="/workspace/employees"
-                className="text-xs text-primary flex gap-1 items-center mb-2 hover:underline"
+                className="text-xs text-primary inline-flex gap-1.5 items-center mb-2 hover:underline text-left justify-start"
               >
                 <ArrowLeft size={14} /> Employee Directory
               </Link>
@@ -869,12 +906,12 @@ function ensureValidUUID(idStr: any): string {
 
         {/* Action Toolbar */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Performance & Calendar Modal Opener */}
+          {/* Schedule and Activity Modal Opener */}
           <button
             className="btn-primary text-xs bg-indigo-700 hover:bg-indigo-800 text-white shadow-sm"
             onClick={() => setShowCalendarModal(true)}
           >
-            <Calendar size={14} /> Performance & Calendar
+            <Calendar size={14} /> Schedule and Activity
           </button>
 
           {/* Admin Account Security & Password Reset Modal Opener — HR/Admin only */}
@@ -2733,28 +2770,26 @@ function ensureValidUUID(idStr: any): string {
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1">Contract Start Date *</label>
-                <input
-                  required
-                  type="date"
+                <AppDateTimePicker
                   name="start_date"
-                  className="input-field"
-                  defaultValue={new Date().toISOString().slice(0, 10)}
+                  mode="date"
+                  required
+                  value={contractStartDate}
+                  onChange={(val) => setContractStartDate(val)}
+                  placeholder="Select start date"
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1">
                   Contract Expiration / End Date *
                 </label>
-                <input
-                  required
-                  type="date"
+                <AppDateTimePicker
                   name="end_date"
-                  className="input-field"
-                  defaultValue={
-                    employee.contract_end_date
-                      ? String(employee.contract_end_date).slice(0, 10)
-                      : ''
-                  }
+                  mode="date"
+                  required
+                  value={contractEndDate}
+                  onChange={(val) => setContractEndDate(val)}
+                  placeholder="Select end date"
                 />
               </div>
             </div>
@@ -2869,15 +2904,22 @@ function ensureValidUUID(idStr: any): string {
                 <label className="block text-xs font-semibold mb-1">
                   Category / Document Type *
                 </label>
-                <select name="doc_cat" className="input-field" defaultValue="MEDICAL_CERTIFICATE">
-                  <option value="MEDICAL_CERTIFICATE">Medical Records & Health</option>
-                  <option value="POLICE_CLEARANCE">Background Checks & Police Clearance</option>
-                  <option value="PASSPORT">Passport / National ID</option>
-                  <option value="WORK_PERMIT">Visas & Work Permits</option>
-                  <option value="EDUCATIONAL_CERTIFICATE">Educational / Trade Certificates</option>
-                  <option value="INSURANCE_DOCUMENT">Insurance & Liability</option>
-                  <option value="OTHER">General HR Note / Other</option>
-                </select>
+                <SearchableSelect
+                  name="doc_cat"
+                  value={docCat}
+                  onChange={(val) => setDocCat(val)}
+                  options={[
+                    { value: 'MEDICAL_CERTIFICATE', label: 'Medical Records & Health' },
+                    { value: 'POLICE_CLEARANCE', label: 'Background Checks & Police Clearance' },
+                    { value: 'PASSPORT', label: 'Passport / National ID' },
+                    { value: 'WORK_PERMIT', label: 'Visas & Work Permits' },
+                    { value: 'EDUCATIONAL_CERTIFICATE', label: 'Educational / Trade Certificates' },
+                    { value: 'INSURANCE_DOCUMENT', label: 'Insurance & Liability' },
+                    { value: 'OTHER', label: 'General HR Note / Other' },
+                  ]}
+                  searchable={false}
+                  ariaLabel="Category / Document Type"
+                />
               </div>
             </div>
 
@@ -2885,7 +2927,15 @@ function ensureValidUUID(idStr: any): string {
               <label className="block text-xs font-semibold mb-1">
                 Expiration / Review Date (Optional)
               </label>
-              <input type="date" name="doc_expiry" className="input-field max-w-xs" />
+              <div className="max-w-xs">
+                <AppDateTimePicker
+                  name="doc_expiry"
+                  mode="date"
+                  value={docExpiry}
+                  onChange={(val) => setDocExpiry(val)}
+                  placeholder="Select expiration date"
+                />
+              </div>
             </div>
 
             <div>
@@ -2989,36 +3039,38 @@ function ensureValidUUID(idStr: any): string {
           >
             <div>
               <label className="block text-xs font-semibold mb-1">Leave Type *</label>
-              <select name="leave_type" className="input-field" defaultValue="ANNUAL">
-                <option value="ANNUAL">Annual Leave</option>
-                <option value="SICK">Sick Leave</option>
-                <option value="MATERNITY">Maternity Leave</option>
-                <option value="PATERNITY">Paternity Leave</option>
-                <option value="COMPASSIONATE">Compassionate Leave</option>
-                <option value="UNPAID">Unpaid Leave</option>
-                <option value="STUDY">Study Leave</option>
-                <option value="OTHER">Other</option>
-              </select>
+              <SearchableSelect
+                name="leave_type"
+                defaultValue="ANNUAL"
+                options={[
+                  { value: 'ANNUAL', label: 'Annual Leave' },
+                  { value: 'SICK', label: 'Sick Leave' },
+                  { value: 'MATERNITY', label: 'Maternity Leave' },
+                  { value: 'PATERNITY', label: 'Paternity Leave' },
+                  { value: 'COMPASSIONATE', label: 'Compassionate Leave' },
+                  { value: 'UNPAID', label: 'Unpaid Leave' },
+                  { value: 'STUDY', label: 'Study Leave' },
+                  { value: 'OTHER', label: 'Other' },
+                ]}
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold mb-1">Start Date *</label>
-                <input
+                <AppDateTimePicker
                   required
-                  type="date"
+                  mode="date"
                   name="leave_start"
-                  className="input-field"
                   defaultValue={new Date().toISOString().slice(0, 10)}
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1">End Date *</label>
-                <input
+                <AppDateTimePicker
                   required
-                  type="date"
+                  mode="date"
                   name="leave_end"
-                  className="input-field"
                   defaultValue={new Date().toISOString().slice(0, 10)}
                 />
               </div>
@@ -3163,20 +3215,23 @@ function ensureValidUUID(idStr: any): string {
           >
             <div>
               <label className="block text-xs font-semibold mb-1">Booking Mode *</label>
-              <select name="log_mode" className="input-field">
-                <option value="SINGLE">Single Day Entry</option>
-                <option value="PERIOD">Multi-Day Period Range (e.g. Entire Week Task)</option>
-              </select>
+              <SearchableSelect
+                name="log_mode"
+                defaultValue="SINGLE"
+                options={[
+                  { value: 'SINGLE', label: 'Single Day Entry' },
+                  { value: 'PERIOD', label: 'Multi-Day Period Range (e.g. Entire Week Task)' },
+                ]}
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold mb-1">Start Date *</label>
-                <input
+                <AppDateTimePicker
                   required
-                  type="date"
+                  mode="date"
                   name="log_start"
-                  className="input-field"
                   defaultValue={new Date().toISOString().slice(0, 10)}
                 />
               </div>
@@ -3184,10 +3239,9 @@ function ensureValidUUID(idStr: any): string {
                 <label className="block text-xs font-semibold mb-1">
                   End Date (For Period Mode)
                 </label>
-                <input
-                  type="date"
+                <AppDateTimePicker
+                  mode="date"
                   name="log_end"
-                  className="input-field"
                   defaultValue={new Date().toISOString().slice(0, 10)}
                 />
               </div>
@@ -3196,19 +3250,17 @@ function ensureValidUUID(idStr: any): string {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-semibold mb-1">Check In Time</label>
-                <input
-                  type="time"
+                <AppDateTimePicker
+                  mode="time"
                   name="log_checkin"
-                  className="input-field"
                   defaultValue="08:00"
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1">Check Out Time</label>
-                <input
-                  type="time"
+                <AppDateTimePicker
+                  mode="time"
                   name="log_checkout"
-                  className="input-field"
                   defaultValue="17:00"
                 />
               </div>
@@ -3407,7 +3459,7 @@ function ensureValidUUID(idStr: any): string {
         </Modal>
       )}
 
-      {/* MODAL: Performance & Calendar Popup */}
+      {/* MODAL: Schedule and Activity Popup */}
       {showCalendarModal && (
         <EmployeeCalendarModal
           employeeId={employeeId}
@@ -3547,11 +3599,10 @@ function ensureValidUUID(idStr: any): string {
               <>
                 <div>
                   <label className="block text-xs font-semibold mb-1">Date *</label>
-                  <input
+                  <AppDateTimePicker
                     required
-                    type="date"
+                    mode="date"
                     name="edit_date"
-                    className="input-field"
                     defaultValue={
                       editingItem.row.date ? String(editingItem.row.date).slice(0, 10) : ''
                     }
@@ -3561,10 +3612,9 @@ function ensureValidUUID(idStr: any): string {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold mb-1">Check In Time</label>
-                    <input
-                      type="time"
+                    <AppDateTimePicker
+                      mode="time"
                       name="edit_checkin"
-                      className="input-field"
                       defaultValue={
                         editingItem.row.check_in
                           ? String(editingItem.row.check_in).slice(11, 16)
@@ -3574,10 +3624,9 @@ function ensureValidUUID(idStr: any): string {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold mb-1">Check Out Time</label>
-                    <input
-                      type="time"
+                    <AppDateTimePicker
+                      mode="time"
                       name="edit_checkout"
-                      className="input-field"
                       defaultValue={
                         editingItem.row.check_out
                           ? String(editingItem.row.check_out).slice(11, 16)
@@ -3601,30 +3650,29 @@ function ensureValidUUID(idStr: any): string {
               <>
                 <div>
                   <label className="block text-xs font-semibold mb-1">Leave Type *</label>
-                  <select
+                  <SearchableSelect
                     name="edit_leave_type"
-                    className="input-field"
                     defaultValue={editingItem.row.leave_type || 'ANNUAL'}
-                  >
-                    <option value="ANNUAL">Annual Leave</option>
-                    <option value="SICK">Sick Leave</option>
-                    <option value="MATERNITY">Maternity Leave</option>
-                    <option value="PATERNITY">Paternity Leave</option>
-                    <option value="COMPASSIONATE">Compassionate Leave</option>
-                    <option value="UNPAID">Unpaid Leave</option>
-                    <option value="STUDY">Study Leave</option>
-                    <option value="OTHER">Other</option>
-                  </select>
+                    options={[
+                      { value: 'ANNUAL', label: 'Annual Leave' },
+                      { value: 'SICK', label: 'Sick Leave' },
+                      { value: 'MATERNITY', label: 'Maternity Leave' },
+                      { value: 'PATERNITY', label: 'Paternity Leave' },
+                      { value: 'COMPASSIONATE', label: 'Compassionate Leave' },
+                      { value: 'UNPAID', label: 'Unpaid Leave' },
+                      { value: 'STUDY', label: 'Study Leave' },
+                      { value: 'OTHER', label: 'Other' },
+                    ]}
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold mb-1">Start Date *</label>
-                    <input
+                    <AppDateTimePicker
                       required
-                      type="date"
+                      mode="date"
                       name="edit_start"
-                      className="input-field"
                       defaultValue={
                         editingItem.row.start_date
                           ? String(editingItem.row.start_date).slice(0, 10)
@@ -3634,11 +3682,10 @@ function ensureValidUUID(idStr: any): string {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold mb-1">End Date *</label>
-                    <input
+                    <AppDateTimePicker
                       required
-                      type="date"
+                      mode="date"
                       name="edit_end"
-                      className="input-field"
                       defaultValue={
                         editingItem.row.end_date
                           ? String(editingItem.row.end_date).slice(0, 10)

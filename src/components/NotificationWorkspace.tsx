@@ -8,6 +8,7 @@ import useNotificationCount from './useNotificationCount';
 import useNotificationData from './useNotificationData';
 import useAppFeedback from './useAppFeedback';
 import { useData, State, Row, rows, Modal, title } from './DataUI';
+import SearchableSelect from './SearchableSelect';
 
 const DOMAIN_RULES: Record<string, { value: string; label: string }[]> = {
   INVENTORY: [
@@ -413,15 +414,19 @@ export default function NotificationWorkspace({ fieldPortal = false, hideSchedul
 
             <div className="flex items-center gap-2 text-xs">
               <span className="text-muted-foreground font-semibold">Status:</span>
-              <select
-                className="input-field text-xs py-1 px-2"
-                value={resolvedFilter}
-                onChange={(e) => setResolvedFilter(e.target.value as any)}
-              >
-                <option value="ALL">All Statuses</option>
-                <option value="UNRESOLVED">Unresolved Only</option>
-                <option value="RESOLVED">Resolved Only</option>
-              </select>
+              <div className="w-36">
+                <SearchableSelect
+                  value={resolvedFilter}
+                  onChange={(val) => setResolvedFilter(val as any)}
+                  options={[
+                    { value: 'ALL', label: 'All Statuses' },
+                    { value: 'UNRESOLVED', label: 'Unresolved Only' },
+                    { value: 'RESOLVED', label: 'Resolved Only' },
+                  ]}
+                  searchable={false}
+                  ariaLabel="Filter Status"
+                />
+              </div>
             </div>
           </div>
 
@@ -923,40 +928,41 @@ export default function NotificationWorkspace({ fieldPortal = false, hideSchedul
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold mb-1">Domain *</label>
-                <select
-                  className="input-field text-xs"
+                <SearchableSelect
                   value={schedDomain}
-                  onChange={(e) => {
-                    const newDomain = e.target.value;
+                  onChange={(val) => {
+                    const newDomain = val;
                     setSchedDomain(newDomain);
                     const availableRules = DOMAIN_RULES[newDomain] || [];
                     if (availableRules.length > 0) {
                       setSchedRuleType(availableRules[0].value);
                     }
                   }}
-                >
-                  <option value="INVENTORY">Inventory Domain</option>
-                  <option value="EQUIPMENT">Equipment Domain</option>
-                  <option value="WORKFORCE">Workforce Domain</option>
-                  <option value="PROJECTS">Projects Domain</option>
-                  <option value="FINANCE">Finance Domain</option>
-                  <option value="HSE">Health, Safety & Environment Domain</option>
-                </select>
+                  options={[
+                    { value: 'INVENTORY', label: 'Inventory Domain' },
+                    { value: 'EQUIPMENT', label: 'Equipment Domain' },
+                    { value: 'WORKFORCE', label: 'Workforce Domain' },
+                    { value: 'PROJECTS', label: 'Projects Domain' },
+                    { value: 'FINANCE', label: 'Finance Domain' },
+                    { value: 'HSE', label: 'Health, Safety & Environment Domain' },
+                  ]}
+                  searchable={false}
+                  ariaLabel="Domain"
+                />
               </div>
 
               <div>
                 <label className="block font-semibold mb-1">Rule Category Criteria *</label>
-                <select
-                  className="input-field text-xs"
+                <SearchableSelect
                   value={schedRuleType}
-                  onChange={(e) => setSchedRuleType(e.target.value)}
-                >
-                  {(DOMAIN_RULES[schedDomain] || []).map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSchedRuleType(val)}
+                  options={(DOMAIN_RULES[schedDomain] || []).map((r) => ({
+                    value: r.value,
+                    label: r.label,
+                  }))}
+                  searchable={false}
+                  ariaLabel="Rule Category Criteria"
+                />
               </div>
             </div>
 
@@ -993,18 +999,20 @@ export default function NotificationWorkspace({ fieldPortal = false, hideSchedul
 
               <div>
                 <label className="block font-semibold mb-1">Notification Frequency *</label>
-                <select
-                  className="input-field text-xs"
+                <SearchableSelect
                   value={schedFrequency}
-                  onChange={(e) => setSchedFrequency(e.target.value)}
-                >
-                  <option value="DAILY">Daily (Once Everyday)</option>
-                  <option value="EVERY_OTHER_DAY">Every 2 Days</option>
-                  <option value="WEEKLY">Weekly</option>
-                  <option value="BIWEEKLY">Every 2 Weeks</option>
-                  <option value="MONTHLY">Monthly</option>
-                  <option value="ONCE">Once Only</option>
-                </select>
+                  onChange={(val) => setSchedFrequency(val)}
+                  options={[
+                    { value: 'DAILY', label: 'Daily (Once Everyday)' },
+                    { value: 'EVERY_OTHER_DAY', label: 'Every 2 Days' },
+                    { value: 'WEEKLY', label: 'Weekly' },
+                    { value: 'BIWEEKLY', label: 'Every 2 Weeks' },
+                    { value: 'MONTHLY', label: 'Monthly' },
+                    { value: 'ONCE', label: 'Once Only' },
+                  ]}
+                  searchable={false}
+                  ariaLabel="Notification Frequency"
+                />
               </div>
             </div>
             )}
@@ -1012,28 +1020,32 @@ export default function NotificationWorkspace({ fieldPortal = false, hideSchedul
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold mb-1">Priority Tag *</label>
-                <select
-                  className="input-field text-xs"
+                <SearchableSelect
                   value={schedPriority}
-                  onChange={(e) => setSchedPriority(e.target.value)}
-                >
-                  <option value="NORMAL">NORMAL</option>
-                  <option value="IMPORTANT">IMPORTANT</option>
-                  <option value="CRITICAL">CRITICAL</option>
-                </select>
+                  onChange={(val) => setSchedPriority(val)}
+                  options={[
+                    { value: 'NORMAL', label: 'NORMAL' },
+                    { value: 'IMPORTANT', label: 'IMPORTANT' },
+                    { value: 'CRITICAL', label: 'CRITICAL' },
+                  ]}
+                  searchable={false}
+                  ariaLabel="Priority Tag"
+                />
               </div>
 
               <div>
                 <label className="block font-semibold mb-1">Delivery Method *</label>
-                <select
-                  className="input-field text-xs"
+                <SearchableSelect
                   value={schedDelivery}
-                  onChange={(e) => setSchedDelivery(e.target.value)}
-                >
-                  <option value="BOTH">BOTH (Email & On-Platform) [Default]</option>
-                  <option value="EMAIL">EMAIL Only</option>
-                  <option value="ON_PLATFORM">ON_PLATFORM Only</option>
-                </select>
+                  onChange={(val) => setSchedDelivery(val)}
+                  options={[
+                    { value: 'BOTH', label: 'BOTH (Email & On-Platform) [Default]' },
+                    { value: 'EMAIL', label: 'EMAIL Only' },
+                    { value: 'ON_PLATFORM', label: 'ON_PLATFORM Only' },
+                  ]}
+                  searchable={false}
+                  ariaLabel="Delivery Method"
+                />
               </div>
             </div>
 

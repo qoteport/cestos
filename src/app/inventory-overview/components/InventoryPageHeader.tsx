@@ -5,6 +5,8 @@ import { Plus, MinusCircle, Download, RefreshCw, SlidersHorizontal, Filter, X } 
 import { Modal, useData, rows } from '@/components/DataUI';
 import RecordForm from '@/components/RecordForm';
 import { operation } from '@/components/ResourceWorkspace';
+import SearchableSelect from '@/components/SearchableSelect';
+import AppDateTimePicker from '@/components/ui/AppDateTimePicker';
 
 interface InventoryPageHeaderProps {
   onRefresh?: () => void;
@@ -204,85 +206,85 @@ export default function InventoryPageHeader({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block font-medium text-foreground mb-1">Target Store</label>
-                <select
+                <SearchableSelect
                   value={draftStore}
-                  onChange={(e) => setDraftStore(e.target.value)}
-                  className="w-full p-2 border rounded-lg bg-card text-foreground"
-                >
-                  <option value="">All Stores</option>
-                  {storeList.map((s: any) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.code})
-                    </option>
-                  ))}
-                </select>
+                  onChange={setDraftStore}
+                  options={[
+                    { value: '', label: 'All Stores' },
+                    ...storeList.map((s: any) => ({
+                      value: s.id,
+                      label: `${s.name} (${s.code})`,
+                    })),
+                  ]}
+                  placeholder="Select store..."
+                />
               </div>
 
               <div>
                 <label className="block font-medium text-foreground mb-1">Item Category</label>
-                <select
+                <SearchableSelect
                   value={draftCategory}
-                  onChange={(e) => setDraftCategory(e.target.value)}
-                  className="w-full p-2 border rounded-lg bg-card text-foreground"
-                >
-                  <option value="">All Categories</option>
-                  {catList.map((c: any) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setDraftCategory}
+                  options={[
+                    { value: '', label: 'All Categories' },
+                    ...catList.map((c: any) => ({
+                      value: c.id,
+                      label: c.name,
+                    })),
+                  ]}
+                  placeholder="Select category..."
+                />
               </div>
 
               <div>
                 <label className="block font-medium text-foreground mb-1">Supplier</label>
-                <select
+                <SearchableSelect
                   value={draftSupplier}
-                  onChange={(e) => setDraftSupplier(e.target.value)}
-                  className="w-full p-2 border rounded-lg bg-card text-foreground"
-                >
-                  <option value="">All Suppliers</option>
-                  {suppList.map((sup: any) => (
-                    <option key={sup.id} value={sup.id}>
-                      {sup.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setDraftSupplier}
+                  options={[
+                    { value: '', label: 'All Suppliers' },
+                    ...suppList.map((sup: any) => ({
+                      value: sup.id,
+                      label: sup.name,
+                    })),
+                  ]}
+                  placeholder="Select supplier..."
+                />
               </div>
 
               <div>
                 <label className="block font-medium text-foreground mb-1">Associated Project</label>
-                <select
+                <SearchableSelect
                   value={draftProject}
-                  onChange={(e) => setDraftProject(e.target.value)}
-                  className="w-full p-2 border rounded-lg bg-card text-foreground"
-                >
-                  <option value="">All Projects</option>
-                  {projList.map((p: any) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setDraftProject}
+                  options={[
+                    { value: '', label: 'All Projects' },
+                    ...projList.map((p: any) => ({
+                      value: p.id,
+                      label: p.name,
+                    })),
+                  ]}
+                  placeholder="Select project..."
+                />
               </div>
 
               <div>
                 <label className="block font-medium text-foreground mb-1">Date Range (From)</label>
-                <input
-                  type="date"
+                <AppDateTimePicker
+                  mode="date"
                   value={draftDateFrom}
-                  onChange={(e) => setDraftDateFrom(e.target.value)}
-                  className="w-full p-2 border rounded-lg bg-card text-foreground"
+                  onChange={setDraftDateFrom}
+                  placeholder="Select start date"
                 />
               </div>
 
               <div>
                 <label className="block font-medium text-foreground mb-1">Date Range (To)</label>
-                <input
-                  type="date"
+                <AppDateTimePicker
+                  mode="date"
                   value={draftDateTo}
-                  onChange={(e) => setDraftDateTo(e.target.value)}
-                  className="w-full p-2 border rounded-lg bg-card text-foreground"
+                  onChange={setDraftDateTo}
+                  placeholder="Select end date"
                 />
               </div>
             </div>

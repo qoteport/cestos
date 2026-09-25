@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { Plus, Download, SlidersHorizontal, Filter, X } from 'lucide-react';
 import { Modal, useData, rows } from '@/components/DataUI';
+import SearchableSelect from '@/components/SearchableSelect';
+import AppDateTimePicker from '@/components/ui/AppDateTimePicker';
 
 interface WorkforcePageHeaderProps {
   onAddEmployee?: () => void;
@@ -173,86 +175,90 @@ export default function WorkforcePageHeader({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold mb-1 text-foreground">Start Date (Date From)</label>
-                <input
-                  type="date"
-                  className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+                <AppDateTimePicker
+                  mode="date"
                   value={draftDateFrom}
-                  onChange={(e) => setDraftDateFrom(e.target.value)}
+                  onChange={setDraftDateFrom}
+                  placeholder="Select start date"
                 />
               </div>
               <div>
                 <label className="block font-semibold mb-1 text-foreground">End Date (Date To)</label>
-                <input
-                  type="date"
-                  className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+                <AppDateTimePicker
+                  mode="date"
                   value={draftDateTo}
-                  onChange={(e) => setDraftDateTo(e.target.value)}
+                  onChange={setDraftDateTo}
+                  placeholder="Select end date"
                 />
               </div>
             </div>
 
             <div>
               <label className="block font-semibold mb-1 text-foreground">Department</label>
-              <select
-                className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'All Departments' },
+                  ...deptList.map((d: any) => ({
+                    value: d.id,
+                    label: `${d.name}${d.code ? ` (${d.code})` : ''}`,
+                  })),
+                ]}
                 value={draftDept}
-                onChange={(e) => setDraftDept(e.target.value)}
-              >
-                <option value="">All Departments</option>
-                {deptList.map((d: any) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name} {d.code ? `(${d.code})` : ''}
-                  </option>
-                ))}
-              </select>
+                onChange={setDraftDept}
+                searchable={deptList.length > 5}
+                placeholder="Select department..."
+              />
             </div>
 
             <div>
               <label className="block font-semibold mb-1 text-foreground">Employment Status</label>
-              <select
-                className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'All Employment Statuses' },
+                  { value: 'ACTIVE', label: 'Active' },
+                  { value: 'PROBATION', label: 'Probation' },
+                  { value: 'SUSPENDED', label: 'Suspended' },
+                  { value: 'TERMINATED', label: 'Terminated' },
+                  { value: 'RESIGNED', label: 'Resigned' },
+                ]}
                 value={draftEmpStatus}
-                onChange={(e) => setDraftEmpStatus(e.target.value)}
-              >
-                <option value="">All Employment Statuses</option>
-                <option value="ACTIVE">Active</option>
-                <option value="PROBATION">Probation</option>
-                <option value="SUSPENDED">Suspended</option>
-                <option value="TERMINATED">Terminated</option>
-                <option value="RESIGNED">Resigned</option>
-              </select>
+                onChange={setDraftEmpStatus}
+                searchable={false}
+              />
             </div>
 
             <div>
               <label className="block font-semibold mb-1 text-foreground">Availability Status</label>
-              <select
-                className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'All Availability States' },
+                  { value: 'AVAILABLE', label: 'Available' },
+                  { value: 'ASSIGNED', label: 'Assigned' },
+                  { value: 'ON_LEAVE', label: 'On Leave' },
+                  { value: 'REST_DAY', label: 'Rest Day' },
+                  { value: 'STANDBY', label: 'Standby' },
+                ]}
                 value={draftAvailStatus}
-                onChange={(e) => setDraftAvailStatus(e.target.value)}
-              >
-                <option value="">All Availability States</option>
-                <option value="AVAILABLE">Available</option>
-                <option value="ASSIGNED">Assigned</option>
-                <option value="ON_LEAVE">On Leave</option>
-                <option value="REST_DAY">Rest Day</option>
-                <option value="STANDBY">Standby</option>
-              </select>
+                onChange={setDraftAvailStatus}
+                searchable={false}
+              />
             </div>
 
             <div>
               <label className="block font-semibold mb-1 text-foreground">Assigned Project</label>
-              <select
-                className="w-full px-3 py-2 border rounded-lg bg-background text-xs"
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'All Projects' },
+                  ...projList.map((p: any) => ({
+                    value: p.id,
+                    label: `${p.name}${p.code ? ` (${p.code})` : ''}`,
+                  })),
+                ]}
                 value={draftProj}
-                onChange={(e) => setDraftProj(e.target.value)}
-              >
-                <option value="">All Projects</option>
-                {projList.map((p: any) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} {p.code ? `(${p.code})` : ''}
-                  </option>
-                ))}
-              </select>
+                onChange={setDraftProj}
+                searchable={projList.length > 5}
+                placeholder="Select project..."
+              />
             </div>
 
             <div className="flex justify-end gap-2 pt-3 border-t">

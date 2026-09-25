@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import SearchableSelect from './SearchableSelect';
+import AppDateTimePicker from './ui/AppDateTimePicker';
 import { useRouter } from 'next/navigation';
 import {
   DollarSign,
@@ -1188,24 +1190,26 @@ Signed: Finance & Procurement Administration
             </div>
             <div className="flex-1 min-w-[200px]">
               <label className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-0.5">Project Scope</label>
-              <select
+              <SearchableSelect
                 value={selectedProjectId}
-                onChange={(e) => setSelectedProjectId(e.target.value)}
-                className="w-full bg-background border rounded-lg px-3 py-1.5 text-xs font-bold text-foreground focus:ring-2 focus:ring-violet-500 focus:outline-none cursor-pointer"
-              >
-                <option value="">All Projects (Organisation-Wide)</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} {p.code ? `(${p.code})` : ''}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setSelectedProjectId(val)}
+                options={[
+                  { value: '', label: 'All Projects (Organisation-Wide)' },
+                  ...projects.map((p: any) => ({
+                    value: p.id,
+                    label: `${p.name}${p.code ? ` (${p.code})` : ''}`,
+                  })),
+                ]}
+                placeholder="All Projects (Organisation-Wide)"
+                searchable={projects.length > 5}
+              />
             </div>
           </div>
 
           {/* Right: Date Presets & Custom Popover */}
-          <div className="flex items-center flex-wrap gap-1.5 w-full sm:w-auto">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1 w-full sm:w-auto">Date Range:</span>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 w-full sm:w-auto">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1 mb-0.5 sm:mb-0 block">Date Range:</span>
+            <div className="flex items-center flex-wrap gap-1.5">
             {(['ALL', 'TODAY', '10_DAYS', '30_DAYS'] as const).map((preset) => (
               <button
                 key={preset}
@@ -1236,6 +1240,7 @@ Signed: Finance & Procurement Administration
               <Clock size={13} /> Custom Time Range
               <ChevronRight size={13} className={`transition-transform duration-200 ${showCustomDatePopover ? 'rotate-90' : ''}`} />
             </button>
+            </div>
           </div>
         </div>
 
@@ -1282,22 +1287,22 @@ Signed: Finance & Procurement Administration
                 <label className="block text-xs font-bold text-foreground flex items-center gap-1.5">
                   <Calendar size={13} className="text-violet-600" /> Start Date &amp; Time
                 </label>
-                <input
-                  type="datetime-local"
+                <AppDateTimePicker
+                  mode="datetime"
                   value={customStartDate}
-                  onChange={(e) => setCustomStartDate(e.target.value)}
-                  className="w-full p-2 border rounded-lg bg-background font-mono text-xs focus:ring-2 focus:ring-violet-500 focus:outline-none"
+                  onChange={(val) => setCustomStartDate(val)}
+                  placeholder="Select start date & time"
                 />
               </div>
               <div className="p-3 border rounded-xl bg-muted/40 space-y-2">
                 <label className="block text-xs font-bold text-foreground flex items-center gap-1.5">
                   <Calendar size={13} className="text-violet-600" /> End Date &amp; Time
                 </label>
-                <input
-                  type="datetime-local"
+                <AppDateTimePicker
+                  mode="datetime"
                   value={customEndDate}
-                  onChange={(e) => setCustomEndDate(e.target.value)}
-                  className="w-full p-2 border rounded-lg bg-background font-mono text-xs focus:ring-2 focus:ring-violet-500 focus:outline-none"
+                  onChange={(val) => setCustomEndDate(val)}
+                  placeholder="Select end date & time"
                 />
               </div>
             </div>
@@ -2874,16 +2879,16 @@ Signed: Finance & Procurement Administration
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-foreground mb-1">Project Assignment</label>
-                  <select
+                  <SearchableSelect
                     value={newPoForm.project_id}
-                    onChange={(e) => setNewPoForm({ ...newPoForm, project_id: e.target.value })}
-                    className="w-full p-2.5 border rounded-xl bg-background text-xs"
-                  >
-                    <option value="">Organization-Wide (All Projects)</option>
-                    {projects.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setNewPoForm({ ...newPoForm, project_id: val })}
+                    options={[
+                      { value: '', label: 'Organization-Wide (All Projects)' },
+                      ...projects.map((p) => ({ value: p.id, label: p.name })),
+                    ]}
+                    placeholder="Organization-Wide (All Projects)"
+                    searchable={projects.length > 5}
+                  />
                 </div>
               </div>
 
@@ -2894,16 +2899,17 @@ Signed: Finance & Procurement Administration
               <div>
                 <label className="block text-xs font-bold text-foreground mb-1">Currency &amp; Notes</label>
                 <div className="grid grid-cols-3 gap-2">
-                  <select
+                  <SearchableSelect
                     value={newPoForm.currency}
-                    onChange={(e) => setNewPoForm({ ...newPoForm, currency: e.target.value })}
-                    className="p-2.5 border rounded-xl bg-background text-xs font-bold"
-                  >
-                    <option value="USD">USD ($)</option>
-                    <option value="EUR">EUR (€)</option>
-                    <option value="GBP">GBP (£)</option>
-                    <option value="ZAR">ZAR (R)</option>
-                  </select>
+                    onChange={(val) => setNewPoForm({ ...newPoForm, currency: val })}
+                    options={[
+                      { value: 'USD', label: 'USD ($)' },
+                      { value: 'EUR', label: 'EUR (€)' },
+                      { value: 'GBP', label: 'GBP (£)' },
+                      { value: 'ZAR', label: 'ZAR (R)' },
+                    ]}
+                    searchable={false}
+                  />
                   <input
                     type="text"
                     placeholder="Purchase Order Notes / Specifications"
@@ -3219,46 +3225,48 @@ Signed: Finance & Procurement Administration
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-foreground mb-1">Project Assignment</label>
-                  <select
+                  <SearchableSelect
                     value={editPoForm.project_id}
-                    onChange={(e) => setEditPoForm({ ...editPoForm, project_id: e.target.value })}
-                    className="w-full p-2.5 border rounded-xl bg-background text-xs"
-                  >
-                    <option value="">Organization-Wide (All Projects)</option>
-                    {projects.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setEditPoForm({ ...editPoForm, project_id: val })}
+                    options={[
+                      { value: '', label: 'Organization-Wide (All Projects)' },
+                      ...projects.map((p) => ({ value: p.id, label: p.name })),
+                    ]}
+                    placeholder="Organization-Wide (All Projects)"
+                    searchable={projects.length > 5}
+                  />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-foreground mb-1">Status</label>
-                  <select
+                  <SearchableSelect
                     value={String(editPoForm.status || '').replaceAll('_', ' ')}
-                    onChange={(e) => setEditPoForm({ ...editPoForm, status: e.target.value })}
-                    className="w-full p-2.5 border rounded-xl bg-background text-xs font-bold"
-                  >
-                    <option value="DRAFT">DRAFT</option>
-                    <option value="PENDING">PENDING</option>
-                    <option value="APPROVED">APPROVED</option>
-                    <option value="COMPLETED">COMPLETED</option>
-                    <option value="CANCELLED">CANCELLED</option>
-                  </select>
+                    onChange={(val) => setEditPoForm({ ...editPoForm, status: val })}
+                    options={[
+                      { value: 'DRAFT', label: 'DRAFT' },
+                      { value: 'PENDING', label: 'PENDING' },
+                      { value: 'APPROVED', label: 'APPROVED' },
+                      { value: 'COMPLETED', label: 'COMPLETED' },
+                      { value: 'CANCELLED', label: 'CANCELLED' },
+                    ]}
+                    searchable={false}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-foreground mb-1">Currency</label>
-                  <select
+                  <SearchableSelect
                     value={editPoForm.currency}
-                    onChange={(e) => setEditPoForm({ ...editPoForm, currency: e.target.value })}
-                    className="w-full p-2.5 border rounded-xl bg-background text-xs font-bold"
-                  >
-                    <option value="USD">USD ($)</option>
-                    <option value="EUR">EUR (€)</option>
-                    <option value="GBP">GBP (£)</option>
-                    <option value="ZAR">ZAR (R)</option>
-                  </select>
+                    onChange={(val) => setEditPoForm({ ...editPoForm, currency: val })}
+                    options={[
+                      { value: 'USD', label: 'USD ($)' },
+                      { value: 'EUR', label: 'EUR (€)' },
+                      { value: 'GBP', label: 'GBP (£)' },
+                      { value: 'ZAR', label: 'ZAR (R)' },
+                    ]}
+                    searchable={false}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-foreground mb-1">Category (Optional)</label>

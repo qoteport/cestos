@@ -4,6 +4,7 @@ import { hasSupervisorRole, canOpenFieldTab } from '@/lib/fieldPortalAccess';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import SearchableSelect from './SearchableSelect';
 import {
   Flame,
   Wrench,
@@ -416,21 +417,22 @@ export default function FieldPortalLayout({
 
             {/* HEADER ASSIGNED PROJECT SWITCHER */}
             {assignedProjects && assignedProjects.length > 0 && (
-              <div className="flex items-center gap-1.5 bg-muted/40 border border-primary/20 rounded-xl px-2.5 py-1 text-xs shadow-sm max-w-[180px] sm:max-w-xs">
+              <div className="flex items-center gap-1.5 bg-muted/40 border border-primary/20 rounded-xl px-2 py-0.5 text-xs shadow-sm max-w-[200px] sm:max-w-xs">
                 <Compass className="h-4 w-4 text-primary shrink-0 animate-pulse" />
                 <span className="text-muted-foreground font-semibold text-[11px] hidden md:inline-block">Project:</span>
-                <select
-                  value={selectedProjectId || assignedProjects[0]?.id || ''}
-                  onChange={(e) => onProjectChange && onProjectChange(e.target.value)}
-                  className="bg-transparent font-bold text-foreground focus:outline-none cursor-pointer text-xs pr-1 truncate w-full"
-                  title="Switch Active Assigned Project View"
-                >
-                  {assignedProjects.map((p) => (
-                    <option key={p.id} value={p.id} className="bg-background text-foreground">
-                      {p.name} {p.code ? `[${p.code}]` : ''}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex-1 min-w-[120px]">
+                  <SearchableSelect
+                    value={selectedProjectId || assignedProjects[0]?.id || ''}
+                    onChange={(val) => onProjectChange && onProjectChange(val)}
+                    options={assignedProjects.map((p) => ({
+                      value: p.id,
+                      label: `${p.name}${p.code ? ` [${p.code}]` : ''}`,
+                    }))}
+                    searchable={assignedProjects.length > 5}
+                    ariaLabel="Switch Active Assigned Project View"
+                    className="border-0 bg-transparent shadow-none py-1 px-1 text-xs font-bold"
+                  />
+                </div>
               </div>
             )}
           </div>

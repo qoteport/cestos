@@ -11,6 +11,8 @@ import { apiFetch } from '@/lib/api';
 import { openUniversalFileViewer } from '@/lib/fileViewer';
 import { useData, rows } from '@/components/DataUI';
 import { toast } from 'sonner';
+import SearchableSelect from '@/components/SearchableSelect';
+import AppDateTimePicker from '@/components/ui/AppDateTimePicker';
 
 interface IntelligenceMetrics {
   fleet_utilization?: {
@@ -634,113 +636,119 @@ export default function IntelligencePage() {
 
           <div className="flex items-center gap-2 flex-wrap text-xs">
             {/* Project Filter */}
-            <div className="flex items-center gap-1.5 bg-muted/40 px-2.5 py-1 rounded border border-border">
-              <FolderKanban size={13} className="text-muted-foreground" />
-              <select
-                aria-label="Filter by project"
-                className="bg-transparent font-600 outline-none text-xs cursor-pointer max-w-[140px] truncate"
+            <div className="min-w-[150px]">
+              <SearchableSelect
+                ariaLabel="Filter by project"
                 value={projectId}
-                onChange={(e) => setProjectId(e.target.value)}
-              >
-                <option value="">All Projects</option>
-                {projectList.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setProjectId}
+                options={[
+                  { value: '', label: 'All Projects' },
+                  ...projectList.map((p) => ({
+                    value: p.id,
+                    label: p.name,
+                  })),
+                ]}
+                placeholder="All Projects"
+                searchable={projectList.length > 5}
+              />
             </div>
 
             {/* Site / Location Filter */}
-            <div className="flex items-center gap-1.5 bg-muted/40 px-2.5 py-1 rounded border border-border">
-              <MapPin size={13} className="text-muted-foreground" />
-              <select
-                aria-label="Filter by location"
-                className="bg-transparent font-600 outline-none text-xs cursor-pointer max-w-[130px] truncate"
+            <div className="min-w-[140px]">
+              <SearchableSelect
+                ariaLabel="Filter by location"
                 value={locationId}
-                onChange={(e) => setLocationId(e.target.value)}
-              >
-                <option value="">All Sites</option>
-                {locationList.map((loc) => (
-                  <option key={loc.id} value={loc.id}>
-                    {loc.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setLocationId}
+                options={[
+                  { value: '', label: 'All Sites' },
+                  ...locationList.map((loc) => ({
+                    value: loc.id,
+                    label: loc.name,
+                  })),
+                ]}
+                placeholder="All Sites"
+                searchable={locationList.length > 5}
+              />
             </div>
 
             {/* Department Filter */}
-            <div className="flex items-center gap-1.5 bg-muted/40 px-2.5 py-1 rounded border border-border">
-              <Building2 size={13} className="text-muted-foreground" />
-              <select
-                aria-label="Filter by department"
-                className="bg-transparent font-600 outline-none text-xs cursor-pointer max-w-[130px] truncate"
+            <div className="min-w-[140px]">
+              <SearchableSelect
+                ariaLabel="Filter by department"
                 value={departmentId}
-                onChange={(e) => setDepartmentId(e.target.value)}
-              >
-                <option value="">All Departments</option>
-                {departmentList.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setDepartmentId}
+                options={[
+                  { value: '', label: 'All Departments' },
+                  ...departmentList.map((d) => ({
+                    value: d.id,
+                    label: d.name,
+                  })),
+                ]}
+                placeholder="All Departments"
+                searchable={departmentList.length > 5}
+              />
             </div>
 
             {/* Category Filter */}
-            <div className="flex items-center gap-1.5 bg-muted/40 px-2.5 py-1 rounded border border-border">
-              <Tag size={13} className="text-muted-foreground" />
-              <select
-                aria-label="Filter by asset category"
-                className="bg-transparent font-600 outline-none text-xs cursor-pointer max-w-[130px] truncate"
+            <div className="min-w-[140px]">
+              <SearchableSelect
+                ariaLabel="Filter by asset category"
                 value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-              >
-                <option value="">All Categories</option>
-                {categoryList.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setCategoryId}
+                options={[
+                  { value: '', label: 'All Categories' },
+                  ...categoryList.map((cat) => ({
+                    value: cat.id,
+                    label: cat.name,
+                  })),
+                ]}
+                placeholder="All Categories"
+                searchable={categoryList.length > 5}
+              />
             </div>
 
             {/* Status Filter */}
-            <div className="flex items-center gap-1.5 bg-muted/40 px-2.5 py-1 rounded border border-border">
-              <Filter size={13} className="text-muted-foreground" />
-              <select
-                aria-label="Filter by status"
-                className="bg-transparent font-600 outline-none text-xs cursor-pointer"
+            <div className="min-w-[130px]">
+              <SearchableSelect
+                ariaLabel="Filter by status"
                 value={status}
-                onChange={(e) => setStatus(e.target.value)}
-              >
-                <option value="">All Statuses</option>
-                <option value="OPERATING">Operating</option>
-                <option value="AVAILABLE">Available</option>
-                <option value="ACTIVE">Active Staff</option>
-                <option value="IN_PROGRESS">In Progress</option>
-                <option value="MAINTENANCE">Maintenance</option>
-              </select>
+                onChange={setStatus}
+                options={[
+                  { value: '', label: 'All Statuses' },
+                  { value: 'OPERATING', label: 'Operating' },
+                  { value: 'AVAILABLE', label: 'Available' },
+                  { value: 'ACTIVE', label: 'Active Staff' },
+                  { value: 'IN_PROGRESS', label: 'In Progress' },
+                  { value: 'MAINTENANCE', label: 'Maintenance' },
+                ]}
+                placeholder="All Statuses"
+                searchable={false}
+              />
             </div>
 
             {/* Date Range Picker */}
-            <div className="flex items-center gap-1 bg-muted/40 px-2 py-1 rounded border border-border">
-              <Calendar size={13} className="text-muted-foreground" />
-              <input
-                type="date"
-                aria-label="Date from"
-                className="bg-transparent outline-none text-[11px] font-500 text-foreground"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-              />
-              <span className="text-muted-foreground text-2xs">to</span>
-              <input
-                type="date"
-                aria-label="Date to"
-                className="bg-transparent outline-none text-[11px] font-500 text-foreground"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-              />
+            <div className="flex items-center gap-1.5">
+              <div className="w-[130px]">
+                <AppDateTimePicker
+                  mode="date"
+                  ariaLabel="Date from"
+                  value={dateFrom}
+                  onChange={setDateFrom}
+                  placeholder="From date"
+                  showPresets={false}
+                />
+              </div>
+              <span className="text-muted-foreground text-xs">to</span>
+              <div className="w-[130px]">
+                <AppDateTimePicker
+                  mode="date"
+                  ariaLabel="Date to"
+                  value={dateTo}
+                  onChange={setDateTo}
+                  placeholder="To date"
+                  showPresets={false}
+                />
+              </div>
             </div>
 
             {/* Clear All Filters */}

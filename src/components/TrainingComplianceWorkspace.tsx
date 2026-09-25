@@ -6,6 +6,8 @@ import { GraduationCap, ShieldCheck, AlertTriangle, Plus, Filter, Search, Refres
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
 import { Row, display, Modal } from './DataUI';
+import SearchableSelect from './SearchableSelect';
+import AppDateTimePicker from './ui/AppDateTimePicker';
 
 export default function TrainingComplianceWorkspace() {
   const [loading, setLoading] = useState(true);
@@ -25,6 +27,13 @@ export default function TrainingComplianceWorkspace() {
   const [planError, setPlanError] = useState('');
   const [selectedEmpIds, setSelectedEmpIds] = useState<string[]>([]);
   const [empSearchModal, setEmpSearchModal] = useState('');
+  const [planForm, setPlanForm] = useState({
+    training_name: '',
+    training_type: 'MANDATORY',
+    training_provider: '',
+    training_start: new Date().toISOString().slice(0, 10),
+    training_expiry: '',
+  });
 
   const reload = () => setVersion(v => v + 1);
 
@@ -32,6 +41,13 @@ export default function TrainingComplianceWorkspace() {
     setSelectedEmpIds([]);
     setPlanError('');
     setEmpSearchModal('');
+    setPlanForm({
+      training_name: '',
+      training_type: 'MANDATORY',
+      training_provider: '',
+      training_start: new Date().toISOString().slice(0, 10),
+      training_expiry: '',
+    });
     setShowPlanModal(true);
   };
 
@@ -348,12 +364,6 @@ export default function TrainingComplianceWorkspace() {
                 toast.warning('Please select at least one employee for this training program.');
                 return;
               }
-              const form = e.currentTarget;
-              const nameVal = (form.elements.namedItem('training_name') as HTMLInputElement).value;
-              const typeVal = (form.elements.namedItem('training_type') as HTMLSelectElement).value;
-              const providerVal = (form.elements.namedItem('training_provider') as HTMLInputElement).value;
-              const startVal = (form.elements.namedItem('training_start') as HTMLInputElement).value;
-              const expiryVal = (form.elements.namedItem('training_expiry') as HTMLInputElement).value;
 
               try {
                 setSavingPlan(true);
@@ -362,11 +372,11 @@ export default function TrainingComplianceWorkspace() {
                     apiFetch(`/api/v1/employees/${empId}/training`, {
                       method: 'POST',
                       body: JSON.stringify({
-                        training_name: nameVal,
-                        training_type: typeVal,
-                        provider: providerVal || undefined,
-                        start_date: startVal,
-                        expiry_date: expiryVal || undefined,
+                        training_name: planForm.training_name,
+                        training_type: planForm.training_type,
+                        provider: planForm.training_provider || undefined,
+                        start_date: planForm.training_start,
+                        expiry_date: planForm.training_expiry || undefined,
                         status: 'PLANNED',
                       }),
                     })
@@ -465,34 +475,63 @@ export default function TrainingComplianceWorkspace() {
 
             <div>
               <label className="block text-xs font-semibold mb-1">Course / Training Program Title *</label>
-              <input required type="text" name="training_name" className="input-field" placeholder="e.g. Basic Offshore Safety Induction & Emergency Training (BOSIET)" />
+              <input
+                required
+                type="text"
+                className="input-field"
+                placeholder="e.g. Basic Offshore Safety Induction & Emergency Training (BOSIET)"
+                value={planForm.training_name}
+                onChange={(e) => setPlanForm({ ...planForm, training_name: e.target.value })}
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold mb-1">Training Type *</label>
-                <select name="training_type" className="input-field" defaultValue="MANDATORY">
-                  <option value="MANDATORY">Mandatory Safety</option>
-                  <option value="TECHNICAL">Technical Skills</option>
-                  <option value="COMPLIANCE">Regulatory Compliance</option>
-                  <option value="RECURRENT">Recurrent Refresher</option>
-                  <option value="OTHER">Other</option>
-                </select>
+                <SearchableSelect
+                  options={[
+                    { value: 'MANDATORY', label: 'Mandatory Safety' },
+                    { value: 'TECHNICAL', label: 'Technical Skills' },
+                    { value: 'COMPLIANCE', label: 'Regulatory Compliance' },
+                    { value: 'RECURRENT', label: 'Recurrent Refresher' },
+                    { value: 'OTHER', label: 'Other' },
+                  ]}
+                  value={planForm.training_type}
+                  onChange={(val) => setPlanForm({ ...planForm, training_type: val })}
+                  searchable={false}
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1">Provider / Institution</label>
-                <input type="text" name="training_provider" className="input-field" placeholder="e.g. National Safety Institute" />
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="e.g. National Safety Institute"
+                  value={planForm.training_provider}
+                  onChange={(e) => setPlanForm({ ...planForm, training_provider: e.target.value })}
+                />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold mb-1">Training Start Date *</label>
-                <input required type="date" name="training_start" className="input-field" defaultValue={new Date().toISOString().slice(0, 10)} />
+                <AppDateTimePicker
+                  mode="date"
+                  required
+                  value={planForm.training_start}
+                  onChange={(val) => setPlanForm({ ...planForm, training_start: val })}
+                  placeholder="Select start date"
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1">Validity / Expiry Date</label>
-                <input type="date" name="training_expiry" className="input-field" />
+                <AppDateTimePicker
+                  mode="date"
+                  value={planForm.training_expiry}
+                  onChange={(val) => setPlanForm({ ...planForm, training_expiry: val })}
+                  placeholder="Select expiry date"
+                />
               </div>
             </div>
 

@@ -5,7 +5,8 @@ import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, X, Check } 
 
 export interface AppDateTimePickerProps {
   value?: string;
-  onChange: (value: string) => void;
+  defaultValue?: string;
+  onChange?: (value: string) => void;
   mode?: 'date' | 'datetime' | 'time';
   placeholder?: string;
   name?: string;
@@ -26,7 +27,8 @@ const MONTH_NAMES = [
 const DAYS_OF_WEEK = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
 export default function AppDateTimePicker({
-  value = '',
+  value,
+  defaultValue,
   onChange,
   mode = 'date',
   placeholder,
@@ -39,14 +41,17 @@ export default function AppDateTimePicker({
   ariaLabel,
   showPresets = true,
 }: AppDateTimePickerProps) {
+  const [internalVal, setInternalVal] = useState(defaultValue || '');
+  const effectiveValue = value !== undefined ? value : internalVal;
+
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Parse current value
   const parsedValue = useMemo(() => {
-    if (!value) return null;
+    if (!effectiveValue) return null;
     if (mode === 'time') {
-      const parts = value.split(':');
+      const parts = effectiveValue.split(':');
       if (parts.length >= 2) {
         const d = new Date();
         d.setHours(Number(parts[0]) || 0, Number(parts[1]) || 0, 0, 0);
@@ -54,9 +59,9 @@ export default function AppDateTimePicker({
       }
       return null;
     }
-    const d = new Date(value);
+    const d = new Date(effectiveValue);
     return isNaN(d.getTime()) ? null : d;
-  }, [value, mode]);
+  }, [effectiveValue, mode]);
 
   // Current view state (Year & Month being viewed)
   const [viewYear, setViewYear] = useState<number>(() => {
@@ -68,10 +73,10 @@ export default function AppDateTimePicker({
 
   // Selected date components
   const [selectedDate, setSelectedDate] = useState<string>(() => {
-    if (!value) return '';
+    if (!effectiveValue) return '';
     if (mode === 'time') return '';
-    if (value.includes('T')) return value.split('T')[0];
-    return value.slice(0, 10);
+    if (effectiveValue.includes('T')) return effectiveValue.split('T')[0];
+    return effectiveValue.slice(0, 10);
   });
 
   // Selected time components
@@ -97,10 +102,10 @@ export default function AppDateTimePicker({
       }
       setSelectedHours(parsedValue.getHours());
       setSelectedMinutes(parsedValue.getMinutes());
-    } else if (!value) {
+    } else if (!effectiveValue) {
       setSelectedDate('');
     }
-  }, [value, parsedValue, mode]);
+  }, [effectiveValue, parsedValue, mode]);
 
   // Close on outside click
   useEffect(() => {
@@ -119,9 +124,9 @@ export default function AppDateTimePicker({
 
   // Format display text
   const displayText = useMemo(() => {
-    if (!value) return '';
+    if (!effectiveValue) return '';
     if (mode === 'time') {
-      const parts = value.split(':');
+      const parts = effectiveValue.split(':');
       if (parts.length >= 2) {
         const h = Number(parts[0]);
         const m = String(parts[1]).padStart(2, '0');
@@ -129,10 +134,10 @@ export default function AppDateTimePicker({
         const h12 = h % 12 || 12;
         return `${h12}:${m} ${ampm}`;
       }
-      return value;
+      return effectiveValue;
     }
     const d = parsedValue;
-    if (!d) return value;
+    if (!d) return effectiveValue;
 
     const dateStr = d.toLocaleDateString('en-GB', {
       day: 'numeric',
@@ -150,7 +155,7 @@ export default function AppDateTimePicker({
     }
 
     return dateStr;
-  }, [value, parsedValue, mode]);
+  }, [effectiveValue, parsedValue, mode]);
 
   const defaultPlaceholder = mode === 'datetime'
     ? 'Select date & time...'
@@ -255,24 +260,30 @@ export default function AppDateTimePicker({
     if (mode === 'time') {
       const hStr = String(hours).padStart(2, '0');
       const mStr = String(minutes).padStart(2, '0');
-      onChange(`${hStr}:${mStr}`);
+      const timeVal = `${hStr}:${mStr}`;
+      setInternalVal(timeVal);
+      onChange?.(timeVal);
       return;
     }
 
     if (!dateStr) {
-      onChange('');
+      setInternalVal('');
+      onChange?.('');
       return;
     }
 
     if (mode === 'date') {
-      onChange(dateStr);
+      setInternalVal(dateStr);
+      onChange?.(dateStr);
       return;
     }
 
     if (mode === 'datetime') {
       const hStr = String(hours).padStart(2, '0');
       const mStr = String(minutes).padStart(2, '0');
-      onChange(`${dateStr}T${hStr}:${mStr}`);
+      const dtVal = `${dateStr}T${hStr}:${mStr}`;
+      setInternalVal(dtVal);
+      onChange?.(dtVal);
     }
   };
 
@@ -302,7 +313,8 @@ export default function AppDateTimePicker({
     const now = new Date();
     if (preset === 'clear') {
       setSelectedDate('');
-      onChange('');
+      setInternalVal('');
+      onChange?.('');
       setIsOpen(false);
       return;
     }
@@ -335,7 +347,8 @@ export default function AppDateTimePicker({
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedDate('');
-    onChange('');
+    setInternalVal('');
+    onChange?.('');
   };
 
   return (
@@ -345,8 +358,8 @@ export default function AppDateTimePicker({
         <input
           type="hidden"
           name={name}
-          value={value || ''}
-          required={required && !value}
+          value={effectiveValue || ''}
+          required={required && !effectiveValue}
         />
       )}
 

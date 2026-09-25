@@ -7,6 +7,7 @@ import { Wrench, ArrowLeft, RefreshCw, Plus, Search, Filter, CheckCircle, Clock,
 import { apiFetch } from '@/lib/api';
 import { Row, display, Modal } from './DataUI';
 import RecordForm from './RecordForm';
+import SearchableSelect from './SearchableSelect';
 
 export default function EquipmentMaintenanceWorkspace() {
   const [loading, setLoading] = useState(true);
@@ -333,42 +334,53 @@ export default function EquipmentMaintenanceWorkspace() {
 
           <div className="flex items-center gap-2">
             <Filter size={14} className="text-muted-foreground shrink-0" />
-            <select
-              value={assetFilter}
-              onChange={(e) => setAssetFilter(e.target.value)}
-              className="input-field text-xs py-1.5 w-44 bg-background"
-            >
-              <option value="ALL">All Equipment Fleet</option>
-              {assets.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.asset_number ? `${a.asset_number} — ` : ''}{a.name}
-                </option>
-              ))}
-            </select>
+            <div className="w-44">
+              <SearchableSelect
+                value={assetFilter}
+                onChange={(val) => setAssetFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Equipment Fleet' },
+                  ...assets.map((a) => ({
+                    value: String(a.id),
+                    label: `${a.asset_number ? `${a.asset_number} — ` : ''}${a.name}`,
+                  })),
+                ]}
+                searchable={assets.length > 5}
+                ariaLabel="Filter Equipment Fleet"
+              />
+            </div>
 
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="input-field text-xs py-1.5 w-40 bg-background"
-            >
-              <option value="ALL">All Types</option>
-              <option value="PREVENTIVE">Preventive</option>
-              <option value="CORRECTIVE">Corrective</option>
-              <option value="SERVICE">Service</option>
-              <option value="INSPECTION">Inspection</option>
-            </select>
+            <div className="w-40">
+              <SearchableSelect
+                value={typeFilter}
+                onChange={(val) => setTypeFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Types' },
+                  { value: 'PREVENTIVE', label: 'Preventive' },
+                  { value: 'CORRECTIVE', label: 'Corrective' },
+                  { value: 'SERVICE', label: 'Service' },
+                  { value: 'INSPECTION', label: 'Inspection' },
+                ]}
+                searchable={false}
+                ariaLabel="Filter Type"
+              />
+            </div>
 
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="input-field text-xs py-1.5 w-44 bg-background"
-            >
-              <option value="ALL">All Statuses</option>
-              <option value="RECURRING">Recurring Schedules</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="SCHEDULED">Scheduled / Open</option>
-              <option value="COMPLETED">Completed</option>
-            </select>
+            <div className="w-44">
+              <SearchableSelect
+                value={statusFilter}
+                onChange={(val) => setStatusFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Statuses' },
+                  { value: 'RECURRING', label: 'Recurring Schedules' },
+                  { value: 'IN_PROGRESS', label: 'In Progress' },
+                  { value: 'SCHEDULED', label: 'Scheduled / Open' },
+                  { value: 'COMPLETED', label: 'Completed' },
+                ]}
+                searchable={false}
+                ariaLabel="Filter Status"
+              />
+            </div>
 
             {(search || assetFilter !== 'ALL' || typeFilter !== 'ALL' || statusFilter !== 'ALL' || activeTab !== 'ALL') && (
               <button

@@ -7,6 +7,7 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianG
 import { apiFetch } from '@/lib/api';
 import { Row, display, Modal } from './DataUI';
 import RecordForm from './RecordForm';
+import SearchableSelect from './SearchableSelect';
 
 export default function EquipmentMeterReadingsWorkspace() {
   const [loading, setLoading] = useState(true);
@@ -201,29 +202,36 @@ export default function EquipmentMeterReadingsWorkspace() {
 
           <div className="flex items-center gap-2">
             <Filter size={14} className="text-muted-foreground shrink-0" />
-            <select
-              value={assetFilter}
-              onChange={(e) => setAssetFilter(e.target.value)}
-              className="input-field text-xs py-1.5 w-48 bg-background"
-            >
-              <option value="ALL">All Equipment Fleet</option>
-              {assets.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.asset_number ? `${a.asset_number} — ` : ''}{a.name}
-                </option>
-              ))}
-            </select>
+            <div className="w-48">
+              <SearchableSelect
+                value={assetFilter}
+                onChange={(val) => setAssetFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Equipment Fleet' },
+                  ...assets.map((a) => ({
+                    value: String(a.id),
+                    label: `${a.asset_number ? `${a.asset_number} — ` : ''}${a.name}`,
+                  })),
+                ]}
+                searchable={assets.length > 5}
+                ariaLabel="Filter Equipment Fleet"
+              />
+            </div>
 
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="input-field text-xs py-1.5 w-44 bg-background"
-            >
-              <option value="ALL">All Meter Types</option>
-              <option value="HOURS">Hours Meter</option>
-              <option value="ODOMETER_KM">Odometer (KM)</option>
-              <option value="ODOMETER_MILES">Odometer (Miles)</option>
-            </select>
+            <div className="w-44">
+              <SearchableSelect
+                value={typeFilter}
+                onChange={(val) => setTypeFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Meter Types' },
+                  { value: 'HOURS', label: 'Hours Meter' },
+                  { value: 'ODOMETER_KM', label: 'Odometer (KM)' },
+                  { value: 'ODOMETER_MILES', label: 'Odometer (Miles)' },
+                ]}
+                searchable={false}
+                ariaLabel="Filter Meter Types"
+              />
+            </div>
 
             {(search || assetFilter !== 'ALL' || typeFilter !== 'ALL') && (
               <button

@@ -43,6 +43,8 @@ import {
 } from '@/lib/api';
 import { openUniversalFileViewer } from '@/lib/fileViewer';
 import { Modal, ErrorModal, SearchableProjectSelect, rows } from './DataUI';
+import SearchableSelect from './SearchableSelect';
+import AppDateTimePicker from './ui/AppDateTimePicker';
 
 interface RateCardInput {
   rate_type: string;
@@ -1548,26 +1550,26 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
             <div className="grid grid-cols-2 gap-3 border-t pt-3">
               <div>
                 <label className="block text-xs font-medium mb-1">Start Date</label>
-                <input
-                  type="date"
+                <AppDateTimePicker
+                  mode="date"
                   value={filterDateFrom}
-                  onChange={(e) => {
-                    setFilterDateFrom(e.target.value);
+                  onChange={(val) => {
+                    setFilterDateFrom(val);
                     setDatePreset('custom');
                   }}
-                  className="w-full border rounded p-2 bg-background text-xs"
+                  placeholder="Start date"
                 />
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1">End Date</label>
-                <input
-                  type="date"
+                <AppDateTimePicker
+                  mode="date"
                   value={filterDateTo}
-                  onChange={(e) => {
-                    setFilterDateTo(e.target.value);
+                  onChange={(val) => {
+                    setFilterDateTo(val);
                     setDatePreset('custom');
                   }}
-                  className="w-full border rounded p-2 bg-background text-xs"
+                  placeholder="End date"
                 />
               </div>
             </div>
@@ -2053,43 +2055,45 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
 
               <div>
                 <label className="block text-xs font-medium mb-1">Start Date</label>
-                <input
-                  type="date"
+                <AppDateTimePicker
+                  mode="date"
                   required
                   value={editingContract.start_date || ''}
-                  onChange={(e) =>
-                    setEditingContract({ ...editingContract, start_date: e.target.value })
+                  onChange={(val) =>
+                    setEditingContract({ ...editingContract, start_date: val })
                   }
-                  className="w-full border rounded p-2 bg-background text-xs"
+                  placeholder="Start date"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-medium mb-1">End Date</label>
-                <input
-                  type="date"
+                <AppDateTimePicker
+                  mode="date"
                   value={editingContract.end_date || ''}
-                  onChange={(e) =>
-                    setEditingContract({ ...editingContract, end_date: e.target.value })
+                  onChange={(val) =>
+                    setEditingContract({ ...editingContract, end_date: val })
                   }
-                  className="w-full border rounded p-2 bg-background text-xs"
+                  placeholder="End date"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-medium mb-1">Status</label>
-                <select
+                <SearchableSelect
                   value={editingContract.status}
-                  onChange={(e) =>
-                    setEditingContract({ ...editingContract, status: e.target.value })
+                  onChange={(val) =>
+                    setEditingContract({ ...editingContract, status: val })
                   }
-                  className="w-full border rounded p-2 bg-background text-xs"
-                >
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="DRAFT">DRAFT</option>
-                  <option value="EXPIRED">EXPIRED</option>
-                  <option value="SUPERSEDED">SUPERSEDED</option>
-                </select>
+                  options={[
+                    { value: 'ACTIVE', label: 'ACTIVE' },
+                    { value: 'DRAFT', label: 'DRAFT' },
+                    { value: 'EXPIRED', label: 'EXPIRED' },
+                    { value: 'SUPERSEDED', label: 'SUPERSEDED' },
+                  ]}
+                  searchable={false}
+                  ariaLabel="Contract status"
+                />
               </div>
 
               <div>
@@ -2187,21 +2191,25 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
                     key={idx}
                     className="grid grid-cols-12 gap-1.5 items-center p-2 rounded border bg-muted/20 text-xs"
                   >
-                    <select
-                      value={rc.rate_type}
-                      onChange={(e) => {
-                        const updated = [...(editingContract.rate_cards || [])];
-                        updated[idx].rate_type = e.target.value;
-                        setEditingContract({ ...editingContract, rate_cards: updated });
-                      }}
-                      className="col-span-2 border rounded p-1 bg-background text-xs font-medium"
-                    >
-                      <option value="DRILLING_METER">DRILLING_METER</option>
-                      <option value="STANDBY_HOURLY">STANDBY_HOURLY</option>
-                      <option value="MOBILIZATION_FLAT">MOBILIZATION_FLAT</option>
-                      <option value="DEMOBILIZATION_FLAT">DEMOBILIZATION_FLAT</option>
-                      <option value="DAYWORK_HOURLY">DAYWORK_HOURLY</option>
-                    </select>
+                    <div className="col-span-2">
+                      <SearchableSelect
+                        value={rc.rate_type}
+                        onChange={(val) => {
+                          const updated = [...(editingContract.rate_cards || [])];
+                          updated[idx].rate_type = val;
+                          setEditingContract({ ...editingContract, rate_cards: updated });
+                        }}
+                        options={[
+                          { value: 'DRILLING_METER', label: 'DRILLING_METER' },
+                          { value: 'STANDBY_HOURLY', label: 'STANDBY_HOURLY' },
+                          { value: 'MOBILIZATION_FLAT', label: 'MOBILIZATION_FLAT' },
+                          { value: 'DEMOBILIZATION_FLAT', label: 'DEMOBILIZATION_FLAT' },
+                          { value: 'DAYWORK_HOURLY', label: 'DAYWORK_HOURLY' },
+                        ]}
+                        searchable={false}
+                        ariaLabel="Rate type"
+                      />
+                    </div>
 
                     <input
                       type="text"
@@ -2442,37 +2450,39 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
 
               <div>
                 <label className="block text-xs font-medium mb-1">Start Date</label>
-                <input
-                  type="date"
+                <AppDateTimePicker
+                  mode="date"
                   required
                   value={formContract.start_date}
-                  onChange={(e) => setFormContract({ ...formContract, start_date: e.target.value })}
-                  className="w-full text-xs border rounded p-2 bg-background"
+                  onChange={(val) => setFormContract({ ...formContract, start_date: val })}
+                  placeholder="Start date"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-medium mb-1">End Date</label>
-                <input
-                  type="date"
+                <AppDateTimePicker
+                  mode="date"
                   value={formContract.end_date}
-                  onChange={(e) => setFormContract({ ...formContract, end_date: e.target.value })}
-                  className="w-full text-xs border rounded p-2 bg-background"
+                  onChange={(val) => setFormContract({ ...formContract, end_date: val })}
+                  placeholder="End date"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-medium mb-1">Status</label>
-                <select
+                <SearchableSelect
                   value={formContract.status}
-                  onChange={(e) => setFormContract({ ...formContract, status: e.target.value })}
-                  className="w-full text-xs border rounded p-2 bg-background"
-                >
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="DRAFT">DRAFT</option>
-                  <option value="EXPIRED">EXPIRED</option>
-                  <option value="SUPERSEDED">SUPERSEDED</option>
-                </select>
+                  onChange={(val) => setFormContract({ ...formContract, status: val })}
+                  options={[
+                    { value: 'ACTIVE', label: 'ACTIVE' },
+                    { value: 'DRAFT', label: 'DRAFT' },
+                    { value: 'EXPIRED', label: 'EXPIRED' },
+                    { value: 'SUPERSEDED', label: 'SUPERSEDED' },
+                  ]}
+                  searchable={false}
+                  ariaLabel="Contract status"
+                />
               </div>
 
               <div>
@@ -2568,21 +2578,25 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
                     key={idx}
                     className="grid grid-cols-12 gap-1.5 items-center p-2 rounded border bg-muted/20 text-xs"
                   >
-                    <select
-                      value={rc.rate_type}
-                      onChange={(e) => {
-                        const updated = [...formContract.rate_cards];
-                        updated[idx].rate_type = e.target.value;
-                        setFormContract({ ...formContract, rate_cards: updated });
-                      }}
-                      className="col-span-2 border rounded p-1 bg-background text-xs font-medium"
-                    >
-                      <option value="DRILLING_METER">DRILLING_METER</option>
-                      <option value="STANDBY_HOURLY">STANDBY_HOURLY</option>
-                      <option value="MOBILIZATION_FLAT">MOBILIZATION_FLAT</option>
-                      <option value="DEMOBILIZATION_FLAT">DEMOBILIZATION_FLAT</option>
-                      <option value="DAYWORK_HOURLY">DAYWORK_HOURLY</option>
-                    </select>
+                    <div className="col-span-2">
+                      <SearchableSelect
+                        value={rc.rate_type}
+                        onChange={(val) => {
+                          const updated = [...formContract.rate_cards];
+                          updated[idx].rate_type = val;
+                          setFormContract({ ...formContract, rate_cards: updated });
+                        }}
+                        options={[
+                          { value: 'DRILLING_METER', label: 'DRILLING_METER' },
+                          { value: 'STANDBY_HOURLY', label: 'STANDBY_HOURLY' },
+                          { value: 'MOBILIZATION_FLAT', label: 'MOBILIZATION_FLAT' },
+                          { value: 'DEMOBILIZATION_FLAT', label: 'DEMOBILIZATION_FLAT' },
+                          { value: 'DAYWORK_HOURLY', label: 'DAYWORK_HOURLY' },
+                        ]}
+                        searchable={false}
+                        ariaLabel="Rate type"
+                      />
+                    </div>
 
                     <input
                       type="text"

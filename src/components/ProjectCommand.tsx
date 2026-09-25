@@ -69,7 +69,7 @@ export default function ProjectCommand({
       <div>
         <Link
           href="/projects-overview"
-          className="inline-flex items-center gap-1.5 text-xs text-primary font-600 hover:underline mb-1 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs text-primary font-600 hover:underline mb-1 transition-colors text-left justify-start font-semibold"
         >
           <ArrowLeft size={14} />
           Back to Projects overview

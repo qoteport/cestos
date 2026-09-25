@@ -53,6 +53,7 @@ import { apiFetch } from '@/lib/api';
 import { Modal, rows } from '@/components/DataUI';
 import useAppFeedback, { AppAlert } from './useAppFeedback';
 import SearchableSelect from '@/components/SearchableSelect';
+import AppDateTimePicker from './ui/AppDateTimePicker';
 import PreventiveMaintenanceWizard from './PreventiveMaintenanceWizard';
 import BreakdownJobCardWizard from './BreakdownJobCardWizard';
 import EmployeeDetailView from '@/components/EmployeeDetailView';
@@ -2768,19 +2769,20 @@ export default function FieldPortalWorkspace() {
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1.5">
                           <span className="text-[11px] font-medium">Rows per page:</span>
-                          <select
-                            value={shiftPageSize}
-                            onChange={(e) => {
-                              setShiftPageSize(Number(e.target.value));
+                          <SearchableSelect
+                            value={String(shiftPageSize)}
+                            onChange={(val) => {
+                              setShiftPageSize(Number(val));
                               setShiftPage(1);
                             }}
-                            className="bg-background border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                          >
-                            <option value={5}>5</option>
-                            <option value={10}>10</option>
-                            <option value={20}>20</option>
-                            <option value={50}>50</option>
-                          </select>
+                            options={[
+                              { value: '5', label: '5' },
+                              { value: '10', label: '10' },
+                              { value: '20', label: '20' },
+                              { value: '50', label: '50' },
+                            ]}
+                            className="w-20 text-xs"
+                          />
                         </div>
 
                         <div className="flex items-center gap-1">
@@ -3192,19 +3194,20 @@ export default function FieldPortalWorkspace() {
                           </td>
                           {isSupervisorOrAdmin && (
                             <td className="px-4 py-3 text-right">
-                              <select
-                                aria-label={`Update status for ${breakdown.title || 'breakdown'}`}
+                              <SearchableSelect
+                                ariaLabel={`Update status for ${breakdown.title || 'breakdown'}`}
                                 value={breakdown.status || 'OPEN'}
-                                onChange={(event) =>
-                                  handleUpdateBreakdownStatus(breakdown, event.target.value)
+                                onChange={(val) =>
+                                  handleUpdateBreakdownStatus(breakdown, val)
                                 }
-                                className="border rounded px-2 py-1 bg-background text-xs"
-                              >
-                                <option value="OPEN">Open</option>
-                                <option value="IN_PROGRESS">In Progress</option>
-                                <option value="RESOLVED">Resolved</option>
-                                <option value="CLOSED">Closed</option>
-                              </select>
+                                options={[
+                                  { value: 'OPEN', label: 'Open' },
+                                  { value: 'IN_PROGRESS', label: 'In Progress' },
+                                  { value: 'RESOLVED', label: 'Resolved' },
+                                  { value: 'CLOSED', label: 'Closed' },
+                                ]}
+                                className="w-32 text-xs"
+                              />
                             </td>
                           )}
                         </tr>
@@ -3938,15 +3941,15 @@ export default function FieldPortalWorkspace() {
 
               <div>
                 <label className="block font-bold mb-1">Drilling Method *</label>
-                <select
+                <SearchableSelect
                   value={holeForm.drilling_method}
-                  onChange={(e) => setHoleForm({ ...holeForm, drilling_method: e.target.value })}
-                  className="w-full border rounded p-2 bg-background font-bold"
-                >
-                  <option value="RC">Reverse Circulation (RC)</option>
-                  <option value="DD">Diamond Core (DD)</option>
-                  <option value="RAB">Rotary Air Blast (RAB)</option>
-                </select>
+                  onChange={(val) => setHoleForm({ ...holeForm, drilling_method: val })}
+                  options={[
+                    { value: 'RC', label: 'Reverse Circulation (RC)' },
+                    { value: 'DD', label: 'Diamond Core (DD)' },
+                    { value: 'RAB', label: 'Rotary Air Blast (RAB)' },
+                  ]}
+                />
               </div>
             </div>
 
@@ -4053,25 +4056,24 @@ export default function FieldPortalWorkspace() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-bold mb-1">Shift Date *</label>
-                <input
-                  type="date"
+                <AppDateTimePicker
+                  mode="date"
                   required
                   value={shiftForm.shift_date}
-                  onChange={(e) => setShiftForm({ ...shiftForm, shift_date: e.target.value })}
-                  className="w-full border rounded-lg p-2 bg-background font-mono"
+                  onChange={(val) => setShiftForm({ ...shiftForm, shift_date: val })}
                 />
               </div>
 
               <div>
                 <label className="block font-bold mb-1">Shift Type *</label>
-                <select
+                <SearchableSelect
                   value={shiftForm.shift_type}
-                  onChange={(e) => setShiftForm({ ...shiftForm, shift_type: e.target.value })}
-                  className="w-full border rounded-lg p-2 bg-background font-bold"
-                >
-                  <option value="DAY">Day Shift (DS)</option>
-                  <option value="NIGHT">Night Shift (NS)</option>
-                </select>
+                  onChange={(val) => setShiftForm({ ...shiftForm, shift_type: val })}
+                  options={[
+                    { value: 'DAY', label: 'Day Shift (DS)' },
+                    { value: 'NIGHT', label: 'Night Shift (NS)' },
+                  ]}
+                />
               </div>
             </div>
 
@@ -4347,18 +4349,18 @@ export default function FieldPortalWorkspace() {
                   <label className="block font-medium mb-1">
                     Link Reported Asset Breakdown / Safety Defect (Optional)
                   </label>
-                  <select
+                  <SearchableSelect
                     value={maintForm.defect_id}
-                    onChange={(e) => setMaintForm({ ...maintForm, defect_id: e.target.value })}
-                    className="w-full border rounded-lg p-2 bg-background font-medium"
-                  >
-                    <option value="">-- No Defect Linked (Scheduled PM) --</option>
-                    {myBreakdowns.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        [{b.severity}] {b.title} ({b.asset_name})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setMaintForm({ ...maintForm, defect_id: val })}
+                    placeholder="-- No Defect Linked (Scheduled PM) --"
+                    options={[
+                      { value: '', label: '-- No Defect Linked (Scheduled PM) --' },
+                      ...myBreakdowns.map((b) => ({
+                        value: b.id,
+                        label: `[${b.severity}] ${b.title} (${b.asset_name})`,
+                      })),
+                    ]}
+                  />
                 </div>
               )}
             </div>
@@ -4380,70 +4382,70 @@ export default function FieldPortalWorkspace() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold mb-1">Maintenance Type *</label>
-                  <select
+                  <SearchableSelect
                     value={maintForm.maintenance_type}
-                    onChange={(e) =>
-                      setMaintForm({ ...maintForm, maintenance_type: e.target.value })
+                    onChange={(val) =>
+                      setMaintForm({ ...maintForm, maintenance_type: val })
                     }
-                    className="w-full border rounded-lg p-2 bg-background font-semibold"
-                  >
-                    <option value="PREVENTIVE">Preventive Maintenance (PM)</option>
-                    <option value="CORRECTIVE">Corrective Repair</option>
-                    <option value="INSPECTION">Safety Inspection & Audit</option>
-                    <option value="OVERHAUL">Major Component Overhaul</option>
-                  </select>
+                    options={[
+                      { value: 'PREVENTIVE', label: 'Preventive Maintenance (PM)' },
+                      { value: 'CORRECTIVE', label: 'Corrective Repair' },
+                      { value: 'INSPECTION', label: 'Safety Inspection & Audit' },
+                      { value: 'OVERHAUL', label: 'Major Component Overhaul' },
+                    ]}
+                  />
                 </div>
 
                 <div>
                   <label className="block font-bold mb-1">
                     Component System / Failure Taxonomy *
                   </label>
-                  <select
+                  <SearchableSelect
                     value={maintForm.failure_taxonomy}
-                    onChange={(e) =>
-                      setMaintForm({ ...maintForm, failure_taxonomy: e.target.value })
+                    onChange={(val) =>
+                      setMaintForm({ ...maintForm, failure_taxonomy: val })
                     }
-                    className="w-full border rounded-lg p-2 bg-background font-semibold"
-                  >
-                    <option value="HYDRAULIC">Hydraulic System</option>
-                    <option value="ENGINE">Engine & Drivetrain</option>
-                    <option value="ELECTRICAL">Electrical & Instrumentation</option>
-                    <option value="PNEUMATIC">Pneumatic & Air Compressor</option>
-                    <option value="STRUCTURAL">Structural & Mast Chassis</option>
-                    <option value="GENERAL">General PM / Lubrication</option>
-                  </select>
+                    options={[
+                      { value: 'HYDRAULIC', label: 'Hydraulic System' },
+                      { value: 'ENGINE', label: 'Engine & Drivetrain' },
+                      { value: 'ELECTRICAL', label: 'Electrical & Instrumentation' },
+                      { value: 'PNEUMATIC', label: 'Pneumatic & Air Compressor' },
+                      { value: 'STRUCTURAL', label: 'Structural & Mast Chassis' },
+                      { value: 'GENERAL', label: 'General PM / Lubrication' },
+                    ]}
+                  />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold mb-1">Priority Level *</label>
-                  <select
+                  <SearchableSelect
                     value={maintForm.priority}
-                    onChange={(e) => setMaintForm({ ...maintForm, priority: e.target.value })}
-                    className="w-full border rounded-lg p-2 bg-background font-bold"
-                  >
-                    <option value="LOW">Low Priority</option>
-                    <option value="MEDIUM">Medium Priority</option>
-                    <option value="HIGH">High Priority</option>
-                    <option value="CRITICAL">Critical / Downtime Risk</option>
-                  </select>
+                    onChange={(val) => setMaintForm({ ...maintForm, priority: val })}
+                    options={[
+                      { value: 'LOW', label: 'Low Priority' },
+                      { value: 'MEDIUM', label: 'Medium Priority' },
+                      { value: 'HIGH', label: 'High Priority' },
+                      { value: 'CRITICAL', label: 'Critical / Downtime Risk' },
+                    ]}
+                  />
                 </div>
 
                 <div>
                   <label className="block font-bold mb-1">Recurrence Frequency</label>
-                  <select
+                  <SearchableSelect
                     value={maintForm.recurrence}
-                    onChange={(e) => setMaintForm({ ...maintForm, recurrence: e.target.value })}
-                    className="w-full border rounded-lg p-2 bg-background font-medium"
-                  >
-                    <option value="ONE_OFF">One-Time Service</option>
-                    <option value="EVERY_250_HOURS">Every 250 Engine Hours</option>
-                    <option value="EVERY_500_HOURS">Every 500 Engine Hours</option>
-                    <option value="WEEKLY">Weekly Schedule</option>
-                    <option value="MONTHLY">Monthly Schedule</option>
-                    <option value="QUARTERLY">Quarterly Audit</option>
-                  </select>
+                    onChange={(val) => setMaintForm({ ...maintForm, recurrence: val })}
+                    options={[
+                      { value: 'ONE_OFF', label: 'One-Time Service' },
+                      { value: 'EVERY_250_HOURS', label: 'Every 250 Engine Hours' },
+                      { value: 'EVERY_500_HOURS', label: 'Every 500 Engine Hours' },
+                      { value: 'WEEKLY', label: 'Weekly Schedule' },
+                      { value: 'MONTHLY', label: 'Monthly Schedule' },
+                      { value: 'QUARTERLY', label: 'Quarterly Audit' },
+                    ]}
+                  />
                 </div>
               </div>
             </div>
@@ -4457,12 +4459,11 @@ export default function FieldPortalWorkspace() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold mb-1">Scheduled Start Date *</label>
-                  <input
-                    type="date"
+                  <AppDateTimePicker
+                    mode="date"
                     required
                     value={maintForm.scheduled_date}
-                    onChange={(e) => setMaintForm({ ...maintForm, scheduled_date: e.target.value })}
-                    className="w-full border rounded-lg p-2 bg-background font-mono"
+                    onChange={(val) => setMaintForm({ ...maintForm, scheduled_date: val })}
                   />
                 </div>
 
@@ -4782,15 +4783,15 @@ export default function FieldPortalWorkspace() {
           onClose={() => setShowStoreIssueModal(false)}
         >
           <div className="space-y-3 text-xs">
-            <label className="block">
-              Log date
-              <input
-                type="date"
-                className="block border rounded p-2 bg-background"
+            <div>
+              <label className="block font-medium mb-1">Log date</label>
+              <AppDateTimePicker
+                mode="date"
+                className="w-full"
                 value={consumablesDate}
-                onChange={(e) => setConsumablesDate(e.target.value)}
+                onChange={(val) => setConsumablesDate(val)}
               />
-            </label>
+            </div>
             <FieldConsumables
               key={`${selectedProjectId}:${consumablesDate}`}
               projectId={selectedProjectId}
@@ -4855,17 +4856,17 @@ export default function FieldPortalWorkspace() {
 
                 <div>
                   <label className="block font-bold mb-1">Fuel Grade / Type *</label>
-                  <select
+                  <SearchableSelect
                     value={fuelRefillForm.fuel_type}
-                    onChange={(e) =>
-                      setFuelRefillForm({ ...fuelRefillForm, fuel_type: e.target.value })
+                    onChange={(val) =>
+                      setFuelRefillForm({ ...fuelRefillForm, fuel_type: val })
                     }
-                    className="w-full border rounded-lg p-2 bg-background font-bold text-foreground"
-                  >
-                    <option value="DIESEL">Low-Sulfur Diesel (AGO)</option>
-                    <option value="PETROL">Super Unleaded Gasoline (PMS)</option>
-                    <option value="OTHER">Other / Specialty Fuel</option>
-                  </select>
+                    options={[
+                      { value: 'DIESEL', label: 'Low-Sulfur Diesel (AGO)' },
+                      { value: 'PETROL', label: 'Super Unleaded Gasoline (PMS)' },
+                      { value: 'OTHER', label: 'Other / Specialty Fuel' },
+                    ]}
+                  />
                 </div>
               </div>
             </div>
@@ -4964,28 +4965,27 @@ export default function FieldPortalWorkspace() {
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <div>
                   <label className="block font-medium mb-1">Currency</label>
-                  <select
+                  <SearchableSelect
                     value={fuelRefillForm.currency}
-                    onChange={(e) =>
-                      setFuelRefillForm({ ...fuelRefillForm, currency: e.target.value })
+                    onChange={(val) =>
+                      setFuelRefillForm({ ...fuelRefillForm, currency: val })
                     }
-                    className="w-full border rounded-lg p-2 bg-background font-bold text-foreground"
-                  >
-                    <option value="USD">USD ($ - United States Dollar)</option>
-                    <option value="LRD">LRD ($ - Liberian Dollar)</option>
-                    <option value="EUR">EUR (€ - Euro)</option>
-                  </select>
+                    options={[
+                      { value: 'USD', label: 'USD ($ - United States Dollar)' },
+                      { value: 'LRD', label: 'LRD ($ - Liberian Dollar)' },
+                      { value: 'EUR', label: 'EUR (€ - Euro)' },
+                    ]}
+                  />
                 </div>
 
                 <div>
                   <label className="block font-medium mb-1">Refueling Date & Time</label>
-                  <input
-                    type="datetime-local"
+                  <AppDateTimePicker
+                    mode="datetime"
                     value={fuelRefillForm.recorded_at}
-                    onChange={(e) =>
-                      setFuelRefillForm({ ...fuelRefillForm, recorded_at: e.target.value })
+                    onChange={(val) =>
+                      setFuelRefillForm({ ...fuelRefillForm, recorded_at: val })
                     }
-                    className="w-full border rounded-lg p-2 bg-background font-mono text-foreground"
                   />
                 </div>
               </div>
@@ -5167,11 +5167,10 @@ export default function FieldPortalWorkspace() {
 
                 <div>
                   <label className="block font-bold mb-1">Associated Refill Log *</label>
-                  <select
+                  <SearchableSelect
                     required
                     value={tankDipForm.fuel_log_id}
-                    onChange={(e) => {
-                      const selectedId = e.target.value;
+                    onChange={(selectedId) => {
                       const selectedLog = fuelLogsList.find((l) => l.id === selectedId);
                       const refillVol = selectedLog
                         ? Number(selectedLog.quantity_litres || selectedLog.fuel_amount || 250)
@@ -5187,17 +5186,15 @@ export default function FieldPortalWorkspace() {
                         litres_reduced: diff,
                       });
                     }}
-                    className="w-full border rounded-lg p-2 bg-background font-mono text-foreground font-bold"
-                  >
-                    <option value="">-- Select Associated Refill Log * --</option>
-                    {fuelLogsList.map((log: any) => (
-                      <option key={log.id} value={log.id}>
-                        {new Date(log.recorded_at || log.created_at).toLocaleDateString()} — Refill:{' '}
-                        {log.quantity_litres || log.fuel_amount || 0} L (
-                        {log.supplier || log.vendor_name || 'Refill'})
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="-- Select Associated Refill Log * --"
+                    options={[
+                      { value: '', label: '-- Select Associated Refill Log * --' },
+                      ...fuelLogsList.map((log: any) => ({
+                        value: log.id,
+                        label: `${new Date(log.recorded_at || log.created_at).toLocaleDateString()} — Refill: ${log.quantity_litres || log.fuel_amount || 0} L (${log.supplier || log.vendor_name || 'Refill'})`,
+                      })),
+                    ]}
+                  />
                 </div>
               </div>
             </div>
@@ -5284,32 +5281,31 @@ export default function FieldPortalWorkspace() {
                   <span className="block text-[10px] text-muted-foreground mb-1">
                     Activity causing reduction
                   </span>
-                  <select
+                  <SearchableSelect
                     value={tankDipForm.reduction_reason}
-                    onChange={(e) =>
-                      setTankDipForm({ ...tankDipForm, reduction_reason: e.target.value })
+                    onChange={(val) =>
+                      setTankDipForm({ ...tankDipForm, reduction_reason: val })
                     }
-                    className="w-full border rounded-lg p-2 bg-background font-bold text-foreground"
-                  >
-                    <option value="Daily Dip Check">Daily Dip Check</option>
-                    <option value="CONSUMPTION">Shift Fuel Consumption</option>
-                    <option value="TRANSFER">Fuel Transfer to Other Equipment</option>
-                    <option value="DRAIN">Tank Maintenance Drain</option>
-                    <option value="LEAKAGE">Leakage / Loss</option>
-                  </select>
+                    options={[
+                      { value: 'Daily Dip Check', label: 'Daily Dip Check' },
+                      { value: 'CONSUMPTION', label: 'Shift Fuel Consumption' },
+                      { value: 'TRANSFER', label: 'Fuel Transfer to Other Equipment' },
+                      { value: 'DRAIN', label: 'Tank Maintenance Drain' },
+                      { value: 'LEAKAGE', label: 'Leakage / Loss' },
+                    ]}
+                  />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div>
                   <label className="block font-medium mb-1">Dip Reading Date & Time</label>
-                  <input
-                    type="datetime-local"
+                  <AppDateTimePicker
+                    mode="datetime"
                     value={tankDipForm.recorded_at}
-                    onChange={(e) =>
-                      setTankDipForm({ ...tankDipForm, recorded_at: e.target.value })
+                    onChange={(val) =>
+                      setTankDipForm({ ...tankDipForm, recorded_at: val })
                     }
-                    className="w-full border rounded-lg p-2 bg-background font-mono text-foreground"
                   />
                 </div>
 
@@ -5392,37 +5388,35 @@ export default function FieldPortalWorkspace() {
           <form onSubmit={handleSubmitLeave} className="space-y-4 text-xs">
             <div>
               <label className="block font-bold mb-1">Leave Type *</label>
-              <select
+              <SearchableSelect
                 value={leaveForm.leave_type}
-                onChange={(e) => setLeaveForm({ ...leaveForm, leave_type: e.target.value })}
-                className="w-full border rounded-lg p-2 bg-background font-medium"
-              >
-                <option value="ANNUAL">Annual Leave</option>
-                <option value="SICK">Sick Leave (Medical)</option>
-                <option value="EMERGENCY">Emergency Field Leave</option>
-                <option value="COMPASSIONATE">Compassionate / Family Leave</option>
-              </select>
+                onChange={(val) => setLeaveForm({ ...leaveForm, leave_type: val })}
+                options={[
+                  { value: 'ANNUAL', label: 'Annual Leave' },
+                  { value: 'SICK', label: 'Sick Leave (Medical)' },
+                  { value: 'EMERGENCY', label: 'Emergency Field Leave' },
+                  { value: 'COMPASSIONATE', label: 'Compassionate / Family Leave' },
+                ]}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-bold mb-1">Start Date *</label>
-                <input
-                  type="date"
+                <AppDateTimePicker
+                  mode="date"
                   required
                   value={leaveForm.start_date}
-                  onChange={(e) => setLeaveForm({ ...leaveForm, start_date: e.target.value })}
-                  className="w-full border rounded-lg p-2 bg-background"
+                  onChange={(val) => setLeaveForm({ ...leaveForm, start_date: val })}
                 />
               </div>
               <div>
                 <label className="block font-bold mb-1">End Date *</label>
-                <input
-                  type="date"
+                <AppDateTimePicker
+                  mode="date"
                   required
                   value={leaveForm.end_date}
-                  onChange={(e) => setLeaveForm({ ...leaveForm, end_date: e.target.value })}
-                  className="w-full border rounded-lg p-2 bg-background"
+                  onChange={(val) => setLeaveForm({ ...leaveForm, end_date: val })}
                 />
               </div>
             </div>
@@ -5585,32 +5579,31 @@ export default function FieldPortalWorkspace() {
           >
             <div>
               <label className="block font-bold mb-1">Booking Mode *</label>
-              <select
+              <SearchableSelect
                 name="tl_mode"
-                className="w-full border rounded-lg p-2 bg-background font-medium"
-              >
-                <option value="SINGLE">Single Day Entry</option>
-                <option value="PERIOD">Multi-Day Period Range (e.g. Entire Week)</option>
-              </select>
+                defaultValue="SINGLE"
+                options={[
+                  { value: 'SINGLE', label: 'Single Day Entry' },
+                  { value: 'PERIOD', label: 'Multi-Day Period Range (e.g. Entire Week)' },
+                ]}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-bold mb-1">Start Date *</label>
-                <input
+                <AppDateTimePicker
                   required
-                  type="date"
+                  mode="date"
                   name="tl_start"
-                  className="w-full border rounded-lg p-2 bg-background"
                   defaultValue={new Date().toISOString().slice(0, 10)}
                 />
               </div>
               <div>
                 <label className="block font-bold mb-1">End Date (Period Mode)</label>
-                <input
-                  type="date"
+                <AppDateTimePicker
+                  mode="date"
                   name="tl_end"
-                  className="w-full border rounded-lg p-2 bg-background"
                   defaultValue={new Date().toISOString().slice(0, 10)}
                 />
               </div>
@@ -5619,20 +5612,18 @@ export default function FieldPortalWorkspace() {
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="block font-bold mb-1">Check In</label>
-                <input
-                  type="time"
+                <AppDateTimePicker
+                  mode="time"
                   name="tl_checkin"
                   defaultValue="08:00"
-                  className="w-full border rounded-lg p-2 bg-background"
                 />
               </div>
               <div>
                 <label className="block font-bold mb-1">Check Out</label>
-                <input
-                  type="time"
+                <AppDateTimePicker
+                  mode="time"
                   name="tl_checkout"
                   defaultValue="17:00"
-                  className="w-full border rounded-lg p-2 bg-background"
                 />
               </div>
               <div>
@@ -5727,15 +5718,15 @@ export default function FieldPortalWorkspace() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-medium mb-1">Severity</label>
-                <select
+                <SearchableSelect
                   value={defectForm.severity}
-                  onChange={(e) => setDefectForm({ ...defectForm, severity: e.target.value })}
-                  className="w-full border rounded-lg p-2 bg-background"
-                >
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High / Critical</option>
-                </select>
+                  onChange={(val) => setDefectForm({ ...defectForm, severity: val })}
+                  options={[
+                    { value: 'LOW', label: 'Low' },
+                    { value: 'MEDIUM', label: 'Medium' },
+                    { value: 'HIGH', label: 'High / Critical' },
+                  ]}
+                />
               </div>
               <div>
                 <label className="block font-medium mb-1">Est. Downtime (Hours)</label>
@@ -6332,33 +6323,33 @@ export default function FieldPortalWorkspace() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block font-bold mb-1">Maintenance Type *</label>
-                  <select
+                  <SearchableSelect
                     value={createWOForm.maintenance_type}
-                    onChange={(e) =>
-                      setCreateWOForm({ ...createWOForm, maintenance_type: e.target.value })
+                    onChange={(val) =>
+                      setCreateWOForm({ ...createWOForm, maintenance_type: val })
                     }
-                    className="w-full border rounded-lg p-2 bg-background font-medium"
-                  >
-                    <option value="PREVENTIVE">Preventive Maintenance</option>
-                    <option value="CORRECTIVE">Corrective Repair</option>
-                    <option value="INSPECTION">Inspection / Safety Audit</option>
-                    <option value="SERVICE">Scheduled Service</option>
-                    <option value="OTHER">Other Operational Work</option>
-                  </select>
+                    options={[
+                      { value: 'PREVENTIVE', label: 'Preventive Maintenance' },
+                      { value: 'CORRECTIVE', label: 'Corrective Repair' },
+                      { value: 'INSPECTION', label: 'Inspection / Safety Audit' },
+                      { value: 'SERVICE', label: 'Scheduled Service' },
+                      { value: 'OTHER', label: 'Other Operational Work' },
+                    ]}
+                  />
                 </div>
 
                 <div>
                   <label className="block font-bold mb-1">Priority Level *</label>
-                  <select
+                  <SearchableSelect
                     value={createWOForm.priority}
-                    onChange={(e) => setCreateWOForm({ ...createWOForm, priority: e.target.value })}
-                    className="w-full border rounded-lg p-2 bg-background font-bold"
-                  >
-                    <option value="LOW">Low Priority</option>
-                    <option value="NORMAL">Normal Priority</option>
-                    <option value="HIGH">High Priority</option>
-                    <option value="CRITICAL">Critical / Rig Down</option>
-                  </select>
+                    onChange={(val) => setCreateWOForm({ ...createWOForm, priority: val })}
+                    options={[
+                      { value: 'LOW', label: 'Low Priority' },
+                      { value: 'NORMAL', label: 'Normal Priority' },
+                      { value: 'HIGH', label: 'High Priority' },
+                      { value: 'CRITICAL', label: 'Critical / Rig Down' },
+                    ]}
+                  />
                 </div>
 
                 <div>
@@ -6390,14 +6381,13 @@ export default function FieldPortalWorkspace() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold mb-1">Scheduled Date *</label>
-                  <input
-                    type="date"
+                  <AppDateTimePicker
+                    mode="date"
                     required
                     value={createWOForm.scheduled_date}
-                    onChange={(e) =>
-                      setCreateWOForm({ ...createWOForm, scheduled_date: e.target.value })
+                    onChange={(val) =>
+                      setCreateWOForm({ ...createWOForm, scheduled_date: val })
                     }
-                    className="w-full border rounded-lg p-2 bg-background font-mono"
                   />
                 </div>
 
@@ -6778,35 +6768,35 @@ export default function FieldPortalWorkspace() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-bold text-xs mb-1">Incident Type / Category *</label>
-                <select
+                <SearchableSelect
                   required
                   value={hseForm.incident_type}
-                  onChange={(e) => setHseForm({ ...hseForm, incident_type: e.target.value })}
-                  className="w-full border rounded-lg p-2 bg-background font-medium"
-                >
-                  <option value="NEAR_MISS">Near Miss</option>
-                  <option value="INJURY_ILLNESS">Injury / Illness</option>
-                  <option value="PROPERTY_DAMAGE">Property Damage</option>
-                  <option value="ENVIRONMENTAL">Environmental Spill / Impact</option>
-                  <option value="HAZARD_OBSERVATION">Hazard Observation</option>
-                  <option value="SECURITY">Security Incident</option>
-                  <option value="OTHER">Other Safety Event</option>
-                </select>
+                  onChange={(val) => setHseForm({ ...hseForm, incident_type: val })}
+                  options={[
+                    { value: 'NEAR_MISS', label: 'Near Miss' },
+                    { value: 'INJURY_ILLNESS', label: 'Injury / Illness' },
+                    { value: 'PROPERTY_DAMAGE', label: 'Property Damage' },
+                    { value: 'ENVIRONMENTAL', label: 'Environmental Spill / Impact' },
+                    { value: 'HAZARD_OBSERVATION', label: 'Hazard Observation' },
+                    { value: 'SECURITY', label: 'Security Incident' },
+                    { value: 'OTHER', label: 'Other Safety Event' },
+                  ]}
+                />
               </div>
 
               <div>
                 <label className="block font-bold text-xs mb-1">Severity Level *</label>
-                <select
+                <SearchableSelect
                   required
                   value={hseForm.severity}
-                  onChange={(e) => setHseForm({ ...hseForm, severity: e.target.value })}
-                  className="w-full border rounded-lg p-2 bg-background font-bold"
-                >
-                  <option value="LOW">Low (Minor First Aid / Observation)</option>
-                  <option value="MEDIUM">Medium (Moderate Damage / Treatment)</option>
-                  <option value="HIGH">High (Major Damage / Lost Time)</option>
-                  <option value="CRITICAL">Critical (Severe Emergency / Fatality Risk)</option>
-                </select>
+                  onChange={(val) => setHseForm({ ...hseForm, severity: val })}
+                  options={[
+                    { value: 'LOW', label: 'Low (Minor First Aid / Observation)' },
+                    { value: 'MEDIUM', label: 'Medium (Moderate Damage / Treatment)' },
+                    { value: 'HIGH', label: 'High (Major Damage / Lost Time)' },
+                    { value: 'CRITICAL', label: 'Critical (Severe Emergency / Fatality Risk)' },
+                  ]}
+                />
               </div>
             </div>
 
@@ -6825,12 +6815,11 @@ export default function FieldPortalWorkspace() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-bold text-xs mb-1">Date & Time *</label>
-                <input
-                  type="datetime-local"
+                <AppDateTimePicker
+                  mode="datetime"
                   required
                   value={hseForm.incident_date}
-                  onChange={(e) => setHseForm({ ...hseForm, incident_date: e.target.value })}
-                  className="w-full border rounded-lg p-2 bg-background font-mono"
+                  onChange={(val) => setHseForm({ ...hseForm, incident_date: val })}
                 />
               </div>
 
@@ -6956,29 +6945,28 @@ export default function FieldPortalWorkspace() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-bold mb-1">Recorded At *</label>
-                <input
+                <AppDateTimePicker
+                  mode="datetime"
                   required
-                  type="datetime-local"
                   value={fuelLogEditForm.recorded_at || ''}
-                  onChange={(event) =>
-                    setFuelLogEditForm({ ...fuelLogEditForm, recorded_at: event.target.value })
+                  onChange={(val) =>
+                    setFuelLogEditForm({ ...fuelLogEditForm, recorded_at: val })
                   }
-                  className="w-full border rounded-lg p-2 bg-background font-mono"
                 />
               </div>
               <div>
                 <label className="block font-bold mb-1">Fuel Type *</label>
-                <select
+                <SearchableSelect
                   value={fuelLogEditForm.fuel_type || 'DIESEL'}
-                  onChange={(event) =>
-                    setFuelLogEditForm({ ...fuelLogEditForm, fuel_type: event.target.value })
+                  onChange={(val) =>
+                    setFuelLogEditForm({ ...fuelLogEditForm, fuel_type: val })
                   }
-                  className="w-full border rounded-lg p-2 bg-background font-bold"
-                >
-                  <option value="DIESEL">Low-Sulfur Diesel (AGO)</option>
-                  <option value="PETROL">Super Unleaded Gasoline (PMS)</option>
-                  <option value="OTHER">Other / Specialty Fuel</option>
-                </select>
+                  options={[
+                    { value: 'DIESEL', label: 'Low-Sulfur Diesel (AGO)' },
+                    { value: 'PETROL', label: 'Super Unleaded Gasoline (PMS)' },
+                    { value: 'OTHER', label: 'Other / Specialty Fuel' },
+                  ]}
+                />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -7012,17 +7000,17 @@ export default function FieldPortalWorkspace() {
               </div>
               <div>
                 <label className="block font-bold mb-1">Currency</label>
-                <select
+                <SearchableSelect
                   value={fuelLogEditForm.currency || 'USD'}
-                  onChange={(event) =>
-                    setFuelLogEditForm({ ...fuelLogEditForm, currency: event.target.value })
+                  onChange={(val) =>
+                    setFuelLogEditForm({ ...fuelLogEditForm, currency: val })
                   }
-                  className="w-full border rounded-lg p-2 bg-background"
-                >
-                  <option value="USD">USD</option>
-                  <option value="LRD">LRD</option>
-                  <option value="EUR">EUR</option>
-                </select>
+                  options={[
+                    { value: 'USD', label: 'USD' },
+                    { value: 'LRD', label: 'LRD' },
+                    { value: 'EUR', label: 'EUR' },
+                  ]}
+                />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { apiFetch, HseIncidentRead, HseActionRead } from '@/lib/api';
 import { Modal } from './DataUI';
+import SearchableSelect from './SearchableSelect';
 
 export default function HseIncidentsWorkspace({ subResource }: { subResource?: string }) {
   const [activeTab, setActiveTab] = useState<'INCIDENTS' | 'CAPA'>('INCIDENTS');
@@ -263,32 +264,36 @@ export default function HseIncidentsWorkspace({ subResource }: { subResource?: s
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium mb-1">Incident Type</label>
-                <select
+                <SearchableSelect
                   value={newIncident.incident_type}
-                  onChange={(e) => setNewIncident({ ...newIncident, incident_type: e.target.value })}
-                  className="w-full text-sm border rounded p-2 bg-background"
-                >
-                  <option value="NEAR_MISS">NEAR_MISS</option>
-                  <option value="FIRST_AID">FIRST_AID</option>
-                  <option value="MEDICAL_TREATMENT">MEDICAL_TREATMENT</option>
-                  <option value="LOST_TIME_INJURY">LOST_TIME_INJURY</option>
-                  <option value="ENVIRONMENTAL_SPILL">ENVIRONMENTAL_SPILL</option>
-                  <option value="PROPERTY_DAMAGE">PROPERTY_DAMAGE</option>
-                </select>
+                  onChange={(val) => setNewIncident({ ...newIncident, incident_type: val })}
+                  options={[
+                    { value: 'NEAR_MISS', label: 'NEAR_MISS' },
+                    { value: 'FIRST_AID', label: 'FIRST_AID' },
+                    { value: 'MEDICAL_TREATMENT', label: 'MEDICAL_TREATMENT' },
+                    { value: 'LOST_TIME_INJURY', label: 'LOST_TIME_INJURY' },
+                    { value: 'ENVIRONMENTAL_SPILL', label: 'ENVIRONMENTAL_SPILL' },
+                    { value: 'PROPERTY_DAMAGE', label: 'PROPERTY_DAMAGE' },
+                  ]}
+                  searchable={false}
+                  ariaLabel="Incident Type"
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-medium mb-1">Severity</label>
-                <select
+                <SearchableSelect
                   value={newIncident.severity}
-                  onChange={(e) => setNewIncident({ ...newIncident, severity: e.target.value })}
-                  className="w-full text-sm border rounded p-2 bg-background"
-                >
-                  <option value="LOW">LOW</option>
-                  <option value="MEDIUM">MEDIUM</option>
-                  <option value="HIGH">HIGH</option>
-                  <option value="CRITICAL">CRITICAL</option>
-                </select>
+                  onChange={(val) => setNewIncident({ ...newIncident, severity: val })}
+                  options={[
+                    { value: 'LOW', label: 'LOW' },
+                    { value: 'MEDIUM', label: 'MEDIUM' },
+                    { value: 'HIGH', label: 'HIGH' },
+                    { value: 'CRITICAL', label: 'CRITICAL' },
+                  ]}
+                  searchable={false}
+                  ariaLabel="Severity"
+                />
               </div>
             </div>
 

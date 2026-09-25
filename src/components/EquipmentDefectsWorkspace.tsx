@@ -6,6 +6,7 @@ import { AlertTriangle, ArrowLeft, RefreshCw, Plus, Search, Filter, CheckCircle,
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import { Row, display, Modal } from './DataUI';
 import RecordForm from './RecordForm';
+import SearchableSelect from './SearchableSelect';
 
 export default function EquipmentDefectsWorkspace() {
   const [loading, setLoading] = useState(true);
@@ -284,40 +285,51 @@ export default function EquipmentDefectsWorkspace() {
 
           <div className="flex items-center gap-2">
             <Filter size={14} className="text-muted-foreground shrink-0" />
-            <select
-              value={assetFilter}
-              onChange={(e) => setAssetFilter(e.target.value)}
-              className="input-field text-xs py-1.5 w-44 bg-background"
-            >
-              <option value="ALL">All Equipment Fleet</option>
-              {assets.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.asset_number ? `${a.asset_number} — ` : ''}{a.name}
-                </option>
-              ))}
-            </select>
+            <div className="w-44">
+              <SearchableSelect
+                value={assetFilter}
+                onChange={(val) => setAssetFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Equipment Fleet' },
+                  ...assets.map((a) => ({
+                    value: String(a.id),
+                    label: `${a.asset_number ? `${a.asset_number} — ` : ''}${a.name}`,
+                  })),
+                ]}
+                searchable={assets.length > 5}
+                ariaLabel="Filter Equipment Fleet"
+              />
+            </div>
 
-            <select
-              value={severityFilter}
-              onChange={(e) => setSeverityFilter(e.target.value)}
-              className="input-field text-xs py-1.5 w-36 bg-background"
-            >
-              <option value="ALL">All Severities</option>
-              <option value="MINOR">Minor</option>
-              <option value="MAJOR">Major</option>
-              <option value="CRITICAL">Critical</option>
-            </select>
+            <div className="w-36">
+              <SearchableSelect
+                value={severityFilter}
+                onChange={(val) => setSeverityFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Severities' },
+                  { value: 'MINOR', label: 'Minor' },
+                  { value: 'MAJOR', label: 'Major' },
+                  { value: 'CRITICAL', label: 'Critical' },
+                ]}
+                searchable={false}
+                ariaLabel="Filter Severity"
+              />
+            </div>
 
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="input-field text-xs py-1.5 w-36 bg-background"
-            >
-              <option value="ALL">All Statuses</option>
-              <option value="OPEN">Open</option>
-              <option value="RESOLVED">Resolved</option>
-              <option value="CLOSED">Closed</option>
-            </select>
+            <div className="w-36">
+              <SearchableSelect
+                value={statusFilter}
+                onChange={(val) => setStatusFilter(val)}
+                options={[
+                  { value: 'ALL', label: 'All Statuses' },
+                  { value: 'OPEN', label: 'Open' },
+                  { value: 'RESOLVED', label: 'Resolved' },
+                  { value: 'CLOSED', label: 'Closed' },
+                ]}
+                searchable={false}
+                ariaLabel="Filter Status"
+              />
+            </div>
 
             {(search || assetFilter !== 'ALL' || severityFilter !== 'ALL' || statusFilter !== 'ALL') && (
               <button

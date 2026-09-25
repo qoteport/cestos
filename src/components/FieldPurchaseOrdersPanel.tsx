@@ -349,15 +349,20 @@ export default function FieldPurchaseOrdersPanel({
                       <span className="block">Category (optional)</span>
                       <PurchaseOrderCategoryField value={category} onChange={setCategory} className={input} />
                     </label>
-                    <label className="space-y-1 text-xs font-semibold">
-                      <span className="block">Currency *</span>
-                      <select className={input} value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                        <option value="USD">USD ($)</option>
-                        <option value="EUR">EUR (€)</option>
-                        <option value="GBP">GBP (£)</option>
-                        <option value="ZAR">ZAR (R)</option>
-                      </select>
-                    </label>
+                    <div className="space-y-1 text-xs font-semibold">
+                      <span className="block mb-1">Currency *</span>
+                      <SearchableSelect
+                        value={currency}
+                        onChange={(val) => setCurrency(val)}
+                        options={[
+                          { value: 'USD', label: 'USD ($)' },
+                          { value: 'EUR', label: 'EUR (€)' },
+                          { value: 'GBP', label: 'GBP (£)' },
+                          { value: 'ZAR', label: 'ZAR (R)' },
+                        ]}
+                        searchable={false}
+                      />
+                    </div>
                     <label className="space-y-1 text-xs font-semibold">
                       <span className="block">Quotation / supporting file</span>
                       <input type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx" className={input} onChange={(e) => setQuotation(e.target.files?.[0] || null)} />

@@ -8,6 +8,7 @@ import {
 import { apiFetch, CeoControlTowerSummary, SupervisorScorecardRead, CommercialOpportunityRead, updateCommercialOpportunity } from '@/lib/api';
 import { Modal, ErrorModal, SearchableProjectSelect, rows } from './DataUI';
 import OperationsPerformanceCombinedChart from '@/app/components/OperationsPerformanceCombinedChart';
+import AppDateTimePicker from './ui/AppDateTimePicker';
 
 export default function ControlTowerWorkspace({ subResource }: { subResource?: string }) {
   const [loading, setLoading] = useState(true);
@@ -390,26 +391,26 @@ export default function ControlTowerWorkspace({ subResource }: { subResource?: s
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground">From Date</label>
-                <input
-                  type="date"
+                <AppDateTimePicker
+                  mode="date"
                   value={filterDateFrom}
-                  onChange={(e) => {
-                    setFilterDateFrom(e.target.value);
+                  onChange={(val) => {
+                    setFilterDateFrom(val);
                     setDatePreset('custom');
                   }}
-                  className="w-full text-sm border rounded-lg p-2 bg-background"
+                  placeholder="Select start date"
                 />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground">To Date</label>
-                <input
-                  type="date"
+                <AppDateTimePicker
+                  mode="date"
                   value={filterDateTo}
-                  onChange={(e) => {
-                    setFilterDateTo(e.target.value);
+                  onChange={(val) => {
+                    setFilterDateTo(val);
                     setDatePreset('custom');
                   }}
-                  className="w-full text-sm border rounded-lg p-2 bg-background"
+                  placeholder="Select end date"
                 />
               </div>
             </div>

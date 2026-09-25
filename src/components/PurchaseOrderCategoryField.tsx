@@ -12,10 +12,12 @@ export const PURCHASE_ORDER_CATEGORIES = [
 
 const CUSTOM = '__CUSTOM_CATEGORY__';
 
+import SearchableSelect from './SearchableSelect';
+
 export function PurchaseOrderCategoryField({
   value,
   onChange,
-  className = 'w-full rounded-lg border bg-background p-2.5 text-sm',
+  className = '',
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -36,29 +38,33 @@ export function PurchaseOrderCategoryField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder="Enter a custom category"
-        className={className}
+        className={`w-full rounded-lg border bg-background p-2.5 text-sm ${className}`}
       />
       <button type="button" onClick={() => { setCustom(false); onChange(''); }} className="text-[11px] font-semibold text-blue-700 hover:underline">
         Choose a standard category
       </button>
     </div>
   ) : (
-    <select
+    <SearchableSelect
       value={value}
-      onChange={(event) => {
-        if (event.target.value === CUSTOM) {
+      onChange={(val) => {
+        if (val === CUSTOM) {
           setCustom(true);
           onChange('');
         } else {
-          onChange(event.target.value);
+          onChange(val);
         }
       }}
+      placeholder="No category"
+      searchable={false}
+      options={[
+        { value: '', label: 'No category' },
+        ...PURCHASE_ORDER_CATEGORIES.map((item) => ({ value: item.value, label: item.label })),
+        { value: CUSTOM, label: 'Custom…' },
+      ]}
       className={className}
-    >
-      <option value="">No category</option>
-      {PURCHASE_ORDER_CATEGORIES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-      <option value={CUSTOM}>Custom…</option>
-    </select>
+      ariaLabel="Purchase order category"
+    />
   );
 }
 

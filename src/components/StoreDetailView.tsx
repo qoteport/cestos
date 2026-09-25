@@ -72,7 +72,7 @@ export default function StoreDetailView({ storeId }: { storeId: string }) {
         <div>
           <Link
             href="/workspace/inventory/stores"
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-1"
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-1 transition text-left justify-start font-semibold"
           >
             <ArrowLeft size={13} />
             Back to Inventory Stores

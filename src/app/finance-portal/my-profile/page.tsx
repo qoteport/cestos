@@ -56,17 +56,14 @@ export default function MyProfilePage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-6 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-4">
-        <div className="flex items-center justify-between border-b pb-3 border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-start border-b pb-3 border-slate-200 dark:border-slate-800">
           <button
             type="button"
             onClick={() => router.push('/finance-portal')}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-violet-600 dark:text-violet-400 hover:text-violet-800 transition"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-violet-600 dark:text-violet-400 hover:text-violet-800 transition text-left justify-start"
           >
             <ArrowLeft size={14} /> Back to Portal
           </button>
-          <span className="text-xs font-bold text-slate-500 bg-violet-50 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 px-3 py-1 rounded-full border border-violet-200 dark:border-violet-800">
-            My Profile - Full Access
-          </span>
         </div>
         <EmployeeDetailView employeeId={employeeId} onClose={() => router.push('/finance-portal')} readOnly={false} hideBackButton={true} />
       </div>

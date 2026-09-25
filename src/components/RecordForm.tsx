@@ -273,20 +273,29 @@ function ProjectTypeInput({
 
   return (
     <div className="space-y-1.5">
-      <select
-        className="input-field text-xs font-medium"
+      <SearchableSelect
         value={isCustom ? '__ADD_NEW__' : value || ''}
         required={required && !isCustom}
-        onChange={handleSelectChange}
-      >
-        <option value="">Select Project Type…</option>
-        {types.map((t) => (
-          <option key={t} value={t}>
-            {t}
-          </option>
-        ))}
-        <option value="__ADD_NEW__">+ Add New Project Type…</option>
-      </select>
+        onChange={(val) => {
+          if (val === '__ADD_NEW__') {
+            setIsCustom(true);
+            setCustomVal('');
+            onChange('');
+          } else {
+            setIsCustom(false);
+            setCustomVal('');
+            onChange(val);
+          }
+        }}
+        placeholder="Select Project Type…"
+        options={[
+          { value: '', label: 'Select Project Type…' },
+          ...types.map((t) => ({ value: t, label: t })),
+          { value: '__ADD_NEW__', label: '+ Add New Project Type…' },
+        ]}
+        searchable={false}
+        ariaLabel="Project Type"
+      />
       {isCustom && (
         <div className="flex gap-1.5 items-center">
           <input
@@ -885,23 +894,24 @@ function Fields({
         ) : key === 'drilling_type' || key === 'drill_type' ? (
           <DrillTypeInput value={val} onChange={set} required={required.includes(key)} />
         ) : key === 'is_recurring' ? (
-          <select
-            id={fieldPrefix + '-' + key}
-            className="input-field text-xs font-medium"
+          <SearchableSelect
             value={val === true || val === 'true' ? 'true' : 'false'}
             required={required.includes(key)}
-            onChange={(e) => {
-              const isRec = e.target.value === 'true';
+            onChange={(selectedVal) => {
+              const isRec = selectedVal === 'true';
               const next: Row = { ...data, is_recurring: isRec };
               if (isRec && (!data.recurrence_interval_days || Number(data.recurrence_interval_days) <= 0)) {
                 next.recurrence_interval_days = 7;
               }
               change(next);
             }}
-          >
-            <option value="false">One-time Maintenance</option>
-            <option value="true">Recurring Maintenance</option>
-          </select>
+            options={[
+              { value: 'false', label: 'One-time Maintenance' },
+              { value: 'true', label: 'Recurring Maintenance' },
+            ]}
+            searchable={false}
+            ariaLabel="Maintenance recurrence"
+          />
         ) : (key.endsWith('_id') || !!lookup[key]) ? (
           <Reference
             field={key}
@@ -912,20 +922,21 @@ function Fields({
             formData={data}
           />
         ) : s.enum ? (
-          <select
-            id={fieldPrefix + '-' + key}
-            className="input-field text-xs"
-            value={val}
+          <SearchableSelect
+            value={val || ''}
             required={required.includes(key)}
-            onChange={(e) => set(e.target.value)}
-          >
-            <option value="">Select…</option>
-            {s.enum.map((v: string) => (
-              <option value={v} key={v}>
-                {title(v.toLowerCase())}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => set(v)}
+            placeholder="Select…"
+            options={[
+              { value: '', label: 'Select…' },
+              ...s.enum.map((v: string) => ({
+                value: v,
+                label: title(v.toLowerCase()),
+              })),
+            ]}
+            searchable={s.enum.length > 5}
+            ariaLabel={title(key)}
+          />
         ) : s.type === 'boolean' ? (
           <input
             id={fieldPrefix + '-' + key}

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { ShieldCheck, User, Mail, Key, Shield, UserCheck, AlertCircle, RefreshCw, Check } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { Modal, Row } from './DataUI';
+import SearchableSelect from './SearchableSelect';
 
 interface RegisterUserModalProps {
   onClose: () => void;
@@ -139,18 +140,20 @@ export default function RegisterUserModal({ onClose, onSaved }: RegisterUserModa
           <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
             Associate with Employee Profile (Optional)
           </label>
-          <select
+          <SearchableSelect
             value={selectedEmployeeId}
-            onChange={(e) => handleEmployeeSelect(e.target.value)}
-            className="w-full p-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
-          >
-            <option value="">-- No employee linked (Standalone Account) --</option>
-            {employees.map((emp) => (
-              <option key={emp.id} value={emp.id}>
-                {emp.first_name} {emp.last_name} ({emp.employee_number || emp.job_title || 'Employee'})
-              </option>
-            ))}
-          </select>
+            onChange={(val) => handleEmployeeSelect(val)}
+            placeholder="-- No employee linked (Standalone Account) --"
+            options={[
+              { value: '', label: '-- No employee linked (Standalone Account) --' },
+              ...employees.map((emp) => ({
+                value: String(emp.id),
+                label: `${emp.first_name} ${emp.last_name}`,
+                sublabel: `${emp.employee_number || emp.job_title || 'Employee'}`,
+              })),
+            ]}
+            ariaLabel="Associate with Employee Profile"
+          />
           <p className="text-xs text-muted-foreground">
             Selecting an employee will auto-fill their contact details and link their personnel record to this login.
           </p>

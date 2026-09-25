@@ -5,6 +5,8 @@ import { openUniversalFileViewer } from '@/lib/fileViewer';
 import { useAuth } from './AuthProvider';
 import { Modal, Row, State, display, rows, title, useData } from './DataUI';
 import { number } from './ProjectDashboard';
+import SearchableSelect from './SearchableSelect';
+import AppDateTimePicker from './ui/AppDateTimePicker';
 
 const types: Record<string, string> = {
   DRILLING_UPDATE: 'Drilling update',
@@ -31,6 +33,7 @@ function ReportForm({
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const [siteId, setSiteId] = useState(initial?.site_id || (sites.find((s) => s.is_active && s.location_type === 'PROJECT_SITE')?.id || ''));
   const [reportDate, setReportDate] = useState(initial?.report_date || today());
   const [titleText, setTitleText] = useState(initial?.title || '');
   const [metresVal, setMetresVal] = useState(initial?.metres != null ? String(initial.metres) : '');
@@ -69,11 +72,15 @@ function ReportForm({
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
+    if (!siteId) {
+      setError('Please select a project site.');
+      return;
+    }
     setBusy(true);
     setError('');
     const values = new FormData(event.currentTarget);
     const report: Row = {
-      site_id: values.get('site_id'),
+      site_id: siteId,
       report_type: type,
       report_date: reportDate,
       title: titleText.trim(),
@@ -122,85 +129,82 @@ function ReportForm({
             : 'Record work for this reporting period. Enter additional meters and holes, or import directly from Daily Shift Production Reports.'}
         </p>
         <div className="grid sm:grid-cols-2 gap-4">
-          <label className="text-sm">
-            Project site
-            <select
-              name="site_id"
-              required
-              className="input-field mt-1"
-              defaultValue={initial?.site_id || ''}
-            >
-              <option value="" disabled>
-                Select project site
-              </option>
-              {sites
+          <div>
+            <label className="text-xs font-semibold mb-1 block">
+              Project site *
+            </label>
+            <SearchableSelect
+              options={sites
                 .filter((s) => s.is_active && s.location_type === 'PROJECT_SITE')
-                .map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <label className="text-sm">
-            Report type
-            <select
-              className="input-field mt-1"
+                .map((s) => ({ value: s.id, label: s.name }))}
+              value={siteId}
+              onChange={(val) => setSiteId(val)}
+              placeholder="Select project site..."
+              required
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold mb-1 block">
+              Report type *
+            </label>
+            <SearchableSelect
+              options={Object.entries(types).map(([value, label]) => ({
+                value,
+                label,
+              }))}
               value={type}
-              onChange={(e) => setType(e.target.value)}
-            >
-              {Object.entries(types).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-sm">
-            Reporting date
-            <input
-              name="report_date"
-              type="date"
+              onChange={(val) => setType(val)}
+              searchable={false}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold mb-1 block">
+              Reporting date *
+            </label>
+            <AppDateTimePicker
+              mode="date"
               required
               max={today()}
               value={reportDate}
-              onChange={(e) => setReportDate(e.target.value)}
-              className="input-field mt-1"
+              onChange={(val) => setReportDate(val)}
+              placeholder="Select reporting date"
             />
-          </label>
-          <label className="text-sm">
-            Report title
+          </div>
+          <div>
+            <label className="text-xs font-semibold mb-1 block">
+              Report title *
+            </label>
             <input
               name="title"
               required
               maxLength={200}
               value={titleText}
               onChange={(e) => setTitleText(e.target.value)}
-              className="input-field mt-1"
+              className="input-field"
               placeholder="e.g. Day shift drilling progress"
             />
-          </label>
+          </div>
         </div>
 
         {type === 'DRILLING_UPDATE' && (
           <div className="space-y-3 border rounded-lg p-4 bg-muted/10">
             {shifts.length > 0 && (
               <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg space-y-1">
-                <label className="text-xs font-bold text-amber-800 dark:text-amber-300 block">
+                <label className="text-xs font-bold text-amber-800 dark:text-amber-300 block mb-1">
                   ⚡ Import Data from Daily Shift Production Report
                 </label>
-                <select
-                  className="input-field text-xs bg-background"
+                <SearchableSelect
+                  options={[
+                    { value: '', label: '-- Select a shift report to auto-populate --' },
+                    ...shifts.map((s: any) => ({
+                      value: String(s.id),
+                      label: `Shift #${s.report_number || s.shift_number || s.id?.slice(0, 8)} | ${s.date || s.shift_date} (${s.shift_type || 'DAY'}) | ${s.total_metres ?? s.total_metres_drilled ?? s.metres_drilled ?? 0}m drilled`,
+                    })),
+                  ]}
                   value={selectedShiftId}
-                  onChange={(e) => handleImportShift(e.target.value)}
-                >
-                  <option value="">-- Select a shift report to auto-populate --</option>
-                  {shifts.map((s: any) => (
-                    <option key={s.id} value={s.id}>
-                      Shift #{s.report_number || s.shift_number || s.id?.slice(0, 8)} | {s.date || s.shift_date} ({s.shift_type || 'DAY'}) | {s.total_metres ?? s.total_metres_drilled ?? s.metres_drilled ?? 0}m drilled | {s.avg_core_recovery_pct ?? s.core_recovery_pct ?? 0}% core
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => handleImportShift(val)}
+                  placeholder="Select a shift report..."
+                />
               </div>
             )}
 
@@ -348,42 +352,41 @@ export default function ProjectUpdates({
         </p>
       )}
       <div className="flex flex-wrap gap-3">
-        <label className="text-xs">
-          Report type
-          <select
-            className="input-field mt-1"
+        <div className="min-w-[170px]">
+          <label className="text-xs font-semibold mb-1 block">
+            Report type
+          </label>
+          <SearchableSelect
+            options={[
+              { value: '', label: 'All report types' },
+              ...Object.entries(types).map(([v, l]) => ({ value: v, label: l })),
+            ]}
             value={type}
-            onChange={(e) => {
-              setType(e.target.value);
+            onChange={(val) => {
+              setType(val);
               setPage(1);
             }}
-          >
-            <option value="">All report types</option>
-            {Object.entries(types).map(([v, l]) => (
-              <option key={v} value={v}>
-                {l}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-xs">
-          Site
-          <select
-            className="input-field mt-1"
+            searchable={false}
+          />
+        </div>
+        <div className="min-w-[170px]">
+          <label className="text-xs font-semibold mb-1 block">
+            Site
+          </label>
+          <SearchableSelect
+            options={[
+              { value: '', label: 'All sites' },
+              ...sites.map((s) => ({ value: s.id, label: s.name })),
+            ]}
             value={site}
-            onChange={(e) => {
-              setSite(e.target.value);
+            onChange={(val) => {
+              setSite(val);
               setPage(1);
             }}
-          >
-            <option value="">All sites</option>
-            {sites.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </label>
+            placeholder="All sites"
+            searchable={sites.length > 5}
+          />
+        </div>
       </div>
       {error && (
         <p role="alert" className="text-red-700">
