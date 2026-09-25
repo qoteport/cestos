@@ -1694,8 +1694,8 @@ Signed: Field Operations Administration
         {/* Date Range & Time Preset Filter Toolbar (Hidden on PROJECTS, PEOPLE, MY_PROFILE, NOTIFICATIONS) */}
         {!['PROJECTS', 'PEOPLE', 'NOTIFICATIONS', 'PURCHASE_ORDERS'].includes(activeTab) && (
           <div className="relative bg-white dark:bg-slate-900 border rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-sm z-30">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 mr-1">
+            <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 mr-1 w-full sm:w-auto">
                 <Calendar size={15} className="text-orange-600" /> Date Range Filter:
               </span>
               <button

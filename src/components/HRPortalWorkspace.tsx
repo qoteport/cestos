@@ -745,8 +745,8 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
           </div>
         </div>
         {/* Right: Date Presets */}
-        <div className="flex items-center flex-wrap gap-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mr-1">Date Range:</span>
+        <div className="flex items-center flex-wrap gap-1.5 w-full sm:w-auto">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mr-1 w-full sm:w-auto">Date Range:</span>
           {(['ALL', 'TODAY', '10_DAYS', '30_DAYS'] as const).map((preset) => (
             <button
               key={preset}
