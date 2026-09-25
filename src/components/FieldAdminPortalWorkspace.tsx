@@ -3611,7 +3611,7 @@ Signed: Field Operations Administration
       {/* 1. Log Fuel Delivery Purchased Modal (ENLARGED & MATCHING FIELD PORTAL FIELDS) */}
       {showFuelBoughtModal && createPortal(
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
-          <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-2xl border-0 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-2xl border-0 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
               <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
                 <Fuel className="text-orange-600" size={20} /> Log Equipment Fuel Refill & Delivery Receipt
@@ -3619,8 +3619,9 @@ Signed: Field Operations Administration
               <button type="button" onClick={() => setShowFuelBoughtModal(false)} className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"><X size={20} /></button>
             </div>
 
-            <form onSubmit={handleCreateFuelBought} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
-              {/* SECTION 1: SITE & FUEL TYPE */}
+            <form onSubmit={handleCreateFuelBought} className="flex-1 flex flex-col min-h-0 overflow-hidden text-xs">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+                {/* SECTION 1: SITE & FUEL TYPE */}
               <div className="p-3.5 border rounded-xl bg-orange-50/40 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900 space-y-3">
                 <h4 className="font-bold text-xs uppercase tracking-wider text-orange-900 dark:text-orange-300 flex items-center gap-1.5 border-b pb-1.5">
                   <Fuel size={14} className="text-orange-600" /> Target Site & Fuel Grade
@@ -3821,10 +3822,11 @@ Signed: Field Operations Administration
                   </div>
                 </div>
               </div>
+              </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t">
-                <button type="button" onClick={() => setShowFuelBoughtModal(false)} className="px-4 py-2 border rounded-lg font-semibold">Cancel</button>
-                <button type="submit" disabled={busySubmit} className="px-5 py-2 bg-orange-600 text-white font-bold rounded-lg hover:bg-orange-700 transition">
+              <div className="flex items-center justify-end gap-2 p-3 sm:px-6 sm:py-4 border-t bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 sticky bottom-0 z-10">
+                <button type="button" onClick={() => setShowFuelBoughtModal(false)} className="px-4 py-2 border rounded-lg font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition">Cancel</button>
+                <button type="submit" disabled={busySubmit} className="px-5 py-2.5 bg-orange-600 text-white font-bold rounded-lg hover:bg-orange-700 transition flex items-center gap-1.5 shadow-sm">
                   {busySubmit ? 'Saving...' : 'Log Fuel Purchase'}
                 </button>
               </div>
@@ -3837,15 +3839,16 @@ Signed: Field Operations Administration
       {/* 2. Allocate Fuel to Asset Modal (ENLARGED & RICH FORM) */}
       {showFuelAllocModal && createPortal(
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
-          <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-xl border-0 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-xl border-0 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
               <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
                 <Truck className="text-orange-600" size={20} /> Allocate Fuel to Asset / Rig
               </h3>
               <button type="button" onClick={() => setShowFuelAllocModal(false)} className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"><X size={20} /></button>
             </div>
-            <form onSubmit={handleCreateFuelAlloc} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
-              {/* Linked Bulk Fuel Delivery Purchase for this Project */}
+            <form onSubmit={handleCreateFuelAlloc} className="flex-1 flex flex-col min-h-0 overflow-hidden text-xs">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+                {/* Linked Bulk Fuel Delivery Purchase for this Project */}
               <div>
                 <label className="block font-bold mb-1">Source Fuel Delivery / Bulk Supply Purchase (Project Logs)</label>
                 <SearchableSelect
@@ -3923,16 +3926,17 @@ Signed: Field Operations Administration
                   className="w-full p-2.5 border rounded-lg bg-background"
                 />
               </div>
+            </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t">
-                <button type="button" onClick={() => setShowFuelAllocModal(false)} className="px-4 py-2 border rounded-lg font-semibold">Cancel</button>
-                <button type="submit" disabled={busySubmit} className="px-5 py-2 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition">
-                  {busySubmit ? 'Allocating...' : 'Allocate Fuel'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>,
+            <div className="flex items-center justify-end gap-2 p-3 sm:px-6 sm:py-4 border-t bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 sticky bottom-0 z-10">
+              <button type="button" onClick={() => setShowFuelAllocModal(false)} className="px-4 py-2 border rounded-lg font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition">Cancel</button>
+              <button type="submit" disabled={busySubmit} className="px-5 py-2.5 bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition shadow-sm">
+                {busySubmit ? 'Allocating...' : 'Allocate Fuel'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>,
         document.body
       )}
 
@@ -3985,7 +3989,7 @@ Signed: Field Operations Administration
       {/* 5. HSE Incident Modal */}
       {showHseModal && createPortal(
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
-          <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-3xl border-0 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-3xl border-0 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
               <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
                 <ShieldCheck className="text-red-600" size={20} /> Report HSE Incident / Near-Miss / Hazard
@@ -3993,7 +3997,8 @@ Signed: Field Operations Administration
               <button type="button" onClick={() => setShowHseModal(false)} className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"><X size={20} /></button>
             </div>
 
-            <form onSubmit={handleCreateHSE} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
+            <form onSubmit={handleCreateHSE} className="flex-1 flex flex-col min-h-0 overflow-hidden text-xs">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
               {/* SECTION: PROJECT & EQUIPMENT SITE ASSOCIATION */}
               <div className="p-3 border rounded-xl bg-slate-50 dark:bg-slate-800/50 space-y-3">
                 <h4 className="font-bold text-xs uppercase tracking-wider text-slate-500 border-b pb-1.5 flex items-center justify-between">
@@ -4187,19 +4192,20 @@ Signed: Field Operations Administration
                   )}
                 </div>
               </div>
+              </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t">
+              <div className="flex items-center justify-end gap-2 p-3 sm:px-6 sm:py-4 border-t bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 sticky bottom-0 z-10">
                 <button
                   type="button"
                   onClick={() => setShowHseModal(false)}
-                  className="px-4 py-2 border rounded-lg font-semibold text-xs"
+                  className="px-4 py-2 border rounded-lg font-semibold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={busySubmit}
-                  className="px-5 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition flex items-center gap-1.5 text-xs"
+                  className="px-5 py-2.5 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition flex items-center gap-1.5 text-xs shadow-sm"
                 >
                   <ShieldCheck size={14} /> {busySubmit ? 'Submitting...' : 'Report Incident'}
                 </button>
@@ -4438,7 +4444,7 @@ Signed: Field Operations Administration
       {/* Edit Fuel Delivery Modal (Enforces 2-Day Edit Rule) */}
       {showEditFuelModal && editingFuelDelivery && createPortal(
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
-          <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-xl border-0 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-xl border-0 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
               <div>
                 <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
@@ -4451,8 +4457,9 @@ Signed: Field Operations Administration
               <button type="button" onClick={() => { setShowEditFuelModal(false); setEditingFuelDelivery(null); }} className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"><X size={20} /></button>
             </div>
 
-            <form onSubmit={handleUpdateFuelDelivery} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
-              <div className="p-2.5 bg-orange-50 border border-orange-200 text-orange-900 dark:bg-orange-950/30 dark:border-orange-800 dark:text-orange-200 rounded-lg text-[11px] font-medium flex items-center gap-2">
+            <form onSubmit={handleUpdateFuelDelivery} className="flex-1 flex flex-col min-h-0 overflow-hidden text-xs">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+                <div className="p-2.5 bg-orange-50 border border-orange-200 text-orange-900 dark:bg-orange-950/30 dark:border-orange-800 dark:text-orange-200 rounded-lg text-[11px] font-medium flex items-center gap-2">
                 <Clock size={14} className="text-orange-600 shrink-0" />
                 <span>Editing is active because this record was logged within the past 48 hours (2-day grace period).</span>
               </div>
@@ -4612,19 +4619,20 @@ Signed: Field Operations Administration
                   )}
                 </div>
               </div>
+              </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t">
+              <div className="flex items-center justify-end gap-2 p-3 sm:px-6 sm:py-4 border-t bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 sticky bottom-0 z-10">
                 <button
                   type="button"
                   onClick={() => { setShowEditFuelModal(false); setEditingFuelDelivery(null); }}
-                  className="px-4 py-2 border rounded-lg font-semibold text-xs"
+                  className="px-4 py-2 border rounded-lg font-semibold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={editFuelBusy}
-                  className="px-5 py-2 bg-orange-600 text-white font-bold rounded-lg hover:bg-orange-700 transition flex items-center gap-1.5 text-xs"
+                  className="px-5 py-2.5 bg-orange-600 text-white font-bold rounded-lg hover:bg-orange-700 transition flex items-center gap-1.5 text-xs shadow-sm"
                 >
                   <Pencil size={14} /> {editFuelBusy ? 'Saving Changes...' : 'Save Updated Log'}
                 </button>
@@ -4638,7 +4646,7 @@ Signed: Field Operations Administration
       {/* Edit Fuel Allocation Modal (Enforces 1-Day Edit Rule) */}
       {showEditFuelAllocModal && editingFuelAlloc && createPortal(
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
-          <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-xl border-0 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-xl border-0 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
               <div>
                 <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
@@ -4651,8 +4659,9 @@ Signed: Field Operations Administration
               <button type="button" onClick={() => { setShowEditFuelAllocModal(false); setEditingFuelAlloc(null); }} className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"><X size={20} /></button>
             </div>
 
-            <form onSubmit={handleUpdateFuelAlloc} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
-              <div className="p-2.5 bg-amber-50 border border-amber-200 text-amber-900 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-200 rounded-lg text-[11px] font-medium flex items-center gap-2">
+            <form onSubmit={handleUpdateFuelAlloc} className="flex-1 flex flex-col min-h-0 overflow-hidden text-xs">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+                <div className="p-2.5 bg-amber-50 border border-amber-200 text-amber-900 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-200 rounded-lg text-[11px] font-medium flex items-center gap-2">
                 <Clock size={14} className="text-amber-600 shrink-0" />
                 <span>Editing is active because this record was logged within the past 24 hours (1-day grace period).</span>
               </div>
@@ -4745,16 +4754,17 @@ Signed: Field Operations Administration
                   className="w-full p-2.5 border rounded-lg bg-background"
                 />
               </div>
+            </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t">
-                <button type="button" onClick={() => { setShowEditFuelAllocModal(false); setEditingFuelAlloc(null); }} className="px-4 py-2 border rounded-lg font-semibold">Cancel</button>
-                <button type="submit" disabled={editAllocBusy} className="px-5 py-2 bg-amber-600 text-white font-bold rounded-lg hover:bg-amber-700 transition flex items-center gap-1.5 text-xs">
-                  <Pencil size={14} /> {editAllocBusy ? 'Updating...' : 'Update Fuel Allocation'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>,
+            <div className="flex items-center justify-end gap-2 p-3 sm:px-6 sm:py-4 border-t bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 sticky bottom-0 z-10">
+              <button type="button" onClick={() => { setShowEditFuelAllocModal(false); setEditingFuelAlloc(null); }} className="px-4 py-2 border rounded-lg font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition">Cancel</button>
+              <button type="submit" disabled={editAllocBusy} className="px-5 py-2.5 bg-amber-600 text-white font-bold rounded-lg hover:bg-amber-700 transition flex items-center gap-1.5 text-xs shadow-sm">
+                <Pencil size={14} /> {editAllocBusy ? 'Updating...' : 'Update Fuel Allocation'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>,
         document.body
       )}
 

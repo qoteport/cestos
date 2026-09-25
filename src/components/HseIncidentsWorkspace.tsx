@@ -237,8 +237,29 @@ export default function HseIncidentsWorkspace({ subResource }: { subResource?: s
 
       {/* NEW INCIDENT MODAL */}
       {showAddIncident && (
-        <Modal title="Report HSE Incident / Near-Miss" onClose={() => setShowAddIncident(false)}>
-          <form onSubmit={handleCreateIncident} className="space-y-4">
+        <Modal
+          title="Report HSE Incident / Near-Miss"
+          onClose={() => setShowAddIncident(false)}
+          footer={
+            <div className="flex items-center justify-end gap-2 w-full">
+              <button
+                type="button"
+                onClick={() => setShowAddIncident(false)}
+                className="px-4 py-2 text-sm border rounded-lg hover:bg-muted transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="hse-add-incident-form"
+                className="px-5 py-2.5 text-sm bg-primary text-primary-foreground rounded-lg font-bold hover:bg-primary/90 transition shadow-sm"
+              >
+                Submit Incident Report
+              </button>
+            </div>
+          }
+        >
+          <form id="hse-add-incident-form" onSubmit={handleCreateIncident} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium mb-1">Incident Type</label>
@@ -295,21 +316,6 @@ export default function HseIncidentsWorkspace({ subResource }: { subResource?: s
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowAddIncident(false)}
-                className="px-4 py-2 text-sm border rounded hover:bg-muted"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded font-medium hover:bg-primary/90"
-              >
-                Submit Incident Report
-              </button>
-            </div>
           </form>
         </Modal>
       )}

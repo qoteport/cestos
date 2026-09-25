@@ -280,12 +280,27 @@ export default function BreakdownJobCardWizard({ assets, projectId, onClose, onS
     </div>
   );
 
-  return <Modal title={`${record ? 'Edit' : 'Create'} daily maintenance / breakdown repair job card`} onClose={onClose} className="sm:!h-[94vh] sm:!max-h-[94vh] sm:!w-[92vw] sm:!max-w-[1440px]">
+  return <Modal
+    title={`${record ? 'Edit' : 'Create'} daily maintenance / breakdown repair job card`}
+    onClose={onClose}
+    className="sm:!h-[94vh] sm:!max-h-[94vh] sm:!w-[92vw] sm:!max-w-[1440px]"
+    footer={
+      <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 w-full">
+        {view === 'ASSISTED' ? (
+          <button type="button" className="btn-secondary w-full sm:w-auto text-xs" disabled={!step} onClick={() => setStep(step - 1)}>Back</button>
+        ) : <div />}
+        <div className="flex flex-col-reverse sm:flex-row gap-2 w-full sm:w-auto sm:ml-auto">
+          {view === 'ASSISTED' && step < 3 && <button type="button" className="btn-primary w-full sm:w-auto text-xs" disabled={step === 0 && !assetId} onClick={() => setStep(step + 1)}>Next</button>}
+          {(view === 'FREE_FLOW' || step === 3) && <button type="button" className="btn-primary w-full sm:w-auto text-xs" disabled={saving || !assetId} onClick={save}>{saving ? 'Saving…' : record || createdRecord ? 'Save changes' : view === 'FREE_FLOW' ? 'Save job card and PDF' : 'Save job card'}</button>}
+        </div>
+      </div>
+    }
+  >
     <div className="space-y-4 text-xs">
       <div className="flex border-b" role="tablist" aria-label="Breakdown job card entry mode">
         {(['ASSISTED', 'FREE_FLOW'] as const).map((mode) => <button type="button" key={mode} role="tab" aria-selected={view === mode} onClick={() => setView(mode)} className={`border-b-2 px-4 py-2 font-bold transition ${view === mode ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>{mode === 'ASSISTED' ? 'Assisted' : 'Free flow'}</button>)}
       </div>
-      {view === 'FREE_FLOW' ? <div className="max-h-[72vh] space-y-3 overflow-auto bg-slate-100 p-2 sm:p-4">
+      {view === 'FREE_FLOW' ? <div className="space-y-3 overflow-auto bg-slate-100 p-2 sm:p-4">
         <div className="freeflow-job-card mx-auto max-w-[1400px] space-y-2 bg-white p-3 shadow sm:p-6">
           <h2 className="py-2 text-center text-sm font-black tracking-wide">DAILY MAINTENANCE / BREAKDOWN REPAIR JOB CARD</h2>
           <section><h3 className="bg-[#184877] px-2 py-1 text-center text-[11px] font-bold uppercase text-white">Job control &amp; machine identification</h3><div className="grid grid-cols-2 border-l border-t border-black sm:grid-cols-4">
@@ -328,13 +343,6 @@ export default function BreakdownJobCardWizard({ assets, projectId, onClose, onS
       {step === 3 && <div className="space-y-3"><label className="block space-y-1 font-medium"><span className="block">Test, release & remarks</span><textarea className="w-full border rounded-lg p-2 bg-background min-h-24" value={release['Test, release & remarks'] || ''} onChange={(event) => setRelease({ ...release, 'Test, release & remarks': event.target.value })} /></label><div className="grid gap-2 sm:grid-cols-3">{signatureField('technician', 'Technician Sign')}{signatureField('supervisor', 'Supervisor Sign')}{signatureField('operator', 'Operator Sign')}</div></div>}
       </div>}
       {saveError && <p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{saveError}</p>}
-      <div className="sticky bottom-0 -mx-4 -mb-4 sm:-mx-6 sm:-mb-6 p-3.5 sm:px-6 sm:py-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 z-10 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 mt-4">
-        {view === 'ASSISTED' && <button type="button" className="btn-secondary w-full sm:w-auto text-xs" disabled={!step} onClick={() => setStep(step - 1)}>Back</button>}
-        <div className="flex flex-col-reverse sm:flex-row gap-2 w-full sm:w-auto sm:ml-auto">
-          {view === 'ASSISTED' && step < 3 && <button type="button" className="btn-primary w-full sm:w-auto text-xs" disabled={step === 0 && !assetId} onClick={() => setStep(step + 1)}>Next</button>}
-          {(view === 'FREE_FLOW' || step === 3) && <button type="button" className="btn-primary w-full sm:w-auto text-xs" disabled={saving || !assetId} onClick={save}>{saving ? 'Saving…' : record || createdRecord ? 'Save changes' : view === 'FREE_FLOW' ? 'Save job card and PDF' : 'Save job card'}</button>}
-        </div>
-      </div>
     </div>
   </Modal>;
 }

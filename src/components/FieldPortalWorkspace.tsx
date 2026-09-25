@@ -4809,10 +4809,31 @@ export default function FieldPortalWorkspace() {
           error={formErrors['fuel']}
           title="Log Equipment Fuel Refill & Delivery Receipt"
           onClose={() => setShowFuelRefillModal(false)}
+          footer={
+            <div className="flex items-center justify-end gap-2 w-full">
+              <button
+                type="button"
+                onClick={() => setShowFuelRefillModal(false)}
+                className="px-4 py-2 border rounded-lg hover:bg-muted font-medium text-xs transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="fuel-refill-modal-form"
+                disabled={fuelSubmitting}
+                className="px-5 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm text-xs disabled:opacity-50"
+              >
+                <Fuel size={14} />{' '}
+                {fuelSubmitting ? 'Saving to Database...' : 'Save Fuel Refill Entry'}
+              </button>
+            </div>
+          }
         >
           <form
+            id="fuel-refill-modal-form"
             onSubmit={handleSubmitFuelRefill}
-            className="space-y-4 text-xs max-h-[80vh] overflow-y-auto pr-1"
+            className="space-y-4 text-xs"
           >
             {/* SECTION 1: EQUIPMENT & FUEL TYPE */}
             <div className="p-3 border rounded-xl bg-muted/20 space-y-3">
@@ -5059,37 +5080,41 @@ export default function FieldPortalWorkspace() {
               </div>
             </div>
 
-            {/* FOOTER ACTIONS */}
-            <div className="flex justify-end gap-2 pt-3 border-t">
+          </form>
+        </Modal>
+      )}
+
+      {showFuelAllocationModal && (
+        <Modal
+          title="Allocate Site Fuel to Vehicle"
+          onClose={() => setShowFuelAllocationModal(false)}
+          footer={
+            <div className="flex items-center justify-end gap-2 w-full">
               <button
                 type="button"
-                onClick={() => setShowFuelRefillModal(false)}
-                className="px-4 py-2 border rounded-lg hover:bg-muted font-medium text-xs"
+                onClick={() => setShowFuelAllocationModal(false)}
+                className="px-4 py-2 border rounded-lg hover:bg-muted font-medium text-xs transition"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={fuelSubmitting}
-                className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm text-xs disabled:opacity-50"
+                form="fuel-alloc-modal-form"
+                className="px-5 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm text-xs"
               >
-                <Fuel size={14} />{' '}
-                {fuelSubmitting ? 'Saving to Database...' : 'Save Fuel Refill Entry'}
+                Save Allocation
               </button>
             </div>
+          }
+        >
+          <form id="fuel-alloc-modal-form" onSubmit={handleSubmitFuelAllocation} className="space-y-4 text-xs">
+            <div><label className="block font-bold mb-1">Site / Location *</label><SearchableSelect value={fuelAllocationForm.site_location_id} onChange={(value) => setFuelAllocationForm({ ...fuelAllocationForm, site_location_id: value })} options={projectSites.filter(site => site.project_id === selectedProjectId).map(site => ({ value: site.id, label: `${site.name} | ${site.project_name || ''}` }))} placeholder="Select site..." required /></div>
+            <div><label className="block font-bold mb-1">Vehicle / Rig *</label><SearchableSelect value={fuelAllocationForm.asset_id} onChange={(value) => setFuelAllocationForm({ ...fuelAllocationForm, asset_id: value })} options={assetOptions} placeholder="Select vehicle..." required /></div>
+            <div><label className="block font-bold mb-1">Allocated Quantity (Litres) *</label><input type="number" min="0.001" step="0.001" required value={fuelAllocationForm.quantity_litres || ''} onChange={e => setFuelAllocationForm({ ...fuelAllocationForm, quantity_litres: Number(e.target.value) })} className="w-full border rounded-lg p-2 bg-background" /></div>
+            <div><label className="block font-bold mb-1">Notes</label><textarea value={fuelAllocationForm.notes} onChange={e => setFuelAllocationForm({ ...fuelAllocationForm, notes: e.target.value })} className="w-full border rounded-lg p-2 bg-background" /></div>
           </form>
         </Modal>
       )}
-
-      {showFuelAllocationModal && <Modal title="Allocate Site Fuel to Vehicle" onClose={() => setShowFuelAllocationModal(false)}>
-        <form onSubmit={handleSubmitFuelAllocation} className="space-y-4 text-xs">
-          <div><label className="block font-bold mb-1">Site / Location *</label><SearchableSelect value={fuelAllocationForm.site_location_id} onChange={(value) => setFuelAllocationForm({ ...fuelAllocationForm, site_location_id: value })} options={projectSites.filter(site => site.project_id === selectedProjectId).map(site => ({ value: site.id, label: `${site.name} | ${site.project_name || ''}` }))} placeholder="Select site..." required /></div>
-          <div><label className="block font-bold mb-1">Vehicle / Rig *</label><SearchableSelect value={fuelAllocationForm.asset_id} onChange={(value) => setFuelAllocationForm({ ...fuelAllocationForm, asset_id: value })} options={assetOptions} placeholder="Select vehicle..." required /></div>
-          <div><label className="block font-bold mb-1">Allocated Quantity (Litres) *</label><input type="number" min="0.001" step="0.001" required value={fuelAllocationForm.quantity_litres || ''} onChange={e => setFuelAllocationForm({ ...fuelAllocationForm, quantity_litres: Number(e.target.value) })} className="w-full border rounded-lg p-2 bg-background" /></div>
-          <div><label className="block font-bold mb-1">Notes</label><textarea value={fuelAllocationForm.notes} onChange={e => setFuelAllocationForm({ ...fuelAllocationForm, notes: e.target.value })} className="w-full border rounded-lg p-2 bg-background" /></div>
-          <button type="submit" className="btn-primary w-full">Save Allocation</button>
-        </form>
-      </Modal>}
 
       {/* MODAL 2: RECORD TANK DIP & FUEL CONSUMPTION (POST /api/v1/assets/:id/fuel-reductions) */}
       {showTankDipModal && (
@@ -5097,10 +5122,31 @@ export default function FieldPortalWorkspace() {
           error={formErrors['tank-dip']}
           title="Record Tank Dip Level & Fuel Consumption"
           onClose={() => setShowTankDipModal(false)}
+          footer={
+            <div className="flex items-center justify-end gap-2 w-full">
+              <button
+                type="button"
+                onClick={() => setShowTankDipModal(false)}
+                className="px-4 py-2 border rounded-lg hover:bg-muted font-medium text-xs transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="tank-dip-modal-form"
+                disabled={dipSubmitting}
+                className="px-5 py-2.5 bg-emerald-600 text-white hover:bg-emerald-700 font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm text-xs disabled:opacity-50"
+              >
+                <Activity size={14} />{' '}
+                {dipSubmitting ? 'Saving Dip Record...' : 'Record Tank Dip & Consumption'}
+              </button>
+            </div>
+          }
         >
           <form
+            id="tank-dip-modal-form"
             onSubmit={handleSubmitTankDip}
-            className="space-y-4 text-xs max-h-[80vh] overflow-y-auto pr-1"
+            className="space-y-4 text-xs"
           >
             <div className="p-3 border rounded-xl bg-emerald-500/5 space-y-3">
               <h4 className="font-bold text-xs uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 border-b pb-1.5">
@@ -5280,24 +5326,6 @@ export default function FieldPortalWorkspace() {
               </div>
             </div>
 
-            {/* FOOTER ACTIONS */}
-            <div className="flex justify-end gap-2 pt-3 border-t">
-              <button
-                type="button"
-                onClick={() => setShowTankDipModal(false)}
-                className="px-4 py-2 border rounded-lg hover:bg-muted font-medium text-xs"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={dipSubmitting}
-                className="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm text-xs disabled:opacity-50"
-              >
-                <Activity size={14} />{' '}
-                {dipSubmitting ? 'Saving Dip Record...' : 'Record Tank Dip & Consumption'}
-              </button>
-            </div>
           </form>
         </Modal>
       )}
@@ -6689,8 +6717,33 @@ export default function FieldPortalWorkspace() {
           title="Report HSE Incident / Near-Miss / Hazard"
           onClose={() => setShowHseModal(false)}
           className="max-w-2xl"
+          footer={
+            <div className="flex items-center justify-end gap-2 w-full">
+              <button
+                type="button"
+                onClick={() => setShowHseModal(false)}
+                className="px-4 py-2 border rounded-lg hover:bg-muted font-medium text-xs transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="hse-incident-modal-form"
+                disabled={hseSubmitting}
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm text-xs disabled:opacity-50"
+              >
+                {hseSubmitting ? (
+                  <span>Submitting Report...</span>
+                ) : (
+                  <>
+                    <ShieldCheck size={14} /> Submit HSE Incident Report
+                  </>
+                )}
+              </button>
+            </div>
+          }
         >
-          <form onSubmit={handleSubmitHseIncident} className="space-y-4 text-xs">
+          <form id="hse-incident-modal-form" onSubmit={handleSubmitHseIncident} className="space-y-4 text-xs">
             {/* SECTION: PROJECT & EQUIPMENT SITE ASSOCIATION */}
             <div className="p-3 border rounded-xl bg-card space-y-3">
               <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground border-b pb-1.5 flex items-center justify-between">
@@ -6876,29 +6929,6 @@ export default function FieldPortalWorkspace() {
               </div>
             </div>
 
-            {/* MODAL ACTIONS */}
-            <div className="flex justify-end gap-2 pt-3 border-t">
-              <button
-                type="button"
-                onClick={() => setShowHseModal(false)}
-                className="px-4 py-2 border rounded-lg hover:bg-muted font-medium text-xs"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={hseSubmitting}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm text-xs disabled:opacity-50"
-              >
-                {hseSubmitting ? (
-                  <span>Submitting Report...</span>
-                ) : (
-                  <>
-                    <ShieldCheck size={14} /> Submit HSE Incident Report
-                  </>
-                )}
-              </button>
-            </div>
           </form>
         </Modal>
       )}
