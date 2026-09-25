@@ -8,7 +8,8 @@ import {
   HardHat, Bell, User, Wrench, ShieldCheck, Clock, Truck, RefreshCw, LogOut, Menu, X, Pencil,
   AlertTriangle, Plus, CheckCircle2, DollarSign, Fuel, Users, FileText, Download, Eye,
   Building2, Calendar, FilePlus, ChevronRight, Check, Ban, AlertCircle, Sparkles, Filter,
-  Activity, Paperclip, Upload, Package, Trash2, TrendingUp, File, ArrowLeft, BarChart2, ChevronDown, ChevronUp, Search
+  Activity, Paperclip, Upload, Package, Trash2, TrendingUp, File, ArrowLeft, BarChart2, ChevronDown, ChevronUp, Search,
+  Zap, Droplet, ShieldAlert, UserCheck
 } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, BarChart, Bar, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { useAuth } from '@/components/AuthProvider';
@@ -1556,7 +1557,108 @@ Signed: Field Operations Administration
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col text-slate-900 dark:text-slate-100">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-row text-slate-900 dark:text-slate-100">
+      {/* ─── Thin Quick-Action Left Sidebar (Large Screens Only) ─────────────────── */}
+      <aside
+        aria-label="Priority Quick Action Forms Sidebar"
+        className="hidden lg:flex flex-col items-center py-4 px-2 bg-slate-900 dark:bg-slate-950 text-slate-100 w-14 border-r border-slate-800 shrink-0 sticky top-0 z-40 h-screen select-none no-print"
+      >
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 text-white flex items-center justify-center shadow-md mb-2 group relative cursor-default shrink-0" title="Quick Priority Action Forms">
+          <Zap size={20} className="animate-pulse" />
+          <span className="absolute left-14 bg-slate-900 text-white text-[11px] font-bold px-2.5 py-1 rounded-md shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700">
+            Priority Action Forms
+          </span>
+        </div>
+        <div className="w-8 h-px bg-slate-800 shrink-0 my-1" />
+        <div className="flex flex-col items-center space-y-3 flex-1 overflow-y-auto scrollbar-none w-full py-1">
+          <button
+            type="button"
+            onClick={() => setShowWOModal(true)}
+            className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-orange-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+            aria-label="Breakdown Work Order Form"
+          >
+            <Wrench size={18} />
+            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+              Breakdown Work Order Form
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowExpenseModal(true)}
+            className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-orange-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+            aria-label="Submit Operational Expense Claim Form"
+          >
+            <DollarSign size={18} />
+            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+              Submit Expense Claim Form
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowScheduleModal(true)}
+            className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-orange-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+            aria-label="Schedule Equipment Maintenance"
+          >
+            <Calendar size={18} />
+            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+              Schedule Equipment Maintenance
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowFuelBoughtModal(true)}
+            className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-orange-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+            aria-label="Register Bulk Fuel Delivery Form"
+          >
+            <Fuel size={18} />
+            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+              Register Bulk Fuel Delivery
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAddAssetModal(true)}
+            className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-orange-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+            aria-label="Register Equipment Asset Form"
+          >
+            <Truck size={18} />
+            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+              Register Equipment Asset Form
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowHseModal(true)}
+            className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-orange-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+            aria-label="Report HSE / Safety Incident"
+          >
+            <ShieldAlert size={18} />
+            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+              Report HSE / Safety Incident
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowBookLeaveModal(true)}
+            className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-orange-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+            aria-label="Book Personnel Leave Request"
+          >
+            <UserCheck size={18} />
+            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+              Book Personnel Leave Request
+            </span>
+          </button>
+        </div>
+      </aside>
+
+      <div className="flex-1 min-w-0 flex flex-col">
       {/* Top Header */}
       <header className="bg-white dark:bg-slate-900 border-b border-orange-100 dark:border-slate-800 sticky top-0 z-40">
         <div className="flex items-center justify-between px-4 py-3 max-w-7xl mx-auto">
@@ -5274,6 +5376,7 @@ Signed: Field Operations Administration
         title={fieldAdminViewerState.title}
         fileType={fieldAdminViewerState.fileType}
       />
+      </div>
     </div>
   );
 }

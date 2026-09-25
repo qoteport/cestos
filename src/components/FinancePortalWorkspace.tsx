@@ -38,6 +38,8 @@ import {
   BarChart2,
   ChevronDown,
   ChevronUp,
+  Zap,
+  Droplet,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -2727,7 +2729,84 @@ Signed: Finance & Procurement Administration
   // ─── Layout (Matching Field Admin Top Navigation Header Layout) ─────────────
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-row font-sans text-slate-900 dark:text-slate-100">
+      {/* ─── Thin Quick-Action Left Sidebar (Large Screens Only) ─────────────────── */}
+      <aside
+        aria-label="Priority Quick Action Forms Sidebar"
+        className="hidden lg:flex flex-col items-center py-4 px-2 bg-slate-900 dark:bg-slate-950 text-slate-100 w-14 border-r border-slate-800 shrink-0 sticky top-0 z-40 h-screen select-none no-print"
+      >
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white flex items-center justify-center shadow-md mb-2 group relative cursor-default shrink-0" title="Quick Priority Action Forms">
+          <Zap size={20} className="animate-pulse" />
+          <span className="absolute left-14 bg-slate-900 text-white text-[11px] font-bold px-2.5 py-1 rounded-md shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700">
+            Priority Action Forms
+          </span>
+        </div>
+        <div className="w-8 h-px bg-slate-800 shrink-0 my-1" />
+        <div className="flex flex-col items-center space-y-3 flex-1 overflow-y-auto scrollbar-none w-full py-1">
+          <button
+            type="button"
+            onClick={() => setShowAddPoModal(true)}
+            className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-violet-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            aria-label="Issue Purchase Order Form"
+          >
+            <ShoppingCart size={18} />
+            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+              Issue Purchase Order Form
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowExpenseModal(true)}
+            className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-violet-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            aria-label="Submit Expense Claim Form"
+          >
+            <DollarSign size={18} />
+            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+              Submit Expense Claim Form
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowFuelBoughtModal(true)}
+            className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-violet-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            aria-label="Register Bulk Fuel Delivery Form"
+          >
+            <Fuel size={18} />
+            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+              Register Bulk Fuel Delivery
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowFuelAllocModal(true)}
+            className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-violet-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            aria-label="Issue Fuel Dispense Ticket"
+          >
+            <Droplet size={18} />
+            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+              Issue Fuel Dispense Ticket
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('VENDORS')}
+            className="relative group w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-violet-600 hover:text-white text-slate-300 flex items-center justify-center transition-all duration-200 shadow-sm hover:scale-105 active:scale-95 border border-slate-700/60 hover:border-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+            aria-label="Manage Vendors & Suppliers"
+          >
+            <Building2 size={18} />
+            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+              Manage Vendors & Suppliers
+            </span>
+          </button>
+        </div>
+      </aside>
+
+      <div className="flex-1 min-w-0 flex flex-col">
       {/* Top Header Bar */}
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
@@ -4101,6 +4180,7 @@ Signed: Finance & Procurement Administration
         </div>
       )}
       <UniversalFileViewerModal isOpen={viewerState.isOpen} onClose={() => setViewerState({ isOpen: false })} fileUrl={viewerState.fileUrl} fileName={viewerState.fileName} title={viewerState.title} />
+      </div>
     </div>
   );
 }
