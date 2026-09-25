@@ -291,7 +291,7 @@ export default function BreakdownJobCardWizard({ assets, projectId, onClose, onS
         ) : <div />}
         <div className="flex flex-col-reverse sm:flex-row gap-2 w-full sm:w-auto sm:ml-auto">
           {view === 'ASSISTED' && step < 3 && <button type="button" className="btn-primary w-full sm:w-auto text-xs" disabled={step === 0 && !assetId} onClick={() => setStep(step + 1)}>Next</button>}
-          {(view === 'FREE_FLOW' || step === 3) && <button type="button" className="btn-primary w-full sm:w-auto text-xs" disabled={saving || !assetId} onClick={save}>{saving ? 'Saving…' : record || createdRecord ? 'Save changes' : view === 'FREE_FLOW' ? 'Save job card and PDF' : 'Save job card'}</button>}
+          {(view === 'FREE_FLOW' || step === 3) && <button type="button" className="btn-primary w-full sm:w-auto text-xs" disabled={saving || !assetId} onClick={save}>{saving ? 'Saving…' : record || createdRecord ? 'Save changes' : view === 'FREE_FLOW' ? 'Save job card' : 'Save job card'}</button>}
         </div>
       </div>
     }

@@ -339,7 +339,40 @@ export default function PreventiveMaintenanceWizard({
   };
   const signatureField = (role: 'technician' | 'supervisor' | 'operator', label: string) => <div className="space-y-2 rounded-lg border p-3"><div className="font-semibold">{label}</div><input className="w-full border rounded-lg p-2 bg-background" placeholder="Signer name" value={signatures[role]?.signer_name || ''} onChange={(event) => setSignatures({ ...signatures, [role]: { ...signatures[role], signer_name: event.target.value } })} /><label className="block cursor-pointer border border-dashed p-2 text-center text-xs">Upload signature<input className="hidden" type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => { const file = event.target.files?.[0]; if (file) void addSignature(role, file).catch((err: any) => setError(err?.message || 'Could not add signature.')); event.currentTarget.value = ''; }} /></label>{signatures[role]?.image_data && <img src={signatures[role].image_data} alt={`${label} preview`} className="h-10 max-w-full object-contain" />}</div>;
 
-  return <Modal title={`${record ? 'Edit' : 'Preventive'} Maintenance Job Card`} onClose={onClose} className="sm:!h-[94vh] sm:!max-h-[94vh] sm:!w-[92vw] sm:!max-w-[1440px]">
+  return <Modal
+    title={`${record ? 'Edit' : 'Preventive'} Maintenance Job Card`}
+    onClose={onClose}
+    className="sm:!h-[94vh] sm:!max-h-[94vh] sm:!w-[92vw] sm:!max-w-[1440px]"
+    footer={
+      <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 w-full">
+        {view === 'ASSISTED' ? (
+          <button type="button" className="btn-secondary w-full sm:w-auto text-xs" disabled={step === 0} onClick={() => setStep(step - 1)}>Back</button>
+        ) : <div />}
+        <div className="flex flex-col-reverse sm:flex-row gap-2 w-full sm:w-auto sm:ml-auto">
+          {view === 'ASSISTED' && step < 3 && (
+            <button
+              type="button"
+              className="btn-primary w-full sm:w-auto text-xs"
+              disabled={step === 0 && !assetId && !(isCustomEquipment && customEquipment.trim())}
+              onClick={() => setStep(step + 1)}
+            >
+              Next
+            </button>
+          )}
+          {(view === 'FREE_FLOW' || step === 3) && (
+            <button
+              type="button"
+              className="btn-primary w-full sm:w-auto text-xs"
+              disabled={saving || (!assetId && !(isCustomEquipment && customEquipment.trim()))}
+              onClick={save}
+            >
+              {saving ? 'Saving…' : 'Save Job Card'}
+            </button>
+          )}
+        </div>
+      </div>
+    }
+  >
     <div className="space-y-4 text-xs">
       <div className="flex border-b" role="tablist" aria-label="Preventive maintenance entry mode">{(['ASSISTED', 'FREE_FLOW'] as const).map((mode) => <button type="button" key={mode} role="tab" aria-selected={view === mode} onClick={() => setView(mode)} className={`border-b-2 px-4 py-2 font-bold ${view === mode ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}>{mode === 'ASSISTED' ? 'Assisted' : 'Free flow'}</button>)}</div>
       {view === 'FREE_FLOW' && <div className="max-h-[72vh] overflow-y-auto bg-slate-100 p-2 sm:p-4"><div className="freeflow-job-card mx-auto max-w-[1400px] space-y-3 bg-white p-3 shadow sm:p-6 text-slate-900">
