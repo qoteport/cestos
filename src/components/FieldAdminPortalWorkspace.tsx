@@ -138,7 +138,7 @@ export default function FieldAdminPortalWorkspace() {
   const [loading, setLoading] = useState(true);
 
   // Modals state
-  const [showPoModal, setShowPoModal] = useState(false);
+  const [poFormSignal, setPoFormSignal] = useState(0);
   const [showFuelBoughtModal, setShowFuelBoughtModal] = useState(false);
   const [showFuelAllocModal, setShowFuelAllocModal] = useState(false);
   const [showWOModal, setShowWOModal] = useState(false);
@@ -1574,7 +1574,10 @@ Signed: Field Operations Administration
         <div className="flex flex-col items-center space-y-3 flex-1 overflow-y-auto scrollbar-none w-full py-1">
           <button
             type="button"
-            onClick={() => setShowPoModal(true)}
+            onClick={() => {
+              setActiveTab('PURCHASE_ORDERS');
+              setPoFormSignal((s) => s + 1);
+            }}
             className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-orange-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
             aria-label="Create Purchase Order Form"
           >
@@ -2913,6 +2916,7 @@ Signed: Field Operations Administration
                 datePreset={datePreset}
                 customStartDate={customStartDate}
                 customEndDate={customEndDate}
+                openCreateSignal={poFormSignal}
               />
             )}
             {activeTab === 'EXPENSES' && (
@@ -5336,20 +5340,6 @@ Signed: Field Operations Administration
           );
         })}
       </nav>
-
-      {/* Create Purchase Order Modal */}
-      {showPoModal && (
-        <RecordForm
-          path="/api/v1/procurement/purchase-orders"
-          title="Create Purchase Order"
-          operation={operation('/api/v1/procurement/purchase-orders', 'POST') || {}}
-          onClose={() => setShowPoModal(false)}
-          onSaved={() => {
-            setShowPoModal(false);
-            void reloadData();
-          }}
-        />
-      )}
 
       {/* Create Equipment Modal */}
       {showAddAssetModal && (

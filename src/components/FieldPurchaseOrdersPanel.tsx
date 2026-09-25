@@ -34,12 +34,14 @@ export default function FieldPurchaseOrdersPanel({
   datePreset = 'ALL',
   customStartDate,
   customEndDate,
+  openCreateSignal = 0,
 }: {
   projectId: string;
   projectName?: string;
   datePreset?: string;
   customStartDate?: string;
   customEndDate?: string;
+  openCreateSignal?: number;
 }) {
   const [orders, setOrders] = useState<Row[]>([]);
   const [suppliers, setSuppliers] = useState<Row[]>([]);
@@ -185,6 +187,11 @@ export default function FieldPurchaseOrdersPanel({
   const openCreate = () => {
     setEditing(null); setOrderProjectId(projectId); setFormStep('EDIT'); setSupplier(''); setCurrency('USD'); setCategory(''); setNotes(''); setLines([]); setManualTotal('0'); setQuotation(null); setExistingQuotation(''); setShowForm(true);
   };
+  useEffect(() => {
+    if (openCreateSignal && openCreateSignal > 0) {
+      openCreate();
+    }
+  }, [openCreateSignal]);
   const openEdit = (po: Row) => {
     setEditing(po); setOrderProjectId(String(po.project_id || projectId)); setFormStep('EDIT'); setSupplier(po.supplier_name || ''); setCurrency(po.currency || 'USD'); setCategory(po.category || ''); setNotes(po.notes || '');
     const existingLines = (po.items || []).map((row: Row) => ({ item_name: row.item_name || '', description: row.description || '', quantity_ordered: String(row.quantity_ordered || 1), unit_price: String(row.unit_price || 0) }));
