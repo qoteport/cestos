@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, X, Check } from 'lucide-react';
 
 export interface AppDateTimePickerProps {
@@ -45,7 +46,16 @@ export default function AppDateTimePicker({
   const effectiveValue = value !== undefined ? value : internalVal;
 
   const [isOpen, setIsOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
+
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Parse current value
   const parsedValue = useMemo(() => {
@@ -107,10 +117,59 @@ export default function AppDateTimePicker({
     }
   }, [effectiveValue, parsedValue, mode]);
 
+  // Calculate popover positioning dynamically (smart portal + flip)
+  const updatePosition = useCallback(() => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    const estimatedHeight = mode === 'time' ? 220 : mode === 'datetime' ? 420 : 360;
+    const openUpwards = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
+
+    let top: number;
+    if (openUpwards) {
+      top = Math.max(8, rect.top - estimatedHeight - 4);
+    } else {
+      top = rect.bottom + 4;
+    }
+
+    const popoverWidth = Math.min(window.innerWidth - 24, 350);
+    let left = rect.left;
+    if (left + popoverWidth > window.innerWidth - 12) {
+      left = Math.max(12, window.innerWidth - popoverWidth - 12);
+    }
+
+    setPopoverStyle({
+      position: 'fixed',
+      top: `${top}px`,
+      left: `${left}px`,
+      width: `${popoverWidth}px`,
+      maxHeight: `${Math.min(480, openUpwards ? spaceAbove - 16 : spaceBelow - 16)}px`,
+      zIndex: 2147483647,
+    });
+  }, [mode]);
+
+  useEffect(() => {
+    if (isOpen) {
+      updatePosition();
+      const handleScrollOrResize = () => updatePosition();
+      window.addEventListener('resize', handleScrollOrResize);
+      window.addEventListener('scroll', handleScrollOrResize, true);
+      return () => {
+        window.removeEventListener('resize', handleScrollOrResize);
+        window.removeEventListener('scroll', handleScrollOrResize, true);
+      };
+    }
+  }, [isOpen, updatePosition]);
+
   // Close on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const targetNode = event.target as Node;
+      const isInsideContainer = containerRef.current && containerRef.current.contains(targetNode);
+      const isInsidePopover = popoverRef.current && popoverRef.current.contains(targetNode);
+      if (!isInsideContainer && !isInsidePopover) {
         setIsOpen(false);
       }
     }
@@ -297,6 +356,7 @@ export default function AppDateTimePicker({
     if (mode === 'date') {
       emitChange(dayObj.dateString, selectedHours, selectedMinutes);
       setIsOpen(false);
+      triggerRef.current?.focus();
     } else {
       emitChange(dayObj.dateString, selectedHours, selectedMinutes);
     }
@@ -316,6 +376,7 @@ export default function AppDateTimePicker({
       setInternalVal('');
       onChange?.('');
       setIsOpen(false);
+      triggerRef.current?.focus();
       return;
     }
 
@@ -341,6 +402,7 @@ export default function AppDateTimePicker({
     emitChange(dateStr, h, m);
     if (mode === 'date') {
       setIsOpen(false);
+      triggerRef.current?.focus();
     }
   };
 
@@ -349,6 +411,16 @@ export default function AppDateTimePicker({
     setSelectedDate('');
     setInternalVal('');
     onChange?.('');
+    triggerRef.current?.focus();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (disabled) return;
+    if (e.key === 'Escape' && isOpen) {
+      e.preventDefault();
+      setIsOpen(false);
+      triggerRef.current?.focus();
+    }
   };
 
   return (
@@ -365,79 +437,90 @@ export default function AppDateTimePicker({
 
       {/* Trigger Button */}
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
         aria-label={ariaLabel || placeholder || defaultPlaceholder}
+        aria-expanded={isOpen}
+        aria-haspopup="dialog"
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`input-field flex items-center justify-between text-left cursor-pointer text-xs w-full min-h-[38px] px-3 py-2 bg-background border rounded-md transition-all ${
-          isOpen ? 'ring-2 ring-primary/20 border-primary' : 'hover:border-primary/50'
+        onKeyDown={handleKeyDown}
+        className={`input-field flex items-center justify-between text-left cursor-pointer text-xs sm:text-sm w-full min-h-[42px] px-3.5 py-2.5 bg-background border rounded-xl transition-all shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 ${
+          isOpen ? 'ring-2 ring-primary/30 border-primary shadow-sm' : 'hover:border-primary/50'
         } ${disabled ? 'opacity-50 cursor-not-allowed bg-muted' : ''}`}
       >
         <span className="flex items-center gap-2 truncate flex-1 pr-2">
           {mode === 'time' ? (
-            <Clock size={15} className="text-primary shrink-0" />
+            <Clock size={16} className="text-primary shrink-0" />
           ) : (
-            <CalendarIcon size={15} className="text-primary shrink-0" />
+            <CalendarIcon size={16} className="text-primary shrink-0" />
           )}
           {displayText ? (
-            <span className="font-medium text-foreground">{displayText}</span>
+            <span className="font-semibold text-foreground">{displayText}</span>
           ) : (
-            <span className="text-muted-foreground">{placeholder || defaultPlaceholder}</span>
+            <span className="text-muted-foreground/80">{placeholder || defaultPlaceholder}</span>
           )}
         </span>
 
         <div className="flex items-center gap-1.5 shrink-0 text-muted-foreground">
-          {value && !disabled && (
+          {effectiveValue && !disabled && (
             <span
               role="button"
               tabIndex={0}
               title="Clear date"
               onClick={handleClear}
-              className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+              className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition"
             >
-              <X size={13} />
+              <X size={14} />
             </span>
           )}
-          <span className="text-muted-foreground/60">
-            {mode === 'time' ? <Clock size={13} /> : <CalendarIcon size={13} />}
+          <span className="text-muted-foreground/70">
+            {mode === 'time' ? <Clock size={14} /> : <CalendarIcon size={14} />}
           </span>
         </div>
       </button>
 
-      {/* Popover / Calendar Modal */}
-      {isOpen && (
-        <div className="absolute z-[10050] top-full left-0 mt-1.5 w-full sm:w-80 bg-background border border-border shadow-2xl rounded-xl overflow-hidden animate-in fade-in-50 zoom-in-95 p-3 space-y-3">
+      {/* Popover / Calendar Modal rendered via Portal */}
+      {isOpen && isMounted && createPortal(
+        <div
+          ref={popoverRef}
+          style={popoverStyle}
+          role="dialog"
+          aria-label="Date and time picker dialog"
+          onKeyDown={handleKeyDown}
+          className="bg-background dark:bg-slate-900 border border-border shadow-2xl rounded-2xl overflow-hidden animate-in fade-in-50 zoom-in-95 p-4 space-y-3.5 text-foreground"
+        >
           {/* Presets Header */}
           {showPresets && mode !== 'time' && (
-            <div className="flex items-center justify-between gap-1 pb-2 border-b border-border text-[11px]">
-              <div className="flex items-center gap-1 flex-wrap">
+            <div className="flex items-center justify-between gap-1.5 pb-2.5 border-b border-border text-xs">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <button
                   type="button"
                   onClick={() => handlePreset('today')}
-                  className="px-2 py-0.5 rounded bg-muted hover:bg-muted/80 text-foreground font-medium transition"
+                  className="px-2.5 py-1 rounded-lg bg-muted hover:bg-primary/10 hover:text-primary text-foreground font-semibold transition"
                 >
                   Today
                 </button>
                 <button
                   type="button"
                   onClick={() => handlePreset('yesterday')}
-                  className="px-2 py-0.5 rounded bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition"
+                  className="px-2.5 py-1 rounded-lg bg-muted hover:bg-primary/10 hover:text-primary text-muted-foreground hover:text-foreground transition font-medium"
                 >
                   Yesterday
                 </button>
                 <button
                   type="button"
                   onClick={() => handlePreset('tomorrow')}
-                  className="px-2 py-0.5 rounded bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition"
+                  className="px-2.5 py-1 rounded-lg bg-muted hover:bg-primary/10 hover:text-primary text-muted-foreground hover:text-foreground transition font-medium"
                 >
                   Tomorrow
                 </button>
               </div>
-              {value && (
+              {effectiveValue && (
                 <button
                   type="button"
                   onClick={() => handlePreset('clear')}
-                  className="text-rose-600 hover:text-rose-700 font-semibold text-[10px]"
+                  className="text-rose-600 dark:text-rose-400 hover:text-rose-700 font-bold text-xs transition px-1 py-0.5"
                 >
                   Clear
                 </button>
@@ -451,24 +534,24 @@ export default function AppDateTimePicker({
               <button
                 type="button"
                 onClick={prevMonth}
-                className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition"
+                className="w-9 h-9 rounded-xl border border-border bg-card hover:bg-muted text-foreground flex items-center justify-center transition shadow-xs focus-visible:ring-2 focus-visible:ring-primary"
                 aria-label="Previous month"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={18} />
               </button>
 
-              <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+              <div className="flex items-center gap-1.5 text-sm sm:text-base font-extrabold text-foreground tracking-tight">
                 <span>{MONTH_NAMES[viewMonth]}</span>
-                <span>{viewYear}</span>
+                <span className="text-primary">{viewYear}</span>
               </div>
 
               <button
                 type="button"
                 onClick={nextMonth}
-                className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition"
+                className="w-9 h-9 rounded-xl border border-border bg-card hover:bg-muted text-foreground flex items-center justify-center transition shadow-xs focus-visible:ring-2 focus-visible:ring-primary"
                 aria-label="Next month"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={18} />
               </button>
             </div>
           )}
@@ -477,30 +560,32 @@ export default function AppDateTimePicker({
           {mode !== 'time' && (
             <div>
               {/* Day of Week Labels */}
-              <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-muted-foreground mb-1">
+              <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold text-muted-foreground/80 mb-1.5">
                 {DAYS_OF_WEEK.map((d) => (
-                  <div key={d} className="py-0.5">
+                  <div key={d} className="py-1">
                     {d}
                   </div>
                 ))}
               </div>
 
-              {/* Day Cells */}
-              <div className="grid grid-cols-7 gap-1 text-center">
+              {/* Day Cells - Large & Touch Friendly (36px–40px) */}
+              <div className="grid grid-cols-7 gap-1 text-center" role="grid">
                 {calendarDays.map((dayObj, i) => (
                   <button
                     key={`${dayObj.dateString}-${i}`}
                     type="button"
                     disabled={dayObj.isDisabled}
+                    role="gridcell"
+                    aria-selected={dayObj.isSelected}
                     onClick={() => handleDaySelect(dayObj)}
-                    className={`h-7 w-7 mx-auto rounded-lg text-xs flex items-center justify-center font-medium transition-all ${
+                    className={`w-9 h-9 sm:w-10 sm:h-10 mx-auto rounded-xl text-xs sm:text-sm flex items-center justify-center font-semibold transition-all ${
                       dayObj.isSelected
-                        ? 'bg-primary text-primary-foreground font-bold shadow-xs'
+                        ? 'bg-primary text-primary-foreground font-extrabold shadow-md scale-105'
                         : dayObj.isToday
-                        ? 'border border-primary text-primary font-bold'
+                        ? 'border-2 border-primary text-primary font-bold'
                         : dayObj.isCurrentMonth
-                        ? 'text-foreground hover:bg-muted'
-                        : 'text-muted-foreground/40 hover:bg-muted/50'
+                        ? 'text-foreground hover:bg-primary/10 hover:text-primary font-semibold'
+                        : 'text-muted-foreground/40 hover:bg-muted/50 font-normal'
                     } ${dayObj.isDisabled ? 'opacity-25 cursor-not-allowed' : ''}`}
                   >
                     {dayObj.day}
@@ -512,27 +597,29 @@ export default function AppDateTimePicker({
 
           {/* Time Picker Section (for datetime or time mode) */}
           {(mode === 'datetime' || mode === 'time') && (
-            <div className="pt-2 border-t border-border space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Clock size={13} /> Time
+            <div className="pt-3 border-t border-border space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-bold text-foreground">
+                <span className="flex items-center gap-1.5 text-primary">
+                  <Clock size={15} /> Select Time
                 </span>
                 <button
                   type="button"
                   onClick={() => handlePreset('now')}
-                  className="text-[10px] text-primary hover:underline"
+                  className="text-xs text-primary font-bold hover:underline"
                 >
                   Set to current time
                 </button>
               </div>
 
-              <div className="flex items-center justify-center gap-2 text-xs">
-                {/* Hours Select */}
-                <div className="flex items-center gap-1">
+              {/* Time Steppers / Selectors */}
+              <div className="flex items-center justify-center gap-2">
+                <div className="flex flex-col items-center">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase mb-0.5">Hour</label>
                   <select
                     value={selectedHours}
                     onChange={(e) => handleTimeChange(Number(e.target.value), selectedMinutes)}
-                    className="bg-muted text-foreground font-mono text-xs rounded-md px-2 py-1 border border-border focus:ring-1 focus:ring-primary outline-hidden"
+                    aria-label="Select Hour"
+                    className="bg-muted text-foreground font-mono text-sm font-bold rounded-xl min-h-[44px] px-3 py-2 border border-border focus:ring-2 focus:ring-primary outline-none cursor-pointer"
                   >
                     {Array.from({ length: 24 }, (_, i) => (
                       <option key={i} value={i}>
@@ -542,14 +629,15 @@ export default function AppDateTimePicker({
                   </select>
                 </div>
 
-                <span className="font-bold text-muted-foreground">:</span>
+                <span className="font-extrabold text-lg text-muted-foreground mt-4">:</span>
 
-                {/* Minutes Select */}
-                <div className="flex items-center gap-1">
+                <div className="flex flex-col items-center">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase mb-0.5">Minute</label>
                   <select
                     value={selectedMinutes}
                     onChange={(e) => handleTimeChange(selectedHours, Number(e.target.value))}
-                    className="bg-muted text-foreground font-mono text-xs rounded-md px-2 py-1 border border-border focus:ring-1 focus:ring-primary outline-hidden"
+                    aria-label="Select Minute"
+                    className="bg-muted text-foreground font-mono text-sm font-bold rounded-xl min-h-[44px] px-3 py-2 border border-border focus:ring-2 focus:ring-primary outline-none cursor-pointer"
                   >
                     {Array.from({ length: 12 }, (_, i) => i * 5).map((m) => (
                       <option key={m} value={m}>
@@ -559,22 +647,48 @@ export default function AppDateTimePicker({
                   </select>
                 </div>
               </div>
+
+              {/* Quick Time Preset Pills */}
+              <div className="flex items-center justify-center gap-1.5 flex-wrap pt-1">
+                {[
+                  { label: '08:00 AM', h: 8, m: 0 },
+                  { label: '12:00 PM', h: 12, m: 0 },
+                  { label: '05:00 PM', h: 17, m: 0 },
+                ].map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => handleTimeChange(preset.h, preset.m)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                      selectedHours === preset.h && selectedMinutes === preset.m
+                        ? 'bg-primary text-primary-foreground font-bold shadow-xs'
+                        : 'bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
-          {/* Done Button for datetime / time */}
+          {/* Action / Done Button */}
           {(mode === 'datetime' || mode === 'time') && (
             <div className="pt-2 border-t border-border flex justify-end">
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
-                className="btn-primary py-1 px-3 text-xs flex items-center gap-1"
+                onClick={() => {
+                  setIsOpen(false);
+                  triggerRef.current?.focus();
+                }}
+                className="w-full min-h-[42px] py-2.5 px-4 bg-primary text-primary-foreground font-bold text-xs sm:text-sm rounded-xl shadow-md flex items-center justify-center gap-2 hover:opacity-95 active:scale-[0.99] transition-all"
               >
-                <Check size={12} /> Done
+                <Check size={16} className="stroke-[3]" /> Done & Apply
               </button>
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
