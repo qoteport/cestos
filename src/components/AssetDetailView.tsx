@@ -168,11 +168,19 @@ export function formatAssetAuditActivity(act: Row) {
 export default function AssetDetailView({
   assetId,
   hideInsuranceAndRegistration,
+  hideBackButton = false,
 }: {
   assetId: string;
   hideInsuranceAndRegistration?: boolean;
+  hideBackButton?: boolean;
 }) {
   const auth = useAuth();
+  const shouldHideBack =
+    hideBackButton ||
+    hideInsuranceAndRegistration ||
+    auth.user?.is_field_portal_only ||
+    auth.user?.portal_type === 'FIELD_ADMIN' ||
+    (typeof window !== 'undefined' && window.location.pathname.includes('field-admin'));
   const root = '/api/v1/assets/' + assetId;
   const overview = useData(root + '/overview');
   const metrics = useData(root + '/operating-metrics');
@@ -758,10 +766,12 @@ const assetEditOp = {
     .reduce((sum: number, r: Row) => sum + Number(r.count), 0);
   return (
     <div className="space-y-5 fade-in">
-      <Link className="text-xs text-primary flex gap-1 items-center" href="/workspace/assets">
-        <ArrowLeft size={13} />
-        Back to assets
-      </Link>
+      {!shouldHideBack && (
+        <Link className="text-xs text-primary flex gap-1 items-center" href="/workspace/assets">
+          <ArrowLeft size={13} />
+          Back to assets
+        </Link>
+      )}
       <State loading={overview.loading} error={overview.error} retry={overview.reload}>
         {asset && (
           <>

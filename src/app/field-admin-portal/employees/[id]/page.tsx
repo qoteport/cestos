@@ -34,7 +34,7 @@ export default function FieldAdminEmployeeDetailPage() {
           </span>
         </div>
 
-        <EmployeeDetailView employeeId={id} isFieldAdmin={true} onClose={() => router.push('/field-admin-portal')} />
+        <EmployeeDetailView employeeId={id} isFieldAdmin={true} hideBackButton={true} />
       </div>
     </div>
   );

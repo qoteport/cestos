@@ -68,7 +68,7 @@ export default function MyProfilePage() {
             My Profile - Full Access
           </span>
         </div>
-        <EmployeeDetailView employeeId={employeeId} onClose={() => router.push('/executive-portal')} readOnly={false} />
+        <EmployeeDetailView employeeId={employeeId} onClose={() => router.push('/executive-portal')} readOnly={false} hideBackButton={true} />
       </div>
     </div>
   );

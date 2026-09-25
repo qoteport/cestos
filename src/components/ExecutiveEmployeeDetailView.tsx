@@ -39,7 +39,7 @@ export default function ExecutiveEmployeeDetailView({
           </span>
         </div>
 
-        <EmployeeDetailView employeeId={employeeId} onClose={onBack} readOnly={true} />
+        <EmployeeDetailView employeeId={employeeId} onClose={onBack} readOnly={true} hideBackButton={true} />
       </div>
     </div>
   );

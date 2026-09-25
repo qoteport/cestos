@@ -68,7 +68,7 @@ export default function HRMyProfilePage() {
             My Profile - HR Access
           </span>
         </div>
-        <EmployeeDetailView employeeId={employeeId} onClose={() => router.push('/hr-portal')} readOnly={false} />
+        <EmployeeDetailView employeeId={employeeId} onClose={() => router.push('/hr-portal')} readOnly={false} hideBackButton={true} />
       </div>
     </div>
   );

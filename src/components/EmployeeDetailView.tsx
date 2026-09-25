@@ -189,11 +189,13 @@ export default function EmployeeDetailView({
   onClose,
   readOnly = false,
   isFieldAdmin = false,
+  hideBackButton = false,
 }: {
   employeeId: string;
   onClose?: () => void;
   readOnly?: boolean;
   isFieldAdmin?: boolean;
+  hideBackButton?: boolean;
 }) {
   const router = useRouter();
   const auth = useAuth();
@@ -202,6 +204,7 @@ export default function EmployeeDetailView({
     auth?.user?.portal_type === 'FIELD_ADMIN' ||
     Boolean(auth?.user?.is_field_portal_only) ||
     (typeof window !== 'undefined' && window.location.pathname.includes('field-admin'));
+  const shouldHideBack = hideBackButton || isFieldAdminUser;
   const [employee, setEmployee] = useState<Row | null>(null);
   const [overview, setOverview] = useState<Row | null>(null);
   const [loading, setLoading] = useState(true);
@@ -746,18 +749,20 @@ function ensureValidUUID(idStr: any): string {
     return (
       <div className="card border-red-200 p-6 space-y-4">
         <p className="text-red-700 font-semibold">{error || 'Employee record not found.'}</p>
-        {onClose ? (
-          <button type="button" onClick={onClose} className="btn-secondary">
-            <ArrowLeft size={14} /> Close Profile
-          </button>
-        ) : auth.user?.is_field_portal_only ? (
-          <Link href="/field-portal" className="btn-secondary">
-            <ArrowLeft size={14} /> Back to Field Operations Portal
-          </Link>
-        ) : (
-          <Link href="/workspace/employees" className="btn-secondary">
-            <ArrowLeft size={14} /> View Employee Directory
-          </Link>
+        {!shouldHideBack && (
+          onClose ? (
+            <button type="button" onClick={onClose} className="btn-secondary">
+              <ArrowLeft size={14} /> Close Profile
+            </button>
+          ) : auth.user?.is_field_portal_only ? (
+            <Link href="/field-portal" className="btn-secondary">
+              <ArrowLeft size={14} /> Back to Field Operations Portal
+            </Link>
+          ) : (
+            <Link href="/workspace/employees" className="btn-secondary">
+              <ArrowLeft size={14} /> View Employee Directory
+            </Link>
+          )
         )}
       </div>
     );
@@ -814,28 +819,30 @@ function ensureValidUUID(idStr: any): string {
       {/* Header Bar */}
       <div className="flex flex-wrap justify-between items-start gap-4 border-b pb-5">
         <div>
-          {onClose ? (
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-xs text-primary flex gap-1 items-center mb-2 hover:underline font-semibold"
-            >
-              <ArrowLeft size={14} /> Close Profile
-            </button>
-          ) : auth.user?.is_field_portal_only ? (
-            <Link
-              href="/field-portal"
-              className="text-xs text-primary flex gap-1 items-center mb-2 hover:underline font-semibold"
-            >
-              <ArrowLeft size={14} /> Back to Field Operations Portal
-            </Link>
-          ) : (
-            <Link
-              href="/workspace/employees"
-              className="text-xs text-primary flex gap-1 items-center mb-2 hover:underline"
-            >
-              <ArrowLeft size={14} /> Employee Directory
-            </Link>
+          {!shouldHideBack && (
+            onClose ? (
+              <button
+                type="button"
+                onClick={onClose}
+                className="text-xs text-primary flex gap-1 items-center mb-2 hover:underline font-semibold"
+              >
+                <ArrowLeft size={14} /> Close Profile
+              </button>
+            ) : auth.user?.is_field_portal_only ? (
+              <Link
+                href="/field-portal"
+                className="text-xs text-primary flex gap-1 items-center mb-2 hover:underline font-semibold"
+              >
+                <ArrowLeft size={14} /> Back to Field Operations Portal
+              </Link>
+            ) : (
+              <Link
+                href="/workspace/employees"
+                className="text-xs text-primary flex gap-1 items-center mb-2 hover:underline"
+              >
+                <ArrowLeft size={14} /> Employee Directory
+              </Link>
+            )
           )}
           <div className="flex items-center gap-3">
             <span className="text-xs font-mono font-bold bg-secondary px-2.5 py-1 rounded text-primary border">

@@ -39,7 +39,7 @@ export default function HREmployeeDetailView({
           </span>
         </div>
 
-        <EmployeeDetailView employeeId={employeeId} onClose={onBack} readOnly={false} />
+        <EmployeeDetailView employeeId={employeeId} onClose={onBack} readOnly={false} hideBackButton={true} />
       </div>
     </div>
   );

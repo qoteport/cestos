@@ -34,7 +34,7 @@ export default function FieldAdminEquipmentDetailPage() {
           </span>
         </div>
 
-        <AssetDetailView assetId={id} hideInsuranceAndRegistration={true} />
+        <AssetDetailView assetId={id} hideInsuranceAndRegistration={true} hideBackButton={true} />
       </div>
     </div>
   );
