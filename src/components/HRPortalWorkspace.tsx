@@ -1823,7 +1823,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
     
     
       {/* Mobile Bottom Navigation Tabbar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex justify-around items-center h-14 px-1 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] no-print">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex justify-around items-center h-[calc(3.75rem+env(safe-area-inset-bottom,0px))] pb-[env(safe-area-inset-bottom,0px)] px-1 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] no-print">
         {navItems.map((item) => {
           const IconComp = item.icon;
           const isActive = activeTab === item.id;
@@ -1831,20 +1831,24 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex items-center justify-center w-full h-full transition relative ${
+              className={`flex flex-col items-center justify-center w-full h-full py-1 transition relative active:scale-95 ${
                 isActive
                   ? 'text-emerald-600 dark:text-emerald-400 font-bold'
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 font-medium'
               }`}
             >
               <div className="relative">
-                <IconComp size={22} className={isActive ? 'opacity-100 scale-110' : 'opacity-70'} />
+                <IconComp size={20} className={isActive ? 'opacity-100 scale-110' : 'opacity-70'} />
                 {item.badge !== undefined && item.badge > 0 && (
                   <span className="absolute -top-2 -right-2 px-1 py-0.5 rounded-full text-[8px] font-black bg-amber-500 text-white min-w-[16px] text-center border-2 border-white dark:border-slate-900 shadow-md">
                     {item.badge}
                   </span>
                 )}
               </div>
+              <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[64px]">{item.label}</span>
+              {isActive && (
+                <span className="absolute top-0 w-8 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-full shadow-sm" />
+              )}
             </button>
           );
         })}

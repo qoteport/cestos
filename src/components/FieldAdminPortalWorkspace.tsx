@@ -5222,27 +5222,26 @@ Signed: Field Operations Administration
       )}
     
       {/* Mobile Bottom Navigation Tabbar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex justify-around items-center h-14 px-1 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] no-print">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex justify-around items-center h-[calc(3.75rem+env(safe-area-inset-bottom,0px))] pb-[env(safe-area-inset-bottom,0px)] px-1 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] no-print">
         {tabs.map((t) => {
           const isActive = activeTab === t.id;
           return (
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id)}
-              className={`flex items-center justify-center w-full h-full transition relative ${
+              className={`flex flex-col items-center justify-center w-full h-full py-1 transition relative active:scale-95 ${
                 isActive
-                  ? 'text-orange-600 dark:text-orange-400'
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
+                  ? 'text-orange-600 dark:text-orange-400 font-bold'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 font-medium'
               }`}
             >
-              <div className={`relative ${isActive ? 'opacity-100' : 'opacity-70'}`}>
+              <div className={`relative ${isActive ? 'opacity-100 scale-110' : 'opacity-70'} transition-transform`}>
                 {t.icon}
               </div>
-
-                {isActive && (
-                  <span className="absolute bottom-1 w-5 h-1 bg-orange-600 dark:bg-orange-400 rounded-full" />
-                )}
-
+              <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[64px]">{t.label}</span>
+              {isActive && (
+                <span className="absolute top-0 w-8 h-0.5 bg-orange-600 dark:bg-orange-400 rounded-full shadow-sm" />
+              )}
             </button>
           );
         })}

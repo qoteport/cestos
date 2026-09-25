@@ -500,7 +500,7 @@ export default function FieldPortalLayout({
         </main>
 
         {/* MOBILE BOTTOM NAVIGATION TABBAR */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t flex justify-around items-center h-16 px-1 shadow-lg no-print">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border flex justify-around items-center h-[calc(3.75rem+env(safe-area-inset-bottom,0px))] pb-[env(safe-area-inset-bottom,0px)] px-1 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] no-print">
           {bottomNavItems.filter(item => isSupervisorOrAdmin || item.id !== 'SHIFT_LOGS').map((item) => {
             const Icon = item.icon;
             const active = activeTab === item.id;
@@ -508,15 +508,15 @@ export default function FieldPortalLayout({
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
-                className={`flex items-center justify-center w-full h-full transition-all relative ${
+                className={`flex flex-col items-center justify-center w-full h-full py-1 transition-all relative active:scale-95 ${
                   active ? 'text-primary font-bold' : 'text-muted-foreground hover:text-foreground font-medium'
                 }`}
               >
                 {active && (
-                  <span className="absolute top-0 w-8 h-0.5 bg-primary rounded-full" />
+                  <span className="absolute top-0 w-8 h-0.5 bg-primary rounded-full shadow-sm" />
                 )}
                 <Icon className={`h-5 w-5 ${active ? 'scale-110 text-primary' : ''} transition-transform`} />
-
+                <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[64px]">{item.label}</span>
               </button>
             );
           })}
