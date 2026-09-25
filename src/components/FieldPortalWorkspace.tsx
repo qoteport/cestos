@@ -4810,11 +4810,11 @@ export default function FieldPortalWorkspace() {
           title="Log Equipment Fuel Refill & Delivery Receipt"
           onClose={() => setShowFuelRefillModal(false)}
           footer={
-            <div className="flex items-center justify-end gap-2 w-full">
+            <div className="flex flex-row items-center justify-end gap-2 w-full">
               <button
                 type="button"
                 onClick={() => setShowFuelRefillModal(false)}
-                className="px-4 py-2 border rounded-lg hover:bg-muted font-medium text-xs transition"
+                className="px-4 py-2.5 border rounded-lg hover:bg-muted font-medium text-xs flex-1 sm:flex-initial transition"
               >
                 Cancel
               </button>
@@ -4822,7 +4822,7 @@ export default function FieldPortalWorkspace() {
                 type="submit"
                 form="fuel-refill-modal-form"
                 disabled={fuelSubmitting}
-                className="px-5 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm text-xs disabled:opacity-50"
+                className="px-5 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 font-bold rounded-lg transition flex items-center justify-center gap-1.5 shadow-sm text-xs flex-1 sm:flex-initial disabled:opacity-50"
               >
                 <Fuel size={14} />{' '}
                 {fuelSubmitting ? 'Saving to Database...' : 'Save Fuel Refill Entry'}
@@ -5089,18 +5089,18 @@ export default function FieldPortalWorkspace() {
           title="Allocate Site Fuel to Vehicle"
           onClose={() => setShowFuelAllocationModal(false)}
           footer={
-            <div className="flex items-center justify-end gap-2 w-full">
+            <div className="flex flex-row items-center justify-end gap-2 w-full">
               <button
                 type="button"
                 onClick={() => setShowFuelAllocationModal(false)}
-                className="px-4 py-2 border rounded-lg hover:bg-muted font-medium text-xs transition"
+                className="px-4 py-2.5 border rounded-lg hover:bg-muted font-medium text-xs flex-1 sm:flex-initial transition"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 form="fuel-alloc-modal-form"
-                className="px-5 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm text-xs"
+                className="px-5 py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 font-bold rounded-lg transition flex items-center justify-center gap-1.5 shadow-sm text-xs flex-1 sm:flex-initial"
               >
                 Save Allocation
               </button>
@@ -5123,11 +5123,11 @@ export default function FieldPortalWorkspace() {
           title="Record Tank Dip Level & Fuel Consumption"
           onClose={() => setShowTankDipModal(false)}
           footer={
-            <div className="flex items-center justify-end gap-2 w-full">
+            <div className="flex flex-row items-center justify-end gap-2 w-full">
               <button
                 type="button"
                 onClick={() => setShowTankDipModal(false)}
-                className="px-4 py-2 border rounded-lg hover:bg-muted font-medium text-xs transition"
+                className="px-4 py-2.5 border rounded-lg hover:bg-muted font-medium text-xs flex-1 sm:flex-initial transition"
               >
                 Cancel
               </button>
@@ -5135,7 +5135,7 @@ export default function FieldPortalWorkspace() {
                 type="submit"
                 form="tank-dip-modal-form"
                 disabled={dipSubmitting}
-                className="px-5 py-2.5 bg-emerald-600 text-white hover:bg-emerald-700 font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm text-xs disabled:opacity-50"
+                className="px-5 py-2.5 bg-emerald-600 text-white hover:bg-emerald-700 font-bold rounded-lg transition flex items-center justify-center gap-1.5 shadow-sm text-xs flex-1 sm:flex-initial disabled:opacity-50"
               >
                 <Activity size={14} />{' '}
                 {dipSubmitting ? 'Saving Dip Record...' : 'Record Tank Dip & Consumption'}
@@ -6718,11 +6718,11 @@ export default function FieldPortalWorkspace() {
           onClose={() => setShowHseModal(false)}
           className="max-w-2xl"
           footer={
-            <div className="flex items-center justify-end gap-2 w-full">
+            <div className="flex flex-row items-center justify-end gap-2 w-full">
               <button
                 type="button"
                 onClick={() => setShowHseModal(false)}
-                className="px-4 py-2 border rounded-lg hover:bg-muted font-medium text-xs transition"
+                className="px-4 py-2.5 border rounded-lg hover:bg-muted font-medium text-xs flex-1 sm:flex-initial transition"
               >
                 Cancel
               </button>
@@ -6730,7 +6730,7 @@ export default function FieldPortalWorkspace() {
                 type="submit"
                 form="hse-incident-modal-form"
                 disabled={hseSubmitting}
-                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm text-xs disabled:opacity-50"
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg transition flex items-center justify-center gap-1.5 shadow-sm text-xs flex-1 sm:flex-initial disabled:opacity-50"
               >
                 {hseSubmitting ? (
                   <span>Submitting Report...</span>

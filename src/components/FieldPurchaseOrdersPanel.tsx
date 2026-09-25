@@ -792,11 +792,11 @@ export default function FieldPurchaseOrdersPanel({ projectId, projectName }: { p
             </div>
 
             {/* Sticky Action Footer */}
-            <div className="sticky bottom-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 p-3.5 sm:px-6 sm:py-4 shrink-0 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3 z-10">
-              <button type="button" onClick={() => setReceivingPO(null)} className="rounded-lg border px-4 py-2 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition w-full sm:w-auto">
+            <div className="sticky bottom-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 p-3.5 sm:px-6 sm:py-4 shrink-0 flex flex-row items-center justify-end gap-2 sm:gap-3 z-10">
+              <button type="button" onClick={() => setReceivingPO(null)} className="rounded-lg border px-4 py-2.5 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition flex-1 sm:flex-initial text-center">
                 Cancel
               </button>
-              <button type="submit" disabled={receivingBusy || selectedReceiptItemIds.length === 0 || selectedReceiptItemIds.some((id) => Number(receiptQuantities[id]) <= 0)} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition disabled:opacity-50 w-full sm:w-auto">
+              <button type="submit" disabled={receivingBusy || selectedReceiptItemIds.length === 0 || selectedReceiptItemIds.some((id) => Number(receiptQuantities[id]) <= 0)} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 transition disabled:opacity-50 flex-1 sm:flex-initial">
                 {receivingBusy ? 'Saving…' : <><PackageCheck size={14} />Save Goods Receipt</>}
               </button>
             </div>

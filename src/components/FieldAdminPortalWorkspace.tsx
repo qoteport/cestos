@@ -3824,9 +3824,9 @@ Signed: Field Operations Administration
               </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 p-3 sm:px-6 sm:py-4 border-t bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 sticky bottom-0 z-10">
-                <button type="button" onClick={() => setShowFuelBoughtModal(false)} className="px-4 py-2 border rounded-lg font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition">Cancel</button>
-                <button type="submit" disabled={busySubmit} className="px-5 py-2.5 bg-orange-600 text-white font-bold rounded-lg hover:bg-orange-700 transition flex items-center gap-1.5 shadow-sm">
+              <div className="flex flex-row items-center justify-end gap-2 p-3 sm:px-6 sm:py-4 border-t bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 sticky bottom-0 z-10">
+                <button type="button" onClick={() => setShowFuelBoughtModal(false)} className="px-4 py-2.5 border rounded-lg font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition flex-1 sm:flex-initial text-center">Cancel</button>
+                <button type="submit" disabled={busySubmit} className="px-5 py-2.5 bg-orange-600 text-white font-bold rounded-lg hover:bg-orange-700 transition flex items-center justify-center gap-1.5 shadow-sm flex-1 sm:flex-initial">
                   {busySubmit ? 'Saving...' : 'Log Fuel Purchase'}
                 </button>
               </div>
@@ -3928,9 +3928,9 @@ Signed: Field Operations Administration
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 p-3 sm:px-6 sm:py-4 border-t bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 sticky bottom-0 z-10">
-              <button type="button" onClick={() => setShowFuelAllocModal(false)} className="px-4 py-2 border rounded-lg font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition">Cancel</button>
-              <button type="submit" disabled={busySubmit} className="px-5 py-2.5 bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition shadow-sm">
+            <div className="flex flex-row items-center justify-end gap-2 p-3 sm:px-6 sm:py-4 border-t bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 sticky bottom-0 z-10">
+              <button type="button" onClick={() => setShowFuelAllocModal(false)} className="px-4 py-2.5 border rounded-lg font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition flex-1 sm:flex-initial text-center">Cancel</button>
+              <button type="submit" disabled={busySubmit} className="px-5 py-2.5 bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition shadow-sm flex-1 sm:flex-initial text-center">
                 {busySubmit ? 'Allocating...' : 'Allocate Fuel'}
               </button>
             </div>
@@ -4194,18 +4194,18 @@ Signed: Field Operations Administration
               </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 p-3 sm:px-6 sm:py-4 border-t bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 sticky bottom-0 z-10">
+              <div className="flex flex-row items-center justify-end gap-2 p-3 sm:px-6 sm:py-4 border-t bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 sticky bottom-0 z-10">
                 <button
                   type="button"
                   onClick={() => setShowHseModal(false)}
-                  className="px-4 py-2 border rounded-lg font-semibold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                  className="px-4 py-2.5 border rounded-lg font-semibold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition flex-1 sm:flex-initial text-center"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={busySubmit}
-                  className="px-5 py-2.5 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition flex items-center gap-1.5 text-xs shadow-sm"
+                  className="px-5 py-2.5 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition flex items-center justify-center gap-1.5 text-xs shadow-sm flex-1 sm:flex-initial"
                 >
                   <ShieldCheck size={14} /> {busySubmit ? 'Submitting...' : 'Report Incident'}
                 </button>

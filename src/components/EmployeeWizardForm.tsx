@@ -1069,7 +1069,7 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
           )}
 
           {/* Action Footer */}
-          <div className="sticky bottom-0 -mx-4 -mb-4 sm:-mx-6 sm:-mb-6 p-3.5 sm:px-6 sm:py-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 z-10 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 mt-6">
+          <div className="sticky bottom-0 -mx-4 -mb-4 sm:-mx-6 sm:-mb-6 p-3.5 sm:px-6 sm:py-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 z-10 flex flex-row items-center justify-between gap-2.5 sm:gap-3 mt-6">
             <div>
               {step > 1 && (
                 <button

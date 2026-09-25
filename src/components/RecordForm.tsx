@@ -1392,23 +1392,23 @@ export default function RecordForm({
       name={modalName}
       onClose={onClose || (() => {})}
       footer={
-        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
+        <div className="flex flex-row items-center justify-between gap-2.5 sm:gap-3 w-full">
           {isAssignmentEdit ? (
             <button
               type="button"
               disabled={busy || deleteBusy}
               onClick={() => void deleteAssignment()}
-              className="btn-secondary text-xs text-red-700 border-red-200 w-full sm:w-auto hover:bg-red-50 dark:hover:bg-red-950/30 transition"
+              className="btn-secondary text-xs text-red-700 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30 transition"
             >
               {deleteBusy ? 'Cancelling…' : 'Delete Assignment'}
             </button>
           ) : (
             <span className="hidden sm:inline" />
           )}
-          <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3 w-full sm:w-auto sm:ml-auto">
+          <div className="flex flex-row items-center gap-2 sm:gap-3 w-full sm:w-auto sm:ml-auto justify-end">
             <button
               type="button"
-              className="btn-secondary text-xs w-full sm:w-auto"
+              className="btn-secondary text-xs flex-1 sm:flex-initial"
               onClick={onClose}
             >
               Cancel
@@ -1417,7 +1417,7 @@ export default function RecordForm({
               type="submit"
               form="record-form-inner"
               disabled={busy}
-              className="btn-primary text-xs w-full sm:w-auto"
+              className="btn-primary text-xs flex-1 sm:flex-initial"
             >
               {busy ? 'Saving…' : 'Save Record'}
             </button>

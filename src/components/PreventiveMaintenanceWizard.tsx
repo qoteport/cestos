@@ -344,15 +344,15 @@ export default function PreventiveMaintenanceWizard({
     onClose={onClose}
     className="sm:!h-[94vh] sm:!max-h-[94vh] sm:!w-[92vw] sm:!max-w-[1440px]"
     footer={
-      <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 w-full">
-        {view === 'ASSISTED' ? (
-          <button type="button" className="btn-secondary w-full sm:w-auto text-xs" disabled={step === 0} onClick={() => setStep(step - 1)}>Back</button>
+      <div className="flex flex-row items-center justify-between gap-2.5 sm:gap-3 w-full">
+        {view === 'ASSISTED' && step > 0 ? (
+          <button type="button" className="btn-secondary flex-1 sm:flex-initial text-xs" onClick={() => setStep(step - 1)}>Back</button>
         ) : <div />}
-        <div className="flex flex-col-reverse sm:flex-row gap-2 w-full sm:w-auto sm:ml-auto">
+        <div className="flex flex-row items-center gap-2 w-full sm:w-auto sm:ml-auto justify-end">
           {view === 'ASSISTED' && step < 3 && (
             <button
               type="button"
-              className="btn-primary w-full sm:w-auto text-xs"
+              className="btn-primary flex-1 sm:flex-initial text-xs"
               disabled={step === 0 && !assetId && !(isCustomEquipment && customEquipment.trim())}
               onClick={() => setStep(step + 1)}
             >
@@ -362,7 +362,7 @@ export default function PreventiveMaintenanceWizard({
           {(view === 'FREE_FLOW' || step === 3) && (
             <button
               type="button"
-              className="btn-primary w-full sm:w-auto text-xs"
+              className="btn-primary flex-1 sm:flex-initial text-xs"
               disabled={saving || (!assetId && !(isCustomEquipment && customEquipment.trim()))}
               onClick={save}
             >

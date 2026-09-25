@@ -285,13 +285,13 @@ export default function BreakdownJobCardWizard({ assets, projectId, onClose, onS
     onClose={onClose}
     className="sm:!h-[94vh] sm:!max-h-[94vh] sm:!w-[92vw] sm:!max-w-[1440px]"
     footer={
-      <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 w-full">
-        {view === 'ASSISTED' ? (
-          <button type="button" className="btn-secondary w-full sm:w-auto text-xs" disabled={!step} onClick={() => setStep(step - 1)}>Back</button>
+      <div className="flex flex-row items-center justify-between gap-2.5 sm:gap-3 w-full">
+        {view === 'ASSISTED' && step > 0 ? (
+          <button type="button" className="btn-secondary flex-1 sm:flex-initial text-xs" onClick={() => setStep(step - 1)}>Back</button>
         ) : <div />}
-        <div className="flex flex-col-reverse sm:flex-row gap-2 w-full sm:w-auto sm:ml-auto">
-          {view === 'ASSISTED' && step < 3 && <button type="button" className="btn-primary w-full sm:w-auto text-xs" disabled={step === 0 && !assetId} onClick={() => setStep(step + 1)}>Next</button>}
-          {(view === 'FREE_FLOW' || step === 3) && <button type="button" className="btn-primary w-full sm:w-auto text-xs" disabled={saving || !assetId} onClick={save}>{saving ? 'Saving…' : record || createdRecord ? 'Save changes' : view === 'FREE_FLOW' ? 'Save job card' : 'Save job card'}</button>}
+        <div className="flex flex-row items-center gap-2 w-full sm:w-auto sm:ml-auto justify-end">
+          {view === 'ASSISTED' && step < 3 && <button type="button" className="btn-primary flex-1 sm:flex-initial text-xs" disabled={step === 0 && !assetId} onClick={() => setStep(step + 1)}>Next</button>}
+          {(view === 'FREE_FLOW' || step === 3) && <button type="button" className="btn-primary flex-1 sm:flex-initial text-xs" disabled={saving || !assetId} onClick={save}>{saving ? 'Saving…' : record || createdRecord ? 'Save changes' : view === 'FREE_FLOW' ? 'Save job card' : 'Save job card'}</button>}
         </div>
       </div>
     }
