@@ -1163,6 +1163,19 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
             </span>
           </button>
         </div>
+        <div className="w-8 h-px bg-slate-200 dark:bg-slate-800 shrink-0 my-2" />
+        <button
+          type="button"
+          onClick={() => void signOut()}
+          className="relative group w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-red-600 dark:hover:bg-red-600 text-slate-600 dark:text-slate-400 hover:text-white dark:hover:text-white flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 border border-slate-200/80 dark:border-slate-700/60 hover:border-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 shrink-0"
+          aria-label="Sign Out"
+        >
+          <LogOut size={18} />
+          <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+            Sign Out
+          </span>
+        </button>
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col">
@@ -1213,7 +1226,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
 
             <button
               onClick={() => void signOut()}
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-red-50 dark:hover:bg-red-950/40 text-slate-600 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 transition"
+              className="lg:hidden p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-red-50 dark:hover:bg-red-950/40 text-slate-600 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 transition"
               title="Sign Out"
             >
               <LogOut size={16} />
