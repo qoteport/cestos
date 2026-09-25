@@ -24,6 +24,7 @@ import {
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import { Row, display, Modal } from './DataUI';
 import SearchableSelect from './SearchableSelect';
+import AppDateTimePicker from './AppDateTimePicker';
 
 function buildSeedIncidents(
   employees: Row[],
@@ -337,43 +338,52 @@ export default function IncidentReportingWorkspace() {
             />
           </div>
 
-          <select
-            className="input-field w-auto text-xs bg-background"
-            value={severityFilter}
-            onChange={(e) => setSeverityFilter(e.target.value)}
-          >
-            <option value="ALL">All Severities</option>
-            <option value="LOW">Low</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="HIGH">High</option>
-            <option value="CRITICAL">Critical</option>
-          </select>
+          <div className="w-[160px]">
+            <SearchableSelect
+              value={severityFilter}
+              onChange={(val) => setSeverityFilter(val)}
+              options={[
+                { value: 'ALL', label: 'All Severities' },
+                { value: 'LOW', label: 'Low' },
+                { value: 'MEDIUM', label: 'Medium' },
+                { value: 'HIGH', label: 'High' },
+                { value: 'CRITICAL', label: 'Critical' },
+              ]}
+              searchable={false}
+            />
+          </div>
 
-          <select
-            className="input-field w-auto text-xs bg-background"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="REPORTED">Reported</option>
-            <option value="UNDER_INVESTIGATION">Under Investigation</option>
-            <option value="RESOLVED">Resolved</option>
-            <option value="CLOSED">Closed</option>
-          </select>
+          <div className="w-[180px]">
+            <SearchableSelect
+              value={statusFilter}
+              onChange={(val) => setStatusFilter(val)}
+              options={[
+                { value: 'ALL', label: 'All Statuses' },
+                { value: 'REPORTED', label: 'Reported' },
+                { value: 'UNDER_INVESTIGATION', label: 'Under Investigation' },
+                { value: 'RESOLVED', label: 'Resolved' },
+                { value: 'CLOSED', label: 'Closed' },
+              ]}
+              searchable={false}
+            />
+          </div>
 
-          <select
-            className="input-field w-auto text-xs bg-background"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-          >
-            <option value="ALL">All Types</option>
-            <option value="NEAR_MISS">Near Miss</option>
-            <option value="INJURY_ILLNESS">Injury / Illness</option>
-            <option value="PROPERTY_DAMAGE">Property Damage</option>
-            <option value="ENVIRONMENTAL">Environmental</option>
-            <option value="HAZARD_OBSERVATION">Hazard Observation</option>
-            <option value="SECURITY">Security Incident</option>
-          </select>
+          <div className="w-[180px]">
+            <SearchableSelect
+              value={typeFilter}
+              onChange={(val) => setTypeFilter(val)}
+              options={[
+                { value: 'ALL', label: 'All Types' },
+                { value: 'NEAR_MISS', label: 'Near Miss' },
+                { value: 'INJURY_ILLNESS', label: 'Injury / Illness' },
+                { value: 'PROPERTY_DAMAGE', label: 'Property Damage' },
+                { value: 'ENVIRONMENTAL', label: 'Environmental' },
+                { value: 'HAZARD_OBSERVATION', label: 'Hazard Observation' },
+                { value: 'SECURITY', label: 'Security Incident' },
+              ]}
+              searchable={false}
+            />
+          </div>
 
           {(searchQuery ||
             severityFilter !== 'ALL' ||
@@ -672,37 +682,39 @@ function CreateIncidentForm({
           <label className="block text-xs font-semibold mb-1">
             Incident Type / Category *
           </label>
-          <select
+          <SearchableSelect
             required
-            className="input-field text-xs bg-background"
+            options={[
+              { value: 'NEAR_MISS', label: 'Near Miss' },
+              { value: 'INJURY_ILLNESS', label: 'Injury / Illness' },
+              { value: 'PROPERTY_DAMAGE', label: 'Property Damage' },
+              { value: 'ENVIRONMENTAL', label: 'Environmental' },
+              { value: 'HAZARD_OBSERVATION', label: 'Hazard Observation' },
+              { value: 'SECURITY', label: 'Security Incident' },
+              { value: 'OTHER', label: 'Other Safety Event' },
+            ]}
             value={incidentType}
-            onChange={(e) => setIncidentType(e.target.value)}
-          >
-            <option value="NEAR_MISS">Near Miss</option>
-            <option value="INJURY_ILLNESS">Injury / Illness</option>
-            <option value="PROPERTY_DAMAGE">Property Damage</option>
-            <option value="ENVIRONMENTAL">Environmental</option>
-            <option value="HAZARD_OBSERVATION">Hazard Observation</option>
-            <option value="SECURITY">Security Incident</option>
-            <option value="OTHER">Other Safety Event</option>
-          </select>
+            onChange={(val) => setIncidentType(val)}
+            placeholder="Select type..."
+          />
         </div>
 
         <div>
           <label className="block text-xs font-semibold mb-1">
             Severity Level *
           </label>
-          <select
+          <SearchableSelect
             required
-            className="input-field text-xs bg-background"
+            options={[
+              { value: 'LOW', label: 'Low (Minor First Aid / Observation)' },
+              { value: 'MEDIUM', label: 'Medium (Moderate Damage / Treatment)' },
+              { value: 'HIGH', label: 'High (Major Damage / Lost Time)' },
+              { value: 'CRITICAL', label: 'Critical (Severe Emergency)' },
+            ]}
             value={severity}
-            onChange={(e) => setSeverity(e.target.value)}
-          >
-            <option value="LOW">Low (Minor First Aid / Observation)</option>
-            <option value="MEDIUM">Medium (Moderate Damage / Treatment)</option>
-            <option value="HIGH">High (Major Damage / Lost Time)</option>
-            <option value="CRITICAL">Critical (Severe Emergency)</option>
-          </select>
+            onChange={(val) => setSeverity(val)}
+            placeholder="Select severity..."
+          />
         </div>
       </div>
 
@@ -737,12 +749,11 @@ function CreateIncidentForm({
           <label className="block text-xs font-semibold mb-1">
             Incident Date & Time *
           </label>
-          <input
+          <AppDateTimePicker
+            mode="datetime"
             required
-            type="datetime-local"
-            className="input-field text-xs"
             value={incidentDate}
-            onChange={(e) => setIncidentDate(e.target.value)}
+            onChange={(val) => setIncidentDate(val)}
           />
         </div>
 

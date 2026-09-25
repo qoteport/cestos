@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { Modal } from './DataUI';
 import useAppFeedback from './useAppFeedback';
+import SearchableSelect from './SearchableSelect';
+import AppDateTimePicker from './AppDateTimePicker';
 
 type Work = Record<string, any>;
 export function canEditFieldWork(work: Work) {
@@ -64,24 +66,37 @@ export default function FieldWorkEditModal({ work, employees, onClose, onSaved }
           <textarea maxLength={20000} rows={4} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="w-full mt-1 rounded-lg border bg-background px-3 py-2" />
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <label>Priority
-            <select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} className="w-full mt-1 rounded-lg border bg-background px-3 py-2">
-              {['LOW', detailed ? 'MEDIUM' : 'NORMAL', 'HIGH', 'CRITICAL'].map(value => <option key={value}>{value}</option>)}
-            </select>
-          </label>
-          <label>Work type
-            <select value={form.maintenance_type} onChange={e => setForm({ ...form, maintenance_type: e.target.value })} className="w-full mt-1 rounded-lg border bg-background px-3 py-2">
-              {(detailed ? ['PREVENTIVE', 'CORRECTIVE', 'EMERGENCY', 'OVERHAUL'] : ['PREVENTIVE', 'CORRECTIVE', 'INSPECTION', 'SERVICE', 'OTHER']).map(value => <option key={value}>{value}</option>)}
-            </select>
-          </label>
-          <label>Scheduled date
-            <input type="date" value={form.scheduled_date} onChange={e => setForm({ ...form, scheduled_date: e.target.value })} className="w-full mt-1 rounded-lg border bg-background px-3 py-2" />
-          </label>
-          <label>Assigned technician
-            <select required disabled={!work.can_reassign} value={form.assigned_employee_id} onChange={e => setForm({ ...form, assigned_employee_id: e.target.value })} className="w-full mt-1 rounded-lg border bg-background px-3 py-2">
-              {candidates.map(employee => <option key={employee.id} value={employee.id}>{employee.name || `${employee.first_name || ''} ${employee.last_name || ''}`.trim()}</option>)}
-            </select>
-          </label>
+          <div>
+            <label className="block text-xs font-semibold mb-1">Priority</label>
+            <SearchableSelect
+              value={form.priority}
+              onChange={val => setForm({ ...form, priority: val })}
+              options={['LOW', detailed ? 'MEDIUM' : 'NORMAL', 'HIGH', 'CRITICAL'].map(value => ({ value, label: value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold mb-1">Work type</label>
+            <SearchableSelect
+              value={form.maintenance_type}
+              onChange={val => setForm({ ...form, maintenance_type: val })}
+              options={(detailed ? ['PREVENTIVE', 'CORRECTIVE', 'EMERGENCY', 'OVERHAUL'] : ['PREVENTIVE', 'CORRECTIVE', 'INSPECTION', 'SERVICE', 'OTHER']).map(value => ({ value, label: value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold mb-1">Scheduled date</label>
+            <AppDateTimePicker mode="date" value={form.scheduled_date} onChange={val => setForm({ ...form, scheduled_date: val })} />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold mb-1">Assigned technician</label>
+            <SearchableSelect
+              required
+              disabled={!work.can_reassign}
+              value={form.assigned_employee_id}
+              onChange={val => setForm({ ...form, assigned_employee_id: val })}
+              options={candidates.map(employee => ({ value: employee.id, label: employee.name || `${employee.first_name || ''} ${employee.last_name || ''}`.trim() }))}
+              placeholder="Select technician..."
+            />
+          </div>
         </div>
         {!detailed && <div className="space-y-2">
           <label className="flex gap-2 items-center"><input type="checkbox" checked={form.is_recurring} onChange={e => setForm({ ...form, is_recurring: e.target.checked })} /> Recurring maintenance</label>

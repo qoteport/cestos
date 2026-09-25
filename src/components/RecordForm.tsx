@@ -47,8 +47,8 @@ const lookup: Row = {
   from_bin_id: 'inventory/bins',
   to_bin_id: 'inventory/bins',
   item_id: 'inventory/items',
-  supplier_id: 'inventory/suppliers',
-  preferred_supplier_id: 'inventory/suppliers',
+  supplier_id: 'inventory/supplier-options',
+  preferred_supplier_id: 'inventory/supplier-options',
   lot_id: 'inventory/lots',
   serial_id: 'inventory/serials',
   original_issue_id: 'inventory/issues',
@@ -436,7 +436,7 @@ function formatLookupOptionLabel(r: Row, route?: string): string {
     const pos = r.job_title || r.position_name || r.position?.title || (typeof r.position === 'string' ? r.position : '');
     return pos ? `${display(name)} (${pos})` : display(name);
   }
-  if (route === 'inventory/suppliers' || route === 'suppliers') {
+  if (route === 'inventory/suppliers' || route === 'inventory/supplier-options' || route === 'suppliers') {
     const name = r.name || r.company_name || r.supplier_name || String(r.id || '');
     return r.code ? `${display(name)} [${r.code}]` : display(name);
   }
@@ -498,6 +498,10 @@ function Reference({
   const [options, setOptions] = useState<Row[]>([]);
   const [error, setError] = useState('');
   const [selectedEntity, setSelectedEntity] = useState<Row | null>(null);
+  const [showCreateSupplier, setShowCreateSupplier] = useState(false);
+  const [supplierDraft, setSupplierDraft] = useState({ name: '', contact_name: '', email: '', phone: '' });
+  const [supplierSaving, setSupplierSaving] = useState(false);
+  const [supplierCreateError, setSupplierCreateError] = useState('');
 
   const selectedProjectId = formData?.project_id;
 
@@ -580,6 +584,36 @@ function Reference({
     raw: r,
   }));
 
+  async function createSupplier() {
+    if (!supplierDraft.name.trim()) {
+      setSupplierCreateError('Supplier name is required.');
+      return;
+    }
+    setSupplierSaving(true);
+    setSupplierCreateError('');
+    try {
+      const created = await apiFetch<Row>('/api/v1/inventory/supplier-options', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: supplierDraft.name.trim(),
+          contact_name: supplierDraft.contact_name.trim() || null,
+          email: supplierDraft.email.trim() || null,
+          phone: supplierDraft.phone.trim() || null,
+        }),
+      });
+      setOptions((current) => [created, ...current.filter((row) => String(row.id) !== String(created.id))]);
+      setSelectedEntity(created);
+      onChange(created.id, created);
+      setSearch('');
+      setSupplierDraft({ name: '', contact_name: '', email: '', phone: '' });
+      setShowCreateSupplier(false);
+    } catch (e: any) {
+      setSupplierCreateError(e?.message || 'Could not create supplier.');
+    } finally {
+      setSupplierSaving(false);
+    }
+  }
+
   if (value && !searchableOptions.some((opt) => String(opt.value) === String(value))) {
     searchableOptions.unshift({
       value: String(value),
@@ -637,8 +671,32 @@ function Reference({
         placeholder={`Search and select ${fieldLabel.toLowerCase()}...`}
         required={required}
       />
+      {(route === 'inventory/suppliers' || route === 'inventory/supplier-options') && (
+        <div className="pt-1">
+          {!showCreateSupplier ? (
+            <button type="button" className="text-xs font-semibold text-primary hover:underline" onClick={() => { setShowCreateSupplier(true); setSupplierCreateError(''); }}>
+              + Create a new supplier
+            </button>
+          ) : (
+            <div className="mt-2 rounded-md border border-border bg-muted/20 p-3 space-y-2">
+              <div className="text-xs font-semibold">New supplier</div>
+              <input className="input-field text-xs" placeholder="Supplier name *" value={supplierDraft.name} onChange={(e) => setSupplierDraft((draft) => ({ ...draft, name: e.target.value }))} maxLength={200} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input className="input-field text-xs" placeholder="Contact name" value={supplierDraft.contact_name} onChange={(e) => setSupplierDraft((draft) => ({ ...draft, contact_name: e.target.value }))} maxLength={150} />
+                <input className="input-field text-xs" type="tel" placeholder="Phone" value={supplierDraft.phone} onChange={(e) => setSupplierDraft((draft) => ({ ...draft, phone: e.target.value }))} maxLength={50} />
+              </div>
+              <input className="input-field text-xs" type="email" placeholder="Email" value={supplierDraft.email} onChange={(e) => setSupplierDraft((draft) => ({ ...draft, email: e.target.value }))} maxLength={320} />
+              {supplierCreateError && <p className="text-xs text-red-700">{supplierCreateError}</p>}
+              <div className="flex justify-end gap-2">
+                <button type="button" className="btn-secondary text-xs" onClick={() => { setShowCreateSupplier(false); setSupplierCreateError(''); }} disabled={supplierSaving}>Cancel</button>
+                <button type="button" className="btn-primary text-xs" onClick={() => void createSupplier()} disabled={supplierSaving || !supplierDraft.name.trim()}>{supplierSaving ? 'Saving…' : 'Save supplier'}</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       {error && <p className="text-xs text-red-700">{error}</p>}
-      {route === 'inventory/suppliers' && (
+      {(route === 'inventory/suppliers' || route === 'inventory/supplier-options') && (
         <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center justify-between">
           <span>Define or manage suppliers:</span>
           <Link href="/workspace/inventory/suppliers" target="_blank" className="text-primary hover:underline font-semibold ml-1">

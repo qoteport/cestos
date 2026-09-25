@@ -4,6 +4,7 @@ import { ArrowRight, Truck, CheckCircle2 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { Modal, Row, rows, useData, State } from './DataUI';
 import SearchableSelect from './SearchableSelect';
+import AppDateTimePicker from './AppDateTimePicker';
 export default function AssetAssignmentModal({
   asset,
   currentProject,
@@ -204,15 +205,17 @@ export default function AssetAssignmentModal({
                 placeholder={String(activeAsset?.current_meter_reading ?? '')}
               />
             </label>
-            <label className="text-xs font-semibold">
-              Expected return
-              <input
-                className="input-field mt-1"
-                type="datetime-local"
+            <div>
+              <label className="block text-xs font-semibold mb-1">
+                Expected return
+              </label>
+              <AppDateTimePicker
+                mode="datetime"
                 value={returnAt}
-                onChange={(e) => setReturnAt(e.target.value)}
+                onChange={(val) => setReturnAt(val)}
+                placeholder="Select expected return date & time..."
               />
-            </label>
+            </div>
             <label className="text-xs font-semibold md:col-span-2">
               Assignment / transfer reason *
               <textarea

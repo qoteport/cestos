@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/api';
 import { Modal } from './DataUI';
 import useAppFeedback from './useAppFeedback';
 import SearchableSelect from './SearchableSelect';
+import AppDateTimePicker from './AppDateTimePicker';
 
 type Row = Record<string, any>;
 
@@ -76,9 +77,7 @@ export default function FieldShiftEditModal({ shift, assets, holes, sites = [], 
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block font-bold mb-1">Drilling Rig / Equipment *</label>
-            <select required value={form.rig_id} onChange={e => setForm({ ...form, rig_id: e.target.value })} className={fieldClassName}>
-              {rigOptions.map(asset => <option key={asset.id} value={asset.id}>{asset.name || asset.asset_number}</option>)}
-            </select>
+            <SearchableSelect required value={form.rig_id} onChange={val => setForm({ ...form, rig_id: val })} options={rigOptions.map(asset => ({ value: asset.id, label: asset.name || asset.asset_number }))} placeholder="Select rig / equipment..." />
           </div>
           <div>
             <label className="block font-bold mb-1">Site / Project</label>
@@ -89,14 +88,11 @@ export default function FieldShiftEditModal({ shift, assets, holes, sites = [], 
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block font-bold mb-1">Shift Date *</label>
-            <input required type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className={`${fieldClassName} font-mono`} />
+            <AppDateTimePicker mode="date" required value={form.date} onChange={val => setForm({ ...form, date: val })} />
           </div>
           <div>
             <label className="block font-bold mb-1">Shift Type *</label>
-            <select value={form.shift_type} onChange={e => setForm({ ...form, shift_type: e.target.value })} className={`${fieldClassName} font-bold`}>
-              <option value="DAY">Day Shift (DS)</option>
-              <option value="NIGHT">Night Shift (NS)</option>
-            </select>
+            <SearchableSelect value={form.shift_type} onChange={val => setForm({ ...form, shift_type: val })} options={[{ value: 'DAY', label: 'Day Shift (DS)' }, { value: 'NIGHT', label: 'Night Shift (NS)' }]} required />
           </div>
         </div>
 
@@ -121,11 +117,13 @@ export default function FieldShiftEditModal({ shift, assets, holes, sites = [], 
               </div>
               <div>
                 <label className="block font-medium mb-1">Select Worked Drill Hole *</label>
-                <select required value={row.drill_hole_id} className={fieldClassName} onChange={e => setIntervals(values => values.map((value, i) => i === index ? { ...value, drill_hole_id: e.target.value } : value))}>
-                  <option value="">Select Drill Hole...</option>
-                  {!projectHoles.some(hole => hole.id === row.drill_hole_id) && row.drill_hole_id && <option value={row.drill_hole_id}>{row.hole_number || 'Recorded hole'}</option>}
-                  {projectHoles.map(hole => <option key={hole.id} value={hole.id}>{hole.hole_number}</option>)}
-                </select>
+                <SearchableSelect
+                  required
+                  value={row.drill_hole_id}
+                  onChange={val => setIntervals(values => values.map((value, i) => i === index ? { ...value, drill_hole_id: val } : value))}
+                  options={projectHoles.map(hole => ({ value: hole.id, label: hole.hole_number }))}
+                  placeholder="Select Drill Hole..."
+                />
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <div>
@@ -165,9 +163,11 @@ export default function FieldShiftEditModal({ shift, assets, holes, sites = [], 
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="block font-medium mb-1">Category *</label>
-                  <select value={row.category} className={fieldClassName} onChange={e => setTimes(values => values.map((value, i) => i === index ? { ...value, category: e.target.value } : value))}>
-                    {['PRODUCTIVE', 'STANDBY', 'MAINTENANCE', 'NON_PRODUCTIVE'].map(value => <option key={value} value={value}>{value.replace('_', ' ')}</option>)}
-                  </select>
+                  <SearchableSelect
+                    value={row.category}
+                    onChange={val => setTimes(values => values.map((value, i) => i === index ? { ...value, category: val } : value))}
+                    options={['PRODUCTIVE', 'STANDBY', 'MAINTENANCE', 'NON_PRODUCTIVE'].map(value => ({ value, label: value.replace('_', ' ') }))}
+                  />
                 </div>
                 <div>
                   <label className="block font-medium mb-1">Reason *</label>

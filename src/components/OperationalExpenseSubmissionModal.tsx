@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { apiFetch } from '@/lib/api';
 import SearchableSelect from './SearchableSelect';
+import AppDateTimePicker from './AppDateTimePicker';
 
 type Row = Record<string, any>;
 type ExpenseItem = { inventory_item_id: string; name: string; quantity: string; unit_cost: string; custom_item?: boolean };
@@ -175,8 +176,8 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
               </label>
               {method === 'BANK_TRANSFER' && <label className="block space-y-1 font-semibold sm:col-span-2"><span className="block">Bank account details</span><textarea rows={4} className={inputClass} value={bank} onChange={(event) => setBank(event.target.value)} placeholder="Bank name, account name, account number, branch or other payment instructions" /></label>}
               {method === 'MOBILE_MONEY' && <label className="block space-y-1 font-semibold sm:col-span-2"><span className="block">Phone number</span><input type="tel" className={inputClass} value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="Enter the payee's mobile money number" /></label>}
-              <label className="block space-y-1 font-semibold"><span className="block">Date *</span><input required type="date" className={inputClass} value={date} onChange={(event) => setDate(event.target.value)} /></label>
-              <label className="block space-y-1 font-semibold"><span className="block">Pay by *</span><select required className={inputClass} value={method} onChange={(event) => setMethod(event.target.value)}>{[['MOBILE_MONEY','Phone / mobile money'],['BANK_TRANSFER','Bank transfer'],['CASH','Cash'],['CARD','Card'],['OTHER','Other']].map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+              <label className="block space-y-1 font-semibold"><span className="block">Date *</span><AppDateTimePicker mode="date" required value={date} onChange={(val) => setDate(val)} /></label>
+              <label className="block space-y-1 font-semibold"><span className="block">Pay by *</span><SearchableSelect value={method} onChange={(val) => setMethod(val)} options={[['MOBILE_MONEY','Phone / mobile money'],['BANK_TRANSFER','Bank transfer'],['CASH','Cash'],['CARD','Card'],['OTHER','Other']].map(([value,label]) => ({ value, label }))} placeholder="Select payment method..." required /></label>
             </section>
             <section className="space-y-3 rounded-xl border p-3">
               <div className="flex items-center justify-between"><h3 className="font-bold text-slate-800 dark:text-slate-100">Items purchased</h3><button type="button" onClick={() => setItems((rows) => [...rows, blankItem()])} className="font-bold text-orange-700 dark:text-orange-400">+ Add item</button></div>

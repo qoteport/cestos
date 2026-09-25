@@ -22,6 +22,7 @@ export interface SearchableSelectProps {
   disabled?: boolean;
   className?: string;
   ariaLabel?: string;
+  searchable?: boolean;
 }
 
 export default function SearchableSelect({
@@ -34,12 +35,14 @@ export default function SearchableSelect({
   disabled = false,
   className = '',
   ariaLabel,
+  searchable,
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const shouldShowSearch = searchable !== undefined ? searchable : options.length > 5;
   const selectedOption = options.find((opt) => String(opt.value) === String(value));
 
   // Close dropdown on outside click
@@ -57,12 +60,12 @@ export default function SearchableSelect({
 
   // Auto focus search input when opened
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && shouldShowSearch) {
       setTimeout(() => searchInputRef.current?.focus(), 50);
     } else {
       setSearchQuery('');
     }
-  }, [isOpen]);
+  }, [isOpen, shouldShowSearch]);
 
   const filteredOptions = options.filter((opt) => {
     if (!searchQuery.trim()) return true;
@@ -144,34 +147,36 @@ export default function SearchableSelect({
       {/* Dropdown Menu */}
       {isOpen && (
         <div className="absolute z-[10050] top-full left-0 right-0 mt-1 bg-background border border-border shadow-xl rounded-md overflow-hidden flex flex-col max-h-64 animate-in fade-in-50 zoom-in-95">
-          {/* Search Bar inside dropdown */}
-          <div className="p-2 border-b bg-muted/30 sticky top-0 z-10 flex items-center gap-2">
-            <Search size={14} className="text-muted-foreground shrink-0 ml-1" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              className="w-full text-xs bg-transparent border-none outline-none focus:ring-0 placeholder:text-muted-foreground"
-              placeholder="Search options..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') setIsOpen(false);
-                if (e.key === 'Enter' && filteredOptions.length > 0) {
-                  e.preventDefault();
-                  handleSelect(filteredOptions[0]);
-                }
-              }}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="text-muted-foreground hover:text-foreground p-0.5"
-              >
-                <X size={12} />
-              </button>
-            )}
-          </div>
+          {/* Search Bar inside dropdown if applicable */}
+          {shouldShowSearch && (
+            <div className="p-2 border-b bg-muted/30 sticky top-0 z-10 flex items-center gap-2">
+              <Search size={14} className="text-muted-foreground shrink-0 ml-1" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                className="w-full text-xs bg-transparent border-none outline-none focus:ring-0 placeholder:text-muted-foreground"
+                placeholder="Search options..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') setIsOpen(false);
+                  if (e.key === 'Enter' && filteredOptions.length > 0) {
+                    e.preventDefault();
+                    handleSelect(filteredOptions[0]);
+                  }
+                }}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="text-muted-foreground hover:text-foreground p-0.5"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Options List */}
           <div className="overflow-y-auto flex-1 scrollbar-thin p-1 space-y-0.5">
@@ -444,4 +449,7 @@ export function MultiSearchableSelect({
     </div>
   );
 }
+
+export const CustomSelect = SearchableSelect;
+
 
