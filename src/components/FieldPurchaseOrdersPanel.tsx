@@ -314,7 +314,7 @@ export default function FieldPurchaseOrdersPanel({
     </div>
     {showForm && createPortal(
       <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-0 sm:p-4 overflow-hidden animate-modal-backdrop-in" onClick={(e) => { if (e.target === e.currentTarget) { setShowForm(false); setFormStep('EDIT'); } }}>
-        <div className="w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-4xl rounded-none sm:rounded-2xl border-0 sm:border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl flex flex-col overflow-hidden animate-modal-content-in">
+        <div className="w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-3xl rounded-none sm:rounded-2xl border-0 sm:border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl flex flex-col overflow-hidden animate-modal-content-in">
           <form onSubmit={submit} className="flex flex-col h-full overflow-hidden">
             {/* Sticky Header */}
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-4 py-3.5 sm:px-6 sm:py-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 sticky top-0 z-10">

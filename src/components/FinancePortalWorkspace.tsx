@@ -2980,7 +2980,7 @@ Signed: Finance & Procurement Administration
       {/* Create Purchase Order Modal */}
       {showAddPoModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs overflow-y-auto">
-              <div className="bg-card border rounded-2xl p-6 max-w-6xl w-full max-h-[92vh] overflow-y-auto space-y-5 shadow-2xl my-8">
+          <div className="bg-card border rounded-2xl p-6 max-w-3xl w-full max-h-[92vh] overflow-y-auto space-y-5 shadow-2xl my-8">
             <div className="flex items-center justify-between border-b pb-3 border-border">
               <h3 className="font-bold text-base flex items-center gap-2 text-foreground">
                 <ShoppingBag className="h-5 w-5 text-violet-600" /> Create Purchase Order

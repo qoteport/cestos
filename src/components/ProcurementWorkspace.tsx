@@ -263,7 +263,7 @@ export default function ProcurementWorkspace({ subResource }: { subResource?: st
 
       {/* NEW PO MODAL */}
       {showAddPo && (
-        <Modal title="Create Purchase Order" onClose={() => setShowAddPo(false)}>
+        <Modal title="Create Purchase Order" className="max-w-3xl" onClose={() => setShowAddPo(false)}>
           <form onSubmit={handleCreatePo} className="space-y-4">
             <div>
               <label className="block text-xs font-medium mb-1">Supplier</label>
