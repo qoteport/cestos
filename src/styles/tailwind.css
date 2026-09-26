@@ -581,6 +581,36 @@
     margin-bottom: 0.25rem;
   }
 
+  /* Mobile Form Inputs, Selects, Textareas & Labels Font Size Enhancement */
+  @media (max-width: 639px) {
+    .input-field,
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="date"],
+    input[type="time"],
+    input[type="datetime-local"],
+    input[type="password"],
+    input[type="search"],
+    select,
+    textarea {
+      font-size: 15px !important;
+      line-height: 1.4 !important;
+    }
+
+    form label,
+    form .label,
+    [role="dialog"] label {
+      font-size: 13.5px !important;
+    }
+
+    [role="dialog"] .text-xs,
+    form .text-xs {
+      font-size: 0.8125rem !important; /* 13px on mobile */
+      line-height: 1.35 !important;
+    }
+  }
+
   .attention-item {
     display: flex;
     align-items: center;
