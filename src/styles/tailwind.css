@@ -264,13 +264,29 @@
   }
 
   .scrollbar-none,
-  .scrollbar-hide {
+  .scrollbar-hide,
+  .overflow-x-auto,
+  div[class*="overflow-x-auto"],
+  div[class*="overflow-x-scroll"],
+  .table-responsive,
+  .data-table-wrapper,
+  .data-table-container,
+  div:has(> table),
+  div:has(> .data-table) {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
 
   .scrollbar-none::-webkit-scrollbar,
-  .scrollbar-hide::-webkit-scrollbar {
+  .scrollbar-hide::-webkit-scrollbar,
+  .overflow-x-auto::-webkit-scrollbar,
+  div[class*="overflow-x-auto"]::-webkit-scrollbar,
+  div[class*="overflow-x-scroll"]::-webkit-scrollbar,
+  .table-responsive::-webkit-scrollbar,
+  .data-table-wrapper::-webkit-scrollbar,
+  .data-table-container::-webkit-scrollbar,
+  div:has(> table)::-webkit-scrollbar,
+  div:has(> .data-table)::-webkit-scrollbar {
     display: none;
     width: 0px;
     height: 0px;
