@@ -33,7 +33,7 @@ export default function MaintenanceAssessmentReportDetailsModal({
   const reportDate = (value?: string) => value ? new Date(`${value.slice(0, 10)}T00:00:00`).toLocaleDateString() : '—';
   const printable = () => {
     const content = document.getElementById('maint-assessment-printable-area');
-    if (content) printElement(content, record.report_number || 'Two-week maintenance assessment & initial action report');
+    if (content) printElement(content, record.report_number || 'Two-week Maintenance Assessment & Initial Action Report');
   };
 
   useEffect(() => {
@@ -57,7 +57,7 @@ export default function MaintenanceAssessmentReportDetailsModal({
     finally { setFileBusy(null); }
   }
 
-  return <Modal title="Two-week maintenance assessment & initial action report" onClose={onClose} className="sm:!h-[90vh] sm:!max-h-[90vh] sm:!max-w-6xl text-upper" footer={<div className="flex w-full justify-end gap-2"><button type="button" className="btn-secondary inline-flex items-center gap-2" onClick={printable}><Printer size={15} /> Print</button>{editable && <button type="button" className="btn-primary inline-flex items-center gap-2" onClick={onEdit}><Pencil size={15} /> Edit report</button>}</div>}>
+  return <Modal title="Two-week Maintenance Assessment & Initial Action Report" onClose={onClose} className="sm:!h-[90vh] sm:!max-h-[90vh] sm:!max-w-5xl text-upper" footer={<div className="flex w-full justify-end gap-2"><button type="button" className="btn-secondary inline-flex items-center gap-2" onClick={printable}><Printer size={15} /> Print</button>{editable && <button type="button" className="btn-primary inline-flex items-center gap-2" onClick={onEdit}><Pencil size={15} /> Edit report</button>}</div>}>
     <article id="maint-assessment-printable-area" className="space-y-5 text-sm print:text-black">
       <header className="border-b border-slate-300 pb-3">
 
@@ -68,7 +68,7 @@ export default function MaintenanceAssessmentReportDetailsModal({
           ['Report date', reportDate(record.report_date)],
           ['Reporting period', `${reportDate(record.reporting_period_start)} – ${reportDate(record.reporting_period_end)}`],
           ['Project', record.project_name_custom || record.project?.name || projects.find((item) => String(item.id) === String(record.project_id))?.name || '—'],
-          ['Prepared by', record.prepared_by_name], ['Position', record.prepared_by_position], ['Submitted to', record.submitted_to],
+          ['Prepared by', record.prepared_by_name], ['Position', record.prepared_by_position], ['Submitted to', record.submitted_to], ['', ' '], [' ', ' '],
         ].map(([label, value]) => <div key={label} className="bg-white px-3 py-2"><div className="text-[10px] font-bold text-slate-500">{label}</div><div className="mt-1 font-semibold text-slate-900">{value || '—'}</div></div>)}
       </section>
 
@@ -76,7 +76,7 @@ export default function MaintenanceAssessmentReportDetailsModal({
       {sections.map((section) => {
         const rawRows = Array.isArray(record[section.key]) ? record[section.key] : [];
         const rows = rawRows.length ? rawRows : [{}];
-        return <section key={section.key} className="overflow-hidden border border-slate-300"><h3 className="bg-[#184877] px-3 py-2 font-bold text-white">{section.title}</h3><div className="overflow-x-auto"><table className="w-full border-collapse text-left text-xs"><thead><tr className="bg-[#dbe7f4]">{section.columns.map(([, label]) => <th key={label} className="border border-slate-300 px-2 py-2 font-bold">{label}</th>)}</tr></thead><tbody>{rows.map((row: any, index: number) => <tr key={index} className="odd:bg-white even:bg-slate-50">{section.columns.map(([key]) => <td key={key} className="border border-slate-300 px-2 py-2 align-top"><DisplayValue value={row[key]} /></td>)}</tr>)}</tbody></table></div></section>;
+        return <section key={section.key} className="overflow-hidden border border-slate-300 bg-white"><h3 className="bg-[#184877] px-3 py-2 font-bold text-white">{section.title}</h3><div className="overflow-x-auto"><table className="w-full border-collapse text-left text-xs"><thead><tr className="bg-[#dbe7f4]">{section.columns.map(([, label]) => <th key={label} className="border border-slate-300 px-2 py-2 font-bold">{label}</th>)}</tr></thead><tbody>{rows.map((row: any, index: number) => <tr key={index} className="odd:bg-white even:bg-slate-50">{section.columns.map(([key]) => <td key={key} className="border border-slate-300 px-2 py-2 align-top"><DisplayValue value={row[key]} /></td>)}</tr>)}</tbody></table></div></section>;
       })}
       {Array.isArray(record.manpower_requirements) && record.manpower_requirements[0]?.recommendation && <section className="border border-slate-300"><h3 className="bg-[#184877] px-3 py-2 font-bold text-white">Manpower requirement recommendation</h3><p className="whitespace-pre-wrap p-3">{record.manpower_requirements[0].recommendation}</p></section>}
       {record.conclusion && <section className="border border-slate-300"><h3 className="bg-[#184877] px-3 py-2 font-bold text-white">Conclusion</h3><p className="whitespace-pre-wrap p-3">{record.conclusion}</p></section>}
@@ -93,12 +93,16 @@ export default function MaintenanceAssessmentReportDetailsModal({
             size: A4 portrait;
             margin: 10mm;
           }
+          *, *::before, *::after {
+            border-radius: 0 !important;
+          }
           body * {
             visibility: hidden !important;
           }
           #maint-assessment-printable-area,
           #maint-assessment-printable-area * {
             visibility: visible !important;
+            border-radius: 0 !important;
           }
           #maint-assessment-printable-area {
             position: absolute !important;
@@ -111,6 +115,7 @@ export default function MaintenanceAssessmentReportDetailsModal({
             overflow: visible !important;
             background: white !important;
             color: black !important;
+            border-radius: 0 !important;
           }
           .no-print {
             display: none !important;

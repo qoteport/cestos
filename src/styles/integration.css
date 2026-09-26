@@ -4,6 +4,10 @@ button:disabled {opacity:.5;cursor:not-allowed;}
 @media(max-width:640px){aside.w-60{width:12rem;} .kpi-value{font-size:1.75rem;}}
 
 @media print {
+  *, *::before, *::after {
+    border-radius: 0 !important;
+  }
+
   html, body, #__next, body > div, main {
     height: auto !important;
     min-height: 0 !important;

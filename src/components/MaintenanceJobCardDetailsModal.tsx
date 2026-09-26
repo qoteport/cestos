@@ -151,10 +151,11 @@ export default function MaintenanceJobCardDetailsModal({
     printWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${kindLabel}</title>${stylesheets}<style>
       @page { size: landscape; margin: 12mm; }
       body { margin: 0; padding: 16px; color: #0f172a; background: white; font-family: Arial, sans-serif; }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      *, *::before, *::after { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; border-radius: 0 !important; }
       button { display: none !important; }
-      section, table, .border { break-inside: avoid; }
+      section, table, .border, div, article, main { break-inside: avoid; border-radius: 0 !important; }
       main { max-width: 100%; }
+      @media print { *, *::before, *::after { border-radius: 0 !important; } }
     </style></head><body><main>${printableRef.current.innerHTML}</main></body></html>`);
     printWindow.document.close();
     printWindow.onload = () => {

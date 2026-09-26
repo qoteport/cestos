@@ -33,18 +33,26 @@ export function printElement(element: HTMLElement, title: string): void {
   clone.style.setProperty('background', '#ffffff', 'important');
   clone.style.setProperty('color', '#111827', 'important');
 
+  clone.style.setProperty('border-radius', '0', 'important');
+  clone.querySelectorAll('*').forEach((node) => {
+    if (node instanceof HTMLElement || node instanceof SVGElement) {
+      node.style.setProperty('border-radius', '0', 'important');
+    }
+  });
+
   const doc = popup.document;
   doc.open();
   doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>
     @page { size: A4 portrait; margin: 0; }
     html, body { margin: 0; padding: 0; background: #fff; color: #111827; }
     body { padding: 10mm; font-family: Arial, sans-serif; }
-    *, *::before, *::after { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    *, *::before, *::after { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; border-radius: 0 !important; }
+    .print-root, .print-root * { border-radius: 0 !important; }
     .print-root { width: 100%; }
-    .print-root section, .print-root header { break-inside: avoid; }
+    .print-root section, .print-root header { break-inside: avoid; border-radius: 0 !important; }
     .print-root table { width: 100%; border-collapse: collapse; }
     .print-root th, .print-root td { vertical-align: top; }
-    @media print { body { padding: 0; } }
+    @media print { body { padding: 0; } *, *::before, *::after { border-radius: 0 !important; } }
   </style></head><body></body></html>`);
   doc.title = title;
   doc.body.appendChild(clone);
