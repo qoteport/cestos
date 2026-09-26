@@ -49,7 +49,7 @@ module.exports = {
         full: '9999px',
       },
       fontFamily: {
-        sans: ['var(--font-dm-sans)', 'sans-serif'],
+        sans: ['var(--font-roboto)', 'Roboto', 'sans-serif'],
       },
       fontSize: {
         '2xs': ['10px', { lineHeight: '14px' }],

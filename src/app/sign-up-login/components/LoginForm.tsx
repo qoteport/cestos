@@ -84,9 +84,12 @@ export default function LoginForm() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 bg-background overflow-y-auto">
       <div className="w-full max-w-md">
-        <div className="lg:hidden flex items-center gap-2 mb-8">
-          <AppLogo size={32} />
-          <span className="font-bold text-lg">Cestos Operations</span>
+        <div className="lg:hidden flex items-center gap-3.5 mb-8">
+          <AppLogo size={64} className="drop-shadow-sm" />
+          <div>
+            <span className="font-bold text-xl tracking-tight block leading-tight text-foreground">Cestos Operations</span>
+            <span className="text-xs text-muted-foreground block font-medium mt-0.5">Field Operations Command</span>
+          </div>
         </div>
         <span className="text-xs font-semibold text-primary uppercase tracking-widest">
           Your operations workspace

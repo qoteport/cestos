@@ -11,7 +11,7 @@ export default function AppToaster() {
   return createPortal(
     <Toaster position="top-center" richColors closeButton expand duration={30_000}
       style={{ zIndex: 2147483647 }}
-      toastOptions={{ duration: 30_000, style: { fontFamily: 'var(--font-dm-sans)', fontSize: '14px' } }}
+      toastOptions={{ duration: 30_000, style: { fontFamily: 'var(--font-roboto), Roboto, sans-serif', fontSize: '14px' } }}
     />, document.body,
   );
 }

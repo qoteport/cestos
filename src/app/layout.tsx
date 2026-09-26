@@ -1,11 +1,19 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
+import { Roboto } from 'next/font/google';
 import { AuthProvider } from '@/components/AuthProvider';
 import '../styles/tailwind.css';
 import '../styles/integration.css';
 import AppToaster from '@/components/AppToaster';
 import PwaRuntime from '@/components/PwaRuntime';
 import UniversalFileViewerHost from '@/components/UniversalFileViewerHost';
+
+const roboto = Roboto({
+  weight: ['300', '400', '500', '700'],
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-roboto',
+});
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -33,8 +41,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" >
-      <body suppressHydrationWarning>
+    <html lang="en" className={roboto.variable}>
+      <body suppressHydrationWarning className={roboto.className}>
         <AuthProvider>
         {children}
         <AppToaster />
