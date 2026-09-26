@@ -113,12 +113,28 @@ function extractErrorMessage(body: any, status: number): string {
   }
   return `Request failed (${status}). Please retry.`;
 }
+export function handleSessionExpired() {
+  clearTokens();
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('cestos:session-expired'));
+    if (!window.location.pathname.startsWith('/sign-up-login')) {
+      window.location.href = '/sign-up-login';
+    }
+  }
+}
+
 async function readResponse<T>(response: Response): Promise<T> {
   if (response.status === 204) return undefined as T;
   const text = await response.text();
   let body;
   try { body = text ? JSON.parse(text) : undefined; } catch { body = undefined; }
-  if (!response.ok) throw new ApiError(response.status, extractErrorMessage(body, response.status));
+  if (!response.ok) {
+    const message = extractErrorMessage(body, response.status);
+    if (/bearer\s*token\s*required/i.test(message) || response.status === 401) {
+      handleSessionExpired();
+    }
+    throw new ApiError(response.status, message);
+  }
   return body as T;
 }
 export async function apiFetch<T>(path: string, options: RequestInit = {}, authenticated = true, policy: ApiFetchPolicy = {}): Promise<T> {
@@ -164,8 +180,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, authe
       response = await fetch(`${BASE_URL}${path}`, {...options, headers, cache:'no-store'});
     }
     if (response.status === 401) {
-      clearTokens();
-      if (typeof window !== 'undefined') window.dispatchEvent(new Event('cestos:session-expired'));
+      handleSessionExpired();
     }
   }
   if (isRead && response.status >= 500 && policy.cacheOfflineRead !== false && offlineScope && !(await checkApiBackend(true))) {
@@ -271,8 +286,7 @@ export async function apiFetchBlob(path: string, options: RequestInit = {}, auth
       response = await fetch(`${BASE_URL}${path}`, {...options, headers, cache:'no-store'});
     }
     if (response.status === 401) {
-      clearTokens();
-      if (typeof window !== 'undefined') window.dispatchEvent(new Event('cestos:session-expired'));
+      handleSessionExpired();
     }
   }
   if (!response.ok) {
@@ -283,7 +297,11 @@ export async function apiFetchBlob(path: string, options: RequestInit = {}, auth
     const text = await response.text().catch(() => '');
     let body;
     try { body = text ? JSON.parse(text) : undefined; } catch {}
-    throw new ApiError(response.status, body?.error?.message || `Failed to fetch file (${response.status})`);
+    const message = extractErrorMessage(body, response.status);
+    if (/bearer\s*token\s*required/i.test(message) || response.status === 401) {
+      handleSessionExpired();
+    }
+    throw new ApiError(response.status, message || `Failed to fetch file (${response.status})`);
   }
   const blob = await response.blob();
   if (method === 'GET' && offlineScope) await cacheApiResponse(offlineScope, path, blob);

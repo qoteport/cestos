@@ -1589,7 +1589,7 @@ function ensureValidUUID(idStr: any): string {
                 Contract Expiration & Reminders Status
               </span>
               <p className="text-xs text-indigo-800 mt-1">
-                Contract end date: <strong>{display(employee.contract_end_date)}</strong>. Cestos
+                Contract end date: <strong>{display(employee.contract_end_date)}</strong> Cestos
                 automated alert rules notify management before contract expiration.
               </p>
             </div>
