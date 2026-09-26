@@ -47,7 +47,8 @@ import {
   Zap,
   UserPlus,
   UserCheck,
-  Briefcase
+  Briefcase,
+  MoreHorizontal
 } from 'lucide-react';
 import EmployeeDetailView from './EmployeeDetailView';
 import HREmployeeDetailView from './HREmployeeDetailView';
@@ -167,6 +168,7 @@ export default function HRPortalWorkspace() {
     }
   }, []);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [banner, setBanner] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
 
   // Data States
@@ -846,18 +848,24 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
     { id: 'HSE', label: 'HSE & Safety', mobileLabel: 'Safety', icon: ShieldAlert },
     { id: 'COMPLIANCE', label: 'Compliance & Documents', mobileLabel: 'Compliance', icon: Shield },
     { id: 'DOC_REQUESTS', label: 'Document Requests', mobileLabel: 'Requests', icon: Download },
+    { id: 'NOTIFICATIONS', label: 'Notifications', mobileLabel: 'Alerts', icon: Bell, badge: notificationCount },
   ];
+
+  const primaryMobileNavItems = navItems.slice(0, 4); // Employees, Leave, Projects, Safety
+  const moreMobileNavItems = navItems.slice(4); // Compliance, Requests, Notifications
+  const moreBadgeCount = moreMobileNavItems.reduce((acc, it) => acc + (it.badge || 0), 0);
+  const isMoreActive = moreMobileNavItems.some((it) => it.id === activeTab);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-row selection:bg-emerald-500 selection:text-white">
       {/* ─── Thin Quick-Action Left Sidebar (Large Screens Only) ─────────────────── */}
       <aside
         aria-label="Priority Quick Action Forms Sidebar"
-        className="hidden lg:flex flex-col items-center py-4 px-2 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-200 w-14 border-r border-slate-200 dark:border-slate-800 shrink-0 sticky top-0 z-40 h-screen select-none shadow-xs no-print"
+        className="hidden lg:flex flex-col items-center py-4 px-2 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-200 w-16 border-r border-slate-200 dark:border-slate-800 shrink-0 sticky top-0 z-40 h-screen select-none shadow-xs no-print"
       >
         <Link href="/" className="w-11 h-11 flex items-center justify-center mb-2 group relative shrink-0" title="Cestos Operations">
           <AppLogo size={42} className="shrink-0" />
-          <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-[100000] flex items-center gap-1.5">
+          <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-[100000] flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             Cestos Operations
           </span>
@@ -871,7 +879,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
             aria-label="Register Personnel / User Form"
           >
             <UserPlus size={18} />
-            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+            <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               Register Personnel / User Form
             </span>
@@ -883,7 +891,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
             aria-label="Book Personnel Leave Request"
           >
             <Calendar size={18} />
-            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+            <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               Book Personnel Leave Request
             </span>
@@ -895,7 +903,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
             aria-label="Submit Expense Claim Form"
           >
             <DollarSign size={18} />
-            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+            <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               Submit Expense Claim Form
             </span>
@@ -907,7 +915,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
             aria-label="Document Requests"
           >
             <Download size={18} />
-            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+            <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               Document Requests
             </span>
@@ -921,7 +929,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
           aria-label="Sign Out"
         >
           <LogOut size={18} />
-          <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+          <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
             Sign Out
           </span>
@@ -988,11 +996,11 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
               title="View My Profile"
             >
               <div className="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
-                {user?.first_name ? user.first_name[0] : 'E'}
+                {user?.first_name ? user.first_name[0] : 'H'}
               </div>
               <div className="text-left text-xs">
                 <p className="font-bold text-slate-900 dark:text-slate-100 leading-tight">
-                  {user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'Executive'}
+                  {user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'HR Officer'}
                 </p>
                 <p className="text-[10px] text-slate-500 font-medium">View My Profile</p>
               </div>
@@ -1007,9 +1015,9 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
           </div>
         </div>
 
-        {/* Desktop Tab Navigation Bar */}
-        <div className="hidden md:block bg-slate-100/70 dark:bg-slate-900/60 border-t border-slate-200 dark:border-slate-800 overflow-x-auto scrollbar-none">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-1 py-1.5">
+        {/* Desktop Tab Navigation Bar with horizontal scroll cue */}
+        <div className="relative hidden md:block bg-slate-100/70 dark:bg-slate-900/60 border-t border-slate-200 dark:border-slate-800">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-1 py-1.5 overflow-x-auto scrollbar-thin">
             {navItems.map((item) => {
               const IconComp = item.icon;
               const isActive = activeTab === item.id;
@@ -1017,7 +1025,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap shrink-0 ${
                     isActive
                       ? 'bg-emerald-600 text-white shadow-xs'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/60 dark:hover:bg-slate-800'
@@ -1037,6 +1045,10 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                 </button>
               );
             })}
+          </div>
+          {/* Subtle Right Edge Fade Indicator to cue scrollable tabs */}
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-100/90 dark:from-slate-900/90 to-transparent flex items-center justify-end pr-1 text-slate-400">
+            <ChevronRight size={14} className="opacity-70" />
           </div>
         </div>
       </header>
@@ -1934,37 +1946,140 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
       )}
     
     
-      {/* Mobile Bottom Navigation Tabbar */}
+      {/* Mobile Bottom Navigation Tabbar (Simplified 4 Tabs + More) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex justify-around items-center h-[calc(3.75rem+env(safe-area-inset-bottom,0px))] pb-[env(safe-area-inset-bottom,0px)] px-1 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] no-print">
-        {navItems.map((item) => {
+        {primaryMobileNavItems.map((item) => {
           const IconComp = item.icon;
           const isActive = activeTab === item.id;
           return (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center justify-center w-full h-full py-1 transition relative active:scale-95 ${
+              onClick={() => {
+                setActiveTab(item.id);
+                setMobileMoreOpen(false);
+              }}
+              className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition relative active:scale-95 ${
                 isActive
                   ? 'text-emerald-600 dark:text-emerald-400 font-bold'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 font-medium'
               }`}
             >
               <div className="relative">
-                <IconComp size={20} className={isActive ? 'opacity-100 scale-110' : 'opacity-70'} />
+                <IconComp size={19} className={isActive ? 'opacity-100 scale-110' : 'opacity-70'} />
                 {item.badge !== undefined && item.badge > 0 && (
                   <span className="absolute -top-2 -right-2 px-1 py-0.5 rounded-full text-[8px] font-black bg-amber-500 text-white min-w-[16px] text-center border-2 border-white dark:border-slate-900 shadow-md">
                     {item.badge}
                   </span>
                 )}
               </div>
-              <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[64px]">{item.mobileLabel || item.label}</span>
+              <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[70px]">{item.mobileLabel || item.label}</span>
               {isActive && (
                 <span className="absolute top-0 w-8 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-full shadow-sm" />
               )}
             </button>
           );
         })}
+
+        {/* 5th Button: More Drawer Trigger */}
+        <button
+          onClick={() => setMobileMoreOpen(!mobileMoreOpen)}
+          className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition relative active:scale-95 ${
+            isMoreActive || mobileMoreOpen
+              ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+              : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 font-medium'
+          }`}
+        >
+          <div className="relative">
+            <MoreHorizontal size={19} className={isMoreActive || mobileMoreOpen ? 'opacity-100 scale-110' : 'opacity-70'} />
+            {moreBadgeCount > 0 && (
+              <span className="absolute -top-2 -right-2 px-1 py-0.5 rounded-full text-[8px] font-black bg-amber-500 text-white min-w-[16px] text-center border-2 border-white dark:border-slate-900 shadow-md">
+                {moreBadgeCount}
+              </span>
+            )}
+          </div>
+          <span className="text-[10px] mt-0.5 tracking-tight">More</span>
+          {(isMoreActive || mobileMoreOpen) && (
+            <span className="absolute top-0 w-8 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-full shadow-sm" />
+          )}
+        </button>
       </nav>
+
+      {/* Mobile More Drawer Bottom Sheet */}
+      {mobileMoreOpen && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-xs md:hidden flex flex-col justify-end" onClick={() => setMobileMoreOpen(false)}>
+          <div
+            className="bg-white dark:bg-slate-900 rounded-t-3xl border-t border-slate-200 dark:border-slate-800 p-5 space-y-4 max-h-[80vh] overflow-y-auto shadow-2xl animate-in slide-in-from-bottom duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center font-bold">
+                  <MoreHorizontal size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">More HR Sections</h3>
+                  <p className="text-[11px] text-slate-500">Personnel &amp; documents management</p>
+                </div>
+              </div>
+              <button onClick={() => setMobileMoreOpen(false)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              {moreMobileNavItems.map((item) => {
+                const IconComp = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setMobileMoreOpen(false);
+                    }}
+                    className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition-all ${
+                      isActive
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-bold shadow-xs'
+                        : 'bg-slate-50/70 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-xl shrink-0 ${isActive ? 'bg-emerald-600 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                      <IconComp size={16} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs truncate">{item.label}</p>
+                      {item.badge !== undefined && item.badge > 0 && (
+                        <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-500 text-white">
+                          {item.badge} new
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Quick Profile & Logout Actions */}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+              <button
+                onClick={() => {
+                  router.push('/hr-portal/my-profile');
+                  setMobileMoreOpen(false);
+                }}
+                className="flex-1 py-2.5 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+              >
+                <User size={15} /> My Profile
+              </button>
+              <button
+                onClick={() => void signOut()}
+                className="py-2.5 px-3 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
+              >
+                <LogOut size={15} /> Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showRegisterUserModal && (
         <RegisterUserModal
           onClose={() => setShowRegisterUserModal(false)}

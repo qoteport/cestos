@@ -149,8 +149,8 @@ export default function MaintenanceJobCardDetailsModal({
       .map((link) => `<link rel="stylesheet" href="${link.href}">`).join('');
     printWindow.document.open();
     printWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${kindLabel}</title>${stylesheets}<style>
-      @page { size: portrait; margin: 10mm; }
-      body { margin: 0; padding: 16px; color: #0f172a; background: white; font-family: Arial, sans-serif; }
+      @page { size: portrait; margin: 1in; }
+      body { margin: 0; padding: 0; color: #0f172a; background: white; font-family: Arial, sans-serif; }
       *, *::before, *::after { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; border-radius: 0 !important; }
       button { display: none !important; }
       .pm-header-group { break-inside: avoid !important; page-break-inside: avoid !important; break-after: avoid !important; page-break-after: avoid !important; }

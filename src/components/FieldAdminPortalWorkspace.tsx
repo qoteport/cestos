@@ -9,7 +9,7 @@ import {
   AlertTriangle, Plus, CheckCircle2, DollarSign, Fuel, Users, FileText, Download, Eye,
   Building2, Calendar, FilePlus, ChevronRight, Check, Ban, AlertCircle, Sparkles, Filter,
   Activity, Paperclip, Upload, Package, Trash2, TrendingUp, File, ArrowLeft, BarChart2, ChevronDown, ChevronUp, Search,
-  Zap, Droplet, ShieldAlert, UserCheck, ShoppingCart
+  Zap, Droplet, ShieldAlert, UserCheck, ShoppingCart, MoreHorizontal
 } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, BarChart, Bar, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { useAuth } from '@/components/AuthProvider';
@@ -122,6 +122,7 @@ export default function FieldAdminPortalWorkspace() {
     if (tab === 'NOTIFICATIONS' || tab === 'EQUIPMENT' || tab === 'PURCHASE_ORDERS' || tab === 'EXPENSES') setActiveTab(tab as AdminTab);
   }, []);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [banner, setBanner] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
 
   // Data states
@@ -1639,28 +1640,33 @@ Signed: Field Operations Administration
 
   // ─── Tabs Array ──────────────────────────────────────────────────────────────
 
-  const tabs: { id: AdminTab; label: string; mobileLabel?: string; icon: React.ReactNode }[] = [
+  const tabs: { id: AdminTab; label: string; mobileLabel?: string; icon: React.ReactNode; badge?: number }[] = [
     { id: 'PROJECTS', label: 'My Projects', mobileLabel: 'Projects', icon: <Building2 size={16} /> },
     { id: 'PURCHASE_ORDERS', label: 'Purchase Orders', mobileLabel: 'Purchases', icon: <FileText size={16} /> },
+    { id: 'MAINTENANCE', label: 'Maintenance & Repairs', mobileLabel: 'Maintenance', icon: <Wrench size={16} /> },
     { id: 'EXPENSES', label: 'Expenses', mobileLabel: 'Expenses', icon: <DollarSign size={16} /> },
-    { id: 'FUEL', label: 'Fuel', mobileLabel: 'Fuel', icon: <Fuel size={16} /> },
-        { id: 'EQUIPMENT', label: 'Equipment', mobileLabel: 'Fleet', icon: <Truck size={16} /> },
-    { id: 'MAINTENANCE', label: 'Maintenance', mobileLabel: 'Repairs', icon: <Wrench size={16} /> },
-    { id: 'HSE', label: 'HSE', mobileLabel: 'HSE', icon: <ShieldCheck size={16} /> },
+    { id: 'EQUIPMENT', label: 'Equipment & Fleet', mobileLabel: 'Fleet', icon: <Truck size={16} /> },
+    { id: 'FUEL', label: 'Fuel Management', mobileLabel: 'Fuel', icon: <Fuel size={16} /> },
+    { id: 'HSE', label: 'HSE & Safety', mobileLabel: 'HSE', icon: <ShieldCheck size={16} /> },
     { id: 'PEOPLE', label: 'Employees', mobileLabel: 'Workers', icon: <Users size={16} /> },
-
+    { id: 'NOTIFICATIONS', label: 'Notifications', mobileLabel: 'Alerts', icon: <Bell size={16} />, badge: notificationCount },
   ];
+
+  const primaryMobileNavItems = tabs.slice(0, 4); // Projects, Purchases, Maintenance, Expenses
+  const moreMobileNavItems = tabs.slice(4); // Equipment, Fuel, HSE, People, Notifications
+  const moreBadgeCount = moreMobileNavItems.reduce((acc, it) => acc + (it.badge || 0), 0);
+  const isMoreActive = moreMobileNavItems.some((it) => it.id === activeTab);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-row text-slate-900 dark:text-slate-100">
       {/* ─── Thin Quick-Action Left Sidebar (Large Screens Only) ─────────────────── */}
       <aside
         aria-label="Priority Quick Action Forms Sidebar"
-        className="hidden lg:flex flex-col items-center py-4 px-2 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-200 w-14 border-r border-slate-200 dark:border-slate-800 shrink-0 sticky top-0 z-40 h-screen select-none shadow-xs no-print"
+        className="hidden lg:flex flex-col items-center py-4 px-2 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-200 w-16 border-r border-slate-200 dark:border-slate-800 shrink-0 sticky top-0 z-40 h-screen select-none shadow-xs no-print"
       >
         <Link href="/" className="w-11 h-11 flex items-center justify-center mb-2 group relative shrink-0" title="Cestos Operations">
           <AppLogo size={42} className="shrink-0" />
-          <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-[100000] flex items-center gap-1.5">
+          <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-[100000] flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
             Cestos Operations
           </span>
@@ -1677,7 +1683,7 @@ Signed: Field Operations Administration
             aria-label="Create Purchase Order Form"
           >
             <ShoppingCart size={18} />
-            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+            <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
               Create Purchase Order Form
             </span>
@@ -1689,7 +1695,7 @@ Signed: Field Operations Administration
             aria-label="Submit Operational Expense Claim Form"
           >
             <DollarSign size={18} />
-            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+            <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
               Submit Expense Claim Form
             </span>
@@ -1701,7 +1707,7 @@ Signed: Field Operations Administration
             aria-label="Register Bulk Fuel Delivery Form"
           >
             <Fuel size={18} />
-            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+            <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
               Register Bulk Fuel Delivery
             </span>
@@ -1713,7 +1719,7 @@ Signed: Field Operations Administration
             aria-label="Breakdown Work Order Form"
           >
             <Wrench size={18} />
-            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+            <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
               Breakdown Work Order Form
             </span>
@@ -1725,7 +1731,7 @@ Signed: Field Operations Administration
             aria-label="Report HSE / Safety Incident"
           >
             <ShieldAlert size={18} />
-            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+            <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
               Report HSE / Safety Incident
             </span>
@@ -1737,7 +1743,7 @@ Signed: Field Operations Administration
             aria-label="Book Personnel Leave Request"
           >
             <UserCheck size={18} />
-            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+            <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
               Book Personnel Leave Request
             </span>
@@ -1749,7 +1755,7 @@ Signed: Field Operations Administration
             aria-label="Register Equipment Asset Form"
           >
             <Truck size={18} />
-            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+            <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
               Register Equipment Asset Form
             </span>
@@ -1763,7 +1769,7 @@ Signed: Field Operations Administration
           aria-label="Sign Out"
         >
           <LogOut size={18} />
-          <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+          <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
             Sign Out
           </span>
@@ -1875,22 +1881,31 @@ Signed: Field Operations Administration
           />
         </div>
 
-        {/* Navigation Bar */}
-        <nav className={`border-t border-slate-100 dark:border-slate-800 ${mobileMenuOpen ? 'block' : 'hidden sm:block'}`}>
-          <div className="flex overflow-x-auto scrollbar-hide px-4 max-w-7xl mx-auto">
+        {/* Navigation Bar with Horizontal Scroll Cue */}
+        <nav className={`relative border-t border-slate-100 dark:border-slate-800 ${mobileMenuOpen ? 'block' : 'hidden sm:block'}`}>
+          <div className="flex overflow-x-auto scrollbar-thin px-4 max-w-7xl mx-auto">
             {tabs.map((t) => (
               <button
                 key={t.id}
                 onClick={() => { setActiveTab(t.id); setMobileMenuOpen(false); }}
-                className={`flex items-center gap-2 px-4 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition-colors ${
+                className={`flex items-center gap-2 px-4 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition-colors shrink-0 ${
                   activeTab === t.id
                     ? 'border-orange-600 text-orange-700 dark:text-orange-400 bg-orange-50/50 dark:bg-orange-950/30'
                     : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900'
                 }`}
               >
-                {t.icon} {t.label}
+                {t.icon} <span>{t.label}</span>
+                {t.badge !== undefined && t.badge > 0 && (
+                  <span className="ml-1 inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white shadow-xs">
+                    {t.badge}
+                  </span>
+                )}
               </button>
             ))}
+          </div>
+          {/* Right edge scroll cue */}
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white dark:from-slate-900 to-transparent flex items-center justify-end pr-1 text-slate-400">
+            <ChevronRight size={14} className="opacity-70" />
           </div>
         </nav>
       </header>
@@ -5577,15 +5592,18 @@ Signed: Field Operations Administration
         />
       )}
     
-      {/* Mobile Bottom Navigation Tabbar */}
+      {/* Mobile Bottom Navigation Tabbar (Simplified 4 Tabs + More) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex justify-around items-center h-[calc(3.75rem+env(safe-area-inset-bottom,0px))] pb-[env(safe-area-inset-bottom,0px)] px-1 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] no-print">
-        {tabs.map((t) => {
+        {primaryMobileNavItems.map((t) => {
           const isActive = activeTab === t.id;
           return (
             <button
               key={t.id}
-              onClick={() => setActiveTab(t.id)}
-              className={`flex flex-col items-center justify-center w-full h-full py-1 transition relative active:scale-95 ${
+              onClick={() => {
+                setActiveTab(t.id);
+                setMobileMoreOpen(false);
+              }}
+              className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition relative active:scale-95 ${
                 isActive
                   ? 'text-orange-600 dark:text-orange-400 font-bold'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 font-medium'
@@ -5593,15 +5611,119 @@ Signed: Field Operations Administration
             >
               <div className={`relative ${isActive ? 'opacity-100 scale-110' : 'opacity-70'} transition-transform`}>
                 {t.icon}
+                {t.badge !== undefined && t.badge > 0 && (
+                  <span className="absolute -top-2 -right-2 px-1 py-0.5 rounded-full text-[8px] font-black bg-amber-500 text-white min-w-[16px] text-center border-2 border-white dark:border-slate-900 shadow-md">
+                    {t.badge}
+                  </span>
+                )}
               </div>
-              <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[64px]">{t.mobileLabel || t.label}</span>
+              <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[70px]">{t.mobileLabel || t.label}</span>
               {isActive && (
                 <span className="absolute top-0 w-8 h-0.5 bg-orange-600 dark:bg-orange-400 rounded-full shadow-sm" />
               )}
             </button>
           );
         })}
+
+        {/* 5th Button: More Drawer Trigger */}
+        <button
+          onClick={() => setMobileMoreOpen(!mobileMoreOpen)}
+          className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition relative active:scale-95 ${
+            isMoreActive || mobileMoreOpen
+              ? 'text-orange-600 dark:text-orange-400 font-bold'
+              : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 font-medium'
+          }`}
+        >
+          <div className="relative">
+            <MoreHorizontal size={19} className={isMoreActive || mobileMoreOpen ? 'opacity-100 scale-110' : 'opacity-70'} />
+            {moreBadgeCount > 0 && (
+              <span className="absolute -top-2 -right-2 px-1 py-0.5 rounded-full text-[8px] font-black bg-amber-500 text-white min-w-[16px] text-center border-2 border-white dark:border-slate-900 shadow-md">
+                {moreBadgeCount}
+              </span>
+            )}
+          </div>
+          <span className="text-[10px] mt-0.5 tracking-tight">More</span>
+          {(isMoreActive || mobileMoreOpen) && (
+            <span className="absolute top-0 w-8 h-0.5 bg-orange-600 dark:bg-orange-400 rounded-full shadow-sm" />
+          )}
+        </button>
       </nav>
+
+      {/* Mobile More Drawer Bottom Sheet */}
+      {mobileMoreOpen && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-xs md:hidden flex flex-col justify-end" onClick={() => setMobileMoreOpen(false)}>
+          <div
+            className="bg-white dark:bg-slate-900 rounded-t-3xl border-t border-slate-200 dark:border-slate-800 p-5 space-y-4 max-h-[80vh] overflow-y-auto shadow-2xl animate-in slide-in-from-bottom duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-950 text-orange-600 flex items-center justify-center font-bold">
+                  <MoreHorizontal size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">More Operations Sections</h3>
+                  <p className="text-[11px] text-slate-500">Field management tools &amp; logs</p>
+                </div>
+              </div>
+              <button onClick={() => setMobileMoreOpen(false)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              {moreMobileNavItems.map((item) => {
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setMobileMoreOpen(false);
+                    }}
+                    className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition-all ${
+                      isActive
+                        ? 'bg-orange-50 dark:bg-orange-950/40 border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300 font-bold shadow-xs'
+                        : 'bg-slate-50/70 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-xl shrink-0 ${isActive ? 'bg-orange-600 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                      {item.icon}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs truncate">{item.label}</p>
+                      {item.badge !== undefined && item.badge > 0 && (
+                        <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-500 text-white">
+                          {item.badge} new
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Quick Profile & Logout Actions */}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+              <button
+                onClick={() => {
+                  router.push('/field-admin-portal/my-profile');
+                  setMobileMoreOpen(false);
+                }}
+                className="flex-1 py-2.5 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+              >
+                <User size={15} /> My Profile
+              </button>
+              <button
+                onClick={() => void signOut()}
+                className="py-2.5 px-3 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
+              >
+                <LogOut size={15} /> Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Equipment Modal */}
       {showAddAssetModal && (

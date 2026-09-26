@@ -42,6 +42,8 @@ import {
   ChevronUp,
   Zap,
   Droplet,
+  MoreHorizontal,
+  Sparkles,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -196,6 +198,7 @@ export default function FinancePortalWorkspace() {
   const [selectedVendorKey, setSelectedVendorKey] = useState('');
   const [vendorSearch, setVendorSearch] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [banner, setBanner] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
   const [version, setVersion] = useState(0);
 
@@ -1185,16 +1188,21 @@ Signed: Finance & Procurement Administration
   // 5. Fuel Management
   // 6. Projects
   // 7. My Profile
-  const navItems: { id: FinanceTab; label: string; mobileLabel?: string; icon: React.ElementType }[] = [
-    { id: 'EXPENSES', label: 'Operational Expenses', mobileLabel: 'Expenses', icon: DollarSign },
-    { id: 'OPERATIONAL_EXPENSES', label: 'Claims Submission', mobileLabel: 'Claims', icon: FileText },
-   /* { id: 'INVOICES', label: 'Invoices', icon: FileText },*/
+  const navItems: { id: FinanceTab; label: string; mobileLabel?: string; icon: React.ElementType; badge?: number }[] = [
+    { id: 'EXPENSES', label: 'Operational Cost Subledger', mobileLabel: 'Cost Ledger', icon: DollarSign },
+    { id: 'OPERATIONAL_EXPENSES', label: 'Staff Claims Submission', mobileLabel: 'Claims', icon: FileText, badge: unresolvedClaimsCount },
+    { id: 'INVOICES', label: 'Commercial Invoices', mobileLabel: 'Invoices', icon: FileText },
     { id: 'PURCHASE_ORDERS', label: 'Purchase Orders', mobileLabel: 'Purchases', icon: ShoppingCart },
     { id: 'VENDORS', label: 'Vendors', mobileLabel: 'Vendors', icon: Building2 },
     { id: 'FUEL', label: 'Fuel Management', mobileLabel: 'Fuel', icon: Fuel },
     { id: 'PROJECTS', label: 'Projects', mobileLabel: 'Projects', icon: Briefcase },
-    { id: 'NOTIFICATIONS', label: 'Notifications', mobileLabel: 'Alerts', icon: Bell },
+    { id: 'NOTIFICATIONS', label: 'Notifications', mobileLabel: 'Alerts', icon: Bell, badge: notificationCount },
   ];
+
+  const primaryMobileNavItems = navItems.slice(0, 4); // Cost Ledger, Claims, Invoices, Purchases
+  const moreMobileNavItems = navItems.slice(4); // Vendors, Fuel, Projects, Notifications
+  const moreBadgeCount = moreMobileNavItems.reduce((acc, it) => acc + (it.badge || 0), 0);
+  const isMoreActive = moreMobileNavItems.some((it) => it.id === activeTab);
 
   // ─── Render Date & Project Filter Bar Component ─────────────────────────────
 
@@ -1362,7 +1370,29 @@ Signed: Finance & Procurement Administration
 
     switch (activeTab) {
       case 'OPERATIONAL_EXPENSES':
-        return <OperationalExpensesWorkspace />;
+        return (
+          <div className="space-y-4">
+            <div className="bg-violet-50/70 dark:bg-violet-950/20 border border-violet-200/80 dark:border-violet-900/40 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-violet-600 text-white flex items-center justify-center font-bold shrink-0">
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <h2 className="font-bold text-base text-foreground">Staff Expense Claims &amp; Reimbursements</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">Submit, verify, and reconcile individual employee expense claims, receipt dockets, and reimbursement vouchers.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowExpenseModal(true)}
+                className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-bold shadow-xs transition shrink-0 flex items-center justify-center gap-1.5"
+              >
+                <Plus size={14} /> Submit New Claim
+              </button>
+            </div>
+            <OperationalExpensesWorkspace />
+          </div>
+        );
 
       case 'NOTIFICATIONS':
         return <NotificationWorkspace hideSchedules={true} />;
@@ -2354,10 +2384,10 @@ Signed: Finance & Procurement Administration
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h2 className="font-bold text-xl text-foreground flex items-center gap-2">
-                  <DollarSign className="h-6 w-6 text-violet-600" /> Operational Expenses
+                  <DollarSign className="h-6 w-6 text-violet-600" /> Operational Cost Subledger
                 </h2>
-                <p className="text-xs text-muted-foreground">
-                  Expenditure tracking, vendor analytics, frequency intelligence, and expense claim management.
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  General site expenditure subledger, cost posting entries, vendor spending analytics, and cost ledger intelligence.
                 </p>
               </div>
               <button
@@ -2365,7 +2395,7 @@ Signed: Finance & Procurement Administration
                 onClick={() => setShowExpenseModal(true)}
                 className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1.5 shrink-0"
               >
-                <Plus size={15} /> Submit Operational Expense Claim
+                <Plus size={15} /> Submit Cost Entry
               </button>
             </div>
 
@@ -2755,11 +2785,11 @@ Signed: Finance & Procurement Administration
       {/* ─── Thin Quick-Action Left Sidebar (Large Screens Only) ─────────────────── */}
       <aside
         aria-label="Priority Quick Action Forms Sidebar"
-        className="hidden lg:flex flex-col items-center py-4 px-2 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-200 w-14 border-r border-slate-200 dark:border-slate-800 shrink-0 sticky top-0 z-40 h-screen select-none shadow-xs no-print"
+        className="hidden lg:flex flex-col items-center py-4 px-2 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-200 w-16 border-r border-slate-200 dark:border-slate-800 shrink-0 sticky top-0 z-40 h-screen select-none shadow-xs no-print"
       >
         <Link href="/" className="w-11 h-11 flex items-center justify-center mb-2 group relative shrink-0" title="Cestos Operations">
           <AppLogo size={42} className="shrink-0" />
-          <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-[100000] flex items-center gap-1.5">
+          <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-[100000] flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
             Cestos Operations
           </span>
@@ -2773,7 +2803,7 @@ Signed: Finance & Procurement Administration
             aria-label="Issue Purchase Order Form"
           >
             <ShoppingCart size={18} />
-            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+            <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
               Issue Purchase Order Form
             </span>
@@ -2785,7 +2815,7 @@ Signed: Finance & Procurement Administration
             aria-label="Submit Expense Claim Form"
           >
             <DollarSign size={18} />
-            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+            <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
               Submit Expense Claim Form
             </span>
@@ -2797,7 +2827,7 @@ Signed: Finance & Procurement Administration
             aria-label="Register Bulk Fuel Delivery Form"
           >
             <Fuel size={18} />
-            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+            <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
               Register Bulk Fuel Delivery
             </span>
@@ -2809,7 +2839,7 @@ Signed: Finance & Procurement Administration
             aria-label="Issue Fuel Dispense Ticket"
           >
             <Droplet size={18} />
-            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+            <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
               Issue Fuel Dispense Ticket
             </span>
@@ -2821,7 +2851,7 @@ Signed: Finance & Procurement Administration
             aria-label="Manage Vendors & Suppliers"
           >
             <Building2 size={18} />
-            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+            <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
               Manage Vendors & Suppliers
             </span>
@@ -2835,7 +2865,7 @@ Signed: Finance & Procurement Administration
           aria-label="Sign Out"
         >
           <LogOut size={18} />
-          <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+          <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
             Sign Out
           </span>
@@ -2918,9 +2948,9 @@ Signed: Finance & Procurement Administration
           </div>
         </div>
 
-        {/* Top Horizontal Navigation Bar in Requested Order */}
-        <nav className={`border-t border-slate-100 dark:border-slate-800 ${mobileMenuOpen ? 'block' : 'hidden sm:block'}`}>
-          <div className="flex overflow-x-auto scrollbar-hide px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        {/* Top Horizontal Navigation Bar in Requested Order with Scroll Cue */}
+        <nav className={`relative border-t border-slate-100 dark:border-slate-800 ${mobileMenuOpen ? 'block' : 'hidden sm:block'}`}>
+          <div className="flex overflow-x-auto scrollbar-thin px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
             {navItems.map((t) => {
               const Icon = t.icon;
               const active = activeTab === t.id;
@@ -2928,7 +2958,7 @@ Signed: Finance & Procurement Administration
                 <button
                   key={t.id}
                   onClick={() => { setActiveTab(t.id); setMobileMenuOpen(false); }}
-                  className={`flex items-center gap-2 px-3 py-2.5 text-xs font-bold whitespace-nowrap border-b-2 transition-colors ${
+                  className={`flex items-center gap-2 px-3 py-2.5 text-xs font-bold whitespace-nowrap border-b-2 transition-colors shrink-0 ${
                     active
                       ? 'border-violet-600 text-violet-700 dark:text-violet-400 bg-violet-50/50 dark:bg-violet-950/30'
                       : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900'
@@ -2944,6 +2974,10 @@ Signed: Finance & Procurement Administration
                 </button>
               );
             })}
+          </div>
+          {/* Right edge scroll cue */}
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white dark:from-slate-900 to-transparent flex items-center justify-end pr-1 text-slate-400">
+            <ChevronRight size={14} className="opacity-70" />
           </div>
         </nav>
       </header>
@@ -3849,37 +3883,140 @@ Signed: Finance & Procurement Administration
         </button>
       )}
     
-      {/* Mobile Bottom Navigation Tabbar */}
+      {/* Mobile Bottom Navigation Tabbar (Simplified 4 Tabs + More) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex justify-around items-center h-[calc(3.75rem+env(safe-area-inset-bottom,0px))] pb-[env(safe-area-inset-bottom,0px)] px-1 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] no-print">
-        {navItems.map((item) => {
+        {primaryMobileNavItems.map((item) => {
           const IconComp = item.icon;
           const isActive = activeTab === item.id;
           return (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center justify-center w-full h-full py-1 transition relative active:scale-95 ${
+              onClick={() => {
+                setActiveTab(item.id);
+                setMobileMoreOpen(false);
+              }}
+              className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition relative active:scale-95 ${
                 isActive
                   ? 'text-violet-600 dark:text-violet-400 font-bold'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 font-medium'
               }`}
             >
               <div className="relative">
-                <IconComp size={20} className={isActive ? 'opacity-100 scale-110' : 'opacity-70'} />
+                <IconComp size={19} className={isActive ? 'opacity-100 scale-110' : 'opacity-70'} />
                 {item.id === 'OPERATIONAL_EXPENSES' && unresolvedClaimsCount > 0 && (
-                  <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 bg-amber-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-md animate-pulse">
+                  <span className="absolute -top-2 -right-2 min-w-[16px] h-[16px] px-1 bg-amber-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-md animate-pulse">
                     {unresolvedClaimsCount > 99 ? '99+' : unresolvedClaimsCount}
                   </span>
                 )}
               </div>
-              <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[64px]">{item.mobileLabel || item.label}</span>
+              <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[70px]">{item.mobileLabel || item.label}</span>
               {isActive && (
                 <span className="absolute top-0 w-8 h-0.5 bg-violet-600 dark:bg-violet-400 rounded-full shadow-sm" />
               )}
             </button>
           );
         })}
+
+        {/* 5th Button: More Drawer Trigger */}
+        <button
+          onClick={() => setMobileMoreOpen(!mobileMoreOpen)}
+          className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition relative active:scale-95 ${
+            isMoreActive || mobileMoreOpen
+              ? 'text-violet-600 dark:text-violet-400 font-bold'
+              : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 font-medium'
+          }`}
+        >
+          <div className="relative">
+            <MoreHorizontal size={19} className={isMoreActive || mobileMoreOpen ? 'opacity-100 scale-110' : 'opacity-70'} />
+            {moreBadgeCount > 0 && (
+              <span className="absolute -top-2 -right-2 px-1 py-0.5 rounded-full text-[8px] font-black bg-amber-500 text-white min-w-[16px] text-center border-2 border-white dark:border-slate-900 shadow-md">
+                {moreBadgeCount}
+              </span>
+            )}
+          </div>
+          <span className="text-[10px] mt-0.5 tracking-tight">More</span>
+          {(isMoreActive || mobileMoreOpen) && (
+            <span className="absolute top-0 w-8 h-0.5 bg-violet-600 dark:bg-violet-400 rounded-full shadow-sm" />
+          )}
+        </button>
       </nav>
+
+      {/* Mobile More Drawer Bottom Sheet */}
+      {mobileMoreOpen && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-xs md:hidden flex flex-col justify-end" onClick={() => setMobileMoreOpen(false)}>
+          <div
+            className="bg-white dark:bg-slate-900 rounded-t-3xl border-t border-slate-200 dark:border-slate-800 p-5 space-y-4 max-h-[80vh] overflow-y-auto shadow-2xl animate-in slide-in-from-bottom duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-violet-50 dark:bg-violet-950 text-violet-600 flex items-center justify-center font-bold">
+                  <MoreHorizontal size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">More Finance Sections</h3>
+                  <p className="text-[11px] text-slate-500">Additional financial management tools</p>
+                </div>
+              </div>
+              <button onClick={() => setMobileMoreOpen(false)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              {moreMobileNavItems.map((item) => {
+                const IconComp = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setMobileMoreOpen(false);
+                    }}
+                    className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition-all ${
+                      isActive
+                        ? 'bg-violet-50 dark:bg-violet-950/40 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300 font-bold shadow-xs'
+                        : 'bg-slate-50/70 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-xl shrink-0 ${isActive ? 'bg-violet-600 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                      <IconComp size={16} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs truncate">{item.label}</p>
+                      {item.badge !== undefined && item.badge > 0 && (
+                        <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-500 text-white">
+                          {item.badge} new
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Quick Profile & Logout Actions */}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+              <button
+                onClick={() => {
+                  router.push('/finance-portal/my-profile');
+                  setMobileMoreOpen(false);
+                }}
+                className="flex-1 py-2.5 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+              >
+                <User size={15} /> My Profile
+              </button>
+              <button
+                onClick={() => void signOut()}
+                className="py-2.5 px-3 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
+              >
+                <LogOut size={15} /> Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* PROJECT FINANCIAL DETAIL MODAL */}
       {viewingProject && (() => {
         const pId = String(viewingProject.id);

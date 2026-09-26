@@ -22,12 +22,13 @@ export function printElement(element: HTMLElement, title: string): void {
     const heading = section.querySelector('h1, h2, h3, h4');
     if (heading?.textContent?.trim().toLowerCase() === 'attachments') section.remove();
   });
-  clone.querySelectorAll('.no-print, button, input, select, textarea, style, script').forEach((node) => node.remove());
+  clone.querySelectorAll('.no-print, [data-no-print], button, input, select, textarea, style, script').forEach((node) => node.remove());
   clone.style.setProperty('position', 'static', 'important');
   clone.style.setProperty('inset', 'auto', 'important');
   clone.style.setProperty('width', '100%', 'important');
   clone.style.setProperty('height', 'auto', 'important');
   clone.style.setProperty('max-height', 'none', 'important');
+  clone.style.setProperty('max-width', 'none', 'important');
   clone.style.setProperty('overflow', 'visible', 'important');
   clone.style.setProperty('margin', '0', 'important');
   clone.style.setProperty('background', '#ffffff', 'important');
@@ -43,9 +44,9 @@ export function printElement(element: HTMLElement, title: string): void {
   const doc = popup.document;
   doc.open();
   doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>
-    @page { size: A4 portrait; margin: 0; }
+    @page { size: A4 portrait; margin: 1in; }
     html, body { margin: 0; padding: 0; background: #fff; color: #111827; }
-    body { padding: 10mm; font-family: Arial, sans-serif; }
+    body { font-family: Arial, sans-serif; }
     *, *::before, *::after { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; border-radius: 0 !important; }
     .print-root, .print-root * { border-radius: 0 !important; }
     .print-root { width: 100%; }

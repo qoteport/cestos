@@ -55,7 +55,10 @@ import {
   Briefcase,
   Truck,
   Sparkles,
-  ShoppingBag } from 'lucide-react';
+  ShoppingBag,
+  LayoutDashboard,
+  MoreHorizontal,
+} from 'lucide-react';
 import EmployeeDetailView from './EmployeeDetailView';
 import ExecutiveEmployeeDetailView from './ExecutiveEmployeeDetailView';
 import ExecutiveProjectDetailView from './ExecutiveProjectDetailView';
@@ -89,6 +92,7 @@ import { useOperationalDataSync } from '@/lib/operationalDataSync';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type ExecutiveTab =
+  | 'OVERVIEW'
   | 'PEOPLE'
   | 'EXPENSES'
   | 'HSE'
@@ -197,10 +201,11 @@ export default function ExecutivePortalWorkspace() {
   const [filteredEmployeesPage, setFilteredemployeespage] = React.useState(1);
   const [scopedIncidentsPage, setScopedincidentspage] = React.useState(1);
 
-  const [activeTab, setActiveTab] = useState<ExecutiveTab>('EXPENSES');
+  const [activeTab, setActiveTab] = useState<ExecutiveTab>('OVERVIEW');
   const handledRecordLink = useRef('');
   const [equipmentTab, setEquipmentTab] = useState<'ASSETS' | 'MAINTENANCE'>('ASSETS');
   const [maintFilter, setMaintFilter] = useState<string>('ALL');
+  const [poApprovalFilter, setPoApprovalFilter] = useState<'ALL' | 'PENDING' | 'APPROVED'>('ALL');
   useEffect(() => {
     const tabParam = new URLSearchParams(window.location.search).get('tab') as ExecutiveTab;
     if (tabParam) {
@@ -208,6 +213,7 @@ export default function ExecutivePortalWorkspace() {
     }
   }, []);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [banner, setBanner] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
   const [showPurchasingCharts, setShowPurchasingCharts] = useState(false);
 
@@ -1149,26 +1155,35 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
   }, [scopedPurchaseOrders]);
 
   const navItems: { id: ExecutiveTab; label: string; mobileLabel?: string; icon: React.ComponentType<{ size?: number; className?: string }>; badge?: number }[] = [
+    { id: 'OVERVIEW', label: 'Executive Oversight', mobileLabel: 'Overview', icon: LayoutDashboard },
     { id: 'EXPENSES', label: 'Operational Expenses', mobileLabel: 'Expenses', icon: TrendingUp },
     { id: 'PURCHASE_ORDERS', label: 'Purchase Orders', mobileLabel: 'Purchases', icon: ShoppingCart, badge: unapprovedPurchaseOrdersCount },
+    { id: 'EQUIPMENTS', label: 'Equipment & Fleet', mobileLabel: 'Fleet', icon: Truck },
     { id: 'FUEL', label: 'Fuel Management', mobileLabel: 'Fuel', icon: Fuel },
     { id: 'PEOPLE', label: 'Employees', mobileLabel: 'Workers', icon: Users },
     { id: 'HSE', label: 'HSE & Safety', mobileLabel: 'Safety', icon: ShieldAlert },
     { id: 'PROJECTS', label: 'Projects', mobileLabel: 'Projects', icon: Briefcase },
-    { id: 'EQUIPMENTS', label: 'Equipments', mobileLabel: 'Fleet', icon: Truck },
     { id: 'COMPLIANCE', label: 'Compliance & Documents', mobileLabel: 'Compliance', icon: Shield },
   ];
+
+  const primaryMobileNavItems = navItems.slice(0, 4);
+  const moreMobileNavItems = [
+    ...navItems.slice(4),
+    { id: 'NOTIFICATIONS' as ExecutiveTab, label: 'Notifications', mobileLabel: 'Alerts', icon: Bell, badge: notificationCount },
+  ];
+  const moreBadgeCount = moreMobileNavItems.reduce((acc, it) => acc + (it.badge || 0), 0);
+  const isMoreActive = moreMobileNavItems.some((it) => it.id === activeTab);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-row selection:bg-indigo-500 selection:text-white">
       {/* ─── Thin Quick-Action Left Sidebar (Large Screens Only) ─────────────────── */}
       <aside
         aria-label="Priority Quick Action Forms Sidebar"
-        className="hidden lg:flex flex-col items-center py-4 px-2 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-200 w-14 border-r border-slate-200 dark:border-slate-800 shrink-0 sticky top-0 z-40 h-screen select-none shadow-xs no-print"
+        className="hidden lg:flex flex-col items-center py-4 px-2 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-200 w-16 border-r border-slate-200 dark:border-slate-800 shrink-0 sticky top-0 z-40 h-screen select-none shadow-xs no-print"
       >
         <Link href="/" className="w-11 h-11 flex items-center justify-center mb-2 group relative shrink-0" title="Cestos Operations">
           <AppLogo size={42} className="shrink-0" />
-          <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-[100000] flex items-center gap-1.5">
+          <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-[100000] flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
             Cestos Operations
           </span>
@@ -1182,7 +1197,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
             aria-label="Issue Purchase Order Form"
           >
             <ShoppingCart size={18} />
-            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+            <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
               Issue Purchase Order Form
             </span>
@@ -1194,7 +1209,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
             aria-label="Submit Expense Claim Form"
           >
             <DollarSign size={18} />
-            <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+            <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
               Submit Expense Claim Form
             </span>
@@ -1209,7 +1224,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
           aria-label="Sign Out"
         >
           <LogOut size={18} />
-          <span className="absolute left-14 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
+          <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
             Sign Out
           </span>
@@ -1295,9 +1310,9 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
           </div>
         </div>
 
-        {/* Desktop Tab Navigation Bar */}
-        <div className="hidden md:block bg-slate-100/70 dark:bg-slate-900/60 border-t border-slate-200 dark:border-slate-800 overflow-x-auto max-w-full scrollbar-none">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-1 py-1.5">
+        {/* Desktop Tab Navigation Bar with horizontal scroll cue */}
+        <div className="relative hidden md:block bg-slate-100/70 dark:bg-slate-900/60 border-t border-slate-200 dark:border-slate-800">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-1 py-1.5 overflow-x-auto scrollbar-thin">
             {navItems.map((item) => {
               const IconComp = item.icon;
               const isActive = activeTab === item.id;
@@ -1305,7 +1320,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap shrink-0 ${
                     isActive
                       ? 'bg-indigo-600 text-white shadow-xs'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/60 dark:hover:bg-slate-800'
@@ -1325,6 +1340,10 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                 </button>
               );
             })}
+          </div>
+          {/* Subtle Right Edge Fade Indicator to cue scrollable tabs */}
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-100/90 dark:from-slate-900/90 to-transparent flex items-center justify-end pr-1 text-slate-400">
+            <ChevronRight size={14} className="opacity-70" />
           </div>
         </div>
       </header>
@@ -1362,7 +1381,6 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
           })}
         </div>
       )}
-
       {/* ─── Main Content Container ───────────────────────────────────────────── */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 pb-24 md:pb-6">
         {banner && (
@@ -1382,6 +1400,399 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
             </button>
           </div>
         )}
+
+        {loading && (
+          <div className="flex items-center justify-center p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl gap-3 text-slate-600 dark:text-slate-300 shadow-xs">
+            <RefreshCw className="h-5 w-5 animate-spin text-indigo-600" />
+            <span className="text-xs font-bold">Synchronizing Executive Operations Data...</span>
+          </div>
+        )}
+
+        {/* ─── TAB 0: EXECUTIVE OVERSIGHT (Landing Page) ────────────────────── */}
+        {activeTab === 'OVERVIEW' && (() => {
+          const unapprovedPOs = scopedPurchaseOrders.filter((po) => {
+            const st = String(po.status || '').toUpperCase();
+            return st === 'WAITING_APPROVAL' || st === 'PENDING' || st === 'SUBMITTED' || st === 'DRAFT';
+          });
+          const pendingPoTotalValue = unapprovedPOs.reduce((acc, po) => acc + Number(po.total_amount || po.total || po.total_cost || 0), 0);
+          const totalExpensesValue = scopedExpenses.reduce((acc, e) => acc + Number(e.total_cost || e.amount || 0), 0);
+          const totalPoSpendValue = scopedPurchaseOrders.reduce((acc, po) => acc + Number(po.total_amount || po.total || po.total_cost || 0), 0);
+          const totalAssetsCount = assets.length;
+          const activeAssetsCount = assets.filter((a) => ['ACTIVE', 'OPERATIONAL', 'AVAILABLE'].includes(String(a.status || a.operational_status || '').toUpperCase())).length;
+          const criticalIncidentsList = scopedIncidents.filter((i) => ['CRITICAL', 'HIGH'].includes(String(i.severity || '').toUpperCase()) || String(i.status || '').toUpperCase() === 'OPEN');
+          const activeWorkOrdersCount = workOrders.filter((w) => ['OPEN', 'IN_PROGRESS', 'PENDING'].includes(String(w.status || '').toUpperCase())).length;
+          const activeEmployeesCount = employees.filter((e) => e.is_active !== false).length;
+
+          return (
+            <div className="space-y-6">
+              {renderFilterBar()}
+
+              {/* Executive Welcome & Context Header */}
+              <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+                <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-indigo-500/10 to-transparent pointer-events-none" />
+                <div className="relative z-10 space-y-3">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[11px] font-bold tracking-wide uppercase">
+                    <Sparkles size={12} className="text-amber-400" /> Executive Command Dashboard
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
+                    Operations &amp; Executive Oversight
+                  </h2>
+                  <p className="text-indigo-200 text-xs sm:text-sm max-w-2xl font-medium leading-relaxed">
+                    Holistic visibility across financial subledgers, pending procurement approvals, field asset health, safety compliance, and site project performance.
+                  </p>
+                  
+                  {/* Status Ribbon */}
+                  <div className="pt-2 flex flex-wrap items-center gap-3 text-xs">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-xs font-semibold">
+                      <Briefcase size={14} className="text-indigo-300" />
+                      <span>{selectedProjectId ? projects.find(p => p.id === selectedProjectId)?.name || 'Filtered Project' : `${projects.length} Active Projects`}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-xs font-semibold">
+                      <Users size={14} className="text-indigo-300" />
+                      <span>{activeEmployeesCount} Field Workforce</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-xs font-semibold">
+                      <Truck size={14} className="text-indigo-300" />
+                      <span>{activeAssetsCount} / {totalAssetsCount} Active Fleet</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ─── PRIORITY EXCEPTION & DECISION WATCHLIST (Decisions First) ─── */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                {/* 1. Pending Purchase Orders Approvals Deck (Span 7) */}
+                <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center font-bold">
+                        <ShoppingCart size={20} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-base text-slate-900 dark:text-white">Purchase Orders Awaiting Sign-Off</h3>
+                          {unapprovedPOs.length > 0 && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white">
+                              {unapprovedPOs.length} Pending
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Total pending commitment: <strong className="text-slate-900 dark:text-white">${pendingPoTotalValue.toLocaleString()}</strong>
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('PURCHASE_ORDERS')}
+                      className="text-xs font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 flex items-center gap-1"
+                    >
+                      View All <ChevronRight size={14} />
+                    </button>
+                  </div>
+
+                  {unapprovedPOs.length === 0 ? (
+                    <div className="p-8 text-center bg-slate-50/60 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                      <CheckCircle2 size={28} className="mx-auto text-emerald-500 mb-2" />
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">All Purchase Orders Reviewed</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">No procurement orders are currently awaiting executive approval.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {unapprovedPOs.slice(0, 4).map((po) => {
+                        const projName = projects.find((p) => String(p.id) === String(po.project_id))?.name || po.project_id || 'All Projects';
+                        return (
+                          <div
+                            key={po.id}
+                            className="p-3.5 rounded-2xl border border-amber-200/80 dark:border-amber-900/40 bg-amber-50/30 dark:bg-amber-950/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:shadow-xs transition"
+                          >
+                            <div className="min-w-0 space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">{po.po_number || `PO-${po.id.slice(0, 8)}`}</span>
+                                <StatusBadge status={po.status || 'WAITING_APPROVAL'} />
+                                {po.category && (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 font-semibold text-slate-600 dark:text-slate-300">
+                                    {purchaseOrderCategoryLabel(po.category)}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                                {po.supplier_name || po.vendor_name || 'Vendor'} · <span className="font-medium text-slate-500">{projName}</span>
+                              </p>
+                              <p className="text-[11px] text-slate-500 font-mono">
+                                Amount: <strong className="text-slate-900 dark:text-white font-bold">{po.currency || 'USD'} {Number(po.total_amount || po.total || 0).toLocaleString()}</strong>
+                                {po.created_at && ` · ${new Date(po.created_at).toLocaleDateString()}`}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPO(po)}
+                                className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 flex items-center gap-1"
+                              >
+                                <Eye size={13} /> View
+                              </button>
+                              <button
+                                type="button"
+                                disabled={!!approvingPoId}
+                                onClick={() => void approvePurchaseOrder(po)}
+                                className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition flex items-center gap-1 disabled:opacity-50"
+                              >
+                                {approvingPoId === String(po.id) ? (
+                                  <RefreshCw size={13} className="animate-spin" />
+                                ) : (
+                                  <CheckCircle2 size={13} />
+                                )}
+                                Approve
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Critical Safety & Fleet Action Watch (Span 5) */}
+                <div className="lg:col-span-5 space-y-6">
+                  {/* Safety Alert Watch */}
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-xs space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-600 flex items-center justify-center font-bold">
+                          <ShieldAlert size={18} />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-sm text-slate-900 dark:text-white">Safety &amp; HSE Watch</h3>
+                          <p className="text-[11px] text-slate-500">{criticalIncidentsList.length} critical / open safety logs</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setActiveTab('HSE')}
+                        className="text-xs font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 flex items-center gap-1"
+                      >
+                        Inspect HSE <ChevronRight size={13} />
+                      </button>
+                    </div>
+
+                    {criticalIncidentsList.length === 0 ? (
+                      <p className="text-xs text-slate-500 p-4 text-center">No critical safety incidents currently flagged.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {criticalIncidentsList.slice(0, 2).map((inc: any) => (
+                          <div key={inc.id} className="p-3 rounded-xl bg-red-50/40 dark:bg-red-950/20 border border-red-200/60 dark:border-red-900/40 text-xs space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-red-700 dark:text-red-400">{inc.incident_type || 'Safety Incident'}</span>
+                              <StatusBadge status={inc.severity || 'HIGH'} />
+                            </div>
+                            <p className="text-slate-600 dark:text-slate-300 line-clamp-2 text-[11px]">{inc.description || 'No description recorded.'}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Maintenance & Fleet Readiness Watch */}
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-xs space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 flex items-center justify-center font-bold">
+                          <Wrench size={18} />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-sm text-slate-900 dark:text-white">Fleet &amp; Maintenance Operations</h3>
+                          <p className="text-[11px] text-slate-500">{activeWorkOrdersCount} active work orders in field</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setActiveTab('EQUIPMENTS')}
+                        className="text-xs font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 flex items-center gap-1"
+                      >
+                        Inspect Fleet <ChevronRight size={13} />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                        <span className="text-[10px] uppercase font-bold text-slate-500 block">Fleet Readiness</span>
+                        <strong className="text-base font-black text-slate-900 dark:text-white">
+                          {totalAssetsCount > 0 ? Math.round((activeAssetsCount / totalAssetsCount) * 100) : 100}%
+                        </strong>
+                        <span className="text-[10px] text-slate-400 block">{activeAssetsCount} operational units</span>
+                      </div>
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                        <span className="text-[10px] uppercase font-bold text-slate-500 block">Open Repairs</span>
+                        <strong className="text-base font-black text-orange-600">{activeWorkOrdersCount}</strong>
+                        <span className="text-[10px] text-slate-400 block">WOs in progress</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ─── KEY EXECUTIVE METRICS GRID ─────────────────────────────── */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div
+                  onClick={() => setActiveTab('EXPENSES')}
+                  className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xs space-y-2 cursor-pointer hover:border-indigo-400 transition group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Expenses</span>
+                    <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition">
+                      <TrendingUp size={16} />
+                    </div>
+                  </div>
+                  <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+                    ${totalExpensesValue.toLocaleString()}
+                  </p>
+                  <p className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1">
+                    {scopedExpenses.length} expense claims <ArrowRight size={12} />
+                  </p>
+                </div>
+
+                <div
+                  onClick={() => setActiveTab('PURCHASE_ORDERS')}
+                  className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xs space-y-2 cursor-pointer hover:border-indigo-400 transition group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">PO Commitments</span>
+                    <div className="p-2 rounded-xl bg-violet-50 dark:bg-violet-950 text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition">
+                      <ShoppingCart size={16} />
+                    </div>
+                  </div>
+                  <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+                    ${totalPoSpendValue.toLocaleString()}
+                  </p>
+                  <p className="text-[11px] text-violet-600 dark:text-violet-400 font-bold flex items-center gap-1">
+                    {scopedPurchaseOrders.length} orders issued <ArrowRight size={12} />
+                  </p>
+                </div>
+
+                <div
+                  onClick={() => setActiveTab('EQUIPMENTS')}
+                  className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xs space-y-2 cursor-pointer hover:border-indigo-400 transition group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Equipment Fleet</span>
+                    <div className="p-2 rounded-xl bg-orange-50 dark:bg-orange-950 text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition">
+                      <Truck size={16} />
+                    </div>
+                  </div>
+                  <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+                    {activeAssetsCount} / {totalAssetsCount}
+                  </p>
+                  <p className="text-[11px] text-orange-600 dark:text-orange-400 font-bold flex items-center gap-1">
+                    Manage Fleet &amp; Maintenance <ArrowRight size={12} />
+                  </p>
+                </div>
+
+                <div
+                  onClick={() => setActiveTab('PEOPLE')}
+                  className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xs space-y-2 cursor-pointer hover:border-indigo-400 transition group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Field Personnel</span>
+                    <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition">
+                      <Users size={16} />
+                    </div>
+                  </div>
+                  <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+                    {activeEmployeesCount}
+                  </p>
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                    {filteredEmployees.length} on current filter <ArrowRight size={12} />
+                  </p>
+                </div>
+              </div>
+
+              {/* ─── ANALYTICS TREND SUMMARY ─── */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="lg:col-span-8 p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xs space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-bold text-base text-slate-900 dark:text-white">Operational Spend &amp; Approval Trend</h3>
+                      <p className="text-xs text-slate-500">Daily breakdown of total operational expenses vs approved payments</p>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('EXPENSES')}
+                      className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                    >
+                      Expense Details →
+                    </button>
+                  </div>
+                  {expenseTimeSeriesData.length === 0 ? (
+                    <div className="p-12 text-center text-slate-400 text-xs">No historical spend entries in current scope.</div>
+                  ) : (
+                    <div className="h-64 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={expenseTimeSeriesData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+                          <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                          <YAxis tick={{ fontSize: 11 }} />
+                          <Tooltip formatter={(value: any) => [`$${Number(value).toLocaleString()}`, '']} />
+                          <Legend wrapperStyle={{ fontSize: 11 }} />
+                          <Bar dataKey="totalCost" fill="#6366f1" radius={[4, 4, 0, 0]} name="Total Raised ($)" />
+                          <Line type="monotone" dataKey="approvedCost" stroke="#10b981" strokeWidth={2.5} dot={{ r: 3 }} name="Approved ($)" />
+                          <Line type="monotone" dataKey="paidCost" stroke="#2563eb" strokeWidth={2.5} dot={{ r: 3 }} name="Paid ($)" />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </div>
+
+                {/* Procurement Spend by Category */}
+                <div className="lg:col-span-4 p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xs space-y-4 flex flex-col justify-between">
+                  <div>
+                    <h3 className="font-bold text-base text-slate-900 dark:text-white">PO Spend by Category</h3>
+                    <p className="text-xs text-slate-500">Distribution of committed procurement</p>
+                  </div>
+                  <div className="flex-1 flex items-center justify-center min-h-[200px]">
+                    <PurchaseOrderCategoryChart orders={scopedPurchaseOrders} />
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('PURCHASE_ORDERS')}
+                    className="w-full py-2.5 px-4 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl transition text-center"
+                  >
+                    Manage Procurement &amp; Invoices →
+                  </button>
+                </div>
+              </div>
+
+              {/* ─── QUICK PORTAL LAUNCHPAD ─── */}
+              <div className="space-y-3">
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">Department Portals &amp; Workspaces</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                  {[
+                    { id: 'EXPENSES' as ExecutiveTab, label: 'Expenses', icon: TrendingUp, desc: `${scopedExpenses.length} claims`, color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40' },
+                    { id: 'PURCHASE_ORDERS' as ExecutiveTab, label: 'Purchasing', icon: ShoppingCart, desc: `${unapprovedPOs.length} unapproved`, color: 'text-violet-600 bg-violet-50 dark:bg-violet-950/40' },
+                    { id: 'EQUIPMENTS' as ExecutiveTab, label: 'Equipment & Fleet', icon: Truck, desc: `${totalAssetsCount} assets`, color: 'text-orange-600 bg-orange-50 dark:bg-orange-950/40' },
+                    { id: 'FUEL' as ExecutiveTab, label: 'Fuel Operations', icon: Fuel, desc: `${scopedFuelDeliveries.length} receipts`, color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/40' },
+                    { id: 'HSE' as ExecutiveTab, label: 'Safety & HSE', icon: ShieldAlert, desc: `${scopedIncidents.length} logs`, color: 'text-red-600 bg-red-50 dark:bg-red-950/40' },
+                    { id: 'PEOPLE' as ExecutiveTab, label: 'Employees', icon: Users, desc: `${employees.length} personnel`, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40' },
+                  ].map((dept) => {
+                    const IconComp = dept.icon;
+                    return (
+                      <button
+                        key={dept.id}
+                        onClick={() => setActiveTab(dept.id)}
+                        className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-left hover:border-indigo-400 hover:shadow-xs transition space-y-2 group"
+                      >
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${dept.color} group-hover:scale-105 transition-transform`}>
+                          <IconComp size={18} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-xs text-slate-900 dark:text-white leading-tight">{dept.label}</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">{dept.desc}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ─── TAB 1: PEOPLE (Employees Table) ──────────────────────────────── */}
         {activeTab === 'PEOPLE' && (
@@ -2223,7 +2634,18 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
           const poCount = scopedPurchaseOrders.length;
           const totalPoSpend = scopedPurchaseOrders.reduce((sum, po) => sum + (Number(po.total_amount || po.total || po.total_cost || 0)), 0);
           const receivedCount = scopedPurchaseOrders.filter((po) => ['RECEIVED', 'COMPLETED'].includes(String(po.status || '').toUpperCase())).length;
-          const pendingCount = scopedPurchaseOrders.filter((po) => ['PENDING', 'PARTIALLY_RECEIVED'].includes(String(po.status || '').toUpperCase())).length;
+          const pendingCount = scopedPurchaseOrders.filter((po) => ['PENDING', 'PARTIALLY_RECEIVED', 'WAITING_APPROVAL'].includes(String(po.status || '').toUpperCase())).length;
+          const filteredByApproval = scopedPurchaseOrders.filter((po) => {
+            if (poApprovalFilter === 'PENDING') {
+              const st = String(po.status || '').toUpperCase();
+              return st === 'WAITING_APPROVAL' || st === 'PENDING' || st === 'SUBMITTED' || st === 'DRAFT';
+            }
+            if (poApprovalFilter === 'APPROVED') {
+              const st = String(po.status || '').toUpperCase();
+              return st !== 'WAITING_APPROVAL' && st !== 'PENDING' && st !== 'SUBMITTED' && st !== 'DRAFT';
+            }
+            return true;
+          });
           return (
             <div className="space-y-6">
               {renderFilterBar()}
@@ -2269,14 +2691,52 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                 </div>
               </div>
 
+              {/* Approval & Status Quick Segment Filter */}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+                <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => { setPoApprovalFilter('ALL'); setScopedpurchaseorderspage(1); }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                      poApprovalFilter === 'ALL'
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
+                    }`}
+                  >
+                    All Orders ({poCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setPoApprovalFilter('PENDING'); setScopedpurchaseorderspage(1); }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                      poApprovalFilter === 'PENDING'
+                        ? 'bg-amber-500 text-white shadow-xs'
+                        : 'text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30'
+                    }`}
+                  >
+                    <AlertTriangle size={13} />
+                    Awaiting Approval ({unapprovedPurchaseOrdersCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setPoApprovalFilter('APPROVED'); setScopedpurchaseorderspage(1); }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                      poApprovalFilter === 'APPROVED'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30'
+                    }`}
+                  >
+                    <CheckCircle2 size={13} />
+                    Approved / Active ({scopedPurchaseOrders.length - unapprovedPurchaseOrdersCount})
+                  </button>
+                </div>
+                <span className="text-xs text-slate-500 font-medium">Showing {filteredByApproval.length} of {scopedPurchaseOrders.length} orders</span>
+              </div>
+
               {/* Table */}
               <div className="space-y-3">
-                <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center justify-between">
-                  <span>Issued Purchase Orders</span>
-                  <span className="text-xs text-slate-500 font-normal">{scopedPurchaseOrders.length} orders</span>
-                </h3>
-                {scopedPurchaseOrders.length === 0 ? (
-                  <div className="p-8 text-center text-slate-500 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">No purchase orders found matching the filter scope.</div>
+                {filteredByApproval.length === 0 ? (
+                  <div className="p-8 text-center text-slate-500 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">No purchase orders found matching the selected filter.</div>
                 ) : (<>
 
 <div className="overflow-x-auto max-w-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
@@ -2289,7 +2749,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {scopedPurchaseOrders.slice((scopedPurchaseOrdersPage - 1) * 15, scopedPurchaseOrdersPage * 15).map((po, i) => {
+                        {filteredByApproval.slice((scopedPurchaseOrdersPage - 1) * 15, scopedPurchaseOrdersPage * 15).map((po, i) => {
                           const poNum = po.po_number || po.number || `PO-${i + 1}`;
                           const vendor = po.supplier_name || po.vendor_name || po.vendor || po.supplier || 'Site Vendor';
                           const projName = projects.find((p: any) => String(p.id) === String(po.project_id))?.name || po.project_id || 'All Projects';
@@ -2297,13 +2757,14 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                           const curr = po.currency || 'USD';
                           const itemCount = Array.isArray(po.items) ? po.items.length : 1;
                           const fileName = po.attachment_file_name;
+                          const isPendingApproval = String(po.status || '').toUpperCase() === 'WAITING_APPROVAL' || String(po.status || '').toUpperCase() === 'PENDING';
                           return (
-                            <tr key={po.id || i} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
+                            <tr key={po.id || i} className={`transition ${isPendingApproval ? 'bg-amber-50/40 dark:bg-amber-950/15 hover:bg-amber-50/80' : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/40'}`}>
                               <td className="px-4 py-3 font-mono font-bold text-slate-900 dark:text-white">{poNum}</td>
                               <td className="px-4 py-3 font-mono text-slate-500">{po.created_at || po.order_date ? new Date(po.created_at || po.order_date).toLocaleDateString() : '—'}</td>
                               <td className="px-4 py-3 font-medium text-slate-700 dark:text-slate-300">{vendor}</td>
                               <td className="px-4 py-3 text-slate-500">{projName}</td>
-                              <td className="px-4 py-3"><span className="rounded-full   py-1 text-[10px] font-bold text-indigo-700 ">{purchaseOrderCategoryLabel(po.category)}</span></td>
+                              <td className="px-4 py-3"><span className="rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900">{purchaseOrderCategoryLabel(po.category)}</span></td>
                               <td className="px-4 py-3 font-mono text-slate-500">{itemCount} items</td>
                               <td className="px-4 py-3">
                                 {fileName ? (
@@ -3154,37 +3615,140 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
         </div>
       )}
     
-      {/* Mobile Bottom Navigation Tabbar */}
+      {/* Mobile Bottom Navigation Tabbar (Simplified 4 Tabs + More) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex justify-around items-center h-[calc(3.75rem+env(safe-area-inset-bottom,0px))] pb-[env(safe-area-inset-bottom,0px)] px-1 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] no-print">
-        {navItems.map((item) => {
+        {primaryMobileNavItems.map((item) => {
           const IconComp = item.icon;
           const isActive = activeTab === item.id;
           return (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center justify-center w-full h-full py-1 transition relative active:scale-95 ${
+              onClick={() => {
+                setActiveTab(item.id);
+                setMobileMoreOpen(false);
+              }}
+              className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition relative active:scale-95 ${
                 isActive
                   ? 'text-indigo-600 dark:text-indigo-400 font-bold'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 font-medium'
               }`}
             >
               <div className="relative">
-                <IconComp size={20} className={isActive ? 'opacity-100 scale-110' : 'opacity-70'} />
+                <IconComp size={19} className={isActive ? 'opacity-100 scale-110' : 'opacity-70'} />
                 {item.badge !== undefined && item.badge > 0 && (
                   <span className="absolute -top-2 -right-2 px-1 py-0.5 rounded-full text-[8px] font-black bg-amber-500 text-white min-w-[16px] text-center border-2 border-white dark:border-slate-900 shadow-md">
                     {item.badge}
                   </span>
                 )}
               </div>
-              <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[64px]">{item.mobileLabel || item.label}</span>
+              <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[70px]">{item.mobileLabel || item.label}</span>
               {isActive && (
                 <span className="absolute top-0 w-8 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-full shadow-sm" />
               )}
             </button>
           );
         })}
+
+        {/* 5th Button: More Drawer Trigger */}
+        <button
+          onClick={() => setMobileMoreOpen(!mobileMoreOpen)}
+          className={`flex flex-col items-center justify-center flex-1 h-full py-1 transition relative active:scale-95 ${
+            isMoreActive || mobileMoreOpen
+              ? 'text-indigo-600 dark:text-indigo-400 font-bold'
+              : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 font-medium'
+          }`}
+        >
+          <div className="relative">
+            <MoreHorizontal size={19} className={isMoreActive || mobileMoreOpen ? 'opacity-100 scale-110' : 'opacity-70'} />
+            {moreBadgeCount > 0 && (
+              <span className="absolute -top-2 -right-2 px-1 py-0.5 rounded-full text-[8px] font-black bg-amber-500 text-white min-w-[16px] text-center border-2 border-white dark:border-slate-900 shadow-md">
+                {moreBadgeCount}
+              </span>
+            )}
+          </div>
+          <span className="text-[10px] mt-0.5 tracking-tight">More</span>
+          {(isMoreActive || mobileMoreOpen) && (
+            <span className="absolute top-0 w-8 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-full shadow-sm" />
+          )}
+        </button>
       </nav>
+
+      {/* Mobile More Drawer Bottom Sheet */}
+      {mobileMoreOpen && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-xs md:hidden flex flex-col justify-end" onClick={() => setMobileMoreOpen(false)}>
+          <div
+            className="bg-white dark:bg-slate-900 rounded-t-3xl border-t border-slate-200 dark:border-slate-800 p-5 space-y-4 max-h-[80vh] overflow-y-auto shadow-2xl animate-in slide-in-from-bottom duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 flex items-center justify-center font-bold">
+                  <MoreHorizontal size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">More Portal Sections</h3>
+                  <p className="text-[11px] text-slate-500">Executive navigation destinations</p>
+                </div>
+              </div>
+              <button onClick={() => setMobileMoreOpen(false)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              {moreMobileNavItems.map((item) => {
+                const IconComp = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setMobileMoreOpen(false);
+                    }}
+                    className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition-all ${
+                      isActive
+                        ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-bold shadow-xs'
+                        : 'bg-slate-50/70 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-xl shrink-0 ${isActive ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                      <IconComp size={16} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs truncate">{item.label}</p>
+                      {item.badge !== undefined && item.badge > 0 && (
+                        <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-500 text-white">
+                          {item.badge} pending
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Quick Profile & Logout Actions */}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+              <button
+                onClick={() => {
+                  router.push('/executive-portal/my-profile');
+                  setMobileMoreOpen(false);
+                }}
+                className="flex-1 py-2.5 px-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+              >
+                <User size={15} /> My Profile
+              </button>
+              <button
+                onClick={() => void signOut()}
+                className="py-2.5 px-3 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
+              >
+                <LogOut size={15} /> Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* View Fuel Delivery Receipt & Docket Modal */}
       {viewingReceiptDelivery && (
