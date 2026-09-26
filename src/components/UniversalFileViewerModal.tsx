@@ -45,6 +45,7 @@ export default function UniversalFileViewerModal({
   const [textContent, setTextContent] = useState<string>('');
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [rotation, setRotation] = useState<number>(0);
+  const [closing, setClosing] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -59,6 +60,7 @@ export default function UniversalFileViewerModal({
     setZoomLevel(100);
     setRotation(0);
     setTextContent('');
+    setClosing(false);
 
     async function loadFile() {
       if (blob) {
@@ -177,7 +179,6 @@ export default function UniversalFileViewerModal({
     }
   };
 
-  const [closing, setClosing] = useState(false);
   const handleClose = () => {
     if (closing) return;
     setClosing(true);

@@ -47,6 +47,20 @@ export default function IncidentDetailModal({
   onClose: () => void;
   onUpdate?: (updated: any) => void;
 }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState(() => ({
+    title: incident?.title || '',
+    incident_type: incident?.incident_type || 'NEAR_MISS',
+    severity: incident?.severity || 'MEDIUM',
+    status: incident?.status || 'OPEN',
+    location: incident?.location || '',
+    description: incident?.description || '',
+    corrective_action: incident?.corrective_action || incident?.immediate_actions_taken || '',
+  }));
+  const [updating, setUpdating] = useState(false);
+  const [editError, setEditError] = useState('');
+  const [closing, setClosing] = useState(false);
+
   if (!incident) return null;
 
   // Calculate 10-day edit window
@@ -60,19 +74,6 @@ export default function IncidentDetailModal({
       isEditable = daysOld <= 10;
     }
   }
-
-  const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({
-    title: incident.title || '',
-    incident_type: incident.incident_type || 'NEAR_MISS',
-    severity: incident.severity || 'MEDIUM',
-    status: incident.status || 'OPEN',
-    location: incident.location || '',
-    description: incident.description || '',
-    corrective_action: incident.corrective_action || incident.immediate_actions_taken || '',
-  });
-  const [updating, setUpdating] = useState(false);
-  const [editError, setEditError] = useState('');
 
   // Determine colors based on severity
   const severity = isEditing ? editForm.severity : (incident.severity || 'MEDIUM');
@@ -136,7 +137,6 @@ export default function IncidentDetailModal({
     }
   };
 
-  const [closing, setClosing] = useState(false);
   const handleClose = () => {
     if (closing) return;
     setClosing(true);
