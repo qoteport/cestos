@@ -126,15 +126,22 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
     } finally { setBusy(false); }
   }
 
+  const [closing, setClosing] = useState(false);
+  const handleClose = () => {
+    if (closing) return;
+    setClosing(true);
+    setTimeout(onClose, 190);
+  };
+
   return createPortal(
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-0 sm:p-4 overflow-hidden" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section role="dialog" aria-modal="true" aria-label="Log operational expense" className="flex h-[100dvh] sm:h-auto sm:max-h-[90vh] w-full max-w-full sm:max-w-3xl flex-col overflow-hidden rounded-none sm:rounded-2xl border-0 sm:border border-slate-200 dark:border-slate-800 bg-white shadow-2xl dark:bg-slate-900">
+    <div className={`fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-0 sm:p-4 overflow-hidden ${closing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`} onClick={(event) => { if (event.target === event.currentTarget) handleClose(); }}>
+      <section role="dialog" aria-modal="true" aria-label="Log operational expense" className={`flex h-[100dvh] sm:h-auto sm:max-h-[90vh] w-full max-w-full sm:max-w-3xl flex-col overflow-hidden rounded-none sm:rounded-2xl border-0 sm:border border-slate-200 dark:border-slate-800 bg-white shadow-2xl dark:bg-slate-900 ${closing ? 'animate-modal-content-out' : 'animate-modal-content-in'}`}>
         <header className="flex items-center justify-between border-b p-4 sm:p-5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 sticky top-0 z-10">
           <div>
             <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Submit Operational Expense Claim</h2>
             <p className="mt-0.5 text-xs text-slate-500">Submit purchased items and invoice details to Finance.</p>
           </div>
-          <button type="button" aria-label="Close" onClick={onClose} className="rounded-full p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white transition w-10 h-10">×</button>
+          <button type="button" aria-label="Close" onClick={handleClose} className="rounded-full p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white transition w-10 h-10">×</button>
         </header>
         <form onSubmit={submit} className="flex flex-col h-full overflow-hidden">
           <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6 text-xs">

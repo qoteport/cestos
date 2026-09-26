@@ -1629,10 +1629,11 @@ Signed: Field Operations Administration
     { id: 'PURCHASE_ORDERS', label: 'Purchase Orders', mobileLabel: 'Purchases', icon: <FileText size={16} /> },
     { id: 'EXPENSES', label: 'Expenses', mobileLabel: 'Expenses', icon: <DollarSign size={16} /> },
     { id: 'FUEL', label: 'Fuel', mobileLabel: 'Fuel', icon: <Fuel size={16} /> },
+        { id: 'EQUIPMENT', label: 'Equipment', mobileLabel: 'Fleet', icon: <Truck size={16} /> },
     { id: 'MAINTENANCE', label: 'Maintenance', mobileLabel: 'Repairs', icon: <Wrench size={16} /> },
     { id: 'HSE', label: 'HSE', mobileLabel: 'HSE', icon: <ShieldCheck size={16} /> },
     { id: 'PEOPLE', label: 'Employees', mobileLabel: 'Workers', icon: <Users size={16} /> },
-    { id: 'EQUIPMENT', label: 'Equipment', mobileLabel: 'Fleet', icon: <Truck size={16} /> },
+
   ];
 
   return (

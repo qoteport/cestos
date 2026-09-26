@@ -199,7 +199,7 @@ export default function MaintenanceAssessmentReportWizard({
   };
 
   const steps = [
-    { title: 'Report Control', body: <>{controls}</> },
+    { title: '', body: <>{controls}</> },
     { title: 'Executive Summary & Equipment', body: <div className="space-y-6">{textBlock('executive_summary', 'Executive summary')}{tableSection('equipment_fleet')}</div> },
     { title: 'Maintenance Assessment', body: tableSection('maintenance_assessment') },
     { title: 'Preventive Maintenance Improvement', body: tableSection('preventive_improvements') },

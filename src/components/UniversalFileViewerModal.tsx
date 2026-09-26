@@ -177,9 +177,16 @@ export default function UniversalFileViewerModal({
     }
   };
 
+  const [closing, setClosing] = useState(false);
+  const handleClose = () => {
+    if (closing) return;
+    setClosing(true);
+    setTimeout(onClose, 190);
+  };
+
   return createPortal(
-    <div className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-slate-950/80 p-2 sm:p-4 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-6xl h-[92vh] flex flex-col overflow-hidden">
+    <div className={`fixed inset-0 z-[2147483647] flex items-center justify-center bg-slate-950/80 p-2 sm:p-4 backdrop-blur-xs ${closing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`}>
+      <div className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-6xl h-[92vh] flex flex-col overflow-hidden ${closing ? 'animate-modal-content-out' : 'animate-modal-content-in'}`}>
         {/* Header Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
@@ -272,7 +279,7 @@ export default function UniversalFileViewerModal({
             {/* Close Modal Button */}
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition ml-1"
               title="Close File Viewer"
             >

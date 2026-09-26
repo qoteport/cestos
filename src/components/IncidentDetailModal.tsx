@@ -136,8 +136,15 @@ export default function IncidentDetailModal({
     }
   };
 
+  const [closing, setClosing] = useState(false);
+  const handleClose = () => {
+    if (closing) return;
+    setClosing(true);
+    setTimeout(onClose, 190);
+  };
+
   return createPortal(
-    <div className="fixed inset-0 bg-black/70 z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden backdrop-blur-xs print:bg-white print:p-0" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className={`fixed inset-0 bg-black/70 z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden backdrop-blur-xs print:bg-white print:p-0 ${closing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`} onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
       <style>{`
         @media print {
           @page {
@@ -171,7 +178,7 @@ export default function IncidentDetailModal({
           }
         }
       `}</style>
-      <div id="incident-report-printable-area" className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[95vh] max-w-full sm:max-w-3xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden relative print:shadow-none print:h-auto print:max-h-none print:w-full">
+      <div id="incident-report-printable-area" className={`bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[95vh] max-w-full sm:max-w-3xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden relative print:shadow-none print:h-auto print:max-h-none print:w-full ${closing ? 'animate-modal-content-out' : 'animate-modal-content-in'}`}>
         
         {/* Action Header (Hidden in Print) */}
         <div className="flex items-center justify-between px-4 py-3 sm:px-6 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10 print:hidden">
@@ -214,7 +221,7 @@ export default function IncidentDetailModal({
             )}
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"
             >
               <X size={20} />
