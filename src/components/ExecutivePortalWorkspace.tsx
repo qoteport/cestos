@@ -511,7 +511,7 @@ export default function ExecutivePortalWorkspace() {
 
   // Compute expense time series using scopedExpenses
   const expenseTimeSeriesData = React.useMemo(() => {
-    const dateMap: Record<string, { date: string; fullDate: string; totalCost: number; approvedCost: number }> = {};
+    const dateMap: Record<string, { date: string; fullDate: string; totalCost: number; approvedCost: number; paidCost: number }> = {};
 
     scopedExpenses.forEach((e: any) => {
       const dateStr = e.expense_date ? new Date(e.expense_date).toISOString().slice(0, 10) : e.created_at?.slice(0, 10) || 'Unknown';
@@ -519,14 +519,20 @@ export default function ExecutivePortalWorkspace() {
       if (!dateMap[dateStr]) {
         const dObj = new Date(dateStr);
         const formattedDate = isNaN(dObj.getTime()) ? dateStr : dObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        dateMap[dateStr] = { date: formattedDate, fullDate: dateStr, totalCost: 0, approvedCost: 0 };
+        dateMap[dateStr] = { date: formattedDate, fullDate: dateStr, totalCost: 0, approvedCost: 0, paidCost: 0 };
       }
       const cost = Number(e.total_cost || e.amount || 0);
       dateMap[dateStr].totalCost += cost;
       const s = (e.status || '').toUpperCase();
-      if (s === 'APPROVED' || s === 'COMPLETED') {
+      const ps = (e.payment_status || '').toUpperCase();
+      if (s === 'APPROVED' || s === 'COMPLETED' || s === 'PAID') {
         dateMap[dateStr].approvedCost += cost;
       }
+      const explicitPaid = Array.isArray(e.payments) && e.payments.length
+        ? e.payments.reduce((acc: number, p: any) => acc + (Number(p.amount) || 0), 0)
+        : Number(e.paid_amount) || 0;
+      const paid = explicitPaid > 0 ? explicitPaid : (s === 'PAID' || s === 'COMPLETED' || ps === 'PAID' || ps === 'COMPLETED' ? cost : 0);
+      dateMap[dateStr].paidCost += paid;
     });
 
     return Object.values(dateMap).sort((a, b) => a.fullDate.localeCompare(b.fullDate));
@@ -1609,7 +1615,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                     </div>
                     <div>
                       <h3 className="font-bold text-sm text-foreground">Operational Expenditure &amp; Expense Trend ($)</h3>
-                      <p className="text-[11px] text-muted-foreground">Daily breakdown of total operational expenses ($) and approved expenditure</p>
+                      <p className="text-[11px] text-muted-foreground">Daily breakdown of total operational expenses ($), approved expenditure, and paid amounts</p>
                     </div>
                   </div>
                 </div>
@@ -1630,6 +1636,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                         <Legend />
                         <Line type="monotone" dataKey="totalCost" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4 }} name="Total Expense Requested ($)" />
                         <Line type="monotone" dataKey="approvedCost" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} name="Approved Expenditure ($)" />
+                        <Line type="monotone" dataKey="paidCost" stroke="#2563eb" strokeWidth={3} dot={{ r: 4 }} name="Paid Amounts ($)" />
                       </ComposedChart>
                     </ResponsiveContainer>
                   </div>

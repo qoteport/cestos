@@ -895,7 +895,7 @@ Signed: Field Operations Administration
   }, [filteredFuelDeliveries, filteredFuelAllocations]);
 
   const expenseTimeSeriesData = React.useMemo(() => {
-    const dateMap: Record<string, { date: string; fullDate: string; totalCost: number; approvedCost: number }> = {};
+    const dateMap: Record<string, { date: string; fullDate: string; totalCost: number; approvedCost: number; paidCost: number }> = {};
 
     filteredOperationalExpenseRequests.forEach((e: any) => {
       const dateStr = e.expense_date ? new Date(e.expense_date).toISOString().slice(0, 10) : e.created_at?.slice(0, 10) || 'Unknown';
@@ -903,14 +903,20 @@ Signed: Field Operations Administration
       if (!dateMap[dateStr]) {
         const dObj = new Date(dateStr);
         const formattedDate = isNaN(dObj.getTime()) ? dateStr : dObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        dateMap[dateStr] = { date: formattedDate, fullDate: dateStr, totalCost: 0, approvedCost: 0 };
+        dateMap[dateStr] = { date: formattedDate, fullDate: dateStr, totalCost: 0, approvedCost: 0, paidCost: 0 };
       }
       const cost = Number(e.total_cost || e.amount || 0);
       dateMap[dateStr].totalCost += cost;
       const s = (e.status || '').toUpperCase();
-      if (s === 'APPROVED' || s === 'COMPLETED') {
+      const ps = (e.payment_status || '').toUpperCase();
+      if (s === 'APPROVED' || s === 'COMPLETED' || s === 'PAID') {
         dateMap[dateStr].approvedCost += cost;
       }
+      const explicitPaid = Array.isArray(e.payments) && e.payments.length
+        ? e.payments.reduce((acc: number, p: any) => acc + (Number(p.amount) || 0), 0)
+        : Number(e.paid_amount) || 0;
+      const paid = explicitPaid > 0 ? explicitPaid : (s === 'PAID' || s === 'COMPLETED' || ps === 'PAID' || ps === 'COMPLETED' ? cost : 0);
+      dateMap[dateStr].paidCost += paid;
     });
 
     return Object.values(dateMap).sort((a, b) => a.fullDate.localeCompare(b.fullDate));
@@ -3136,7 +3142,7 @@ Signed: Field Operations Administration
                       <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                         <TrendingUp size={16} className="text-orange-600" /> Operational Expenditure &amp; Expense Trend
                       </h3>
-                      <p className="text-xs text-slate-500">Daily breakdown of total operational expenses ($) and approved expenditure</p>
+                      <p className="text-xs text-slate-500">Daily breakdown of total operational expenses ($), approved expenditure, and paid amounts</p>
                     </div>
                   </div>
 
@@ -3158,6 +3164,7 @@ Signed: Field Operations Administration
                           <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
                           <Line yAxisId="cost" type="monotone" dataKey="totalCost" name="Total Operational Expenditure ($)" stroke="#ea580c" strokeWidth={2.5} dot={{ r: 4 }} />
                           <Line yAxisId="cost" type="monotone" dataKey="approvedCost" name="Approved Expenses ($)" stroke="#10b981" strokeWidth={2.5} dot={{ r: 4 }} />
+                          <Line yAxisId="cost" type="monotone" dataKey="paidCost" name="Paid Amounts ($)" stroke="#2563eb" strokeWidth={2.5} dot={{ r: 4 }} />
                         </ComposedChart>
                       </ResponsiveContainer>
                     </div>
