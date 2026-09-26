@@ -59,7 +59,7 @@ import {
 import { useAuth } from '@/components/AuthProvider';
 import { apiFetch, apiFetchBlob, downloadBlob, receivePurchaseOrderGoods } from '@/lib/api';
 import { openUniversalFileViewer } from '@/lib/fileViewer';
-import OperationalExpensesWorkspace, { FALLBACK_CLAIMS } from './OperationalExpensesWorkspace';
+import OperationalExpensesWorkspace from './OperationalExpensesWorkspace';
 import OperationalExpenseSubmissionModal from './OperationalExpenseSubmissionModal';
 import NotificationWorkspace from './NotificationWorkspace';
 import useNotificationCount from './useNotificationCount';
@@ -218,7 +218,7 @@ export default function FinancePortalWorkspace() {
   const [projectSites, setProjectSites] = useState<any[]>([]);
   const [assets, setAssets] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]); // Cost Subledger
-  const [operationalExpenseRequests, setOperationalExpenseRequests] = useState<any[]>(FALLBACK_CLAIMS);
+  const [operationalExpenseRequests, setOperationalExpenseRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Modals state for Fuel
@@ -345,11 +345,11 @@ export default function FinancePortalWorkspace() {
       apiFetch<any>('/api/v1/operational-expenses').then((res) => {
         if (active) {
           const list = Array.isArray(res) ? res : res?.items || [];
-          setOperationalExpenseRequests(list.length > 0 ? list : FALLBACK_CLAIMS);
+          setOperationalExpenseRequests(list);
         }
       }).catch(() => {
         if (active) {
-          setOperationalExpenseRequests(FALLBACK_CLAIMS);
+          setOperationalExpenseRequests([]);
         }
       }),
       apiFetch<any>('/api/v1/procurement/purchase-orders')

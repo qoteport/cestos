@@ -65,72 +65,6 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export const FALLBACK_CLAIMS: Row[] = [
-  {
-    id: 'op-claim-001',
-    expense_number: 'EXP-2026-089',
-    submitted_by_name: 'Kwame Mensah',
-    submitted_by_position: 'Field Operations Lead',
-    submitted_by_email: 'kwame.mensah@cestos.com',
-    cost_category: 'EQUIPMENT_MAINTENANCE',
-    pay_to_name: 'Mantrac Ghana Heavy Equipment',
-    pay_to_phone: '+233 24 412 3456',
-    bank_account_details: 'Standard Chartered Bank · Acc: 0100234567800',
-    expense_date: '2026-09-22',
-    payment_method: 'BANK_TRANSFER',
-    total_cost: 1450.00,
-    paid_amount: 0,
-    status: 'SUBMITTED',
-    items: [
-      { name: 'Hydraulic Seals & Hose Replacement Set', quantity: 2, unit_cost: 725.00 }
-    ],
-    invoice_name: 'Mantrac_Invoice_INV8923.pdf',
-    created_at: '2026-09-22T10:15:00Z',
-  },
-  {
-    id: 'op-claim-002',
-    expense_number: 'EXP-2026-090',
-    submitted_by_name: 'Abena Osei',
-    submitted_by_position: 'Site Logistics Manager',
-    submitted_by_email: 'abena.osei@cestos.com',
-    cost_category: 'FUEL_SUPPLY',
-    pay_to_name: 'GOIL Bulk Fuel Delivery',
-    pay_to_phone: '+233 20 811 9988',
-    bank_account_details: 'MTN Mobile Money · MoMo: 0244998877',
-    expense_date: '2026-09-23',
-    payment_method: 'MOBILE_MONEY',
-    total_cost: 820.00,
-    paid_amount: 0,
-    status: 'SUBMITTED',
-    items: [
-      { name: 'Emergency Diesel Tanker Refuel (500L)', quantity: 500, unit_cost: 1.64 }
-    ],
-    invoice_name: 'GOIL_Refuel_Docket_0923.pdf',
-    created_at: '2026-09-23T08:30:00Z',
-  },
-  {
-    id: 'op-claim-003',
-    expense_number: 'EXP-2026-091',
-    submitted_by_name: 'Kofi Owusu',
-    submitted_by_position: 'Senior Mechanical Technician',
-    submitted_by_email: 'kofi.owusu@cestos.com',
-    cost_category: 'SPARE_PARTS',
-    pay_to_name: 'Takoradi Auto Spares Ltd',
-    pay_to_phone: '+233 31 202 4411',
-    bank_account_details: 'GCB Bank Ghana · Acc: 1011144556677',
-    expense_date: '2026-09-23',
-    payment_method: 'BANK_TRANSFER',
-    total_cost: 2300.00,
-    paid_amount: 0,
-    status: 'PENDING',
-    items: [
-      { name: 'CAT 330 Excavator Track Shoes Set', quantity: 1, unit_cost: 2300.00 }
-    ],
-    invoice_name: 'Takoradi_Spares_Invoice_441.pdf',
-    created_at: '2026-09-23T11:45:00Z',
-  },
-];
-
 export default function OperationalExpensesWorkspace({ readOnly = false }: { readOnly?: boolean }) {
   const auth = useAuth();
   const finance =
@@ -139,7 +73,7 @@ export default function OperationalExpensesWorkspace({ readOnly = false }: { rea
     auth.access?.is_superuser ||
     auth.access?.roles?.some((r: string) => ['finance', 'accountant', 'accounts payable'].includes(r.toLowerCase())));
 
-  const [rows, setRows] = useState<Row[]>(FALLBACK_CLAIMS);
+  const [rows, setRows] = useState<Row[]>([]);
   const [focusedExpenseId] = useState(() => typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('expense_id') || '');
   const [payees, setPayees] = useState<Row[]>([]);
   const [inventory, setInventory] = useState<Row[]>([]);
@@ -166,16 +100,15 @@ export default function OperationalExpensesWorkspace({ readOnly = false }: { rea
   const reload = async () => {
     try {
       const [expenseRows, payeeRows, inventoryRows] = await Promise.all([
-        apiFetch<Row[]>('/api/v1/operational-expenses').catch(() => []),
-        apiFetch<Row[]>('/api/v1/operational-expenses/payees').catch(() => []),
+        apiFetch<any>('/api/v1/operational-expenses').catch(() => []),
+        apiFetch<any>('/api/v1/operational-expenses/payees').catch(() => []),
         apiFetch<any>('/api/v1/inventory/items?page_size=200').catch(() => ({ items: [] })),
       ]);
-      const claims = Array.isArray(expenseRows) && expenseRows.length > 0 ? expenseRows : FALLBACK_CLAIMS;
-      setRows(claims);
-      setPayees(Array.isArray(payeeRows) ? payeeRows : []);
-      setInventory(Array.isArray(inventoryRows) ? inventoryRows : inventoryRows.items || []);
+      setRows(Array.isArray(expenseRows) ? expenseRows : (expenseRows as any)?.items || []);
+      setPayees(Array.isArray(payeeRows) ? payeeRows : (payeeRows as any)?.items || []);
+      setInventory(Array.isArray(inventoryRows) ? inventoryRows : (inventoryRows as any)?.items || []);
     } catch (e) {
-      setRows(FALLBACK_CLAIMS);
+      setRows([]);
       setError(e instanceof Error ? e.message : 'Could not load expenses');
     }
   };
