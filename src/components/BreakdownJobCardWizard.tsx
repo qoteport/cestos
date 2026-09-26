@@ -313,7 +313,7 @@ export default function BreakdownJobCardWizard({ assets, projectId, onClose, onS
         {(['ASSISTED', 'FREE_FLOW'] as const).map((mode) => <button type="button" key={mode} role="tab" aria-selected={view === mode} onClick={() => setView(mode)} className={`border-b-2 px-4 py-2 font-bold transition ${view === mode ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>{mode === 'ASSISTED' ? 'Assisted' : 'Free flow'}</button>)}
       </div>
       {view === 'FREE_FLOW' ? <div className="space-y-3 overflow-auto bg-slate-100 p-2 sm:p-4">
-        <div className="freeflow-job-card mx-auto max-w-[1400px] space-y-2 bg-white p-3 shadow sm:p-6">
+        <div className="freeflow-job-card mx-auto max-w-[1400px] space-y-2 bg-white p-3 shadow sm:p-6 [&_input]:rounded-none [&_textarea]:rounded-none [&_select]:rounded-none [&_button]:rounded-none">
           <h2 className="py-2 text-center text-sm font-black tracking-wide">DAILY MAINTENANCE / BREAKDOWN REPAIR JOB CARD</h2>
           <section><h3 className="bg-[#184877] px-2 py-1 text-center text-[11px] font-bold uppercase text-white">Job control &amp; machine identification</h3><div className="grid grid-cols-2 border-l border-t border-black sm:grid-cols-4">
             {[
