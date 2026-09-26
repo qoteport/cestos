@@ -19,10 +19,12 @@ export default function ProjectCommand({
   projectId,
   onBack,
   readOnly = false,
+  hideBackNav = false,
 }: {
   projectId?: string;
   onBack?: () => void;
   readOnly?: boolean;
+  hideBackNav?: boolean;
 } = {}) {
   const router = useRouter();
   const [id, setId] = useState('');
@@ -67,13 +69,15 @@ export default function ProjectCommand({
     <div className="space-y-5 fade-in">
       {/* Navigation Breadcrumb */}
       <div>
-        <Link
-          href="/projects-overview"
-          className="inline-flex items-center gap-1.5 text-xs text-primary font-600 hover:underline mb-1 transition-colors text-left justify-start font-semibold"
-        >
-          <ArrowLeft size={14} />
-          Back to Projects overview
-        </Link>
+        {!hideBackNav && !onBack && (
+          <Link
+            href="/projects-overview"
+            className="inline-flex items-center gap-1.5 text-xs text-primary font-600 hover:underline mb-1 transition-colors text-left justify-start font-semibold"
+          >
+            <ArrowLeft size={14} />
+            Back to Projects overview
+          </Link>
+        )}
         <div className="flex flex-wrap justify-between gap-4 items-center">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{d?.project?.name || 'Project Command Center'}</h1>
@@ -83,14 +87,16 @@ export default function ProjectCommand({
             </p>
           </div>
           <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              className="px-3.5 py-2 bg-secondary hover:bg-muted text-foreground font-semibold rounded-lg text-xs border transition flex items-center gap-1.5 shadow-sm cursor-pointer"
-              onClick={() => setEditing(true)}
-            >
-              <Edit size={14} className="text-primary" />
-              Edit Project
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                className="px-3.5 py-2 bg-secondary hover:bg-muted text-foreground font-semibold rounded-xl text-xs border transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+                onClick={() => setEditing(true)}
+              >
+                <Edit size={14} className="text-primary" />
+                Edit Project
+              </button>
+            )}
             {d?.project?.status && (
               <span
                 className={`badge ${

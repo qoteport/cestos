@@ -4,7 +4,7 @@ import React from 'react';
 import { useParams } from 'next/navigation';
 import ExecutiveProjectDetailView from '@/components/ExecutiveProjectDetailView';
 
-export default function ExecutiveProjectDetailPage() {
+export default function HRProjectDetailPage() {
   const params = useParams();
   const id = Array.isArray(params?.id) ? params.id[0] : (params?.id as string) || '';
 
@@ -19,9 +19,9 @@ export default function ExecutiveProjectDetailPage() {
   return (
     <ExecutiveProjectDetailView
       projectId={id}
-      backHref="/executive-portal?tab=PROJECTS"
-      backLabel="Back to Executive Portal Projects"
-      portalTheme="indigo"
+      backHref="/hr-portal?tab=PROJECTS"
+      backLabel="Back to HR Portal Projects"
+      portalTheme="emerald"
     />
   );
 }
