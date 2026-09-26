@@ -2298,21 +2298,23 @@ Signed: Field Operations Administration
                               <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
                                 {ast.location_name || ast.site_name || ast.location || 'On Site'}
                               </td>
-                              <td className="px-4 py-3 text-right space-x-2">
-                                <button
-                                  type="button"
-                                  onClick={() => router.push(`/field-admin-portal/equipment/${ast.id}`)}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-[11px] font-medium transition"
-                                >
-                                  <Eye size={12} /> View
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingAsset(ast)}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-orange-50 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/50 border border-orange-200 dark:border-orange-800 text-[11px] font-medium transition"
-                                >
-                                  <Pencil size={12} /> Edit
-                                </button>
+                              <td className="px-4 py-3 text-right">
+                                <div className="inline-flex flex-wrap items-center justify-end gap-2 my-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => router.push(`/field-admin-portal/equipment/${ast.id}`)}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-[11px] font-medium transition my-0.5"
+                                  >
+                                    <Eye size={12} /> View
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingAsset(ast)}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-orange-50 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/50 border border-orange-200 dark:border-orange-800 text-[11px] font-medium transition my-0.5"
+                                  >
+                                    <Pencil size={12} /> Edit
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))
@@ -3416,34 +3418,36 @@ Signed: Field Operations Administration
                                     <span className="text-slate-400 italic">No file attached</span>
                                   )}
                                 </td>
-                                <td className="p-2.5 text-right space-x-1.5 whitespace-nowrap">
-                                  <button
-                                    type="button"
-                                    onClick={() => setViewingExpense(expense)}
-                                    className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded font-semibold text-[11px] inline-flex items-center gap-1 transition"
-                                  >
-                                    <FileText size={12} /> View Details
-                                  </button>
-                                  <button
-                                    type="button"
-                                    disabled={Boolean(expense.paid_at) || ['PAID', 'COMPLETED'].includes(String(expense.status || '').toUpperCase())}
-                                    onClick={() => {
-                                      setEditingExpense(expense);
-                                      setEditExpenseForm({
-                                        pay_to_name: expense.pay_to_name || '',
-                                        expense_date: expense.expense_date || new Date().toISOString().slice(0, 10),
-                                        total_cost: String(expense.total_cost || expense.amount || ''),
-                                        payment_method: expense.payment_method || 'MOBILE_MONEY',
-                                        notes: expense.notes || '',
-                                      });
-                                      setEditExpenseReceiptFile(null);
-                                      setShowEditExpenseModal(true);
-                                    }}
-                                    title={expense.paid_at || ['PAID', 'COMPLETED'].includes(String(expense.status || '').toUpperCase()) ? 'Paid expenses cannot be edited' : 'Edit expense'}
-                                    className="px-2.5 py-1 bg-orange-50 hover:bg-orange-100 dark:bg-orange-950/50 dark:hover:bg-orange-900/60 text-orange-700 dark:text-orange-300 rounded font-semibold text-[11px] inline-flex items-center gap-1 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-orange-50"
-                                  >
-                                    <Pencil size={12} /> Edit
-                                  </button>
+                                <td className="p-2.5 text-right">
+                                  <div className="inline-flex flex-wrap items-center justify-end gap-1.5 my-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => setViewingExpense(expense)}
+                                      className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded font-semibold text-[11px] inline-flex items-center gap-1 transition my-0.5"
+                                    >
+                                      <FileText size={12} /> View Details
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={Boolean(expense.paid_at) || ['PAID', 'COMPLETED'].includes(String(expense.status || '').toUpperCase())}
+                                      onClick={() => {
+                                        setEditingExpense(expense);
+                                        setEditExpenseForm({
+                                          pay_to_name: expense.pay_to_name || '',
+                                          expense_date: expense.expense_date || new Date().toISOString().slice(0, 10),
+                                          total_cost: String(expense.total_cost || expense.amount || ''),
+                                          payment_method: expense.payment_method || 'MOBILE_MONEY',
+                                          notes: expense.notes || '',
+                                        });
+                                        setEditExpenseReceiptFile(null);
+                                        setShowEditExpenseModal(true);
+                                      }}
+                                      title={expense.paid_at || ['PAID', 'COMPLETED'].includes(String(expense.status || '').toUpperCase()) ? 'Paid expenses cannot be edited' : 'Edit expense'}
+                                      className="px-2.5 py-1 bg-orange-50 hover:bg-orange-100 dark:bg-orange-950/50 dark:hover:bg-orange-900/60 text-orange-700 dark:text-orange-300 rounded font-semibold text-[11px] inline-flex items-center gap-1 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-orange-50 my-0.5"
+                                    >
+                                      <Pencil size={12} /> Edit
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );

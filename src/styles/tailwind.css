@@ -560,6 +560,27 @@
     border-bottom: none;
   }
 
+  /* Table Action Buttons Margin & Responsive Spacing */
+  table td button,
+  table td a.btn-primary,
+  table td a.btn-secondary,
+  table td a.inline-flex,
+  .data-table td button,
+  .data-table td a {
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
+  }
+
+  table td > div.flex,
+  table td > div.inline-flex,
+  .data-table td > div.flex,
+  .data-table td > div.inline-flex {
+    row-gap: 0.5rem;
+    column-gap: 0.5rem;
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
+  }
+
   .attention-item {
     display: flex;
     align-items: center;

@@ -14,6 +14,7 @@ import { operation } from '@/components/ResourceWorkspace';
 import { Row } from '@/components/DataUI';
 import { toast } from 'sonner';
 import Icon from '@/components/ui/AppIcon';
+import CommandCenterRecordManagerModal from '@/components/CommandCenterRecordManagerModal';
 
 
 type CategoryKey = 'ALL' | 'WORKFORCE' | 'PROJECTS' | 'FLEET' | 'INVENTORY' | 'ADMIN';
@@ -30,11 +31,23 @@ interface CommandDef {
   path?: string;
   targetPathPattern?: string;
   method?: string;
-  customModalType?: 'assignment' | 'edit-employee' | 'employee-select' | 'asset-select' | 'create-user' | null;
+  customModalType?: 'assignment' | 'edit-employee' | 'employee-select' | 'asset-select' | 'create-user' | 'record-manager' | null;
   tags: string[];
 }
 
 const COMMAND_REGISTRY: CommandDef[] = [
+  // --- Central record management ---
+  {
+    id: 'manage-records',
+    title: 'Manage Projects, People, Equipment & Suppliers',
+    description: 'Search, edit, and safely archive core records with a linked-record impact review before archiving.',
+    category: 'ADMIN',
+    categoryName: 'Administration',
+    permission: 'admin.manage',
+    icon: FolderKanban,
+    customModalType: 'record-manager',
+    tags: ['manage records', 'edit project', 'delete project', 'archive employee', 'edit equipment', 'suppliers', 'records admin'],
+  },
   // --- Workforce & HR ---
   {
     id: 'create-employee',
@@ -639,6 +652,7 @@ export default function CommandCenterPage() {
   const [showAssetAssignment, setShowAssetAssignment] = useState(false);
   const [showEditEmployee, setShowEditEmployee] = useState(false);
   const [showCreateUser, setShowCreateUser] = useState(false);
+  const [showRecordManager, setShowRecordManager] = useState(false);
   const [pendingSelectCommand, setPendingSelectCommand] = useState<CommandDef | null>(null);
   const [pendingAssetSelectCommand, setPendingAssetSelectCommand] = useState<CommandDef | null>(null);
 
@@ -675,6 +689,11 @@ export default function CommandCenterPage() {
   const handleRunCommand = (cmd: CommandDef) => {
     if (!canRun(cmd)) {
       toast.error(`Permission Required: ${cmd.permission}`);
+      return;
+    }
+
+    if (cmd.customModalType === 'record-manager') {
+      setShowRecordManager(true);
       return;
     }
 
@@ -972,6 +991,13 @@ export default function CommandCenterPage() {
           </div>
         </div>
       </div>
+
+      {showRecordManager && <CommandCenterRecordManagerModal
+
+        onClose={() => setShowRecordManager(false)}
+        onChanged={() => {}}
+        canEdit={(entity) => entity === 'projects' ? auth.can('projects.update') : entity === 'employees' ? auth.can('employees.write') : entity === 'equipment' ? auth.can('assets.update') : auth.can('inventory.catalog.manage')}
+      />}
 
       {/* Schema-driven Creation Form Modal */}
       {activeCommand && activeCommand.resource && activeCommand.path && activeOp && (
