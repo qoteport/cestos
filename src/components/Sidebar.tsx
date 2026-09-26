@@ -280,7 +280,7 @@ export default function Sidebar({
 
       {/* Navigation */}
       <nav
-        className="flex-1 overflow-y-auto py-3 px-2 space-y-1 scrollbar-thin"
+        className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2 space-y-1 scrollbar-thin"
         aria-label="Main navigation"
       >
         {/* Module groups */}
@@ -288,27 +288,55 @@ export default function Sidebar({
           .filter((g) => auth.can(g.permission))
           .map((g) => {
             const expanded = open.includes(g.name);
+            const isGroupActive =
+              path === g.href ||
+              (g.name === 'Dashboard' &&
+                (path === '/' || path === '/control-tower-overview' || path === '/tenders-overview')) ||
+              (g.name === 'Projects' &&
+                (path === '/project-command-center' || path === '/drilling-overview')) ||
+              (g.name === 'Workforce' &&
+                (path === '/field-leadership-overview' || path === '/workforce-overview'));
+
             return (
               <div key={g.name}>
-                <div className="flex">
+                {collapsed ? (
                   <Link
                     title={g.name}
                     href={g.href}
-                    className={
-                      'flex flex-1 gap-3 items-center p-2.5 rounded text-sm ' + active(g.href)
-                    }
+                    className={`flex items-center justify-center w-full p-2.5 rounded-lg text-sm transition-colors ${
+                      isGroupActive
+                        ? 'bg-secondary text-primary font-semibold'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    }`}
                   >
-                    <g.icon size={18} />
-                    {!collapsed && g.name}
+                    <g.icon size={18} className="shrink-0" />
                   </Link>
-                  {!collapsed && (
+                ) : (
+                  <div
+                    className={`group flex items-center justify-between w-full rounded-lg transition-colors ${
+                      isGroupActive
+                        ? 'bg-secondary text-primary font-semibold'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    }`}
+                  >
+                    <Link
+                      title={g.name}
+                      href={g.href}
+                      className="flex flex-1 items-center gap-3 py-2 px-2.5 text-sm font-medium rounded-l-lg truncate"
+                    >
+                      <g.icon size={18} className="shrink-0" />
+                      <span className="truncate">{g.name}</span>
+                    </Link>
                     <button
-                      className="px-2 text-muted-foreground"
+                      type="button"
+                      className="p-2 mr-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors shrink-0"
                       aria-label={'Toggle ' + g.name}
                       aria-expanded={expanded}
-                      onClick={() =>
-                        setOpen(expanded ? open.filter((x) => x !== g.name) : [...open, g.name])
-                      }
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setOpen(expanded ? open.filter((x) => x !== g.name) : [...open, g.name]);
+                      }}
                     >
                       <ChevronDown
                         size={14}
@@ -317,10 +345,11 @@ export default function Sidebar({
                         }
                       />
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
+
                 {!collapsed && expanded && (
-                  <div className="ml-4 pl-3 border-l my-1 space-y-2">
+                  <div className="ml-3.5 pl-2.5 border-l border-border/80 my-1 space-y-1">
                     {g.sections.map((sec, sIdx) => {
                       const visibleLinks = sec.links.filter(([, r]) => {
                         if (r === 'operations-and-revenue')
@@ -350,12 +379,14 @@ export default function Sidebar({
                             const targetHref = resource.startsWith('/')
                               ? resource
                               : '/workspace/' + resource;
+                            const isSubActive = path === targetHref;
                             return (
                               <Link
-                                className={
-                                  'block px-2 py-1.5 rounded text-xs transition-colors ' +
-                                  active(targetHref)
-                                }
+                                className={`block px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                                  isSubActive
+                                    ? 'bg-secondary text-primary font-semibold'
+                                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                }`}
                                 href={targetHref}
                                 key={resource}
                               >
@@ -382,47 +413,57 @@ export default function Sidebar({
           ['Administration', 'admin'],
         ]
           .filter(([, r]) => r !== 'admin' || canAccessAdministration(auth))
-          .map(([label, r]) => (
-            <Link
-              key={r}
-              title={label}
-              className={
-                'flex gap-3 items-center p-2.5 rounded text-sm ' + active('/workspace/' + r)
-              }
-              href={'/workspace/' + r}
-            >
-              {r === 'hr/notifications' ? (
-                <Bell size={18} />
-              ) : r === 'admin' ? (
-                <ShieldCheck size={18} />
-              ) : (
-                <User size={18} />
-              )}
-              {!collapsed && label}
-            </Link>
-          ))}
+          .map(([label, r]) => {
+            const targetHref = '/workspace/' + r;
+            const isLinkActive = path === targetHref;
+            return (
+              <Link
+                key={r}
+                title={label}
+                className={`flex items-center ${
+                  collapsed ? 'justify-center p-2.5' : 'gap-3 px-2.5 py-2'
+                } w-full rounded-lg text-sm transition-colors ${
+                  isLinkActive
+                    ? 'bg-secondary text-primary font-semibold'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
+                href={targetHref}
+              >
+                {r === 'hr/notifications' ? (
+                  <Bell size={18} className="shrink-0" />
+                ) : r === 'admin' ? (
+                  <ShieldCheck size={18} className="shrink-0" />
+                ) : (
+                  <User size={18} className="shrink-0" />
+                )}
+                {!collapsed && <span className="truncate">{label}</span>}
+              </Link>
+            );
+          })}
       </nav>
 
       {/* Footer */}
-      <div className="border-t p-2">
+      <div className="border-t p-2 space-y-1">
         {!collapsed && (
-          <div className="px-2 py-3">
+          <div className="px-2.5 py-2.5">
             <p className="text-sm font-semibold truncate">{name}</p>
-            <p className="text-xs text-muted-foreground truncate mt-1">
+            <p className="text-xs text-muted-foreground truncate mt-0.5">
               {auth.access?.roles.join(', ') || 'Team member'}
             </p>
           </div>
         )}
         <button
           title="Sign out"
-          className="flex items-center gap-2 w-full px-2 py-2 rounded hover:bg-muted text-sm text-muted-foreground"
+          className={`flex items-center ${
+            collapsed ? 'justify-center p-2.5' : 'gap-2.5 px-2.5 py-2'
+          } w-full rounded-lg hover:bg-destructive/10 hover:text-destructive text-sm text-muted-foreground transition-colors`}
           onClick={() => void auth.signOut()}
         >
-          <LogOut size={16} />
-          {!collapsed && 'Sign out'}
+          <LogOut size={16} className="shrink-0" />
+          {!collapsed && <span>Sign out</span>}
         </button>
         <button
-          className="flex items-center justify-center gap-2 w-full py-2 rounded hover:bg-muted text-xs text-muted-foreground"
+          className="flex items-center justify-center gap-2 w-full py-2 rounded-lg hover:bg-muted text-xs text-muted-foreground transition-colors"
           onClick={onToggle}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
@@ -431,7 +472,7 @@ export default function Sidebar({
           ) : (
             <>
               <PanelLeftClose size={16} />
-              Collapse
+              <span>Collapse</span>
             </>
           )}
         </button>

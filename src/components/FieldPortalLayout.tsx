@@ -178,7 +178,7 @@ export default function FieldPortalLayout({
         </div>
 
         {/* Dedicated Navigation Links */}
-        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1 scrollbar-thin">
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 space-y-1 scrollbar-thin">
           {!collapsed && (
             <p className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/75">
               Field Navigation
