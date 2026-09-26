@@ -1014,8 +1014,17 @@ Signed: Field Operations Administration
     const avgClaim = count > 0 ? totalExp / count : 0;
     const maxClaim = filteredOperationalExpenseRequests.reduce((max, e) => Math.max(max, Number(e.total_cost || e.amount || 0)), 0);
     const totalItemsCount = filteredOperationalExpenseRequests.reduce((sum, e) => sum + (Array.isArray(e.items) ? e.items.length : 1), 0);
+    const totalPaid = filteredOperationalExpenseRequests.reduce((sum, e: any) => {
+      const explicitPaid = Array.isArray(e.payments) && e.payments.length
+        ? e.payments.reduce((acc: number, p: any) => acc + (Number(p.amount) || 0), 0)
+        : Number(e.paid_amount) || 0;
+      const s = String(e.status || '').toUpperCase();
+      const ps = String(e.payment_status || '').toUpperCase();
+      const paid = explicitPaid > 0 ? explicitPaid : (s === 'PAID' || s === 'COMPLETED' || ps === 'PAID' || ps === 'COMPLETED' ? Number(e.total_cost || e.amount || 0) : 0);
+      return sum + paid;
+    }, 0);
 
-    return { totalExp, count, avgClaim, maxClaim, totalItemsCount };
+    return { totalExp, count, avgClaim, maxClaim, totalItemsCount, totalPaid };
   }, [filteredOperationalExpenseRequests]);
 
   const hseTimeSeriesData = React.useMemo(() => {
@@ -3110,11 +3119,11 @@ Signed: Field Operations Administration
                   </div>
 
                   <div className="bg-white dark:bg-slate-900 border rounded-xl p-4 space-y-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total claims</span>
-                    <p className="text-xl font-black text-slate-900 dark:text-white">
-                      {expenseIntelligenceMetrics.count}
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Paid Out</span>
+                    <p className="text-xl font-black text-blue-600 dark:text-blue-400">
+                      ${expenseIntelligenceMetrics.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
-                    <span className="text-[11px] text-slate-500 font-medium">Operational expense claims</span>
+                    <span className="text-[11px] text-slate-500 font-medium">Disbursed expense payments</span>
                   </div>
 
                   <div className="bg-white dark:bg-slate-900 border rounded-xl p-4 space-y-1">

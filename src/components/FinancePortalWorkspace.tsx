@@ -1765,7 +1765,7 @@ Signed: Finance & Procurement Administration
                             <td className="px-4 py-3 font-mono text-muted-foreground">{po.created_at ? new Date(po.created_at).toLocaleDateString() : '—'}</td>
                             <td className="px-4 py-3 font-medium text-foreground">{vendor}</td>
                             <td className="px-4 py-3 text-muted-foreground">{projName}</td>
-                            <td className="px-4 py-3"><span className="rounded-full bg-violet-50 px-2 py-1 text-[10px] font-bold text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">{purchaseOrderCategoryLabel(po.category)}</span></td>
+                            <td className="px-4 py-3"><span className="rounded-full py-1 text-[10px] font-bold text text-violet-700">{purchaseOrderCategoryLabel(po.category)}</span></td>
                             <td className="px-4 py-3 font-mono text-muted-foreground">{itemCount} items</td>
                             <td className="px-4 py-3">
                               {po.attachment_file_name ? (

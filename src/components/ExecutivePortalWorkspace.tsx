@@ -2292,7 +2292,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                               <td className="px-4 py-3 font-mono text-slate-500">{po.created_at || po.order_date ? new Date(po.created_at || po.order_date).toLocaleDateString() : '—'}</td>
                               <td className="px-4 py-3 font-medium text-slate-700 dark:text-slate-300">{vendor}</td>
                               <td className="px-4 py-3 text-slate-500">{projName}</td>
-                              <td className="px-4 py-3"><span className="rounded-full bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">{purchaseOrderCategoryLabel(po.category)}</span></td>
+                              <td className="px-4 py-3"><span className="rounded-full   py-1 text-[10px] font-bold text-indigo-700 ">{purchaseOrderCategoryLabel(po.category)}</span></td>
                               <td className="px-4 py-3 font-mono text-slate-500">{itemCount} items</td>
                               <td className="px-4 py-3">
                                 {fileName ? (
