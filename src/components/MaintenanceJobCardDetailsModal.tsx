@@ -149,11 +149,12 @@ export default function MaintenanceJobCardDetailsModal({
       .map((link) => `<link rel="stylesheet" href="${link.href}">`).join('');
     printWindow.document.open();
     printWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${kindLabel}</title>${stylesheets}<style>
-      @page { size: landscape; margin: 12mm; }
+      @page { size: portrait; margin: 10mm; }
       body { margin: 0; padding: 16px; color: #0f172a; background: white; font-family: Arial, sans-serif; }
       *, *::before, *::after { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; border-radius: 0 !important; }
       button { display: none !important; }
-      section, table, .border, div, article, main { break-inside: avoid; border-radius: 0 !important; }
+      .pm-header-group { break-inside: avoid !important; page-break-inside: avoid !important; break-after: avoid !important; page-break-after: avoid !important; }
+      section, table, .border, div, article, main { border-radius: 0 !important; }
       main { max-width: 100%; }
       @media print { *, *::before, *::after { border-radius: 0 !important; } }
     </style></head><body><main>${printableRef.current.innerHTML}</main></body></html>`);
@@ -200,14 +201,27 @@ export default function MaintenanceJobCardDetailsModal({
     </div>
   </div>}>
     <div ref={printableRef} className="space-y-4 text-sm">
-      <div className="overflow-hidden border border-slate-900 bg-white dark:bg-slate-950">
-        <p className="bg-[#184877] px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-white">{kind === 'preventive' ? 'Maintenance Control — Preventive Maintenance Job Card' : kind === 'breakdown' ? 'Daily Maintenance / Breakdown Repair Job Card' : 'Work Order Record'}</p>
-        <div className="p-3 sm:p-4">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-600">{record.job_card_number || record.wo_number || 'Record'}</p>
-          <h3 className="mt-1 text-base font-bold text-slate-900 dark:text-white">{title}</h3>
-          <p className="mt-1 text-xs text-slate-500">Created {record.created_at ? new Date(record.created_at).toLocaleString() : '—'} · Status: {record.status || '—'}</p>
+      {!editing && (
+        <div className="pm-header-group space-y-4">
+          <div className="overflow-hidden border border-slate-900 bg-white dark:bg-slate-950">
+            <p className="bg-[#184877] px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-white">{kind === 'preventive' ? 'Maintenance Control — Preventive Maintenance Job Card' : kind === 'breakdown' ? 'Daily Maintenance / Breakdown Repair Job Card' : 'Work Order Record'}</p>
+            <div className="p-3 sm:p-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-600">{record.job_card_number || record.wo_number || 'Record'}</p>
+              <h3 className="mt-1 text-base font-bold text-slate-900 dark:text-white">{title}</h3>
+              <p className="mt-1 text-xs text-slate-500">Created {record.created_at ? new Date(record.created_at).toLocaleString() : '—'} · Status: {record.status || '—'}</p>
+            </div>
+          </div>
+          {kind === 'preventive' && (
+            <CardSection title="PM control"><InfoGrid values={{ date: record.pm_control?.date, pm_interval: record.pm_control?.pm_interval, status: record.status, equipment: record.pm_control?.equipment, fleet_unit_id: record.pm_control?.fleet_unit_id, location: record.pm_control?.location || siteName || record.site_location_id, hour_meter_km: record.pm_control?.hour_meter_km, technician_team: record.pm_control?.technician_team, work_order_no: record.pm_control?.work_order_no, start_time: record.pm_control?.start_time, finish_time: record.pm_control?.finish_time }} /></CardSection>
+          )}
+          {kind === 'breakdown' && (
+            <CardSection title="Job control and machine identification"><InfoGrid values={{ status: record.status, equipment: record.job_control?.equipment || record.job_control?.equipment_name, fleet_unit_id: record.job_control?.fleet_unit_id, location: record.job_control?.location || siteName || record.site_location_id, hour_km: record.job_control?.hour_km || record.job_control?.hour_meter_km, operator_driver: record.job_control?.operator_driver || record.job_control?.operator || record.job_control?.driver, department: record.job_control?.department, time_reported: record.job_control?.time_reported, time_attended: record.job_control?.time_attended }} /></CardSection>
+          )}
+          {kind === 'work_order' && (
+            <CardSection title="Work order details"><InfoGrid values={{ title: record.title, description: record.description, work_type: record.work_type, priority: record.priority, scheduled_date: record.scheduled_date, status: record.status, assigned_technician_id: record.assigned_technician_id, downtime_hours: record.downtime_hours, root_cause: record.root_cause, remedy: record.remedy, notes: record.notes }} /></CardSection>
+          )}
         </div>
-      </div>
+      )}
       {editing ? <>
         <div className="block space-y-1 font-semibold">
           <span>Status</span>
@@ -222,12 +236,11 @@ export default function MaintenanceJobCardDetailsModal({
         {fields.map((field: Field) => <label key={field.key} className="block space-y-1 font-semibold"><span>{field.label}{field.json ? ' (JSON)' : ''}</span><textarea rows={field.json ? 6 : 3} className="w-full rounded-lg border bg-background p-2.5 font-normal" value={values[field.key] ?? ''} onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))} /></label>)}
       </> : <>
         {kind === 'preventive' ? <div className="space-y-4">
-          <CardSection title="PM control"><InfoGrid values={{ date: record.pm_control?.date, pm_interval: record.pm_control?.pm_interval, status: record.status, equipment: record.pm_control?.equipment, fleet_unit_id: record.pm_control?.fleet_unit_id, location: record.pm_control?.location || siteName || record.site_location_id, hour_meter_km: record.pm_control?.hour_meter_km, technician_team: record.pm_control?.technician_team, work_order_no: record.pm_control?.work_order_no, start_time: record.pm_control?.start_time, finish_time: record.pm_control?.finish_time }} /></CardSection>
           <CardSection title="Checklist and measurements">{Array.isArray(record.inspection_items) && record.inspection_items.length ? <div className="space-y-3">{record.inspection_items.map((item: any, index: number) => <div key={`${item.system_component || 'system'}-${index}`} className="rounded-lg border p-3"><div className="flex flex-wrap items-center justify-between gap-2"><h5 className="font-bold">{item.system_component || `Inspection ${index + 1}`}</h5><span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold dark:bg-slate-800">{shown([item.condition, item.condition_reading].filter(Boolean).join(' — '))}</span></div>{Array.isArray(item.service_tasks) ? <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">{item.service_tasks.join(' · ')}</p> : item.service_tasks && <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">{item.service_tasks}</p>}<InfoGrid values={{ action_taken: item.action_taken, parts_used: Array.isArray(item.parts_used) ? item.parts_used.map((part: any) => typeof part === 'string' ? part : `${part.name || part.description || 'Part'}${part.quantity ? ` × ${part.quantity}` : ''}`) : item.parts_used || item.parts_text, technician_initial: item.technician_initial, supervisor_check: item.supervisor_check, remarks: item.remarks }} /></div>)}</div> : <p className="text-sm text-slate-500">No inspection items recorded.</p>}</CardSection>
           <CardSection title="Service interval and defects"><InfoGrid values={{ pm_level: record.service_defect_control?.pm_level, next_pm_due: record.service_defect_control?.next_pm_due, total_labour_hours: record.service_defect_control?.total_labour_hours, machine_down_hours: record.service_defect_control?.machine_down_hours, pm_result: record.service_defect_control?.pm_result, defects_recommendations: record.service_defect_control?.defects_recommendations }} /></CardSection>
           <CardSection title="Release and sign-off"><InfoGrid values={{ machine_status: record.machine_release?.machine_status, technician_sign: record.signatures?.technician, supervisor_sign: record.signatures?.supervisor, operator_sign: record.signatures?.operator, supervisor_comments: record.supervisor_comments }} /><div className="grid gap-3 sm:grid-cols-3">{['technician', 'supervisor', 'operator'].map((role) => { const signature = record.signatures?.[role]; const image = typeof signature === 'object' ? signature?.image_data : null; return image ? <div key={role} className="rounded-lg border p-3"><p className="mb-2 text-xs font-semibold capitalize">{role} signature</p><img src={image} alt={`${role} signature`} className="h-12 max-w-full object-contain" /></div> : null; })}</div></CardSection>
         </div> : kind === 'breakdown' ? <div className="space-y-4">
-          <CardSection title="Job control and machine identification"><InfoGrid values={{ status: record.status, equipment: record.job_control?.equipment || record.job_control?.equipment_name, fleet_unit_id: record.job_control?.fleet_unit_id, location: record.job_control?.location || siteName || record.site_location_id, hour_km: record.job_control?.hour_km || record.job_control?.hour_meter_km, operator_driver: record.job_control?.operator_driver || record.job_control?.operator || record.job_control?.driver, department: record.job_control?.department, time_reported: record.job_control?.time_reported, time_attended: record.job_control?.time_attended }} /></CardSection>
+          <CardSection title="Reported failure"><p className="whitespace-pre-wrap text-sm">{record.reported_failure || 'No failure details recorded.'}</p></CardSection>
           <CardSection title="Reported failure"><p className="whitespace-pre-wrap text-sm">{record.reported_failure || 'No failure details recorded.'}</p></CardSection>
           <CardSection title="Corrective action and work completed"><p className="whitespace-pre-wrap text-sm">{record.corrective_action || 'No corrective action recorded.'}</p></CardSection>
           <CardSection title="Parts, consumables and materials">{Array.isArray(record.parts_materials) && record.parts_materials.length ? <div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left text-xs"><thead><tr className="border-b text-slate-500">{['Description', 'Part no.', 'Qty', 'Unit', 'Source', 'Condition', 'Old returned', 'Remarks'].map((heading) => <th key={heading} className="p-2">{heading}</th>)}</tr></thead><tbody>{record.parts_materials.map((part: any, index: number) => <tr key={index} className="border-b last:border-0">{['description', 'part_no', 'qty', 'unit', 'source', 'condition', 'old_returned', 'remarks'].map((key) => <td key={key} className="p-2 align-top">{shown(part[key])}</td>)}</tr>)}</tbody></table></div> : <p className="text-sm text-slate-500">No parts or consumables recorded.</p>}</CardSection>
