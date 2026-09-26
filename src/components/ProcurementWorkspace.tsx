@@ -351,13 +351,13 @@ export default function ProcurementWorkspace({ subResource }: { subResource?: st
               <button
                 type="button"
                 onClick={() => setShowAddPo(false)}
-                className="px-4 py-2 text-xs sm:text-sm border rounded-lg hover:bg-muted font-medium w-full sm:w-auto"
+                className="px-4 py-2 text-xs sm:text-sm border rounded-xl hover:bg-muted font-medium w-full sm:w-auto"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 text-xs sm:text-sm bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition w-full sm:w-auto"
+                className="px-4 py-2 text-xs sm:text-sm bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition w-full sm:w-auto"
               >
                 Submit Purchase Order
               </button>
@@ -397,13 +397,13 @@ export default function ProcurementWorkspace({ subResource }: { subResource?: st
               <button
                 type="button"
                 onClick={() => setReceivingPo(null)}
-                className="px-4 py-2 text-xs sm:text-sm border rounded-lg hover:bg-muted font-medium w-full sm:w-auto"
+                className="px-4 py-2 text-xs sm:text-sm border rounded-xl hover:bg-muted font-medium w-full sm:w-auto"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 text-xs sm:text-sm bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition w-full sm:w-auto"
+                className="px-4 py-2 text-xs sm:text-sm bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition w-full sm:w-auto"
               >
                 Confirm Goods Receipt
               </button>

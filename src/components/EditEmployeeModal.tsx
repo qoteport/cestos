@@ -199,7 +199,7 @@ export default function EditEmployeeModal({
                           e.stopPropagation();
                           handleSelect(emp);
                         }}
-                        className="px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-xs"
+                        className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-xs"
                       >
                         {onSelectEmployee ? 'Select' : 'Edit'}
                       </button>
