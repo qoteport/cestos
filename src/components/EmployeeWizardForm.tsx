@@ -1104,7 +1104,7 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                 <button
                   type="button"
                   onClick={prevStep}
-                  className="btn-secondary text-xs w-full sm:w-auto"
+                  className="btn-secondary rounded-xl text-xs w-full sm:w-auto"
                   disabled={busy}
                 >
                   <ArrowLeft size={14} /> Back
@@ -1115,7 +1115,7 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
               <button
                 type="button"
                 onClick={onClose}
-                className="btn-secondary text-xs w-full sm:w-auto"
+                className="btn-secondary rounded-xl text-xs w-full sm:w-auto"
                 disabled={busy}
               >
                 Cancel
@@ -1125,7 +1125,7 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                 <button
                   type="button"
                   onClick={nextStep}
-                  className="btn-primary text-xs w-full sm:w-auto"
+                  className="btn-primary rounded-xl text-xs w-full sm:w-auto shadow-xs"
                 >
                   Continue <ArrowRight size={14} />
                 </button>
@@ -1134,7 +1134,7 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                   type="button"
                   onClick={handleSubmit}
                   disabled={busy || !reviewReady}
-                  className={`btn-primary text-xs w-full sm:w-auto ${!reviewReady ? 'opacity-50 cursor-not-allowed' : 'bg-emerald-700 hover:bg-emerald-800'}`}
+                  className={`btn-primary rounded-xl text-xs w-full sm:w-auto shadow-xs ${!reviewReady ? 'opacity-50 cursor-not-allowed' : 'bg-emerald-700 hover:bg-emerald-800'}`}
                 >
                   {busy ? 'Saving Employee...' : initial ? 'Save Changes' : 'Create Employee Profile'}
                 </button>

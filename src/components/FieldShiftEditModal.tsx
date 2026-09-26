@@ -188,8 +188,8 @@ export default function FieldShiftEditModal({ shift, assets, holes, sites = [], 
         </div>
 
         <div className="sticky bottom-0 -mx-4 -mb-4 sm:-mx-6 sm:-mb-6 p-3.5 sm:px-6 sm:py-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 z-10 flex flex-row items-center justify-end gap-2 sm:gap-3 mt-4">
-          <button type="button" disabled={saving} onClick={onClose} className="px-4 py-2 border rounded-lg hover:bg-muted font-medium w-full sm:w-auto">Cancel</button>
-          <button disabled={saving || locked} className="px-4 py-2 bg-primary text-primary-foreground font-bold rounded-lg hover:bg-primary/90 transition w-full sm:w-auto">{saving ? 'Saving...' : 'Save Shift Report'}</button>
+          <button type="button" disabled={saving} onClick={onClose} className="px-4 py-2 border rounded-xl hover:bg-muted font-medium w-full sm:w-auto">Cancel</button>
+          <button disabled={saving || locked} className="px-4 py-2 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition w-full sm:w-auto shadow-xs">{saving ? 'Saving...' : 'Save Shift Report'}</button>
         </div>
       </form>
     </Modal>

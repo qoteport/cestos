@@ -570,7 +570,7 @@ export default function EquipmentDefectsWorkspace() {
             </div>
 
             <div className="flex justify-end pt-2">
-              <button onClick={() => setSelectedDefect(null)} className="btn-secondary text-xs">
+              <button onClick={() => setSelectedDefect(null)} className="btn-secondary rounded-xl text-xs">
                 Close
               </button>
             </div>
@@ -593,7 +593,7 @@ export default function EquipmentDefectsWorkspace() {
               <span className="text-muted-foreground">{previewFile.filename}</span>
               <button
                 onClick={() => handleFileDownload(previewFile.id || '', previewFile.filename)}
-                className="btn-primary text-xs flex items-center gap-1"
+                className="btn-primary rounded-xl text-xs flex items-center gap-1 shadow-xs"
               >
                 <Download size={12} /> Download File
               </button>

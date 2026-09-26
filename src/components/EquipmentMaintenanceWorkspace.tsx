@@ -581,7 +581,7 @@ export default function EquipmentMaintenanceWorkspace() {
             )}
 
             <div className="flex justify-end pt-2">
-              <button type="button" onClick={() => setSelectedJob(null)} className="btn-secondary text-xs">
+              <button type="button" onClick={() => setSelectedJob(null)} className="btn-secondary rounded-xl text-xs">
                 Close
               </button>
             </div>

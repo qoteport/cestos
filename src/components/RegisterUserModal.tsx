@@ -359,14 +359,14 @@ export default function RegisterUserModal({ onClose, onSaved }: RegisterUserModa
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg border hover:bg-muted transition-colors w-full sm:w-auto"
+            className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl border hover:bg-muted transition-colors w-full sm:w-auto"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={busy}
-            className="px-5 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 w-full sm:w-auto"
+            className="px-5 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 w-full sm:w-auto shadow-xs"
           >
             {busy && <RefreshCw size={14} className="animate-spin" />}
             {busy ? 'Registering User...' : 'Register User & Assign Access'}

@@ -563,13 +563,13 @@ export default function EquipmentWorkOrdersWorkspace() {
               <button
                 type="button"
                 onClick={() => setCreating(false)}
-                className="btn-secondary text-xs py-1.5 px-3"
+                className="btn-secondary rounded-xl text-xs py-1.5 px-3"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="btn-primary text-xs py-1.5 px-4 font-semibold"
+                className="btn-primary rounded-xl text-xs py-1.5 px-4 font-semibold shadow-xs"
               >
                 Dispatch Work Order
               </button>
@@ -729,7 +729,7 @@ export default function EquipmentWorkOrdersWorkspace() {
             </div>
 
             <div className="flex justify-end pt-2">
-              <button type="button" onClick={() => setSelectedOrder(null)} className="btn-secondary text-xs">
+              <button type="button" onClick={() => setSelectedOrder(null)} className="btn-secondary rounded-xl text-xs">
                 Close
               </button>
             </div>

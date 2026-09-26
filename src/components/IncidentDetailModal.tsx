@@ -197,14 +197,14 @@ export default function IncidentDetailModal({
                   <button
                     type="button"
                     onClick={() => setIsEditing(true)}
-                    className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5 text-xs font-semibold"
+                    className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5 text-xs font-semibold"
                     title="Edit HSE report (allowed within 10 days of creation)"
                   >
                     <Pencil size={14} /> Edit Report
                   </button>
                 ) : (
                   <span
-                    className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 text-[11px] font-semibold cursor-not-allowed"
+                    className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 text-[11px] font-semibold cursor-not-allowed"
                     title="Edit window closed (Report was created over 10 days ago)"
                   >
                     Edit Closed (10d Limit)
@@ -213,7 +213,7 @@ export default function IncidentDetailModal({
                 <button
                   type="button"
                   onClick={printReport}
-                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5 text-xs font-semibold"
+                  className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5 text-xs font-semibold"
                 >
                   <Printer size={16} /> Print
                 </button>

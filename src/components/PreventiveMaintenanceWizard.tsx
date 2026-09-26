@@ -365,13 +365,13 @@ export default function PreventiveMaintenanceWizard({
     footer={
       <div className="flex flex-row items-center justify-between gap-2.5 sm:gap-3 w-full">
         {view === 'ASSISTED' && step > 0 ? (
-          <button type="button" className="btn-secondary flex-1 sm:flex-initial text-xs" onClick={() => setStep(step - 1)}>Back</button>
+          <button type="button" className="btn-secondary rounded-xl flex-1 sm:flex-initial text-xs" onClick={() => setStep(step - 1)}>Back</button>
         ) : <div />}
         <div className="flex flex-row items-center gap-2 w-full sm:w-auto sm:ml-auto justify-end">
           {view === 'ASSISTED' && step < 3 && (
             <button
               type="button"
-              className="btn-primary flex-1 sm:flex-initial text-xs"
+              className="btn-primary rounded-xl flex-1 sm:flex-initial text-xs"
               disabled={step === 0 && !assetId && !(isCustomEquipment && customEquipment.trim())}
               onClick={() => setStep(step + 1)}
             >
@@ -381,7 +381,7 @@ export default function PreventiveMaintenanceWizard({
           {(view === 'FREE_FLOW' || step === 3) && (
             <button
               type="button"
-              className="btn-primary flex-1 sm:flex-initial text-xs"
+              className="btn-primary rounded-xl flex-1 sm:flex-initial text-xs"
               disabled={saving || (!assetId && !(isCustomEquipment && customEquipment.trim()))}
               onClick={save}
             >
@@ -460,14 +460,14 @@ export default function PreventiveMaintenanceWizard({
           <div className="flex flex-row items-center justify-end gap-2 sm:gap-3">
             <button
               type="button"
-              className="btn-secondary text-xs sm:text-sm flex-1 sm:flex-none"
+              className="btn-secondary rounded-xl text-xs sm:text-sm flex-1 sm:flex-none"
               onClick={() => setShowCreateWorkOrder(false)}
             >
               Cancel
             </button>
             <button
               type="button"
-              className="btn-primary text-xs sm:text-sm flex-1 sm:flex-none"
+              className="btn-primary rounded-xl text-xs sm:text-sm flex-1 sm:flex-none"
               disabled={creatingWorkOrder}
               onClick={createWorkOrder}
             >

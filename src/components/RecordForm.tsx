@@ -1475,7 +1475,7 @@ export default function RecordForm({
               type="button"
               disabled={busy || deleteBusy}
               onClick={() => void deleteAssignment()}
-              className="btn-secondary text-xs text-red-700 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30 transition"
+              className="btn-secondary rounded-xl text-xs text-red-700 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30 transition"
             >
               {deleteBusy ? 'Cancelling…' : 'Delete Assignment'}
             </button>
@@ -1485,7 +1485,7 @@ export default function RecordForm({
           <div className="flex flex-row items-center gap-2 sm:gap-3 w-full sm:w-auto sm:ml-auto justify-end">
             <button
               type="button"
-              className="btn-secondary text-xs flex-1 sm:flex-initial"
+              className="btn-secondary rounded-xl text-xs flex-1 sm:flex-initial"
               onClick={onClose}
             >
               Cancel
@@ -1494,7 +1494,7 @@ export default function RecordForm({
               type="submit"
               form="record-form-inner"
               disabled={busy}
-              className="btn-primary text-xs flex-1 sm:flex-initial"
+              className="btn-primary rounded-xl text-xs flex-1 sm:flex-initial shadow-xs"
             >
               {busy ? 'Saving…' : 'Save Record'}
             </button>

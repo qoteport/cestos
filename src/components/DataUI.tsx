@@ -83,7 +83,7 @@ export function ErrorModal({title = 'Operational Alert', error, onClose}: {title
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-primary text-primary-foreground text-xs font-semibold rounded-lg hover:bg-primary/90 transition shadow-sm"
+            className="px-4 py-2 bg-primary text-primary-foreground text-xs font-semibold rounded-xl hover:bg-primary/90 transition shadow-sm"
           >
             Dismiss
           </button>

@@ -240,8 +240,8 @@ export default function MaintenanceAssessmentReportWizard({
   }
 
   const footer = <div className="flex w-full items-center justify-between gap-2">
-    {mode === 'ASSISTED' && step > 0 ? <button type="button" className="btn-secondary text-xs" onClick={() => setStep(step - 1)}>Back</button> : <span />}
-    <div className="flex items-center gap-2">{mode === 'ASSISTED' && step < steps.length - 1 && <button type="button" className="btn-primary text-xs" onClick={() => setStep(step + 1)}>Next</button>}<button type="button" className="btn-primary text-xs" onClick={() => void save()} disabled={saving}>{saving ? 'Saving…' : record ? 'Save changes' : 'Save assessment'}</button></div>
+    {mode === 'ASSISTED' && step > 0 ? <button type="button" className="btn-secondary rounded-xl text-xs" onClick={() => setStep(step - 1)}>Back</button> : <span />}
+    <div className="flex items-center gap-2">{mode === 'ASSISTED' && step < steps.length - 1 && <button type="button" className="btn-primary rounded-xl text-xs" onClick={() => setStep(step + 1)}>Next</button>}<button type="button" className="btn-primary rounded-xl text-xs" onClick={() => void save()} disabled={saving}>{saving ? 'Saving…' : record ? 'Save changes' : 'Save assessment'}</button></div>
   </div>;
 
   return <Modal title={`${record ? 'Edit' : 'New'} Maintenance Assessment Report`} onClose={onClose} className="sm:!h-[90vh] sm:!max-h-[90vh] sm:!max-w-6xl" footer={footer}>

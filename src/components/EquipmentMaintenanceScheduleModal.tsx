@@ -93,7 +93,7 @@ export default function EquipmentMaintenanceScheduleModal({ assets, employees, p
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 sm:flex-none rounded-lg border px-4 py-2 font-medium text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+            className="flex-1 sm:flex-none rounded-xl border px-4 py-2 font-medium text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition"
           >
             Cancel
           </button>
@@ -101,7 +101,7 @@ export default function EquipmentMaintenanceScheduleModal({ assets, employees, p
             type="submit"
             form="equipment-maintenance-form"
             disabled={busy}
-            className="flex-1 sm:flex-none rounded-lg bg-orange-600 px-4 py-2 font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition text-xs sm:text-sm"
+            className="flex-1 sm:flex-none rounded-xl bg-orange-600 px-4 py-2 font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition text-xs sm:text-sm shadow-xs"
           >
             {busy ? 'Creating schedule…' : 'Create & dispatch maintenance schedule'}
           </button>

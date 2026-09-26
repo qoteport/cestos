@@ -178,7 +178,7 @@ export default function AuthorizationDetailsModal({
 
         {/* Footer Actions */}
         <div className="flex justify-between items-center pt-3 border-t">
-          <button type="button" className="btn-secondary text-xs" onClick={onClose}>
+          <button type="button" className="btn-secondary rounded-xl text-xs" onClick={onClose}>
             Close
           </button>
 
@@ -189,7 +189,7 @@ export default function AuthorizationDetailsModal({
                 onClose();
                 onEdit(item);
               }}
-              className="btn-primary text-xs flex items-center gap-1.5"
+              className="btn-primary rounded-xl text-xs flex items-center gap-1.5 shadow-xs"
             >
               <Edit size={13} /> Edit Authorization
             </button>
