@@ -3135,11 +3135,14 @@ Signed: Field Operations Administration
                   </div>
 
                   <div className="bg-white dark:bg-slate-900 border rounded-xl p-4 space-y-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Purchased Line Items</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pending Approvals</span>
                     <p className="text-xl font-black text-amber-600">
-                      {expenseIntelligenceMetrics.totalItemsCount}
+                      ${filteredOperationalExpenseRequests
+                        .filter((e: any) => (e.status || '').toUpperCase() === 'SUBMITTED' || (e.status || '').toUpperCase() === 'PENDING')
+                        .reduce((sum: number, e: any) => sum + Number(e.total_cost || e.amount || 0), 0)
+                        .toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
-                    <span className="text-[11px] text-slate-500 font-medium">Purchased items count</span>
+                    <span className="text-[11px] text-slate-500 font-medium">Awaiting approval action</span>
                   </div>
                   </div>
 

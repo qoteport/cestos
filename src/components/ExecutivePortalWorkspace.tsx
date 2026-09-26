@@ -613,8 +613,17 @@ export default function ExecutivePortalWorkspace() {
     const avgClaim = count > 0 ? totalExp / count : 0;
     const maxClaim = scopedExpenses.reduce((max, e) => Math.max(max, Number(e.total_cost || e.amount || 0)), 0);
     const totalItemsCount = scopedExpenses.reduce((sum, e) => sum + (Array.isArray(e.items) ? e.items.length : 1), 0);
+    const totalPaid = scopedExpenses.reduce((sum, e: any) => {
+      const explicitPaid = Array.isArray(e.payments) && e.payments.length
+        ? e.payments.reduce((acc: number, p: any) => acc + (Number(p.amount) || 0), 0)
+        : Number(e.paid_amount) || 0;
+      const s = String(e.status || '').toUpperCase();
+      const ps = String(e.payment_status || '').toUpperCase();
+      const paid = explicitPaid > 0 ? explicitPaid : (s === 'PAID' || s === 'COMPLETED' || ps === 'PAID' || ps === 'COMPLETED' ? Number(e.total_cost || e.amount || 0) : 0);
+      return sum + paid;
+    }, 0);
 
-    return { totalExp, count, avgClaim, maxClaim, totalItemsCount };
+    return { totalExp, count, avgClaim, maxClaim, totalItemsCount, totalPaid };
   }, [scopedExpenses]);
 
   const scopedPurchaseOrders = useMemo(() => {
@@ -1574,15 +1583,17 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                 <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex-1 flex flex-col justify-center">
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Expenditure</p>
                   <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">
-                    ${scopedExpenses.reduce((acc, e) => acc + Number(e.total_cost || e.amount || 0), 0).toLocaleString()}
+                    ${scopedExpenses.reduce((acc, e) => acc + Number(e.total_cost || e.amount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                   <p className="text-[11px] text-indigo-600 font-bold mt-1">All recorded vouchers</p>
                 </div>
 
                 <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex-1 flex flex-col justify-center">
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total claims</p>
-                  <p className="text-2xl font-black text-indigo-600 mt-1">{scopedExpenses.length}</p>
-                  <p className="text-[11px] text-indigo-600 font-bold mt-1">Operational expense claims</p>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Paid Out</p>
+                  <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">
+                    ${expenseIntelligenceMetrics.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-[11px] text-blue-600 dark:text-blue-400 font-bold mt-1">Disbursed expense payments</p>
                 </div>
 
                 <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex-1 flex flex-col justify-center">
@@ -1600,9 +1611,9 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                     {scopedExpenses
                       .filter((e) => (e.status || '').toUpperCase() === 'SUBMITTED' || (e.status || '').toUpperCase() === 'PENDING')
                       .reduce((acc, e) => acc + Number(e.total_cost || e.amount || 0), 0)
-                      .toLocaleString()}
+                      .toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
-                  <p className="text-[11px] text-amber-600 font-bold mt-1">{unresolvedClaimsCount} Unresolved Claims</p>
+                  <p className="text-[11px] text-amber-600 font-bold mt-1">Awaiting approval action</p>
                 </div>
               </div>
 

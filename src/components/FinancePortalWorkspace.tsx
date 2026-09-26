@@ -1122,8 +1122,17 @@ Signed: Finance & Procurement Administration
     const avgClaim = count > 0 ? totalExp / count : 0;
     const maxClaim = scopedOperationalExpenseRequests.reduce((max, e) => Math.max(max, Number(e.total_cost || e.amount || 0)), 0);
     const totalItemsCount = scopedOperationalExpenseRequests.reduce((sum, e) => sum + (Array.isArray(e.items) ? e.items.length : 1), 0);
+    const totalPaid = scopedOperationalExpenseRequests.reduce((sum, e: any) => {
+      const explicitPaid = Array.isArray(e.payments) && e.payments.length
+        ? e.payments.reduce((acc: number, p: any) => acc + (Number(p.amount) || 0), 0)
+        : Number(e.paid_amount) || 0;
+      const s = String(e.status || '').toUpperCase();
+      const ps = String(e.payment_status || '').toUpperCase();
+      const paid = explicitPaid > 0 ? explicitPaid : (s === 'PAID' || s === 'COMPLETED' || ps === 'PAID' || ps === 'COMPLETED' ? Number(e.total_cost || e.amount || 0) : 0);
+      return sum + paid;
+    }, 0);
 
-    return { totalExp, count, avgClaim, maxClaim, totalItemsCount };
+    return { totalExp, count, avgClaim, maxClaim, totalItemsCount, totalPaid };
   }, [scopedOperationalExpenseRequests]);
 
   const unresolvedClaimsCount = React.useMemo(() => {
@@ -2335,7 +2344,7 @@ Signed: Finance & Procurement Administration
       }
 
       case 'EXPENSES': {
-        const { totalExp, count, avgClaim, maxClaim, totalItemsCount } = expenseIntelligenceMetrics;
+        const { totalExp, count, avgClaim, maxClaim, totalItemsCount, totalPaid } = expenseIntelligenceMetrics;
 
         return (
           <div className="space-y-6 w-full">
@@ -2366,13 +2375,13 @@ Signed: Finance & Procurement Administration
               <div className="lg:col-span-4 flex flex-col justify-between gap-3.5">
               <div className="p-4 bg-card border rounded-2xl shadow-xs space-y-1">
                 <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Total expenditure</span>
-                <p className="text-2xl font-black text-violet-600">${totalExp.toLocaleString()}</p>
+                <p className="text-2xl font-black text-violet-600">${totalExp.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 <span className="text-[10px] text-muted-foreground">All recorded vouchers</span>
               </div>
               <div className="p-4 bg-card border rounded-2xl shadow-xs space-y-1">
-                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Total claims</span>
-                <p className="text-2xl font-black text-foreground">{count}</p>
-                <span className="text-[10px] text-muted-foreground">Operational expense claims</span>
+                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Total Paid Out</span>
+                <p className="text-2xl font-black text-blue-600 dark:text-blue-400">${totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <span className="text-[10px] text-muted-foreground">Disbursed expense payments</span>
               </div>
               <div className="p-4 bg-card border rounded-2xl shadow-xs space-y-1">
                 <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Average claim value</span>
@@ -2380,9 +2389,9 @@ Signed: Finance & Procurement Administration
                 <span className="text-[10px] text-muted-foreground">Mean expenditure per claim</span>
               </div>
               <div className="p-4 bg-card border rounded-2xl shadow-xs space-y-1">
-                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Line items purchased</span>
-                <p className="text-2xl font-black text-amber-600">{totalItemsCount}</p>
-                <span className="text-[10px] text-muted-foreground">Purchased items count</span>
+                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Pending Approvals</span>
+                <p className="text-2xl font-black text-amber-600">${scopedOperationalExpenseRequests.filter((e) => (e.status || '').toUpperCase() === 'SUBMITTED' || (e.status || '').toUpperCase() === 'PENDING').reduce((acc, e) => acc + Number(e.total_cost || e.amount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <span className="text-[10px] text-muted-foreground">Awaiting approval action</span>
               </div>
               </div>
 
