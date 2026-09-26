@@ -18,7 +18,7 @@
   --border: #DDE2EA;
   --input: #DDE2EA;
   --ring: #1B4F8A;
-  --radius: 0px;
+  --radius: 0.75rem;
   --font-sans: var(--font-dm-sans), sans-serif;
 
   --status-available: #15803D;
@@ -419,7 +419,7 @@
     font-weight: 600;
     letter-spacing: 0.03em;
     padding: 3px 8px;
-    border-radius: 0px;
+    border-radius: 6px;
     text-transform: uppercase;
     white-space: nowrap;
   }
