@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
-import { ShieldCheck, CheckSquare, Square, Search, UserCheck, Info } from 'lucide-react';
+import { ShieldCheck, CheckSquare, Square, Search, UserCheck, Info, UserMinus, ShieldOff, AlertTriangle } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from './AuthProvider';
 import { Modal, Row, State, display, rows, useData } from './DataUI';
@@ -463,34 +463,79 @@ export default function ProjectWorkforce({
   const [assigningSupervisor, setAssigningSupervisor] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedEmp, setSelectedEmp] = useState<Row | null>(null);
+  const [assignmentToRemove, setAssignmentToRemove] = useState<{ employee: Row; assignment: Row } | null>(null);
+  const [supervisorToRemove, setSupervisorToRemove] = useState<{ employee: Row; reports: Row[] } | null>(null);
+  const [inspectingEmployeeId, setInspectingEmployeeId] = useState<string | null>(null);
+  const [removalBusy, setRemovalBusy] = useState(false);
+  const [removalError, setRemovalError] = useState('');
 
   const candidates = useData(
     picking ? '/api/v1/employees?page_size=100&search=' + encodeURIComponent(search) : null
   );
 
-  // Build supervisor IDs from multiple sources for accurate badge detection:
-  // 1. assignment_supervisor_id — enriched from EmployeeAssignment.supervisor_id (most accurate)
-  // 2. assignments array — supervisor_id field on each assignment record
-  // 3. is_supervisor flag
-  // 4. role keyword heuristic
+  // Project supervisor status is based on active project-assignment links. This
+  // lets the project remove a supervisor designation without changing an HR
+  // title or an organization-wide employee flag.
   const supervisorIds = new Set<string>();
   employees.forEach((emp) => {
-    // assignment_supervisor_id is injected by ProjectCommand from the assignment record
     if (emp.assignment_supervisor_id) supervisorIds.add(String(emp.assignment_supervisor_id));
-    if (emp.supervisor_id) supervisorIds.add(String(emp.supervisor_id));
-    if (emp.is_supervisor) supervisorIds.add(String(emp.id));
-    const role = String(emp.role_on_project || emp.job_title || '').toLowerCase();
-    if (role.includes('supervisor') || role.includes('manager') || role.includes('lead')) {
-      supervisorIds.add(String(emp.id));
-    }
   });
-  // Scan assignments array for supervisor_id (covers employees whose assignment
-  // may not be in the recent_employee_assignments window)
   assignments.forEach((a: Row) => {
     if (a.supervisor_id && String(a.project_id) === projectId && a.status === 'ACTIVE') {
       supervisorIds.add(String(a.supervisor_id));
     }
   });
+
+  async function inspectAssignmentRemoval(employee: Row) {
+    setRemovalError(''); setInspectingEmployeeId(String(employee.id));
+    try {
+      const response = await apiFetch<any>(`/api/v1/employees/${employee.id}/assignments`);
+      const list = Array.isArray(response) ? response : response?.items || [];
+      const assignment = list.find((item: Row) => item.status === 'ACTIVE' && String(item.project_id) === projectId);
+      if (!assignment) { setRemovalError(`${display(employee)} has no active assignment on this project.`); return; }
+      setAssignmentToRemove({ employee, assignment });
+    } catch (err) { setRemovalError(err instanceof Error ? err.message : 'Could not load this employee’s project assignment.'); }
+    finally { setInspectingEmployeeId(null); }
+  }
+
+  async function inspectSupervisorRemoval(employee: Row) {
+    setRemovalError(''); setInspectingEmployeeId(String(employee.id));
+    try {
+      const reports = await Promise.all(employees.map(async (teamMember) => {
+        const response = await apiFetch<any>(`/api/v1/employees/${teamMember.id}/assignments`);
+        const list = Array.isArray(response) ? response : response?.items || [];
+        return list.find((item: Row) => item.status === 'ACTIVE' && String(item.project_id) === projectId && String(item.supervisor_id) === String(employee.id));
+      }));
+      setSupervisorToRemove({ employee, reports: reports.filter(Boolean) as Row[] });
+    } catch (err) { setRemovalError(err instanceof Error ? err.message : 'Could not load the employees assigned to this supervisor.'); }
+    finally { setInspectingEmployeeId(null); }
+  }
+
+  async function confirmAssignmentRemoval() {
+    if (!assignmentToRemove || removalBusy) return;
+    setRemovalBusy(true); setRemovalError('');
+    try {
+      await apiFetch(`/api/v1/employee-assignments/${assignmentToRemove.assignment.id}/complete`, { method: 'POST' });
+      setAssignmentToRemove(null); onSaved();
+    } catch (err) { setRemovalError(err instanceof Error ? err.message : 'Could not remove this employee from the project.'); }
+    finally { setRemovalBusy(false); }
+  }
+
+  async function confirmSupervisorRemoval() {
+    if (!supervisorToRemove || removalBusy || !supervisorToRemove.reports.length) return;
+    setRemovalBusy(true); setRemovalError('');
+    let completed = 0;
+    try {
+      for (const assignment of supervisorToRemove.reports) {
+        await apiFetch(`/api/v1/employee-assignments/${assignment.id}`, { method: 'PATCH', body: JSON.stringify({ supervisor_id: null }) });
+        completed += 1;
+      }
+      setSupervisorToRemove(null); onSaved();
+    } catch (err) {
+      setRemovalError(completed ? `Supervisor links were cleared for ${completed} employee(s), but another update failed: ${err instanceof Error ? err.message : 'Unknown error'}` : err instanceof Error ? err.message : 'Could not remove this supervisor designation.');
+      if (completed) onSaved();
+    } finally { setRemovalBusy(false); }
+  }
 
   return (
     <div className="space-y-4">
@@ -530,6 +575,8 @@ export default function ProjectWorkforce({
         })
         .map((e) => {
         const isSupervisor = supervisorIds.has(String(e.id));
+        const hasDirectReports = employees.some((member) => String(member.assignment_supervisor_id) === String(e.id))
+          || assignments.some((assignment) => assignment.status === 'ACTIVE' && String(assignment.project_id) === projectId && String(assignment.supervisor_id) === String(e.id));
         const subtitle = [
           e.employee_number || 'No employee #',
           e.role_on_project || e.job_title || '',
@@ -559,6 +606,8 @@ export default function ProjectWorkforce({
                   Transfer to another project
                 </button>
               )}
+              {auth.can('employees.assign') && hasDirectReports && <button type="button" className="btn-secondary text-xs inline-flex items-center gap-1" disabled={inspectingEmployeeId === String(e.id)} onClick={() => void inspectSupervisorRemoval(e)}><ShieldOff size={13} />{inspectingEmployeeId === String(e.id) ? 'Loading…' : 'Remove as supervisor'}</button>}
+              {auth.can('employees.assign') && <button type="button" className="btn-secondary text-xs inline-flex items-center gap-1 text-red-700" disabled={inspectingEmployeeId === String(e.id)} onClick={() => void inspectAssignmentRemoval(e)}><UserMinus size={13} />{inspectingEmployeeId === String(e.id) ? 'Loading…' : 'Remove from project'}</button>}
             </div>
           </div>
         );
@@ -569,6 +618,24 @@ export default function ProjectWorkforce({
           No employees assigned to this project.
         </p>
       )}
+
+      {removalError && !assignmentToRemove && !supervisorToRemove && <p role="alert" className="flex items-center gap-2 border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"><AlertTriangle size={15} />{removalError}<button type="button" className="ml-auto font-bold underline" onClick={() => setRemovalError('')}>Dismiss</button></p>}
+
+      {assignmentToRemove && <Modal name="Remove employee from project?" onClose={() => { if (!removalBusy) { setAssignmentToRemove(null); setRemovalError(''); } }}>
+        <div className="space-y-4">
+          <p className="text-sm text-slate-700">This will end <b>{display(assignmentToRemove.employee)}</b>’s active assignment to this project effective today. Their employee record and assignment history will remain available.</p>
+          {removalError && <p role="alert" className="border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{removalError}</p>}
+          <div className="flex justify-end gap-2"><button type="button" disabled={removalBusy} className="btn-secondary text-xs" onClick={() => { setAssignmentToRemove(null); setRemovalError(''); }}>Cancel</button><button type="button" disabled={removalBusy} className="inline-flex items-center gap-1 bg-red-700 px-3 py-2 text-xs font-bold text-white hover:bg-red-800 disabled:opacity-50" onClick={() => void confirmAssignmentRemoval()}><UserMinus size={14} />{removalBusy ? 'Removing…' : 'Remove from project'}</button></div>
+        </div>
+      </Modal>}
+
+      {supervisorToRemove && <Modal name="Remove project supervisor designation?" onClose={() => { if (!removalBusy) { setSupervisorToRemove(null); setRemovalError(''); } }}>
+        <div className="space-y-4">
+          {supervisorToRemove.reports.length ? <><p className="text-sm text-slate-700">This clears <b>{display(supervisorToRemove.employee)}</b> as the designated supervisor for these active project assignments. Their own project assignment and employee profile will remain unchanged.</p><div className="max-h-64 divide-y overflow-y-auto border border-slate-200">{supervisorToRemove.reports.map((assignment) => { const member = employees.find((item) => String(item.id) === String(assignment.employee_id)); return <div key={assignment.id} className="px-3 py-2 text-sm"><span className="font-semibold">{member ? display(member) : assignment.employee_name || 'Team member'}</span><span className="ml-2 text-xs text-slate-500">{assignment.assignment_number || ''}</span></div>; })}</div></> : <p className="text-sm text-slate-700">{display(supervisorToRemove.employee)} has no active project assignments currently designated to them as supervisor.</p>}
+          {removalError && <p role="alert" className="border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{removalError}</p>}
+          <div className="flex justify-end gap-2"><button type="button" disabled={removalBusy} className="btn-secondary text-xs" onClick={() => { setSupervisorToRemove(null); setRemovalError(''); }}>Close</button>{supervisorToRemove.reports.length > 0 && <button type="button" disabled={removalBusy} className="inline-flex items-center gap-1 bg-red-700 px-3 py-2 text-xs font-bold text-white hover:bg-red-800 disabled:opacity-50" onClick={() => void confirmSupervisorRemoval()}><ShieldOff size={14} />{removalBusy ? 'Removing…' : 'Remove supervisor designation'}</button>}</div>
+        </div>
+      </Modal>}
 
       {/* Modal: Pick New Employee to Assign */}
       {picking && (
