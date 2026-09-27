@@ -87,6 +87,9 @@ export default function CommandCenterMaintenanceCsvModal({ onClose, initialKind 
 
   const currentRow = rows[selected];
   const incompleteRows = useMemo(() => rows.filter((row) => !row.saved).length, [rows]);
+  const projectOptions = useMemo(() => projects.map((project) => ({
+    value: String(project.id), label: project.name || project.project_name || project.project_number || project.id, sublabel: project.project_number || '',
+  })), [projects]);
 
   async function loadCsv(file?: File) {
     setError(''); setFileName(''); if (!file) return;
