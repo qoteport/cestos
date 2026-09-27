@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus, Download, RefreshCw, Filter, X } from 'lucide-react';
+import { Plus, Download, RefreshCw, Filter, X, Eye } from 'lucide-react';
 import { downloadBlob } from '@/lib/api';
 import { useAuth } from './AuthProvider';
 import { useData, rows, State, Table, Row } from './DataUI';
@@ -187,24 +187,98 @@ export function ProjectRegister({ dashboard = false, onSelectProject, readOnly }
       )}
 
       <State loading={data.loading} error={data.error} retry={data.reload}>
-        <Table
-          data={list}
-          columns={[
-            'project_number',
-            'name',
-            'status',
-            'start_date',
-            'expected_end_date',
-            'target_metres',
-          ]}
-          onSelect={(r) => {
-            if (onSelectProject) {
-              onSelectProject(r.id);
-            } else {
-              router.push('/project-command-center?project=' + r.id);
-            }
-          }}
-        />
+        {list.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground border rounded-lg bg-muted/20">
+            No projects found.
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
+                <tr>
+                  <th className="px-4 py-3 font-semibold hidden sm:table-cell">Project #</th>
+                  <th className="px-4 py-3 font-semibold">Project Name</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold hidden md:table-cell">Start Date</th>
+                  <th className="px-4 py-3 font-semibold hidden sm:table-cell">Expected End</th>
+                  <th className="px-4 py-3 font-semibold hidden lg:table-cell text-right">Target Metres</th>
+                  <th className="px-4 py-3 font-semibold text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {list.map((r) => {
+                  const handleSelect = () => {
+                    if (onSelectProject) {
+                      onSelectProject(r.id);
+                    } else {
+                      router.push('/project-command-center?project=' + r.id);
+                    }
+                  };
+
+                  const getStatusBadge = (st: string) => {
+                    const statusUpper = String(st || '').toUpperCase();
+                    switch (statusUpper) {
+                      case 'ACTIVE':
+                        return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400">Active</span>;
+                      case 'COMPLETED':
+                        return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-400">Completed</span>;
+                      case 'MOBILIZING':
+                        return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-400">Mobilizing</span>;
+                      case 'PAUSED':
+                      case 'ON_HOLD':
+                        return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400">Paused</span>;
+                      case 'PLANNING':
+                        return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-100 text-sky-800 dark:bg-sky-950/50 dark:text-sky-400">Planning</span>;
+                      case 'CLOSED':
+                      case 'CANCELLED':
+                        return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300">Closed</span>;
+                      default:
+                        return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">{st || '—'}</span>;
+                    }
+                  };
+
+                  return (
+                    <tr
+                      key={r.id || r.project_number}
+                      onClick={handleSelect}
+                      className="hover:bg-muted/40 cursor-pointer transition-colors"
+                    >
+                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground hidden sm:table-cell">
+                        {r.project_number || '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-foreground">{r.name || '—'}</div>
+                        <div className="text-xs text-muted-foreground sm:hidden font-mono mt-0.5">
+                          {r.project_number}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {getStatusBadge(r.status)}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs hidden md:table-cell">
+                        {r.start_date || '—'}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs hidden sm:table-cell">
+                        {r.expected_end_date || '—'}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs hidden lg:table-cell text-right font-mono">
+                        {r.target_metres != null ? Number(r.target_metres).toLocaleString() : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={handleSelect}
+                          className="btn-secondary text-xs inline-flex items-center gap-1.5 py-1 px-2.5 rounded-md hover:bg-primary/10 hover:text-primary transition-colors"
+                        >
+                          <Eye size={13} /> View
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
         <div className="flex justify-between items-center text-xs mt-4">
           <span>
             {data.data?.total || 0} projects · Page {page} of {Math.max(1, data.data?.pages || 0)}
