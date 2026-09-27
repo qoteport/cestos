@@ -2931,7 +2931,7 @@ Signed: Finance & Procurement Administration
             
             <button
               onClick={() => router.push('/finance-portal/my-profile')}
-              className="hidden md:flex items-center gap-2 pl-3 border-l border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 p-1.5 -my-1.5 rounded-lg transition text-left"
+              className="hidden md:flex items-center gap-2 pl-3 border-0 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 p-1.5 -my-1.5 rounded-lg transition text-left"
               title="View My Profile"
             >
               <div className="w-8 h-8 rounded-full bg-violet-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">

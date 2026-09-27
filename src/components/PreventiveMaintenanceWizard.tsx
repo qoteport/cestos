@@ -72,15 +72,17 @@ export default function PreventiveMaintenanceWizard({
   onClose,
   onSaved,
   record,
+  initialView = 'ASSISTED',
 }: {
   assets: any[];
   projectId: string;
   onClose: () => void;
   onSaved?: () => void;
   record?: any;
+  initialView?: 'ASSISTED' | 'FREE_FLOW';
 }) {
   const [step, setStep] = useState(0);
-  const [view, setView] = useState<'ASSISTED' | 'FREE_FLOW'>('ASSISTED');
+  const [view, setView] = useState<'ASSISTED' | 'FREE_FLOW'>(initialView);
   const [savedSignatures, setSavedSignatures] = useState<any[]>([]);
   const [savedRecord, setSavedRecord] = useState<any>(null);
   const [saving, setSaving] = useState(false);
@@ -107,18 +109,18 @@ export default function PreventiveMaintenanceWizard({
   const [woFile, setWoFile] = useState<File | null>(null);
   const [control, setControl] = useState<any>({
     ...(record?.pm_control || {}),
-    pm_interval: '250 Hours',
-    date: new Date().toISOString().slice(0, 10),
-    start_time: '',
-    finish_time: '',
-    hour_meter_km: '',
-    technician_team: '',
-    technician_employee_id: '',
-    location: '',
-    site_location_id: '',
-    work_order_no: '',
+    pm_interval: record?.pm_control?.pm_interval || '250 Hours',
+    date: record?.pm_control?.date || new Date().toISOString().slice(0, 10),
+    start_time: record?.pm_control?.start_time || '',
+    finish_time: record?.pm_control?.finish_time || '',
+    hour_meter_km: record?.pm_control?.hour_meter_km || '',
+    technician_team: record?.pm_control?.technician_team || '',
+    technician_employee_id: record?.pm_control?.technician_employee_id || '',
+    location: record?.pm_control?.location || '',
+    site_location_id: record?.site_location_id || record?.pm_control?.site_location_id || '',
+    work_order_no: record?.pm_control?.work_order_no || '',
     status: record?.status || 'DRAFT',
-    job_card_number: record?.job_card_number || '',
+    job_card_number: record?.job_card_number || record?.pm_control?.job_card_number || '',
   });
   const [items, setItems] = useState<any[]>(record?.inspection_items?.length ? record.inspection_items : systems.map(([system_component, service_tasks], i) => ({
     sequence: i + 1,

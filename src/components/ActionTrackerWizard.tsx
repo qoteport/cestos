@@ -13,10 +13,10 @@ const fields = [
   ['priority', 'Priority'], ['status', 'Status'], ['completion_date', 'Completion date'], ['remarks', 'Remarks'],
 ] as const;
 
-export default function ActionTrackerWizard({ projectId, assets, employees, record, onClose, onSaved }: {
-  projectId: string; assets: any[]; employees: any[]; record?: any; onClose: () => void; onSaved: () => void;
+export default function ActionTrackerWizard({ projectId, assets, employees, record, onClose, onSaved, initialMode = 'ASSISTED' }: {
+  projectId: string; assets: any[]; employees: any[]; record?: any; onClose: () => void; onSaved: () => void; initialMode?: 'ASSISTED' | 'FREE_FLOW';
 }) {
-  const [mode, setMode] = useState<'ASSISTED' | 'FREE_FLOW'>('ASSISTED');
+  const [mode, setMode] = useState<'ASSISTED' | 'FREE_FLOW'>(initialMode);
   const [data, setData] = useState<any>(() => ({ action_date: today, equipment_area: '', issue_finding: '', action_taken: '', parts_required: '', responsible_name: '', priority: 'MEDIUM', status: 'OPEN', completion_date: '', remarks: '', ...record }));
   const [customEquipment, setCustomEquipment] = useState(Boolean(record?.equipment_area && !record?.asset_id));
   const [customResponsible, setCustomResponsible] = useState(Boolean(record?.responsible_name && !record?.responsible_employee_id));

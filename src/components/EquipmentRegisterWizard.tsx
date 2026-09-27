@@ -13,10 +13,10 @@ const fields = [
 const statusOptions = ['Operational / Monitoring', 'Under Assessment', 'Operational / PM', 'Out of Service'];
 const priorityOptions = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 
-export default function EquipmentRegisterWizard({ projectId, assets, record, onClose, onSaved }: {
-  projectId: string; assets: any[]; record?: any; onClose: () => void; onSaved: () => void;
+export default function EquipmentRegisterWizard({ projectId, assets, record, onClose, onSaved, initialMode = 'ASSISTED' }: {
+  projectId: string; assets: any[]; record?: any; onClose: () => void; onSaved: () => void; initialMode?: 'ASSISTED' | 'FREE_FLOW';
 }) {
-  const [mode, setMode] = useState<'ASSISTED' | 'FREE_FLOW'>('ASSISTED');
+  const [mode, setMode] = useState<'ASSISTED' | 'FREE_FLOW'>(initialMode);
   const [data, setData] = useState<any>(() => ({ equipment: '', unit_number: '', equipment_type: '', status: 'Operational / Monitoring', open_defects: '', action_required: '', priority: 'MEDIUM', remarks: '', ...record }));
   const [customEquipment, setCustomEquipment] = useState(Boolean(record?.equipment && !record?.asset_id));
   const [customStatus, setCustomStatus] = useState(Boolean(record?.status && !statusOptions.includes(record.status)));

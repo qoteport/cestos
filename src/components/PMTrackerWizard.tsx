@@ -14,10 +14,10 @@ const fields = [
   ['parts_required', 'Parts required'], ['technician_name', 'Technician'], ['remarks', 'Remarks'],
 ] as const;
 
-export default function PMTrackerWizard({ projectId, assets, employees, record, onClose, onSaved }: {
-  projectId: string; assets: any[]; employees: any[]; record?: any; onClose: () => void; onSaved: () => void;
+export default function PMTrackerWizard({ projectId, assets, employees, record, onClose, onSaved, initialMode = 'ASSISTED' }: {
+  projectId: string; assets: any[]; employees: any[]; record?: any; onClose: () => void; onSaved: () => void; initialMode?: 'ASSISTED' | 'FREE_FLOW';
 }) {
-  const [mode, setMode] = useState<'ASSISTED' | 'FREE_FLOW'>('ASSISTED');
+  const [mode, setMode] = useState<'ASSISTED' | 'FREE_FLOW'>(initialMode);
   const [data, setData] = useState<any>(() => ({ equipment: '', service_type: '', due_date: today, planned_actual: 'PLANNED', pm_completed: false, defects_found: '', parts_required: '', technician_name: '', remarks: '', ...record }));
   const [customEquipment, setCustomEquipment] = useState(Boolean(record?.equipment && !record?.asset_id));
   const [customTechnician, setCustomTechnician] = useState(Boolean(record?.technician_name && !record?.technician_employee_id));

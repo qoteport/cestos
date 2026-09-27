@@ -1,0 +1,168 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import { apiFetch } from '@/lib/api';
+import { X, Upload, Download, FileSpreadsheet, CheckCircle2, Circle, ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
+import BreakdownJobCardWizard from './BreakdownJobCardWizard';
+import PreventiveMaintenanceWizard from './PreventiveMaintenanceWizard';
+import MaintenanceAssessmentReportWizard from './MaintenanceAssessmentReportWizard';
+import ActionTrackerWizard from './ActionTrackerWizard';
+import PMTrackerWizard from './PMTrackerWizard';
+import EquipmentRegisterWizard from './EquipmentRegisterWizard';
+
+type Kind = 'breakdown' | 'preventive' | 'assessment' | 'action' | 'pm' | 'equipment';
+type CsvRecord = Record<string, any>;
+type CsvRow = { record: CsvRecord; saved: boolean; sourceLine: number };
+
+const definitions: Record<Kind, { label: string; template: string[] }> = {
+  breakdown: { label: 'Breakdown cards', template: ['project_id', 'asset_id', 'job_control.date', 'job_control.equipment', 'job_control.fleet_unit_id', 'job_control.location', 'job_control.hour_km', 'job_control.operator_driver', 'job_control.department', 'job_control.time_reported', 'job_control.time_attended', 'reported_failure', 'corrective_action', 'parts_materials', 'labour_downtime', 'test_release', 'signatures'] },
+  preventive: { label: 'Preventive cards', template: ['project_id', 'asset_id', 'job_card_number', 'status', 'pm_control.date', 'pm_control.pm_interval', 'pm_control.equipment', 'pm_control.fleet_unit_id', 'pm_control.location', 'pm_control.hour_meter_km', 'pm_control.technician_team', 'pm_control.work_order_no', 'pm_control.start_time', 'pm_control.finish_time', 'inspection_items', 'service_defect_control', 'machine_release', 'technicians', 'signatures', 'supervisor_comments'] },
+  assessment: { label: 'Assessments', template: ['report_number', 'project_id', 'site_location_id', 'project_name_custom', 'reporting_period_start', 'reporting_period_end', 'report_date', 'prepared_by_name', 'prepared_by_position', 'submitted_to', 'status', 'equipment_asset_ids', 'equipment_fleet', 'maintenance_assessment', 'preventive_improvements', 'spare_parts_actions', 'manpower_requirements', 'control_documents', 'action_plan', 'maintenance_kpis', 'conclusion'] },
+  action: { label: 'Action tracker', template: ['project_id', 'action_date', 'asset_id', 'equipment_area', 'issue_finding', 'action_taken', 'parts_required', 'responsible_name', 'priority', 'status', 'completion_date', 'remarks'] },
+  pm: { label: 'PM tracker', template: ['project_id', 'asset_id', 'equipment', 'service_type', 'due_date', 'planned_actual', 'pm_completed', 'defects_found', 'parts_required', 'technician_name', 'remarks'] },
+  equipment: { label: 'Equipment register', template: ['project_id', 'asset_id', 'equipment', 'unit_number', 'equipment_type', 'status', 'open_defects', 'action_required', 'priority', 'remarks'] },
+};
+
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = []; let row: string[] = []; let value = ''; let quoted = false;
+  for (let i = 0; i < text.length; i += 1) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"' && text[i + 1] === '"') { value += '"'; i += 1; }
+      else if (c === '"') quoted = false;
+      else value += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ',') { row.push(value.trim()); value = ''; }
+    else if (c === '\n') { row.push(value.trim()); if (row.some((cell) => cell)) rows.push(row); row = []; value = ''; }
+    else if (c !== '\r') value += c;
+  }
+  row.push(value.trim()); if (row.some((cell) => cell)) rows.push(row);
+  return rows;
+}
+
+function cellValue(raw: string): any {
+  const value = raw.trim(); if (!value) return '';
+  if (value[0] === '[' || value[0] === '{') { try { return JSON.parse(value); } catch { return value; } }
+  if (/^(true|false)$/i.test(value)) return value.toLowerCase() === 'true';
+  return value;
+}
+
+function setPath(target: CsvRecord, path: string, value: any) {
+  const parts = path.split('.').map((part) => part.trim()).filter(Boolean); if (!parts.length) return;
+  let cursor = target;
+  for (const part of parts.slice(0, -1)) { if (!cursor[part] || typeof cursor[part] !== 'object' || Array.isArray(cursor[part])) cursor[part] = {}; cursor = cursor[part]; }
+  cursor[parts[parts.length - 1]] = value;
+}
+
+function escapeCsv(value: string) { return `"${value.replaceAll('"', '""')}"`; }
+
+export default function CommandCenterMaintenanceCsvModal({ onClose, initialKind = 'breakdown' }: { onClose: () => void; initialKind?: Kind }) {
+  const [kind, setKind] = useState<Kind>(initialKind);
+  const [rows, setRows] = useState<CsvRow[]>([]);
+  const [selected, setSelected] = useState(0);
+  const [projectId, setProjectId] = useState('');
+  const [projects, setProjects] = useState<any[]>([]);
+  const [assets, setAssets] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [activeWizard, setActiveWizard] = useState(false);
+  const [fileName, setFileName] = useState('');
+  const definition = definitions[kind];
+
+  useEffect(() => {
+    let active = true;
+    Promise.allSettled([
+      apiFetch<any>('/api/v1/projects?page_size=100'),
+      apiFetch<any>('/api/v1/assets?page_size=100'),
+      apiFetch<any>('/api/v1/employees?page_size=100'),
+    ]).then((results) => {
+      if (!active) return;
+      const list = (result: PromiseSettledResult<any>) => result.status === 'fulfilled' ? (Array.isArray(result.value) ? result.value : result.value?.items || []) : [];
+      setProjects(list(results[0])); setAssets(list(results[1])); setEmployees(list(results[2])); setLoading(false);
+    });
+    return () => { active = false; };
+  }, []);
+
+  const currentRow = rows[selected];
+  const incompleteRows = useMemo(() => rows.filter((row) => !row.saved).length, [rows]);
+
+  async function loadCsv(file?: File) {
+    setError(''); setFileName(''); if (!file) return;
+    try {
+      const parsed = parseCsv(await file.text());
+      if (parsed.length < 2) throw new Error('The CSV needs a header row and at least one data row.');
+      const headers = parsed[0].map((header) => header.trim());
+      if (headers.some((header) => !header)) throw new Error('Every CSV column needs a header.');
+      const imported = parsed.slice(1).map((values, rowIndex) => {
+        const record: CsvRecord = {};
+        headers.forEach((header, columnIndex) => {
+          const value = cellValue(values[columnIndex] || ''); if (value === '') return;
+          if (header === 'record_json') {
+            if (typeof value !== 'object' || Array.isArray(value)) throw new Error(`Row ${rowIndex + 2}: record_json must contain a JSON object.`);
+            Object.assign(record, value);
+          } else setPath(record, header, value);
+        });
+        // CSV imports always create new records. Never let an id supplied in a
+        // file turn this flow into an accidental edit of an existing record.
+        delete record.id;
+        if (!record.project_id && projectId) record.project_id = projectId;
+        return { record, saved: false, sourceLine: rowIndex + 2 };
+      });
+      setRows(imported); setSelected(0); setFileName(file.name);
+    } catch (e: any) { setRows([]); setError(e?.message || 'Could not read this CSV.'); }
+  }
+
+  function downloadTemplate() {
+    const csv = `${definition.template.map(escapeCsv).join(',')}\n`;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' }); const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a'); anchor.href = url; anchor.download = `${kind}-maintenance-template.csv`; anchor.click(); URL.revokeObjectURL(url);
+  }
+
+  async function handleSaved() {
+    setRows((old) => old.map((row, index) => index === selected ? { ...row, saved: true } : row));
+    setActiveWizard(false);
+  }
+
+  const projectValue = (currentRow?.record.project_id || projectId || '');
+  const shared = { projectId: projectValue, assets, employees, record: currentRow?.record, onClose: () => setActiveWizard(false), onSaved: handleSaved };
+  const wizard = activeWizard && currentRow ? kind === 'breakdown'
+    ? <BreakdownJobCardWizard initialView="FREE_FLOW" {...shared} />
+    : kind === 'preventive' ? <PreventiveMaintenanceWizard initialView="FREE_FLOW" {...shared} />
+    : kind === 'assessment' ? <MaintenanceAssessmentReportWizard projects={projects} initialMode="FREE_FLOW" {...shared} />
+    : kind === 'action' ? <ActionTrackerWizard initialMode="FREE_FLOW" {...shared} />
+    : kind === 'pm' ? <PMTrackerWizard initialMode="FREE_FLOW" {...shared} />
+    : <EquipmentRegisterWizard initialMode="FREE_FLOW" {...shared} /> : null;
+
+  return <>
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/65 p-3 sm:p-6" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <section className="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden bg-white shadow-2xl">
+        <header className="flex items-center justify-between border-b border-slate-200 bg-[#123f68] px-5 py-4 text-white">
+          <div><p className="text-xs font-semibold uppercase tracking-[.16em] text-blue-100">Command center</p><h2 className="mt-1 text-xl font-bold">Import maintenance records from CSV</h2></div>
+          <button type="button" className="p-2 hover:bg-white/10" onClick={onClose} aria-label="Close"><X size={20} /></button>
+        </header>
+        <div className="flex-1 space-y-5 overflow-y-auto p-5">
+          <p className="text-sm text-slate-600">Upload one record type at a time. Each row opens in its free-flow form for review and editing before it is saved.</p>
+          <div className="grid gap-4 md:grid-cols-3">
+            <label className="block space-y-1.5"><span className="text-sm font-semibold text-slate-700">Record type</span><select className="input-field w-full rounded-none" value={kind} onChange={(event) => { setKind(event.target.value as Kind); setRows([]); setFileName(''); setError(''); }}>
+              {(Object.keys(definitions) as Kind[]).map((key) => <option key={key} value={key}>{definitions[key].label}</option>)}
+            </select></label>
+            <label className="block space-y-1.5"><span className="text-sm font-semibold text-slate-700">Default project (optional)</span><select className="input-field w-full rounded-none" value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="">Use project_id from CSV / form</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name || project.project_name || project.project_number || project.id}</option>)}</select></label>
+            <div className="flex items-end gap-2"><button type="button" onClick={downloadTemplate} className="inline-flex h-10 items-center gap-2 border border-slate-300 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><Download size={16} />Download template</button><label className="inline-flex h-10 cursor-pointer items-center gap-2 bg-[#184877] px-4 text-sm font-semibold text-white hover:bg-[#123f68]"><Upload size={16} />Upload CSV<input type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => void loadCsv(event.target.files?.[0])} /></label></div>
+          </div>
+          <div className="border-l-4 border-blue-500 bg-blue-50 px-4 py-3 text-sm text-blue-950"><b>CSV format:</b> Use the template headers; nested form fields use dot notation (for example <code>job_control.equipment</code>). Array/object fields accept JSON in one quoted cell. You can also use a single <code>record_json</code> column containing a full JSON record.</div>
+          {loading && <div className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="animate-spin" size={16} />Loading project and employee options…</div>}
+          {error && <p role="alert" className="border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+          {fileName && <div className="flex items-center gap-2 text-sm font-medium text-slate-700"><FileSpreadsheet size={17} className="text-emerald-700" />{fileName}<span className="font-normal text-slate-500">{rows.length} rows · {incompleteRows} awaiting review</span></div>}
+          {rows.length > 0 && <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+            <div className="overflow-x-auto border border-slate-200"><table className="w-full min-w-[520px] text-left text-sm"><thead className="bg-slate-100 text-xs uppercase text-slate-600"><tr><th className="px-3 py-2">CSV row</th><th className="px-3 py-2">Preview</th><th className="px-3 py-2">Review</th></tr></thead><tbody>{rows.map((row, index) => <tr key={row.sourceLine} className={`border-t border-slate-200 ${index === selected ? 'bg-blue-50' : ''}`}><td className="px-3 py-2 font-mono text-xs">{row.sourceLine}</td><td className="max-w-[450px] truncate px-3 py-2">{String(row.record.job_card_number || row.record.pm_control?.job_card_number || row.record.report_number || row.record.equipment || row.record.job_control?.equipment || row.record.issue_finding || row.record.reported_failure || '(record)')}</td><td className="px-3 py-2">{row.saved ? <span className="inline-flex items-center gap-1 text-emerald-700"><CheckCircle2 size={15} />Saved</span> : <button type="button" onClick={() => setSelected(index)} className="font-semibold text-blue-800 underline">Select</button>}</td></tr>)}</tbody></table></div>
+            <aside className="space-y-3 border border-slate-200 bg-slate-50 p-4"><h3 className="font-bold text-slate-900">Review row {currentRow?.sourceLine}</h3><p className="text-sm text-slate-600">Open the imported values in the matching free-flow form. Edit any field, then save to create the record.</p><button type="button" disabled={!currentRow || currentRow.saved} onClick={() => setActiveWizard(true)} className="flex w-full items-center justify-center gap-2 bg-[#184877] px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"><FileSpreadsheet size={17} />{currentRow?.saved ? 'Already saved' : 'Open free-flow form'}</button><div className="flex justify-between gap-2"><button type="button" className="inline-flex items-center gap-1 px-2 py-2 text-sm text-slate-700 disabled:opacity-40" disabled={selected <= 0} onClick={() => setSelected((value) => Math.max(0, value - 1))}><ArrowLeft size={15} />Previous</button><button type="button" className="inline-flex items-center gap-1 px-2 py-2 text-sm text-slate-700 disabled:opacity-40" disabled={selected >= rows.length - 1} onClick={() => setSelected((value) => Math.min(rows.length - 1, value + 1))}>Next<ArrowRight size={15} /></button></div><p className="text-xs text-slate-500">Saved rows are marked and skipped. Remaining rows can be reviewed in any order.</p></aside>
+          </div>}
+          {!rows.length && !fileName && <div className="flex min-h-40 flex-col items-center justify-center border border-dashed border-slate-300 text-slate-500"><Circle size={28} /><p className="mt-2 text-sm">Choose a record type, download its template, and upload your completed CSV.</p></div>}
+        </div>
+        <footer className="flex justify-end border-t border-slate-200 bg-slate-50 px-5 py-3"><button type="button" onClick={onClose} className="border border-slate-300 px-5 py-2 text-sm font-semibold text-slate-700 hover:bg-white">Close</button></footer>
+      </section>
+    </div>
+    {wizard}
+  </>;
+}

@@ -4,23 +4,21 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useData } from '@/components/DataUI';
 
 const DEPT_COLORS = ['var(--primary)', '#7C3AED', '#D97706', '#0891B2', '#6B7280', '#15803D', '#DC2626'];
-const PROJ_COLORS = ['var(--primary)', '#7C3AED', '#D97706', '#0891B2', '#6B7280', '#0891B2', '#15803D'];
-
-const DeptTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-card border border-border rounded shadow-card-md px-3 py-2 text-xs">
-        <p className="font-600 text-foreground">{label}</p>
-        <p className="text-muted-foreground mt-0.5">
-          <span className="font-600 text-foreground">{payload[0].value}</span> employees
-        </p>
-      </div>
-    );
-  }
-  return null;
+const PROJ_COLORS = ['#3B82F6', '#8B5CF6', '#F59E0B', '#10B981', '#64748B', '#06B6D4', '#EC4899'];
+const STATUS_COLORS: Record<string, string> = {
+  Active: '#16A34A',
+  'On Leave': '#EAB308',
+  'Off Rotation': '#8B5CF6',
+  'Out Of Contract': '#F97316',
+  Suspended: '#EF4444',
+  Probation: '#3B82F6',
+  Resigned: '#64748B',
+  Terminated: '#DC2626',
+  Exited: '#94A3B8',
+  Unknown: '#94A3B8',
 };
 
-const ProjTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-card border border-border rounded shadow-card-md px-3 py-2 text-xs">
@@ -48,7 +46,7 @@ function EmployeesByDeptChart({ data }: { data: Array<{ dept: string; count: num
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
         <XAxis dataKey="dept" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
         <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-        <Tooltip content={<DeptTooltip />} cursor={{ fill: 'var(--muted)', opacity: 0.5 }} />
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--muted)', opacity: 0.5 }} />
         <Bar dataKey="count" radius={[3, 3, 0, 0]}>
           {data.map((entry, index) => (
             <Cell key={`dept-cell-${entry.dept}-${index}`} fill={DEPT_COLORS[index % DEPT_COLORS.length]} />
@@ -73,10 +71,38 @@ function EmployeesByProjectChart({ data }: { data: Array<{ project: string; coun
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
         <XAxis dataKey="project" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
         <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-        <Tooltip content={<ProjTooltip />} cursor={{ fill: 'var(--muted)', opacity: 0.5 }} />
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--muted)', opacity: 0.5 }} />
         <Bar dataKey="count" radius={[3, 3, 0, 0]}>
           {data.map((entry, index) => (
             <Cell key={`proj-cell-${entry.project}-${index}`} fill={PROJ_COLORS[index % PROJ_COLORS.length]} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+function EmployeesByStatusChart({ data }: { data: Array<{ status: string; count: number }> }) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-[220px] flex items-center justify-center text-xs text-muted-foreground">
+        No employment status records found in database.
+      </div>
+    );
+  }
+  return (
+    <ResponsiveContainer width="100%" height={220}>
+      <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} barSize={22}>
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+        <XAxis dataKey="status" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--muted)', opacity: 0.5 }} />
+        <Bar dataKey="count" radius={[3, 3, 0, 0]}>
+          {data.map((entry, index) => (
+            <Cell
+              key={`status-cell-${entry.status}-${index}`}
+              fill={STATUS_COLORS[entry.status] || DEPT_COLORS[index % DEPT_COLORS.length]}
+            />
           ))}
         </Bar>
       </BarChart>
@@ -121,27 +147,64 @@ export default function WorkforceCharts({
     ? Object.entries(rawProj).map(([project, count]) => ({ project: project || 'Unknown', count: Number(count || 0) }))
     : [];
 
+  const rawStatus = statsRes.data?.employees_by_employment_status || statsRes.data?.by_employment_status || statsRes.data?.by_status;
+  let byStatus: Array<{ status: string; count: number }> = [];
+
+  if (Array.isArray(rawStatus)) {
+    byStatus = rawStatus.map((d: any) => ({
+      status: d.status ?? d.name ?? 'Unknown',
+      count: Number(d.count ?? d.value ?? 0),
+    }));
+  } else if (typeof rawStatus === 'object' && rawStatus !== null) {
+    byStatus = Object.entries(rawStatus).map(([st, count]) => ({
+      status: st || 'Unknown',
+      count: Number(count || 0),
+    }));
+  } else if (statsRes.data) {
+    // Fallback using KPI stats if rawStatus object is not present yet
+    const d = statsRes.data;
+    const fallbackList = [
+      { status: 'Active', count: Number(d.active_employees || 0) },
+      { status: 'On Leave', count: Number(d.on_leave || 0) },
+      { status: 'Off Rotation', count: Number(d.off_rotation || 0) },
+      { status: 'Suspended', count: Number(d.suspended || 0) },
+    ].filter((item) => item.count > 0);
+    byStatus = fallbackList;
+  }
+
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       <div className="card p-5">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <p className="text-sm font-700 text-foreground">Employees by Department</p>
-            <p className="text-xs text-muted-foreground">Current headcount per department</p>
+            <p className="text-xs text-muted-foreground">Headcount per department</p>
           </div>
           {statsRes.loading && <span className="text-[11px] text-muted-foreground animate-pulse">Loading live data...</span>}
         </div>
         <EmployeesByDeptChart data={byDept} />
       </div>
+
       <div className="card p-5">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <p className="text-sm font-700 text-foreground">Employees by Project</p>
-            <p className="text-xs text-muted-foreground">Current deployment distribution</p>
+            <p className="text-xs text-muted-foreground">Current project deployment</p>
           </div>
           {statsRes.loading && <span className="text-[11px] text-muted-foreground animate-pulse">Loading live data...</span>}
         </div>
         <EmployeesByProjectChart data={byProj} />
+      </div>
+
+      <div className="card p-5 md:col-span-2 xl:col-span-1">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-700 text-foreground">Employees by Employment Status</p>
+            <p className="text-xs text-muted-foreground">Headcount by status category</p>
+          </div>
+          {statsRes.loading && <span className="text-[11px] text-muted-foreground animate-pulse">Loading live data...</span>}
+        </div>
+        <EmployeesByStatusChart data={byStatus} />
       </div>
     </div>
   );

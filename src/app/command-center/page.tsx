@@ -15,9 +15,13 @@ import { Row } from '@/components/DataUI';
 import { toast } from 'sonner';
 import Icon from '@/components/ui/AppIcon';
 import CommandCenterRecordManagerModal from '@/components/CommandCenterRecordManagerModal';
+import CommandCenterMaintenanceCsvModal from '@/components/CommandCenterMaintenanceCsvModal';
+import { TransferEmployeeModal } from '@/components/ProjectWorkforce';
+import CommandCenterTimesheetCsvModal from '@/components/CommandCenterTimesheetCsvModal';
 
 
 type CategoryKey = 'ALL' | 'WORKFORCE' | 'PROJECTS' | 'FLEET' | 'INVENTORY' | 'ADMIN';
+type MaintenanceCsvKind = 'breakdown' | 'preventive' | 'assessment' | 'action' | 'pm' | 'equipment';
 
 interface CommandDef {
   id: string;
@@ -31,9 +35,23 @@ interface CommandDef {
   path?: string;
   targetPathPattern?: string;
   method?: string;
-  customModalType?: 'assignment' | 'edit-employee' | 'employee-select' | 'asset-select' | 'create-user' | 'record-manager' | null;
+  customModalType?: 'assignment' | 'edit-employee' | 'employee-select' | 'employee-transfer' | 'asset-select' | 'create-user' | 'record-manager' | 'maintenance-csv-import' | 'timesheet-csv-import' | null;
+  maintenanceCsvKind?: MaintenanceCsvKind;
   tags: string[];
 }
+
+const maintenanceCsvCommands: CommandDef[] = ([
+  ['breakdown', 'Import Breakdown Cards from CSV', 'breakdown card', ['breakdown', 'job card', 'csv', 'import']],
+  ['preventive', 'Import Preventive Cards from CSV', 'preventive maintenance card', ['preventive', 'pm job card', 'csv', 'import']],
+  ['assessment', 'Import Maintenance Assessments from CSV', 'maintenance assessment report', ['assessment', 'two week report', 'csv', 'import']],
+  ['action', 'Import Action Tracker from CSV', 'action tracker entries', ['action tracker', 'csv', 'import']],
+  ['pm', 'Import PM Tracker from CSV', 'PM tracker entries', ['pm tracker', 'csv', 'import']],
+  ['equipment', 'Import Equipment Register from CSV', 'equipment register entries', ['equipment register', 'fleet register', 'csv', 'import']],
+] as Array<[MaintenanceCsvKind, string, string, string[]]>).map(([maintenanceCsvKind, title, subject, tags]) => ({
+  id: `import-${maintenanceCsvKind}-csv`, title, description: `Upload ${subject}, review and edit every row in the free-flow form, then save it.`,
+  category: 'FLEET', categoryName: 'Fleet & Equipment', permission: 'admin.manage', icon: Wrench,
+  customModalType: 'maintenance-csv-import', maintenanceCsvKind, tags,
+}));
 
 const COMMAND_REGISTRY: CommandDef[] = [
   // --- Central record management ---
@@ -61,6 +79,7 @@ const COMMAND_REGISTRY: CommandDef[] = [
     path: '/api/v1/employees',
     tags: ['employee', 'staff', 'add employee', 'register', 'personnel', 'hr', 'hire'],
   },
+  ...maintenanceCsvCommands,
   {
     id: 'edit-employee',
     title: 'Edit Employee Profile & Information',
@@ -84,6 +103,17 @@ const COMMAND_REGISTRY: CommandDef[] = [
     targetPathPattern: '/api/v1/employees/{id}/assignments',
     resource: 'employees/assignments',
     tags: ['assign workforce', 'deploy employee', 'assign employee', 'workforce assignment', 'project assignment', 'deploy staff', 'hr', 'personnel'],
+  },
+  {
+    id: 'update-employee-active-project',
+    title: 'Update Employee’s Active Project',
+    description: 'Select an employee and transfer their active primary assignment to another active project while preserving assignment history.',
+    category: 'WORKFORCE',
+    categoryName: 'Workforce & HR',
+    permission: 'employees.transfer',
+    icon: ArrowRightLeft,
+    customModalType: 'employee-transfer',
+    tags: ['transfer employee', 'change employee project', 'active project', 'move employee', 'project assignment', 'workforce'],
   },
   {
     id: 'record-salary',
@@ -110,6 +140,17 @@ const COMMAND_REGISTRY: CommandDef[] = [
     targetPathPattern: '/api/v1/employees/{id}/time-logs',
     resource: 'hr/time-logs',
     tags: ['time', 'attendance', 'hours', 'clock', 'shift', 'timelog'],
+  },
+  {
+    id: 'import-timesheet-csv',
+    title: 'Import Employee Time Sheet from CSV',
+    description: 'Upload a monthly time sheet, review its original rows, match employees and project sites, and save the reported hours.',
+    category: 'WORKFORCE',
+    categoryName: 'Workforce & HR',
+    permission: 'employees.time_log.create',
+    icon: ClipboardList,
+    customModalType: 'timesheet-csv-import',
+    tags: ['timesheet', 'time sheet', 'csv', 'import hours', 'monthly hours', 'employee attendance', 'site matching'],
   },
   {
     id: 'request-leave',
@@ -653,6 +694,10 @@ export default function CommandCenterPage() {
   const [showEditEmployee, setShowEditEmployee] = useState(false);
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [showRecordManager, setShowRecordManager] = useState(false);
+  const [showMaintenanceCsvImport, setShowMaintenanceCsvImport] = useState(false);
+  const [showTimesheetCsvImport, setShowTimesheetCsvImport] = useState(false);
+  const [maintenanceCsvKind, setMaintenanceCsvKind] = useState<CommandDef['maintenanceCsvKind']>('breakdown');
+  const [employeeToTransfer, setEmployeeToTransfer] = useState<Row | null>(null);
   const [pendingSelectCommand, setPendingSelectCommand] = useState<CommandDef | null>(null);
   const [pendingAssetSelectCommand, setPendingAssetSelectCommand] = useState<CommandDef | null>(null);
 
@@ -697,6 +742,17 @@ export default function CommandCenterPage() {
       return;
     }
 
+    if (cmd.customModalType === 'maintenance-csv-import') {
+      setMaintenanceCsvKind(cmd.maintenanceCsvKind || 'breakdown');
+      setShowMaintenanceCsvImport(true);
+      return;
+    }
+
+    if (cmd.customModalType === 'timesheet-csv-import') {
+      setShowTimesheetCsvImport(true);
+      return;
+    }
+
     if (cmd.customModalType === 'assignment') {
       setShowAssetAssignment(true);
       return;
@@ -729,6 +785,11 @@ export default function CommandCenterPage() {
 
   const handleEmployeeSelectedForCommand = (employee: Row) => {
     if (!pendingSelectCommand) return;
+    if (pendingSelectCommand.customModalType === 'employee-transfer') {
+      setEmployeeToTransfer(employee);
+      setPendingSelectCommand(null);
+      return;
+    }
     const targetPath = pendingSelectCommand.targetPathPattern
       ? pendingSelectCommand.targetPathPattern.replace('{id}', employee.id)
       : pendingSelectCommand.path;
@@ -997,6 +1058,19 @@ export default function CommandCenterPage() {
         onClose={() => setShowRecordManager(false)}
         onChanged={() => {}}
         canEdit={(entity) => entity === 'projects' ? auth.can('projects.update') : entity === 'employees' ? auth.can('employees.write') : entity === 'equipment' ? auth.can('assets.update') : auth.can('inventory.catalog.manage')}
+      />}
+
+      {showMaintenanceCsvImport && <CommandCenterMaintenanceCsvModal initialKind={maintenanceCsvKind} onClose={() => setShowMaintenanceCsvImport(false)} />}
+      {showTimesheetCsvImport && <CommandCenterTimesheetCsvModal onClose={() => setShowTimesheetCsvImport(false)} />}
+
+      {employeeToTransfer && <TransferEmployeeModal
+        employee={employeeToTransfer}
+        projectId=""
+        onClose={() => setEmployeeToTransfer(null)}
+        onSaved={() => {
+          toast.success('Employee active project updated successfully.');
+          setEmployeeToTransfer(null);
+        }}
       />}
 
       {/* Schema-driven Creation Form Modal */}

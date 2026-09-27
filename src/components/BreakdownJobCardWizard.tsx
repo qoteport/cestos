@@ -103,10 +103,10 @@ async function makeBreakdownPdf(data: { control: any; failure: string; action: s
   return canvasPdf(canvas);
 }
 
-export default function BreakdownJobCardWizard({ assets, projectId, onClose, onSaved, record }: { assets: any[]; projectId: string; onClose: () => void; onSaved?: () => void; record?: any }) {
+export default function BreakdownJobCardWizard({ assets, projectId, onClose, onSaved, record, initialView = 'ASSISTED' }: { assets: any[]; projectId: string; onClose: () => void; onSaved?: () => void; record?: any; initialView?: 'ASSISTED' | 'FREE_FLOW' }) {
   const initialControl = record?.job_control || {};
   const [step, setStep] = useState(0);
-  const [view, setView] = useState<'ASSISTED' | 'FREE_FLOW'>('ASSISTED');
+  const [view, setView] = useState<'ASSISTED' | 'FREE_FLOW'>(initialView);
   const [assetId, setAssetId] = useState(record?.asset_id || '');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');

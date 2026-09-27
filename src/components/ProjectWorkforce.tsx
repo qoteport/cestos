@@ -226,7 +226,7 @@ function AssignSupervisorModal({
 }
 
 // ── Transfer Employee Modal ──────────────────────────────────────────────────
-function TransferEmployeeModal({
+export function TransferEmployeeModal({
   employee,
   projectId,
   onClose,
@@ -242,7 +242,7 @@ function TransferEmployeeModal({
   const [destination, setDestination] = useState(projectId);
   const projects = useData('/api/v1/projects?page_size=100');
   const supervisors = useData('/api/v1/employees?page_size=100');
-  const sites = useData('/api/v1/projects/' + destination + '/sites');
+  const sites = useData(destination ? '/api/v1/projects/' + destination + '/sites' : null);
 
   const current = rows(assignments.data).find((a) => a.status === 'ACTIVE' && a.is_primary);
 
@@ -328,6 +328,7 @@ function TransferEmployeeModal({
               ? 'Transfer this employee to another active project. The current assignment will conclude on the effective date.'
               : 'Assign this employee to an active project.'}
           </p>
+          {current && <div className="border-l-4 border-[#184877] bg-blue-50 px-3 py-2 text-sm text-slate-800"><span className="font-semibold">Current project: </span>{current.project_name || current.project?.name || current.project?.project_name || current.project_id}</div>}
 
           {/* Unified Project Dropdown */}
           <State loading={projects.loading} error={projects.error} retry={projects.reload}>

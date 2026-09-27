@@ -93,14 +93,15 @@ function makeInitial(record: Row | undefined, projectId: string): ReportData {
 }
 
 export default function MaintenanceAssessmentReportWizard({
-  assets, employees, projects = [], projectId, record, onClose, onSaved,
+  assets, employees, projects = [], projectId, record, onClose, onSaved, initialMode = 'ASSISTED',
 }: {
   assets: Row[]; employees: Row[]; projects?: Row[]; projectId: string; record?: Row;
   onClose: () => void; onSaved: () => void;
+  initialMode?: 'ASSISTED' | 'FREE_FLOW';
 }) {
   const [data, setData] = useState<ReportData>(() => makeInitial(record, projectId));
   const [step, setStep] = useState(0);
-  const [mode, setMode] = useState<'ASSISTED' | 'FREE_FLOW'>('ASSISTED');
+  const [mode, setMode] = useState<'ASSISTED' | 'FREE_FLOW'>(initialMode);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
