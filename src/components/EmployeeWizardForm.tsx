@@ -231,12 +231,6 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (busy) return;
-    if (step < 5) {
-      if (validateStep(step)) {
-        setStep(s => Math.min(s + 1, 5));
-      }
-      return;
-    }
     for (const stage of [1, 4]) {
       if (!validateStep(stage)) { setStep(stage); return; }
     }
@@ -372,6 +366,8 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
     { num: 5, label: 'Review & Confirm', icon: ShieldCheck },
   ];
 
+  const isFormCleanAndValid = !!(personal.first_name.trim() && personal.last_name.trim());
+
   const wizardFooter = (
     <div className="flex flex-row items-center justify-between gap-2.5 sm:gap-3 w-full">
       <div>
@@ -396,22 +392,27 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
           Cancel
         </button>
 
-        {step < 5 ? (
+        {/* Save button: shown on step 5 OR whenever form is clean & valid for direct save */}
+        {(step === 5 || isFormCleanAndValid) && (
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={busy || (step === 5 && !reviewReady)}
+            className={`btn-primary rounded-xl text-xs w-full sm:w-auto shadow-xs ${
+              step === 5 && !reviewReady ? 'opacity-50 cursor-not-allowed' : 'bg-emerald-700 hover:bg-emerald-800'
+            }`}
+          >
+            {busy ? 'Saving Employee...' : initial ? 'Save Changes' : 'Create Employee Profile'}
+          </button>
+        )}
+
+        {step < 5 && (
           <button
             type="button"
             onClick={nextStep}
             className="btn-primary rounded-xl text-xs w-full sm:w-auto shadow-xs"
           >
             Continue <ArrowRight size={14} />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={busy || !reviewReady}
-            className={`btn-primary rounded-xl text-xs w-full sm:w-auto shadow-xs ${!reviewReady ? 'opacity-50 cursor-not-allowed' : 'bg-emerald-700 hover:bg-emerald-800'}`}
-          >
-            {busy ? 'Saving Employee...' : initial ? 'Save Changes' : 'Create Employee Profile'}
           </button>
         )}
       </div>
