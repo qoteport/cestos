@@ -4,6 +4,8 @@ import IncidentDetailModal from './IncidentDetailModal';
 import React, { useState, useEffect, useMemo } from 'react';
 import SearchableSelect from './SearchableSelect';
 import AppDateTimePicker from './ui/AppDateTimePicker';
+import WorkforceKPIStrip from '@/app/workforce-overview/components/WorkforceKPIStrip';
+import WorkforceCharts from '@/app/workforce-overview/components/WorkforceCharts';
 import AppLogo from './ui/AppLogo';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -163,7 +165,7 @@ export default function HRPortalWorkspace() {
   const [scopedIncidentsPage, setScopedincidentspage] = React.useState(1);
 
   const [activeTab, setActiveTab] = useState<HRTab>('PEOPLE');
-  const [peopleSubTab, setPeopleSubTab] = useState<'EMPLOYEES' | 'TIMESHEETS'>('EMPLOYEES');
+  const [peopleSubTab, setPeopleSubTab] = useState<'ANALYTICS' | 'EMPLOYEES' | 'TIMESHEETS'>('ANALYTICS');
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('tab') === 'NOTIFICATIONS') {
       setActiveTab('NOTIFICATIONS');
@@ -1097,9 +1099,14 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
         {activeTab === 'PEOPLE' && (
           <div className="space-y-6">
             <div role="tablist" aria-label="Employee views" className="flex gap-2 border-b border-slate-200 dark:border-slate-800">
-              {([{ id: 'EMPLOYEES', label: 'Employees' }, { id: 'TIMESHEETS', label: 'Time sheet' }] as const).map((tab) => <button key={tab.id} type="button" role="tab" aria-selected={peopleSubTab === tab.id} onClick={() => setPeopleSubTab(tab.id)} className={`border-b-2 px-4 py-2.5 text-sm font-bold ${peopleSubTab === tab.id ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}>{tab.label}</button>)}
+              {([{ id: 'ANALYTICS', label: 'Analytics' }, { id: 'EMPLOYEES', label: 'Employees' }, { id: 'TIMESHEETS', label: 'Time sheet' }] as const).map((tab) => <button key={tab.id} type="button" role="tab" aria-selected={peopleSubTab === tab.id} onClick={() => setPeopleSubTab(tab.id)} className={`border-b-2 px-4 py-2.5 text-sm font-bold ${peopleSubTab === tab.id ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}>{tab.label}</button>)}
             </div>
-            {peopleSubTab === 'TIMESHEETS' ? <EmployeeTimesheetsWorkspace employees={employees} canReport accent="emerald" /> : <>
+            {peopleSubTab === 'ANALYTICS' ? (
+              <div className="space-y-6">
+                <WorkforceKPIStrip />
+                <WorkforceCharts />
+              </div>
+            ) : peopleSubTab === 'TIMESHEETS' ? <EmployeeTimesheetsWorkspace employees={employees} canReport accent="emerald" /> : <>
             {/* Header Toolbar */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">

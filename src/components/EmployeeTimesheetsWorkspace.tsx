@@ -91,6 +91,21 @@ export default function EmployeeTimesheetsWorkspace({
     const [year, month] = (period || currentMonth()).split('-').map(Number);
     return new Date(year, month, 0).getDate();
   }, [period]);
+  const calendarDays = useMemo(() => {
+    const [year, month] = (period || currentMonth()).split('-').map(Number);
+    return Array.from({ length: daysInPeriod }, (_, index) => {
+      const day = index + 1;
+      const date = new Date(year, month - 1, day);
+      return {
+        day,
+        weekday: new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date),
+        dayMonth: `${day}-${new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date)}`,
+        isoDate: `${period || currentMonth()}-${String(day).padStart(2, '0')}`,
+      };
+    });
+  }, [daysInPeriod, period]);
+  const dailyHourTotals = useMemo(() => calendarDays.map(({ day }) => rows.reduce((sum, row) => sum + Number(row.daily_hours?.[day] || 0), 0)), [calendarDays, rows]);
+  const totalDaysWorked = useMemo(() => rows.reduce((sum, row) => sum + Number(row.days_worked || 0), 0), [rows]);
   const daysInForm = useMemo(() => {
     const [year, month] = (formPeriod || currentMonth()).split('-').map(Number);
     return new Date(year, month, 0).getDate();
@@ -196,23 +211,30 @@ export default function EmployeeTimesheetsWorkspace({
         {loading ? <div role="status" className="p-8 text-center text-sm text-slate-500">Loading time sheet…</div> : (
           <div className="max-h-[70vh] overflow-auto">
             <table className="min-w-max border-collapse text-left text-xs">
-              <thead className="sticky top-0 z-20 bg-slate-100 text-[10px] font-extrabold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                <tr>
-                  <th className="sticky left-0 z-30 min-w-[210px] border-b border-r border-slate-200 bg-slate-100 px-3 py-3 dark:border-slate-700 dark:bg-slate-800">Employee</th>
-                  <th className="min-w-[115px] border-b border-slate-200 px-3 py-3 dark:border-slate-700">Site</th>
-                  {Array.from({ length: daysInPeriod }, (_, index) => <th key={index + 1} className="min-w-[40px] border-b border-slate-200 px-2 py-3 text-center dark:border-slate-700" title={`${period || currentMonth()}-${String(index + 1).padStart(2, '0')}`}>{index + 1}</th>)}
-                  <th className="min-w-[88px] border-b border-l border-slate-200 px-3 py-3 text-right dark:border-slate-700">Total h</th>
-                  <th className="min-w-[75px] border-b border-slate-200 px-3 py-3 text-right dark:border-slate-700">Days</th>
-                  {canReport && <th className="sticky right-0 z-30 min-w-[78px] border-b border-l border-slate-200 bg-slate-100 px-3 py-3 text-center dark:border-slate-700 dark:bg-slate-800">Action</th>}
+              <thead className="bg-slate-100 text-[10px] font-extrabold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                <tr className="h-8">
+                  <th className="sticky left-0 top-0 z-50 h-8 w-[210px] min-w-[210px] max-w-[210px] border-b border-r border-blue-800 bg-[#184877] px-3 text-white dark:border-slate-700" />
+                  <th className="sticky left-[210px] top-0 z-50 h-8 w-[115px] min-w-[115px] max-w-[115px] border-b border-r border-blue-800 bg-[#184877] px-3 text-white dark:border-slate-700" />
+                  {calendarDays.map(({ day, weekday, isoDate }) => <th key={day} className="sticky top-0 z-20 h-8 min-w-[48px] border-b border-r border-blue-800 bg-[#184877] px-2 text-center text-white" title={isoDate}>{weekday}</th>)}
+                  <th className="sticky top-0 z-20 h-8 min-w-[88px] border-b border-l border-blue-800 bg-[#184877] px-3" />
+                  <th className="sticky top-0 z-20 h-8 min-w-[85px] border-b border-l border-blue-800 bg-[#184877] px-3" />
+                  {canReport && <th className="sticky right-0 top-0 z-50 h-8 min-w-[78px] border-b border-l border-blue-800 bg-[#184877] px-3" />}
+                </tr>
+                <tr className="h-10 bg-blue-50 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                  <th className="sticky left-0 top-8 z-40 h-10 w-[210px] min-w-[210px] max-w-[210px] border-b border-r border-slate-200 bg-blue-50 px-3 dark:border-slate-700 dark:bg-slate-800">Name</th>
+                  <th className="sticky left-[210px] top-8 z-40 h-10 w-[115px] min-w-[115px] max-w-[115px] border-b border-r border-slate-200 bg-blue-50 px-3 dark:border-slate-700 dark:bg-slate-800">Site</th>
+                  {calendarDays.map(({ day, dayMonth, isoDate }) => <th key={day} className="sticky top-8 z-20 h-10 min-w-[48px] border-b border-r border-slate-200 bg-blue-50 px-2 text-center dark:border-slate-700 dark:bg-slate-800" title={isoDate}>{dayMonth}</th>)}
+                  <th className="sticky top-8 z-20 h-10 min-w-[88px] border-b border-l border-slate-200 bg-blue-50 px-3 text-right dark:border-slate-700 dark:bg-slate-800">Hrs</th>
+                  <th className="sticky top-8 z-20 h-10 min-w-[85px] border-b border-l border-slate-200 bg-blue-50 px-3 text-right dark:border-slate-700 dark:bg-slate-800">Total days</th>
+                  {canReport && <th className="sticky right-0 top-8 z-50 h-10 min-w-[78px] border-b border-l border-slate-200 bg-blue-50 px-3 text-center dark:border-slate-700 dark:bg-slate-800">Action</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {rows.length === 0 ? <tr><td colSpan={daysInPeriod + (canReport ? 5 : 4)} className="p-10 text-center text-sm text-slate-500">No time sheets have been reported for this month.</td></tr> : rows.map((row) => (
                   <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                    <td className="sticky left-0 z-10 border-r border-slate-100 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900"><span className="block font-bold text-slate-900 dark:text-white">{row.employee_name}</span><span className="mt-0.5 block font-mono text-[10px] text-slate-500">{row.employee_number || '—'}</span></td>
-                    <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{row.site_name || '—'}</td>
-                    {Array.from({ length: daysInPeriod }, (_, index) => {
-                      const day = index + 1;
+                    <td className="sticky left-0 z-20 w-[210px] min-w-[210px] max-w-[210px] border-r border-slate-100 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900"><span className="block truncate font-bold text-slate-900 dark:text-white">{row.employee_name}</span><span className="mt-0.5 block truncate font-mono text-[10px] text-slate-500">{row.employee_number || '—'}</span></td>
+                    <td className="sticky left-[210px] z-20 w-[115px] min-w-[115px] max-w-[115px] border-r border-slate-100 bg-white px-3 py-2 text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"><span className="block truncate">{row.site_name || '—'}</span></td>
+                    {calendarDays.map(({ day }) => {
                       const value = row.daily_hours?.[day];
                       return <td key={day} className={`px-2 py-2 text-center tabular-nums ${typeof value === 'number' && value > 0 ? 'font-semibold text-slate-800 dark:text-slate-200' : 'text-slate-400'}`}>{typeof value === 'number' ? value : '—'}</td>;
                     })}
@@ -222,6 +244,16 @@ export default function EmployeeTimesheetsWorkspace({
                   </tr>
                 ))}
               </tbody>
+              <tfoot className="border-t-2 border-slate-400 bg-slate-100 font-extrabold text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white">
+                <tr>
+                  <td className="sticky left-0 z-20 w-[210px] min-w-[210px] max-w-[210px] border-r border-slate-200 bg-slate-100 px-3 py-3 dark:border-slate-700 dark:bg-slate-800" />
+                  <td className="sticky left-[210px] z-20 w-[115px] min-w-[115px] max-w-[115px] border-r border-slate-200 bg-slate-100 px-3 py-3 text-right dark:border-slate-700 dark:bg-slate-800">Hrs</td>
+                  {dailyHourTotals.map((hours, index) => <td key={index + 1} className="border-r border-slate-200 px-2 py-3 text-center tabular-nums dark:border-slate-700">{hours.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>)}
+                  <td className="border-l border-slate-200 px-3 py-3 text-right tabular-nums dark:border-slate-700">{allHours.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                  <td className="border-l border-slate-200 px-3 py-3 text-right tabular-nums dark:border-slate-700">{totalDaysWorked}</td>
+                  {canReport && <td className="sticky right-0 border-l border-slate-200 bg-slate-100 px-2 py-3 dark:border-slate-700 dark:bg-slate-800" />}
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}
