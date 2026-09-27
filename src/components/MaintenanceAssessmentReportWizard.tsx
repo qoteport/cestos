@@ -5,11 +5,35 @@ import { apiFetch } from '@/lib/api';
 import { Modal, Row } from './DataUI';
 import SearchableSelect from './SearchableSelect';
 import AppDateTimePicker from './AppDateTimePicker';
-import { Paperclip, X } from 'lucide-react';
+import { Paperclip, X, FileSpreadsheet } from 'lucide-react';
 
 type ReportRow = Record<string, string>;
 type ReportData = Record<string, any>;
 type Column = { key: string; label: string; wide?: boolean; asset?: boolean };
+
+function parseCsvToRows(text: string): string[][] {
+  const lines: string[][] = [];
+  let cur: string[] = [];
+  let field = '';
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    const next = text[i + 1];
+    if (inQuotes) {
+      if (c === '"' && next === '"') { field += '"'; i++; }
+      else if (c === '"') { inQuotes = false; }
+      else { field += c; }
+    } else {
+      if (c === '"') { inQuotes = true; }
+      else if (c === ',' || c === '\t' || c === ';') { cur.push(field.trim()); field = ''; }
+      else if (c === '\r') { /* ignore */ }
+      else if (c === '\n') { cur.push(field.trim()); lines.push(cur); cur = []; field = ''; }
+      else { field += c; }
+    }
+  }
+  if (field || cur.length > 0) { cur.push(field.trim()); lines.push(cur); }
+  return lines.filter((row) => row.some((cell) => cell.length > 0));
+}
 
 const blankRow = (columns: Column[]): ReportRow => Object.fromEntries(columns.map(({ key }) => [key, '']));
 const sectionDefinitions: Record<string, { title: string; columns: Column[] }> = {
@@ -114,6 +138,78 @@ export default function MaintenanceAssessmentReportWizard({
     return key === 'equipment_fleet' || key === 'maintenance_assessment' ? (data[key] || []).map((row: ReportRow) => row.asset_id).filter((id: string) => id && id !== '__CUSTOM__') : [];
   }))];
 
+  const [parseNotice, setParseNotice] = useState<string | null>(null);
+
+  const handleSpreadsheetAutoFill = async (file: File) => {
+    try {
+      const text = await file.text();
+      const rows = parseCsvToRows(text);
+      if (rows.length < 2) return;
+      const headers = rows[0].map((h) => h.toLowerCase());
+      const dataRows = rows.slice(1);
+
+      let filledCount = 0;
+      const newData = { ...data };
+
+      // Try matching equipment fleet columns
+      if (headers.some((h) => h.includes('equipment') || h.includes('machine') || h.includes('focus') || h.includes('approach'))) {
+        const parsedFleet: ReportRow[] = [];
+        dataRows.forEach((r) => {
+          const eqCol = r[headers.findIndex((h) => h.includes('equipment') || h.includes('asset') || h.includes('machine'))] || '';
+          const qtyCol = r[headers.findIndex((h) => h.includes('qty') || h.includes('quantity'))] || '1';
+          const focusCol = r[headers.findIndex((h) => h.includes('focus') || h.includes('maint'))] || '';
+          const approachCol = r[headers.findIndex((h) => h.includes('approach') || h.includes('current'))] || '';
+          if (eqCol || focusCol || approachCol) {
+            const matchedAsset = assets.find((a) => (a.name || a.asset_name || a.asset_number || '').toLowerCase() === eqCol.toLowerCase());
+            parsedFleet.push({
+              equipment: eqCol,
+              asset_id: matchedAsset ? String(matchedAsset.id) : '',
+              quantity: qtyCol,
+              maintenance_focus: focusCol,
+              current_approach: approachCol,
+            });
+          }
+        });
+        if (parsedFleet.length > 0) {
+          newData.equipment_fleet = parsedFleet;
+          filledCount += parsedFleet.length;
+        }
+      }
+
+      // Try matching maintenance assessment columns
+      if (headers.some((h) => h.includes('observation') || h.includes('failure') || h.includes('action') || h.includes('status'))) {
+        const parsedAssessment: ReportRow[] = [];
+        dataRows.forEach((r) => {
+          const areaCol = r[headers.findIndex((h) => h.includes('area') || h.includes('equipment') || h.includes('asset'))] || '';
+          const obsCol = r[headers.findIndex((h) => h.includes('obs') || h.includes('failure') || h.includes('issue'))] || '';
+          const actCol = r[headers.findIndex((h) => h.includes('action') || h.includes('response') || h.includes('repair'))] || '';
+          const stCol = r[headers.findIndex((h) => h.includes('status'))] || 'OPEN';
+          if (areaCol || obsCol || actCol) {
+            const matchedAsset = assets.find((a) => (a.name || a.asset_name || a.asset_number || '').toLowerCase() === areaCol.toLowerCase());
+            parsedAssessment.push({
+              area_equipment: areaCol,
+              asset_id: matchedAsset ? String(matchedAsset.id) : '',
+              observation_failure: obsCol,
+              action_taken_response: actCol,
+              current_status: stCol.toUpperCase().replace(/\s+/g, '_'),
+            });
+          }
+        });
+        if (parsedAssessment.length > 0) {
+          newData.maintenance_assessment = parsedAssessment;
+          filledCount += parsedAssessment.length;
+        }
+      }
+
+      if (filledCount > 0) {
+        setData(newData);
+        setParseNotice(`Parsed ${file.name}: Automatically populated ${filledCount} row(s) into report sections.`);
+      }
+    } catch {
+      /* ignore file read error */
+    }
+  };
+
   const controls = <div className="space-y-4">
     {mode === 'ASSISTED' && <h3 className={sectionHeadingClass}>Report control</h3>}
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -126,9 +222,23 @@ export default function MaintenanceAssessmentReportWizard({
       <label className="space-y-1"><span className="block font-medium">Submitted to</span><input className="input-field" value={data.submitted_to || ''} onChange={(e) => patch('submitted_to', e.target.value)} maxLength={200} /></label>
     </div>
     {mode === 'ASSISTED' && <section className="space-y-2 border border-border p-3">
-      <label className="block space-y-1 font-medium"><span className="flex items-center gap-2"><Paperclip size={14} /> Attach supporting files</span><input type="file" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx" onChange={(event) => setPendingFiles((files) => [...files, ...Array.from(event.target.files || [])])} className="block w-full rounded-lg border bg-background p-2" /></label>
-      {pendingFiles.length > 0 && <ul className="space-y-1">{pendingFiles.map((file, index) => <li key={`${file.name}-${file.size}-${index}`} className="flex items-center justify-between gap-2 rounded border bg-muted/30 px-2 py-1"><span className="truncate">{file.name}</span><button type="button" aria-label={`Remove ${file.name}`} onClick={() => setPendingFiles((files) => files.filter((_, fileIndex) => fileIndex !== index))} className="text-red-700"><X size={14} /></button></li>)}</ul>}
-      <p className="text-[11px] text-muted-foreground">Existing attachments are kept when editing. New files are linked to this assessment after it is saved.</p>
+      <label className="block space-y-1 font-medium"><span className="flex items-center gap-2"><Paperclip size={14} /> Attach supporting files (.csv, .xlsx, .pdf, images)</span><input type="file" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.tsv" onChange={(event) => {
+        const added = Array.from(event.target.files || []);
+        setPendingFiles((files) => [...files, ...added]);
+        added.forEach((f) => {
+          if (f.name.endsWith('.csv') || f.name.endsWith('.tsv') || f.name.endsWith('.txt')) {
+            void handleSpreadsheetAutoFill(f);
+          }
+        });
+      }} className="block w-full rounded-lg border bg-background p-2" /></label>
+      {parseNotice && (
+        <div className="flex items-center justify-between p-2 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs">
+          <span className="flex items-center gap-1.5"><FileSpreadsheet size={14} /> {parseNotice}</span>
+          <button type="button" onClick={() => setParseNotice(null)} className="text-emerald-900 font-bold hover:underline">Dismiss</button>
+        </div>
+      )}
+      {pendingFiles.length > 0 && <ul className="space-y-1">{pendingFiles.map((file, index) => <li key={`${file.name}-${file.size}-${index}`} className="flex items-center justify-between gap-2 rounded border bg-muted/30 px-2 py-1"><span className="truncate flex items-center gap-1.5">{file.name.match(/\.(csv|tsv|xlsx|xls)$/i) && <FileSpreadsheet size={13} className="text-emerald-600" />}{file.name}</span><button type="button" aria-label={`Remove ${file.name}`} onClick={() => setPendingFiles((files) => files.filter((_, fileIndex) => fileIndex !== index))} className="text-red-700"><X size={14} /></button></li>)}</ul>}
+      <p className="text-[11px] text-muted-foreground">Existing attachments are kept when editing. Tabular spreadsheet files (.csv, .tsv) uploaded here will automatically parse and auto-fill report sections.</p>
     </section>}
   </div>;
 
