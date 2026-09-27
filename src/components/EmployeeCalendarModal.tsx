@@ -171,7 +171,7 @@ export default function EmployeeCalendarModal({
     // Blank cells before month starts
     for (let i = 0; i < startingDayOfWeek; i++) {
       days.push(
-        <div key={`pad-${i}`} className="h-20 bg-muted/20 border border-border/40 p-1.5 opacity-40" />
+        <div key={`pad-${i}`} className="h-20 bg-muted/20 border border-border/40 rounded-xl p-1.5 opacity-40" />
       );
     }
 
@@ -189,7 +189,7 @@ export default function EmployeeCalendarModal({
         <div
           key={dateStr}
           onClick={() => setSelectedDate(dateStr)}
-          className={`h-20 border p-1.5 flex flex-col justify-between cursor-pointer transition-all ${
+          className={`h-20 border rounded-xl p-1.5 flex flex-col justify-between cursor-pointer transition-all ${
             isSelected
               ? 'ring-2 ring-primary bg-secondary/40 border-primary font-bold shadow-sm'
               : isToday
