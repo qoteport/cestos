@@ -871,18 +871,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
         </Link>
         <div className="w-8 h-px bg-slate-200 dark:bg-slate-800 shrink-0 my-1" />
         <div className="flex flex-col items-center justify-center space-y-2.5 flex-1 overflow-y-auto overflow-x-hidden scrollbar-none w-full py-1">
-          <button
-            type="button"
-            onClick={() => setShowRegisterUserModal(true)}
-            className="relative group w-11 h-11 rounded-xl hover:bg-emerald-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 shrink-0"
-            aria-label="Register Personnel / User Form"
-          >
-            <UserPlus size={18} />
-            <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              Register Personnel / User Form
-            </span>
-          </button>
+
           <button
             type="button"
             onClick={() => setShowBookLeaveModal(true)}

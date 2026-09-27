@@ -59,7 +59,7 @@ export function Modal({name,title: modalTitle,onClose,children,className,error,f
           {error && <div role="alert" className="sticky top-0 z-20 mb-4 border border-red-300 bg-red-50 p-3 text-sm text-red-900 shadow-sm"><strong className="block">Could not save changes</strong><p className="whitespace-pre-wrap break-words">{error}</p></div>}
           {children}
         </div>
-        {footer&&<footer className="z-20 shrink-0 border-t border-slate-200 bg-white/95 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] dark:border-slate-700 dark:bg-slate-900/95 backdrop-blur-md sm:px-6 sm:pb-3 sticky bottom-0">{footer}</footer>}
+        {footer&&<footer className="z-20 shrink-0 border-t border-slate-200 bg-white/95 px-4 py-3.5 sm:px-6 sm:py-4 dark:border-slate-700 dark:bg-slate-900/95 backdrop-blur-md sticky bottom-0 rounded-b-none sm:rounded-b-2xl">{footer}</footer>}
       </section>
     </div>,
     document.body

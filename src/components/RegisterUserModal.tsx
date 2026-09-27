@@ -354,7 +354,7 @@ export default function RegisterUserModal({ onClose, onSaved }: RegisterUserModa
         </div>
 
         {/* Footer Actions */}
-        <div className="sticky bottom-0 -mx-4 -mb-4 sm:-mx-6 sm:-mb-6 p-3.5 sm:px-6 sm:py-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 z-10 flex flex-row items-center justify-end gap-2 sm:gap-3 mt-4">
+        <div className="sticky bottom-0 -mx-4 -mb-4 sm:-mx-6 sm:-mb-6 pt-3.5 pb-4 px-4 sm:px-6 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 z-10 flex flex-row items-center justify-end gap-2 sm:gap-3 mt-4 rounded-b-none sm:rounded-b-2xl">
           <button
             type="button"
             onClick={onClose}
