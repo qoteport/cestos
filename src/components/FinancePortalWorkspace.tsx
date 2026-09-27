@@ -2772,7 +2772,7 @@ Signed: Finance & Procurement Administration
           </span>
         </Link>
         <div className="w-8 h-px bg-slate-200 dark:bg-slate-800 shrink-0 my-1" />
-        <div className="flex flex-col items-center space-y-2.5 flex-1 overflow-y-auto overflow-x-hidden scrollbar-none w-full py-1">
+        <div className="flex flex-col items-center justify-center space-y-2.5 flex-1 overflow-y-auto overflow-x-hidden scrollbar-none w-full py-1">
           <button
             type="button"
             onClick={() => setShowAddPoModal(true)}
