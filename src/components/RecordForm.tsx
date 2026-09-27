@@ -272,6 +272,7 @@ const fieldEnums: Record<string, string[]> = {
     'ACTIVE',
     'ON_LEAVE',
     'OFF_ROTATION',
+    'OUT_OF_CONTRACT',
     'SUSPENDED',
     'EXITED',
     'RESIGNED',

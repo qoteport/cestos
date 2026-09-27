@@ -719,6 +719,7 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
                       { value: 'ACTIVE', label: 'Active' },
                       { value: 'ON_LEAVE', label: 'On Leave' },
                       { value: 'OFF_ROTATION', label: 'Off Rotation' },
+                      { value: 'OUT_OF_CONTRACT', label: 'Out of Contract' },
                       { value: 'SUSPENDED', label: 'Suspended' },
                       { value: 'EXITED', label: 'Exited' },
                       { value: 'RESIGNED', label: 'Resigned' },
