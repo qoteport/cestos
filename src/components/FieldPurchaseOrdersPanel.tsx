@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { apiFetch, apiFetchBlob, downloadBlob, receivePurchaseOrderGoods } from '@/lib/api';
-import { Eye, Download, FileText, Paperclip, X, Plus, CheckCircle2, ShoppingCart, Truck, PackageCheck, RefreshCw } from 'lucide-react';
+import { Eye, Download, FileText, Paperclip, X, Plus, CheckCircle2, ShoppingCart, Truck, PackageCheck, RefreshCw, Trash } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
 import OperationalExpenseSubmissionModal from './OperationalExpenseSubmissionModal';
 import UniversalFileViewerModal from './UniversalFileViewerModal';
@@ -408,7 +408,7 @@ export default function FieldPurchaseOrdersPanel({
                           <span className="block">Unit price</span>
                           <input min="0" step="0.01" type="number" className={input} value={line.unit_price} onChange={(e) => setLines((rows) => rows.map((r, i) => i === index ? { ...r, unit_price: e.target.value } : r))} />
                         </label>
-                        <button type="button" onClick={() => setLines((rows) => rows.filter((_, i) => i !== index))} className="self-center rounded-lg border px-2 py-2 text-xs text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 lg:col-span-1">Remove</button>
+                        <button type="button" onClick={() => setLines((rows) => rows.filter((_, i) => i !== index))} className="self-center rounded-lg border px-2 py-2 text-xs text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 lg:col-span-1"><Trash></Trash></button>
                       </div>
                     ))}
                   </section>

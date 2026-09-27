@@ -1466,8 +1466,8 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                       <th className="px-5 py-3.5">Employee Name</th>
                       <th className="px-5 py-3.5">Department &amp; Role</th>
                       <th className="px-5 py-3.5">Status</th>
-                      <th className="px-5 py-3.5">Home Location</th>
-                      <th className="px-5 py-3.5">Assigned Project</th>
+                      <th className="hidden sm:table-cell px-5 py-3.5">Home Location</th>
+                      <th className="hidden md:table-cell px-5 py-3.5">Assigned Project</th>
                       <th className="px-5 py-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -1513,13 +1513,13 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                             <td className="px-5 py-3.5">
                               <StatusBadge status={emp.employment_status || (emp.is_active ? 'ACTIVE / AVAILABLE' : 'ARCHIVED')} />
                             </td>
-                            <td className="px-5 py-3.5">
+                            <td className="hidden sm:table-cell px-5 py-3.5">
                               <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1">
                                 <MapPin size={13} className="text-indigo-600" />
                                 {locName}
                               </span>
                             </td>
-                            <td className="px-5 py-3.5 space-y-0.5">
+                            <td className="hidden md:table-cell px-5 py-3.5 space-y-0.5">
                               <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
                                 {emp.current_project_name || emp.project_name || 'Unassigned / Available'}
                               </span>
@@ -1928,24 +1928,24 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                       <table className="w-full text-xs text-left border-collapse">
                         <thead>
                           <tr className="border-b bg-slate-50 dark:bg-slate-800/50 text-slate-500">
-                            <th className="p-2.5 font-bold">Date &amp; Time</th>
+                            <th className="hidden sm:table-cell p-2.5 font-bold">Date &amp; Time</th>
                             <th className="p-2.5 font-bold">Title / Incident Summary</th>
-                            <th className="p-2.5 font-bold">Category</th>
+                            <th className="hidden md:table-cell p-2.5 font-bold">Category</th>
                             <th className="p-2.5 font-bold">Severity</th>
-                            <th className="p-2.5 font-bold">Location / Asset</th>
+                            <th className="hidden sm:table-cell p-2.5 font-bold">Location / Asset</th>
                             <th className="p-2.5 text-right font-bold">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y">
                           {scopedIncidents.slice((scopedIncidentsPage - 1) * 15, scopedIncidentsPage * 15).map((inc: any) => (
                             <tr key={inc.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
-                              <td className="p-2.5 font-medium whitespace-nowrap">
+                              <td className="hidden sm:table-cell p-2.5 font-medium whitespace-nowrap">
                                 {inc.incident_date ? new Date(inc.incident_date).toLocaleString() : inc.created_at?.slice(0, 10) || '—'}
                               </td>
                               <td className="p-2.5 font-bold text-slate-900 dark:text-white max-w-[220px] truncate">
                                 {inc.title || 'Safety Incident'}
                               </td>
-                              <td className="p-2.5">
+                              <td className="hidden md:table-cell p-2.5">
                                 <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                                   {String(inc.incident_type || 'HAZARD').replaceAll('_', ' ')}
                                 </span>
@@ -1953,7 +1953,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                               <td className="p-2.5">
                                 <StatusBadge status={String(inc.severity || 'MEDIUM').replaceAll('_', ' ')} />
                               </td>
-                              <td className="p-2.5 text-slate-600 dark:text-slate-400 max-w-[180px] truncate">
+                              <td className="hidden sm:table-cell p-2.5 text-slate-600 dark:text-slate-400 max-w-[180px] truncate">
                                 {inc.location || locations.find((s) => String(s.id) === String(inc.site_location_id))?.name || 'Site Field Area'}
                               </td>
                               <td className="p-2.5 text-right">

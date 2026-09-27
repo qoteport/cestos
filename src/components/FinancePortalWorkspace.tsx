@@ -1386,19 +1386,21 @@ Signed: Finance & Procurement Administration
                 <table className="w-full text-sm">
                   <thead className="bg-muted/50">
                     <tr>
-                      {['Invoice #', 'Client', 'Amount', 'Status', 'Due Date'].map((h) => (
-                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
-                      ))}
+                      <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Invoice #</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Client</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Amount</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Status</th>
+                      <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">Due Date</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {invoices.slice((invoicesPage - 1) * 15, invoicesPage * 15).map((inv, i) => (
                       <tr key={inv.id || i} className="hover:bg-muted/30 transition">
-                        <td className="px-4 py-3 font-mono text-xs font-semibold">{inv.invoice_number || inv.number || `INV-${i + 1}`}</td>
+                        <td className="hidden sm:table-cell px-4 py-3 font-mono text-xs font-semibold">{inv.invoice_number || inv.number || `INV-${i + 1}`}</td>
                         <td className="px-4 py-3 text-xs">{inv.client_name || inv.client || '—'}</td>
                         <td className="px-4 py-3 text-xs font-semibold">{inv.currency || 'USD'} {typeof inv.amount === 'number' ? inv.amount.toLocaleString() : inv.total_amount?.toLocaleString() || '—'}</td>
                         <td className="px-4 py-3"><StatusBadge status={inv.status || 'DRAFT'} /></td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground">{inv.due_date || '—'}</td>
+                        <td className="hidden sm:table-cell px-4 py-3 text-xs text-muted-foreground">{inv.due_date || '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1761,9 +1763,17 @@ Signed: Finance & Procurement Administration
                   <table className="w-full text-xs">
                     <thead className="bg-muted/50 border-b">
                       <tr>
-                        {['PO #', 'Order Date', 'Vendor / Supplier', 'Project Scope', 'Category', 'Items Count', 'Receipt', 'Total Amount', 'Finance Payments', 'Status', 'Actions'].map((h) => (
-                          <th key={h} className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">{h}</th>
-                        ))}
+                        <th className="hidden sm:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">PO #</th>
+                        <th className="hidden md:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Order Date</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Vendor / Supplier</th>
+                        <th className="hidden lg:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Project Scope</th>
+                        <th className="hidden md:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Category</th>
+                        <th className="hidden sm:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Items Count</th>
+                        <th className="hidden lg:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Receipt</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Total Amount</th>
+                        <th className="hidden sm:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Finance Payments</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -1777,13 +1787,13 @@ Signed: Finance & Procurement Administration
 
                         return (
                           <tr key={po.id || i} className="hover:bg-muted/30 transition">
-                            <td className="px-4 py-3 font-mono font-bold text-foreground">{poNum}</td>
-                            <td className="px-4 py-3 font-mono text-muted-foreground">{po.created_at ? new Date(po.created_at).toLocaleDateString() : '—'}</td>
+                            <td className="hidden sm:table-cell px-4 py-3 font-mono font-bold text-foreground">{poNum}</td>
+                            <td className="hidden md:table-cell px-4 py-3 font-mono text-muted-foreground">{po.created_at ? new Date(po.created_at).toLocaleDateString() : '—'}</td>
                             <td className="px-4 py-3 font-medium text-foreground">{vendor}</td>
-                            <td className="px-4 py-3 text-muted-foreground">{projName}</td>
-                            <td className="px-4 py-3"><span className="rounded-full py-1 text-[10px] font-bold text text-violet-700">{purchaseOrderCategoryLabel(po.category)}</span></td>
-                            <td className="px-4 py-3 font-mono text-muted-foreground">{itemCount} items</td>
-                            <td className="px-4 py-3">
+                            <td className="hidden lg:table-cell px-4 py-3 text-muted-foreground">{projName}</td>
+                            <td className="hidden md:table-cell px-4 py-3"><span className="rounded-full py-1 text-[10px] font-bold text text-violet-700">{purchaseOrderCategoryLabel(po.category)}</span></td>
+                            <td className="hidden sm:table-cell px-4 py-3 font-mono text-muted-foreground">{itemCount} items</td>
+                            <td className="hidden lg:table-cell px-4 py-3">
                               {po.attachment_file_name ? (
                                 <div className="flex items-center gap-2">
                                   <button type="button" onClick={() => void viewPoAttachment(po)} className="text-violet-700 hover:underline font-bold text-[11px]" title={po.attachment_file_name}>{po.attachment_file_name}</button>
@@ -1800,7 +1810,7 @@ Signed: Finance & Procurement Administration
                               )}
                             </td>
                             <td className="px-4 py-3 font-bold text-violet-600">{curr} ${amount.toLocaleString()}</td>
-                            <td className="px-4 py-3"><div className="min-w-[210px] space-y-1.5"><div className="flex justify-between gap-2 rounded-md border border-violet-100 bg-violet-50 px-2 py-1.5 dark:border-violet-900 dark:bg-violet-950/30"><span className="text-muted-foreground">Paid to date</span><strong className="whitespace-nowrap">{curr} {Number(po.expense_paid_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>{(po.expense_payments || []).length ? po.expense_payments.map((payment: any, index: number) => <div key={payment.id} className="rounded-md border px-2 py-1.5"><div className="flex items-center justify-between gap-2"><span className="text-[10px] font-semibold text-muted-foreground">Installment {(po.expense_payments || []).length - index}</span><strong className="whitespace-nowrap">{curr} {Number(payment.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div><div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-muted-foreground"><span>{payment.payment_date ? new Date(`${payment.payment_date}T00:00:00`).toLocaleDateString() : 'Date unavailable'}</span>{payment.reference && <span className="max-w-24 truncate" title={payment.reference}>Ref: {payment.reference}</span>}</div>{payment.receipt_name ? <div className="mt-1 flex items-center gap-2 border-t pt-1"><span className="max-w-24 truncate text-[10px] text-muted-foreground" title={payment.receipt_name}>{payment.receipt_name}</span><button type="button" onClick={() => handleOpenFile(`/api/v1/operational-expenses/${payment.expense_id}/payments/${payment.id}/receipt`, payment.receipt_name || 'Payment receipt')} className="text-[10px] font-bold text-violet-700 hover:underline">View</button><button type="button" onClick={() => void downloadPurchaseOrderPaymentReceipt(payment)} className="text-[10px] font-bold text-violet-700 hover:underline">Download</button></div> : <span className="mt-1 block text-[10px] text-muted-foreground">No receipt attached</span>}</div>) : <span className="text-[10px] text-muted-foreground">No payments recorded</span>}</div></td>
+                            <td className="hidden sm:table-cell px-4 py-3"><div className="min-w-[210px] space-y-1.5"><div className="flex justify-between gap-2 rounded-md border border-violet-100 bg-violet-50 px-2 py-1.5 dark:border-violet-900 dark:bg-violet-950/30"><span className="text-muted-foreground">Paid to date</span><strong className="whitespace-nowrap">{curr} {Number(po.expense_paid_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>{(po.expense_payments || []).length ? po.expense_payments.map((payment: any, index: number) => <div key={payment.id} className="rounded-md border px-2 py-1.5"><div className="flex items-center justify-between gap-2"><span className="text-[10px] font-semibold text-muted-foreground">Installment {(po.expense_payments || []).length - index}</span><strong className="whitespace-nowrap">{curr} {Number(payment.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div><div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-muted-foreground"><span>{payment.payment_date ? new Date(`${payment.payment_date}T00:00:00`).toLocaleDateString() : 'Date unavailable'}</span>{payment.reference && <span className="max-w-24 truncate" title={payment.reference}>Ref: {payment.reference}</span>}</div>{payment.receipt_name ? <div className="mt-1 flex items-center gap-2 border-t pt-1"><span className="max-w-24 truncate text-[10px] text-muted-foreground" title={payment.receipt_name}>{payment.receipt_name}</span><button type="button" onClick={() => handleOpenFile(`/api/v1/operational-expenses/${payment.expense_id}/payments/${payment.id}/receipt`, payment.receipt_name || 'Payment receipt')} className="text-[10px] font-bold text-violet-700 hover:underline">View</button><button type="button" onClick={() => void downloadPurchaseOrderPaymentReceipt(payment)} className="text-[10px] font-bold text-violet-700 hover:underline">Download</button></div> : <span className="mt-1 block text-[10px] text-muted-foreground">No receipt attached</span>}</div>) : <span className="text-[10px] text-muted-foreground">No payments recorded</span>}</div></td>
                             <td className="px-4 py-3"><div className="flex flex-col items-start gap-1"><StatusBadge status={po.status || 'PENDING'} />{po.expense_raised && <ExpensePaymentBadge status={po.expense_status} />}</div></td>
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-1.5">
@@ -2128,9 +2138,14 @@ Signed: Finance & Procurement Administration
                   <table className="w-full text-xs">
                     <thead className="bg-muted/50 border-b">
                       <tr>
-                        {['Date', 'Ref #', 'Supplier', 'Litres', 'Unit Cost', 'Total Cost', 'Receipt Docket', 'Actions'].map((h) => (
-                          <th key={h} className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">{h}</th>
-                        ))}
+                        <th className="hidden sm:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Date</th>
+                        <th className="hidden sm:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Ref #</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Supplier</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Litres</th>
+                        <th className="hidden md:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Unit Cost</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Total Cost</th>
+                        <th className="hidden lg:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Receipt Docket</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -2144,13 +2159,13 @@ Signed: Finance & Procurement Administration
 
                         return (
                           <tr key={d.id} className="hover:bg-muted/30 transition">
-                            <td className="px-4 py-3 font-mono">{d.recorded_at ? new Date(d.recorded_at).toLocaleDateString() : '—'}</td>
-                            <td className="px-4 py-3 font-bold">{d.reference_number || d.id.slice(0, 8)}</td>
+                            <td className="hidden sm:table-cell px-4 py-3 font-mono">{d.recorded_at ? new Date(d.recorded_at).toLocaleDateString() : '—'}</td>
+                            <td className="hidden sm:table-cell px-4 py-3 font-bold">{d.reference_number || d.id.slice(0, 8)}</td>
                             <td className="px-4 py-3">{d.supplier || 'Bulk Supply'}</td>
                             <td className="px-4 py-3 font-bold text-violet-600">{Number(d.quantity_litres).toLocaleString()} L</td>
-                            <td className="px-4 py-3 font-mono">{unitC ? `${curr} ${unitC.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}` : '—'}</td>
+                            <td className="hidden md:table-cell px-4 py-3 font-mono">{unitC ? `${curr} ${unitC.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}` : '—'}</td>
                             <td className="px-4 py-3 font-bold text-foreground">{totalC ? `${curr} ${totalC.toLocaleString()}` : '—'}</td>
-                            <td className="px-4 py-3">
+                            <td className="hidden lg:table-cell px-4 py-3">
                               {fileName ? (
                                 <div className="flex items-center gap-1.5">
                                   <button
@@ -2258,9 +2273,12 @@ Signed: Finance & Procurement Administration
                   <table className="w-full text-xs">
                     <thead className="bg-muted/50 border-b">
                       <tr>
-                        {['Date', 'Asset / Equipment', 'Litres Allocated', 'Odometer / Hours', 'Notes', 'Actions'].map((h) => (
-                          <th key={h} className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">{h}</th>
-                        ))}
+                        <th className="hidden sm:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Date</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Asset / Equipment</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Litres Allocated</th>
+                        <th className="hidden sm:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Odometer / Hours</th>
+                        <th className="hidden md:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Notes</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -2280,13 +2298,13 @@ Signed: Finance & Procurement Administration
 
                         return (
                           <tr key={a.id} className="hover:bg-muted/30 transition">
-                            <td className="px-4 py-3 font-mono">{formattedDate}</td>
+                            <td className="hidden sm:table-cell px-4 py-3 font-mono">{formattedDate}</td>
                             <td className="px-4 py-3 font-bold text-foreground">{assetName}</td>
                             <td className="px-4 py-3 font-bold text-emerald-600">{Number(a.quantity_litres).toLocaleString()} L</td>
-                            <td className="px-4 py-3 font-mono text-muted-foreground">
+                            <td className="hidden sm:table-cell px-4 py-3 font-mono text-muted-foreground">
                               {a.odometer_km ? `${a.odometer_km} km` : a.operating_hours ? `${a.operating_hours} hrs` : '—'}
                             </td>
-                            <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">{a.notes || '—'}</td>
+                            <td className="hidden md:table-cell px-4 py-3 text-muted-foreground max-w-xs truncate">{a.notes || '—'}</td>
                             <td className="px-4 py-3">
                               {canEditAlloc ? (
                                 <button
@@ -2579,9 +2597,15 @@ Signed: Finance & Procurement Administration
                   <table className="w-full text-xs">
                     <thead className="bg-muted/50 border-b">
                       <tr>
-                        {['Date', 'Submitted By', 'Ref # / Payee', 'Payment Method', 'Total Amount', 'Receipt Docket', 'Payments', 'Status', 'Actions'].map((h) => (
-                          <th key={h} className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">{h}</th>
-                        ))}
+                        <th className="hidden sm:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Date</th>
+                        <th className="hidden md:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Submitted By</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Ref # / Payee</th>
+                        <th className="hidden sm:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Payment Method</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Total Amount</th>
+                        <th className="hidden lg:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Receipt Docket</th>
+                        <th className="hidden md:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Payments</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -2594,8 +2618,8 @@ Signed: Finance & Procurement Administration
 
                         return (
                           <tr key={exp.id} className="hover:bg-muted/30 transition">
-                            <td className="px-4 py-3 font-mono">{exp.expense_date ? new Date(exp.expense_date).toLocaleDateString() : '—'}</td>
-                            <td className="px-4 py-3 space-y-0.5">
+                            <td className="hidden sm:table-cell px-4 py-3 font-mono">{exp.expense_date ? new Date(exp.expense_date).toLocaleDateString() : '—'}</td>
+                            <td className="hidden md:table-cell px-4 py-3 space-y-0.5">
                               <div className="font-bold text-foreground flex items-center gap-1">
                                 <User size={12} className="text-violet-600 shrink-0" />
                                 <span>{sName}</span>
@@ -2617,9 +2641,9 @@ Signed: Finance & Procurement Administration
                               </div>
                             </td>
                             <td className="px-4 py-3 font-bold text-foreground">{exp.pay_to_name || exp.reference_number || exp.id.slice(0, 8)}</td>
-                            <td className="px-4 py-3 font-medium text-muted-foreground">{exp.payment_method || 'MOBILE_MONEY'}</td>
+                            <td className="hidden sm:table-cell px-4 py-3 font-medium text-muted-foreground">{exp.payment_method || 'MOBILE_MONEY'}</td>
                             <td className="px-4 py-3 font-bold text-violet-600">${cost.toLocaleString()}</td>
-                            <td className="px-4 py-3">
+                            <td className="hidden lg:table-cell px-4 py-3">
                               {fileName ? (
                                 <button
                                   type="button"
@@ -2643,7 +2667,7 @@ Signed: Finance & Procurement Administration
                                 <span className="text-muted-foreground text-[11px]">No docket</span>
                               )}
                             </td>
-                            <td className="px-4 py-3"><div className="min-w-[205px] space-y-1.5"><div className="flex justify-between gap-2 rounded-md border border-violet-100 bg-violet-50 px-2 py-1.5 dark:border-violet-900 dark:bg-violet-950/30"><span className="text-muted-foreground">Paid to date</span><strong className="whitespace-nowrap">${Number(exp.paid_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div><div className="flex justify-between gap-2 px-1 text-[10px] text-muted-foreground"><span>Balance</span><span className="whitespace-nowrap">${Number(exp.balance_due ?? Math.max(0, cost - Number(exp.paid_amount || 0))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>{Array.isArray(exp.payments) && exp.payments.length ? exp.payments.map((payment: any, index: number) => <div key={payment.id} className="rounded-md border px-2 py-1.5"><div className="flex justify-between gap-2"><span className="text-[10px] font-semibold text-muted-foreground">Installment {exp.payments.length - index}</span><strong className="whitespace-nowrap">${Number(payment.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div><div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-muted-foreground"><span>{payment.payment_date ? new Date(`${payment.payment_date}T00:00:00`).toLocaleDateString() : 'Date unavailable'}</span>{payment.reference && <span className="max-w-20 truncate" title={payment.reference}>Ref: {payment.reference}</span>}</div>{payment.receipt_name ? <div className="mt-1 flex items-center gap-2 border-t pt-1"><span className="max-w-20 truncate text-[10px] text-muted-foreground" title={payment.receipt_name}>{payment.receipt_name}</span><button type="button" onClick={() => handleOpenFile(`/api/v1/operational-expenses/${exp.id}/payments/${payment.id}/receipt`, payment.receipt_name || 'Payment receipt')} className="text-[10px] font-bold text-violet-700 hover:underline">View</button><button type="button" onClick={() => void downloadPurchaseOrderPaymentReceipt({ ...payment, expense_id: exp.id })} className="text-[10px] font-bold text-violet-700 hover:underline">Download</button></div> : <span className="mt-1 block text-[10px] text-muted-foreground">No receipt attached</span>}</div>) : <span className="text-[10px] text-muted-foreground">No payments recorded</span>}</div></td>
+                            <td className="hidden md:table-cell px-4 py-3"><div className="min-w-[205px] space-y-1.5"><div className="flex justify-between gap-2 rounded-md border border-violet-100 bg-violet-50 px-2 py-1.5 dark:border-violet-900 dark:bg-violet-950/30"><span className="text-muted-foreground">Paid to date</span><strong className="whitespace-nowrap">${Number(exp.paid_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div><div className="flex justify-between gap-2 px-1 text-[10px] text-muted-foreground"><span>Balance</span><span className="whitespace-nowrap">${Number(exp.balance_due ?? Math.max(0, cost - Number(exp.paid_amount || 0))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>{Array.isArray(exp.payments) && exp.payments.length ? exp.payments.map((payment: any, index: number) => <div key={payment.id} className="rounded-md border px-2 py-1.5"><div className="flex justify-between gap-2"><span className="text-[10px] font-semibold text-muted-foreground">Installment {exp.payments.length - index}</span><strong className="whitespace-nowrap">${Number(payment.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div><div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-muted-foreground"><span>{payment.payment_date ? new Date(`${payment.payment_date}T00:00:00`).toLocaleDateString() : 'Date unavailable'}</span>{payment.reference && <span className="max-w-20 truncate" title={payment.reference}>Ref: {payment.reference}</span>}</div>{payment.receipt_name ? <div className="mt-1 flex items-center gap-2 border-t pt-1"><span className="max-w-20 truncate text-[10px] text-muted-foreground" title={payment.receipt_name}>{payment.receipt_name}</span><button type="button" onClick={() => handleOpenFile(`/api/v1/operational-expenses/${exp.id}/payments/${payment.id}/receipt`, payment.receipt_name || 'Payment receipt')} className="text-[10px] font-bold text-violet-700 hover:underline">View</button><button type="button" onClick={() => void downloadPurchaseOrderPaymentReceipt({ ...payment, expense_id: exp.id })} className="text-[10px] font-bold text-violet-700 hover:underline">Download</button></div> : <span className="mt-1 block text-[10px] text-muted-foreground">No receipt attached</span>}</div>) : <span className="text-[10px] text-muted-foreground">No payments recorded</span>}</div></td>
                             <td className="px-4 py-3"><StatusBadge status={exp.status || 'SUBMITTED'} /></td>
                             <td className="px-4 py-3">
                               <button
@@ -2704,19 +2728,21 @@ Signed: Finance & Procurement Administration
                   <table className="w-full text-xs">
                     <thead className="bg-muted/50 border-b">
                       <tr>
-                        {['Entry Date', 'Category', 'Description', 'Amount', 'Ref #'].map((h) => (
-                          <th key={h} className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">{h}</th>
-                        ))}
+                        <th className="hidden sm:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Entry Date</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Category</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Description</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Amount</th>
+                        <th className="hidden sm:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Ref #</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
                       {scopedExpenses.slice((scopedExpensesPage - 1) * 15, scopedExpensesPage * 15).map((c, i) => (
                         <tr key={c.id || i} className="hover:bg-muted/30 transition">
-                          <td className="px-4 py-3 font-mono">{c.posted_at ? new Date(c.posted_at).toLocaleString() : c.entry_date || c.created_at?.slice(0, 10) || '—'}</td>
+                          <td className="hidden sm:table-cell px-4 py-3 font-mono">{c.posted_at ? new Date(c.posted_at).toLocaleString() : c.entry_date || c.created_at?.slice(0, 10) || '—'}</td>
                           <td className="px-4 py-3 font-bold">{c.cost_category || 'OPERATIONAL'}</td>
                           <td className="px-4 py-3 text-muted-foreground">{c.description || '—'}</td>
                           <td className="px-4 py-3 font-bold text-foreground">{c.currency || 'USD'} {Number(c.total_cost ?? c.amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                          <td className="px-4 py-3 font-mono text-muted-foreground" title={String(c.source_entity_id || c.id || '')}>{c.reference_number || (c.source_entity_id || c.id ? String(c.source_entity_id || c.id).slice(0, 8).toUpperCase() : '—')}</td>
+                          <td className="hidden sm:table-cell px-4 py-3 font-mono text-muted-foreground" title={String(c.source_entity_id || c.id || '')}>{c.reference_number || (c.source_entity_id || c.id ? String(c.source_entity_id || c.id).slice(0, 8).toUpperCase() : '—')}</td>
                         </tr>
                       ))}
                     </tbody>
