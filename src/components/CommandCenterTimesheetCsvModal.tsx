@@ -133,8 +133,8 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
     }));
   }, [projectColumn, projects, sites, siteColumn]);
   const rawEmployee = (row: CsvRow) => employeeColumn >= 0 ? (row.cells[employeeColumn] || '').trim() : '';
-  const readyCount = rows.filter((row) => row.status !== 'saved' && (row.employeeId || rawEmployee(row)) && (row.projectMatchId === 'custom' ? Boolean(projectColumn >= 0 && row.cells[projectColumn]?.trim()) : Boolean(row.projectMatchId))).length;
-  const unmatchedCount = rows.filter((row) => row.status !== 'saved' && (!(row.employeeId || rawEmployee(row)) || (row.projectMatchId === 'custom' ? !(projectColumn >= 0 && row.cells[projectColumn]?.trim()) : !row.projectMatchId))).length;
+  const readyCount = rows.filter((row) => row.status !== 'saved' && (row.employeeId || rawEmployee(row))).length;
+  const unmatchedCount = rows.filter((row) => row.status !== 'saved' && !(row.employeeId || rawEmployee(row))).length;
   const savedCount = rows.filter((row) => row.status === 'saved').length;
 
   async function upload(file?: File) {
@@ -181,14 +181,15 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
         const selectedSite = sites.find((site) => String(site.id) === value);
         return { ...row, siteId: value, projectMatchId: selectedSite?.project_id ? String(selectedSite.project_id) : row.projectMatchId, status: row.status === 'saved' ? 'saved' : 'ready', error: undefined };
       }
-      return { ...row, [key]: value, ...(key === 'projectMatchId' ? { siteId: '' } : {}), status: row.status === 'saved' ? 'saved' : 'ready', error: undefined };
+      const selectedValue = key === 'employeeId' && value.startsWith(`csv-employee-${row.csvRow}`) ? '' : value;
+      return { ...row, [key]: selectedValue, ...(key === 'projectMatchId' ? { siteId: '' } : {}), status: row.status === 'saved' ? 'saved' : 'ready', error: undefined };
     }));
   }
 
   async function saveMatchedRows() {
     setError(''); setNotice('');
     if (!period) { setError('Select the reporting month.'); return; }
-    if (unmatchedCount) { setError(`Match an employee and a registered project for each row (${unmatchedCount} incomplete).`); return; }
+    if (unmatchedCount) { setError(`Enter or match an employee name for each row (${unmatchedCount} incomplete). Project and site assignments may be left blank.`); return; }
     setSaving(true);
     let failures = 0;
     for (let index = 0; index < rows.length; index += 1) {
@@ -228,10 +229,10 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
   const tableRows = rows.map((row, rowIndex) => <tr key={row.csvRow} className="border-t border-slate-200 align-top hover:bg-slate-50">
     <td className="sticky left-0 z-10 min-w-14 border-r border-slate-200 bg-white px-2 py-2 text-center font-mono text-xs text-slate-500">{row.csvRow}</td>
     {headers.map((_, columnIndex) => <td key={columnIndex} className="min-w-20 border-r border-slate-100 px-2 py-2 text-xs text-slate-700">{row.cells[columnIndex] || ''}</td>)}
-    <td className="min-w-56 border-r border-slate-100 p-2"><SearchableSelect value={row.employeeId} onChange={(value) => updateRow(rowIndex, 'employeeId', value === 'custom' ? '' : value)} options={[{ value: 'custom', label: `Keep CSV employee: ${rawEmployee(row) || '(blank)'}` }, ...employeeOptions]} placeholder="Keep CSV employee name" searchable disabled={row.status === 'saved'} /></td>
+    <td className="min-w-56 border-r border-slate-100 p-2"><SearchableSelect key={`employee-${row.csvRow}`} value={row.employeeId} onChange={(value) => updateRow(rowIndex, 'employeeId', value)} options={[{ value: `csv-employee-${row.csvRow}`, label: `Keep CSV employee: ${rawEmployee(row) || '(blank)'}` }, ...employeeOptions]} placeholder={rawEmployee(row) || 'Keep CSV employee name'} searchable disabled={row.status === 'saved'} /></td>
     <td className="min-w-56 border-r border-slate-100 p-2"><SearchableSelect value={row.projectMatchId} onChange={(value) => updateRow(rowIndex, 'projectMatchId', value)} options={[{ value: 'custom', label: `Keep CSV project: ${projectColumn >= 0 ? row.cells[projectColumn] || '(blank)' : 'Select a project'}` }, ...projectOptions]} placeholder="Select project for this row" searchable disabled={row.status === 'saved'} /></td>
     <td className="min-w-56 border-r border-slate-100 p-2"><SearchableSelect value={row.siteId} onChange={(value) => updateRow(rowIndex, 'siteId', value)} options={[{ value: 'custom', label: `Keep CSV site: ${siteColumn >= 0 ? row.cells[siteColumn] || '(blank)' : 'No site'}` }, ...siteOptions.filter((option) => !row.projectMatchId || row.projectMatchId === 'custom' || sites.some((site) => String(site.id) === option.value && String(site.project_id) === row.projectMatchId))]} placeholder="Select site for this row" searchable disabled={row.status === 'saved'} /></td>
-    <td className="sticky right-0 z-10 min-w-44 border-l border-slate-200 bg-white px-2 py-2 text-xs">{row.status === 'saved' ? <span className="inline-flex items-center gap-1 font-semibold text-emerald-700"><CheckCircle2 size={14} />Saved</span> : row.error ? <span className="inline-flex items-start gap-1 text-red-700"><AlertTriangle size={14} className="mt-0.5 shrink-0" />{row.error}</span> : (row.employeeId || rawEmployee(row)) && row.projectMatchId && (row.projectMatchId !== 'custom' || (projectColumn >= 0 && row.cells[projectColumn]?.trim())) ? <span className="text-emerald-700">Ready</span> : <span className="text-amber-700">Needs matching</span>}</td>
+    <td className="sticky right-0 z-10 min-w-44 border-l border-slate-200 bg-white px-2 py-2 text-xs">{row.status === 'saved' ? <span className="inline-flex items-center gap-1 font-semibold text-emerald-700"><CheckCircle2 size={14} />Saved</span> : row.error ? <span className="inline-flex items-start gap-1 text-red-700"><AlertTriangle size={14} className="mt-0.5 shrink-0" />{row.error}</span> : (row.employeeId || rawEmployee(row)) ? <span className="text-emerald-700">Ready</span> : <span className="text-amber-700">Needs employee</span>}</td>
   </tr>);
 
   return <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/65 p-2 sm:p-5" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
