@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 import { useData } from '@/components/DataUI';
 
 const DEPT_COLORS = ['var(--primary)', '#7C3AED', '#D97706', '#0891B2', '#6B7280', '#15803D', '#DC2626'];
@@ -21,11 +21,32 @@ const STATUS_COLORS: Record<string, string> = {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-card border border-border rounded shadow-card-md px-3 py-2 text-xs">
+      <div className="bg-card border border-border rounded shadow-card-md px-3 py-2 text-xs z-50">
         <p className="font-600 text-foreground">{label}</p>
         <p className="text-muted-foreground mt-0.5">
           <span className="font-600 text-foreground">{payload[0].value}</span> employees
         </p>
+      </div>
+    );
+  }
+  return null;
+};
+
+const ProjectStatusTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const total = payload.reduce((acc: number, entry: any) => acc + (Number(entry.value) || 0), 0);
+    return (
+      <div className="bg-card border border-border rounded shadow-card-md px-3 py-2 text-xs z-50 space-y-1">
+        <p className="font-700 text-foreground border-b border-border pb-1 mb-1">{label} ({total} total)</p>
+        {payload.map((entry: any, index: number) => (
+          <div key={`tt-${entry.name}-${index}`} className="flex items-center justify-between gap-4 text-[11px]">
+            <span className="flex items-center gap-1.5 font-500 text-muted-foreground">
+              <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: entry.color }} />
+              {entry.name}:
+            </span>
+            <span className="font-700 text-foreground">{entry.value}</span>
+          </div>
+        ))}
       </div>
     );
   }
@@ -110,6 +131,42 @@ function EmployeesByStatusChart({ data }: { data: Array<{ status: string; count:
   );
 }
 
+function EmployeesByProjectAndStatusChart({
+  data,
+  statusKeys,
+}: {
+  data: Array<Record<string, any>>;
+  statusKeys: string[];
+}) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-[220px] flex items-center justify-center text-xs text-muted-foreground">
+        No project breakdown records found in database.
+      </div>
+    );
+  }
+  return (
+    <ResponsiveContainer width="100%" height={220}>
+      <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} barSize={26}>
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+        <XAxis dataKey="project" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+        <Tooltip content={<ProjectStatusTooltip />} cursor={{ fill: 'var(--muted)', opacity: 0.5 }} />
+        <Legend wrapperStyle={{ fontSize: 10, paddingTop: 4 }} />
+        {statusKeys.map((statusKey, index) => (
+          <Bar
+            key={`bar-status-${statusKey}`}
+            dataKey={statusKey}
+            stackId="projStatusStack"
+            fill={STATUS_COLORS[statusKey] || DEPT_COLORS[index % DEPT_COLORS.length]}
+            radius={index === statusKeys.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]}
+          />
+        ))}
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
 interface WorkforceChartsProps {
   departmentId?: string;
   employmentStatus?: string;
@@ -161,7 +218,6 @@ export default function WorkforceCharts({
       count: Number(count || 0),
     }));
   } else if (statsRes.data) {
-    // Fallback using KPI stats if rawStatus object is not present yet
     const d = statsRes.data;
     const fallbackList = [
       { status: 'Active', count: Number(d.active_employees || 0) },
@@ -172,8 +228,27 @@ export default function WorkforceCharts({
     byStatus = fallbackList;
   }
 
+  // 4th Chart: Employees by Project & Employment Status
+  const rawProjStatus = statsRes.data?.employees_by_project_and_status || statsRes.data?.by_project_and_status;
+  const projectStatusMap: Record<string, Record<string, number>> = typeof rawProjStatus === 'object' && rawProjStatus !== null ? rawProjStatus : {};
+
+  const statusKeySet = new Set<string>();
+  const projStatusData: Array<Record<string, any>> = [];
+
+  Object.entries(projectStatusMap).forEach(([projName, statusObj]) => {
+    const row: Record<string, any> = { project: projName };
+    Object.entries(statusObj || {}).forEach(([st, cnt]) => {
+      row[st] = Number(cnt || 0);
+      if (Number(cnt || 0) > 0) statusKeySet.add(st);
+    });
+    projStatusData.push(row);
+  });
+
+  const statusKeys = Array.from(statusKeySet);
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* 1. Department */}
       <div className="card p-5">
         <div className="mb-4 flex items-center justify-between">
           <div>
@@ -185,6 +260,7 @@ export default function WorkforceCharts({
         <EmployeesByDeptChart data={byDept} />
       </div>
 
+      {/* 2. Project */}
       <div className="card p-5">
         <div className="mb-4 flex items-center justify-between">
           <div>
@@ -196,7 +272,8 @@ export default function WorkforceCharts({
         <EmployeesByProjectChart data={byProj} />
       </div>
 
-      <div className="card p-5 md:col-span-2 xl:col-span-1">
+      {/* 3. Employment Status */}
+      <div className="card p-5">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <p className="text-sm font-700 text-foreground">Employees by Employment Status</p>
@@ -205,6 +282,18 @@ export default function WorkforceCharts({
           {statsRes.loading && <span className="text-[11px] text-muted-foreground animate-pulse">Loading live data...</span>}
         </div>
         <EmployeesByStatusChart data={byStatus} />
+      </div>
+
+      {/* 4. Project & Employment Status Combined */}
+      <div className="card p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-700 text-foreground">Employees by Project & Employment Status</p>
+            <p className="text-xs text-muted-foreground">Breakdown of status per project assignment</p>
+          </div>
+          {statsRes.loading && <span className="text-[11px] text-muted-foreground animate-pulse">Loading live data...</span>}
+        </div>
+        <EmployeesByProjectAndStatusChart data={projStatusData} statusKeys={statusKeys} />
       </div>
     </div>
   );

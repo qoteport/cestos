@@ -768,7 +768,7 @@ export default function CommandCenterPage() {
       return;
     }
 
-    if (cmd.customModalType === 'employee-select') {
+    if (cmd.customModalType === 'employee-select' || cmd.customModalType === 'employee-transfer') {
       setPendingSelectCommand(cmd);
       return;
     }

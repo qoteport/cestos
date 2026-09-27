@@ -30,7 +30,7 @@ function parseCsv(text: string): string[][] {
 function normalize(value: string) { return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
 function monthFromName(fileName: string) {
   const match = fileName.match(/\b(january|february|march|april|may|june|july|august|september|october|november|december)[\s_-]+(20\d{2})\b/i);
-  if (!match) return new Date().toISOString().slice(0, 7);
+  if (!match) return '';
   const month = new Date(`${match[1]} 1, ${match[2]}`).getMonth() + 1;
   return `${match[2]}-${String(month).padStart(2, '0')}`;
 }
@@ -41,10 +41,28 @@ function matchColumn(headers: string[], candidates: string[]) {
   return index;
 }
 
-function isDayHeader(value: string) { return /^(0?[1-9]|[12]\d|3[01])$/.test(value.trim()); }
+const monthIndex: Record<string, number> = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+function parseDateHeader(value: string, defaultPeriod: string): { day: number; month?: number; year?: number } | null {
+  const text = value.trim();
+  if (/^(0?[1-9]|[12]\d|3[01])$/.test(text)) return { day: Number(text) };
+  const dayFirst = text.match(/^(\d{1,2})[-/\s]([a-z]{3,9})(?:[-/\s](\d{2,4}))?$/i);
+  const monthFirst = text.match(/^([a-z]{3,9})[-/\s](\d{1,2})(?:[-/\s](\d{2,4}))?$/i);
+  const iso = text.match(/^(20\d{2})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (iso) return { year: Number(iso[1]), month: Number(iso[2]), day: Number(iso[3]) };
+  const match = dayFirst || monthFirst;
+  if (!match) return null;
+  const day = Number(dayFirst ? match[1] : match[2]);
+  const monthText = (dayFirst ? match[2] : match[1]).slice(0, 3).toLowerCase();
+  const month = monthIndex[monthText];
+  const yearText = match[3];
+  if (!month || day < 1 || day > 31) return null;
+  const year = yearText ? Number(yearText.length === 2 ? `20${yearText}` : yearText) : Number(defaultPeriod.slice(0, 4));
+  return { day, month, year };
+}
 
 export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: () => void }) {
   const [headers, setHeaders] = useState<string[]>([]);
+  const [sourceHeaderRows, setSourceHeaderRows] = useState<string[][]>([]);
   const [rows, setRows] = useState<CsvRow[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
@@ -91,7 +109,10 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
   const employeeColumn = useMemo(() => matchColumn(headers, ['employee', 'employee name', 'name', 'staff', 'staff name', 'employee full name']), [headers]);
   const numberColumn = useMemo(() => matchColumn(headers, ['employee number', 'employee no', 'employee id', 'staff no', 'staff number']), [headers]);
   const siteColumn = useMemo(() => matchColumn(headers, ['site', 'site name', 'location', 'site location', 'work site']), [headers]);
-  const dayColumns = useMemo(() => headers.map((header, index) => ({ day: Number(header), index })).filter(({ day }) => Number.isInteger(day) && day >= 1 && day <= 31), [headers]);
+  const dayColumns = useMemo(() => headers.map((header, index) => {
+    const parsed = parseDateHeader(header, period);
+    return parsed ? { day: parsed.day, month: parsed.month, index } : null;
+  }).filter((column): column is { day: number; month: number | undefined; index: number } => Boolean(column)), [headers, period]);
   useEffect(() => {
     if (siteColumn < 0 || !sites.length) return;
     setRows((current) => current.map((row) => {
@@ -111,13 +132,19 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
     try {
       const matrix = parseCsv(await file.text());
       if (matrix.length < 2) throw new Error('The CSV must include a header row and at least one employee row.');
-      const nextHeaders = matrix[0].map((header) => header.trim());
-      if (!nextHeaders.some((header) => isDayHeader(header))) throw new Error('Could not find daily hour columns. Use day numbers (1–31) as the CSV column headers.');
+      const detectedHeaderRow = matrix.slice(0, Math.min(matrix.length, 8)).findIndex((candidate) => candidate.filter((value) => parseDateHeader(value, period)).length >= 2);
+      if (detectedHeaderRow < 0) throw new Error('Could not find the date heading row. Upload the CSV exported from the time sheet with its weekday and date headings.');
+      const nextHeaderRows = matrix.slice(0, detectedHeaderRow + 1).map((line) => line.map((header) => header.trim()));
+      const nextHeaders = nextHeaderRows[0].map((_, column) => [...nextHeaderRows].reverse().map((line) => line[column] || '').find(Boolean) || '');
+      const explicitHeaderDate = nextHeaders.map((header) => parseDateHeader(header, period)).find((header) => header?.month);
+      const filenamePeriod = monthFromName(file.name);
+      const inferredPeriod = filenamePeriod || (explicitHeaderDate?.month ? `${explicitHeaderDate.year || new Date().getFullYear()}-${String(explicitHeaderDate.month).padStart(2, '0')}` : period);
+      if (!nextHeaders.some((header) => parseDateHeader(header, inferredPeriod))) throw new Error('Could not find daily date columns in the heading row.');
       const nextEmployeeCol = matchColumn(nextHeaders, ['employee', 'employee name', 'name', 'staff', 'staff name', 'employee full name']);
       const nextNumberCol = matchColumn(nextHeaders, ['employee number', 'employee no', 'employee id', 'staff no', 'staff number']);
       if (nextEmployeeCol < 0 && nextNumberCol < 0) throw new Error('Could not find an Employee or Employee Number column in this CSV.');
       const nextSiteCol = matchColumn(nextHeaders, ['site', 'site name', 'location', 'site location', 'work site']);
-      const imported = matrix.slice(1).map((cells, index) => {
+      const imported = matrix.slice(detectedHeaderRow + 1).map((cells, index) => {
         const rawName = nextEmployeeCol >= 0 ? cells[nextEmployeeCol] || '' : '';
         const rawNumber = nextNumberCol >= 0 ? cells[nextNumberCol] || '' : '';
         const employee = employees.find((person) => rawNumber && normalize(person.employee_number || '') === normalize(rawNumber))
@@ -125,10 +152,10 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
           || employees.find((person) => rawName && normalize([person.first_name, person.middle_name, person.last_name].filter(Boolean).join(' ')) === normalize(rawName));
         const rawSite = nextSiteCol >= 0 ? cells[nextSiteCol] || '' : '';
         const site = sites.find((item) => rawSite && normalize(item.name || item.site_name || '') === normalize(rawSite));
-        return { cells, employeeId: employee ? String(employee.id) : '', siteId: site ? String(site.id) : '', status: 'ready' as const, csvRow: index + 2 };
+        return { cells, employeeId: employee ? String(employee.id) : '', siteId: site ? String(site.id) : '', status: 'ready' as const, csvRow: detectedHeaderRow + index + 2 };
       });
-      setHeaders(nextHeaders); setRows(imported); setFileName(file.name); setPeriod(monthFromName(file.name));
-    } catch (err: any) { setHeaders([]); setRows([]); setFileName(''); setError(err?.message || 'Could not read the selected CSV.'); }
+      setHeaders(nextHeaders); setSourceHeaderRows(nextHeaderRows); setRows(imported); setFileName(file.name); setPeriod(inferredPeriod);
+    } catch (err: any) { setHeaders([]); setSourceHeaderRows([]); setRows([]); setFileName(''); setError(err?.message || 'Could not read the selected CSV.'); }
   }
 
   function updateRow(index: number, key: 'employeeId' | 'siteId', value: string) {
@@ -144,6 +171,10 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
     let failures = 0;
     for (let index = 0; index < rows.length; index += 1) {
       const row = rows[index]; if (row.status === 'saved') continue;
+      const mismatchedMonth = dayColumns.find((column) => column.month && column.month !== Number(period.slice(5, 7)));
+      if (mismatchedMonth) {
+        failures += 1; setRows((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, status: 'error', error: 'The selected month does not match the month shown in the CSV date headings.' } : item)); continue;
+      }
       const entries = dayColumns.flatMap(({ day, index: column }) => {
         const raw = (row.cells[column] || '').replace(/[$,\s]/g, '');
         if (!raw) return [];
@@ -185,12 +216,12 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
           <label className="block space-y-1"><span className="text-xs font-bold text-slate-700">Reporting month *</span><AppDateTimePicker mode="month" value={period} onChange={(value) => value && setPeriod(value)} placeholder="Select month" /></label>
           <label className={`inline-flex h-10 items-center justify-center gap-2 self-end px-4 text-sm font-bold text-white ${loading ? 'cursor-not-allowed bg-slate-400' : 'cursor-pointer bg-[#184877] hover:bg-[#123f68]'}`}><Upload size={16} />Upload CSV<input type="file" accept=".csv,text/csv" className="hidden" disabled={loading} onChange={(event) => void upload(event.target.files?.[0])} /></label>
         </div>
-        <div className="border-l-4 border-blue-500 bg-blue-50 px-3 py-2 text-sm text-blue-950">CSV day columns should be numbered <b>1–31</b>. Employee and site names are matched automatically when exact matches are found; review or change each match before saving. A project is required so the API can validate field assignments.</div>
+        <div className="border-l-4 border-blue-500 bg-blue-50 px-3 py-2 text-sm text-blue-950">Upload the worksheet as a CSV. The preview keeps its weekday/date heading rows, NAME and SITE columns, daily hours, Hrs, and Total Days in their original order. Match each employee and project site before importing; the monthly total is recalculated from the daily hours.</div>
         {loading && <p className="flex items-center gap-2 text-sm text-slate-500"><Loader2 size={16} className="animate-spin" />Loading employees and projects…</p>}
         {error && <p role="alert" className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
         {notice && <p role="status" className="rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{notice}</p>}
         {fileName && <div className="flex flex-wrap items-center justify-between gap-2 text-sm"><span className="inline-flex items-center gap-2 font-semibold text-slate-800"><FileSpreadsheet size={17} className="text-emerald-700" />{fileName} · {rows.length} employee rows</span><span className="text-slate-600">{savedCount} saved · {readyCount} ready · {unmatchedCount} need matching</span></div>}
-        {rows.length > 0 && <div className="max-h-[62vh] overflow-auto border border-slate-300"><table className="w-full border-collapse text-left"><thead className="sticky top-0 z-20 bg-slate-100"><tr><th className="sticky left-0 z-30 border-r border-slate-200 bg-slate-100 px-2 py-2 text-[10px] font-bold uppercase text-slate-600">Row</th>{headers.map((header, index) => <th key={index} className="min-w-20 border-r border-slate-200 px-2 py-2 text-[10px] font-bold uppercase text-slate-600">{header}</th>)}<th className="min-w-56 border-r border-slate-200 px-2 py-2 text-[10px] font-bold uppercase text-slate-600">Matched employee</th><th className="min-w-56 border-r border-slate-200 px-2 py-2 text-[10px] font-bold uppercase text-slate-600">Matched site</th><th className="sticky right-0 z-30 min-w-44 border-l border-slate-200 bg-slate-100 px-2 py-2 text-[10px] font-bold uppercase text-slate-600">Import status</th></tr></thead><tbody>{tableRows}</tbody></table></div>}
+        {rows.length > 0 && <div className="max-h-[62vh] overflow-auto border border-slate-300"><table className="w-full border-collapse text-left"><thead className="sticky top-0 z-20 bg-slate-100">{sourceHeaderRows.map((headerRow, rowIndex) => <tr key={rowIndex} className="bg-slate-100">{rowIndex === 0 && <th rowSpan={sourceHeaderRows.length} className="sticky left-0 z-30 min-w-14 border-r border-slate-200 bg-slate-100 px-2 py-2 text-[10px] font-bold uppercase text-slate-600">Row</th>}{headerRow.map((header, columnIndex) => <th key={columnIndex} className="min-w-20 border-r border-slate-200 px-2 py-2 text-[10px] font-bold uppercase text-slate-600">{header}</th>)}{rowIndex === sourceHeaderRows.length - 1 && <><th className="min-w-56 border-r border-slate-200 px-2 py-2 text-[10px] font-bold uppercase text-slate-600">Matched employee</th><th className="min-w-56 border-r border-slate-200 px-2 py-2 text-[10px] font-bold uppercase text-slate-600">Matched site</th><th className="sticky right-0 z-30 min-w-44 border-l border-slate-200 bg-slate-100 px-2 py-2 text-[10px] font-bold uppercase text-slate-600">Import status</th></>}</tr>)}</thead><tbody>{tableRows}</tbody></table></div>}
         {!rows.length && !fileName && <div className="flex min-h-48 flex-col items-center justify-center border border-dashed border-slate-300 text-slate-500"><FileSpreadsheet size={30} /><p className="mt-2 text-sm">Select the project and reporting month, then upload the original timesheet CSV.</p></div>}
         {(employeeColumn < 0 && headers.length > 0) && <p className="text-xs text-amber-700">Employee name column was not detected. Use Employee Number or manually match employee rows.</p>}
         {(siteColumn < 0 && headers.length > 0) && <p className="text-xs text-amber-700">No site column was detected; select a project site for each row.</p>}
