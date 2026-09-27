@@ -4,6 +4,11 @@ button:disabled {opacity:.5;cursor:not-allowed;}
 @media(max-width:640px){aside.w-60{width:12rem;} .kpi-value{font-size:1.75rem;}}
 
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 1in !important;
+  }
+
   *, *::before, *::after {
     border-radius: 0 !important;
   }
@@ -16,8 +21,6 @@ button:disabled {opacity:.5;cursor:not-allowed;}
     position: static !important;
     display: block !important;
     width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
   }

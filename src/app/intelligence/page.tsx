@@ -494,6 +494,11 @@ export default function IntelligencePage() {
       {/* Global Print CSS */}
       <style jsx global>{`
         @media print {
+          @page {
+            size: A4 portrait;
+            margin: 1in !important;
+          }
+
           html, body, #__next, body > div, main {
             height: auto !important;
             min-height: 0 !important;

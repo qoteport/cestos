@@ -43,7 +43,7 @@ export function printElement(element: HTMLElement, title: string): void {
   const doc = popup.document;
   doc.open();
   doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>
-    @page { size: A4 portrait; margin: 0; }
+    @page { size: A4 portrait; margin: 1in !important; }
     html, body { margin: 0; padding: 0; background: #fff; color: #111827; }
     body { padding: 10mm; font-family: Arial, sans-serif; }
     *, *::before, *::after { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; border-radius: 0 !important; }

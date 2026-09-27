@@ -91,7 +91,7 @@ export default function MaintenanceAssessmentReportDetailsModal({
         @media print {
           @page {
             size: A4 portrait;
-            margin: 10mm;
+            margin: 1in !important;
           }
           *, *::before, *::after {
             border-radius: 0 !important;

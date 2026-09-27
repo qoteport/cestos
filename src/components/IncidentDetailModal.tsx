@@ -149,7 +149,7 @@ export default function IncidentDetailModal({
         @media print {
           @page {
             size: A4 portrait;
-            margin: 10mm;
+            margin: 1in !important;
           }
           body * {
             visibility: hidden !important;
