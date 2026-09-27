@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { X } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import SearchableSelect from './SearchableSelect';
 import AppDateTimePicker from './AppDateTimePicker';
@@ -141,7 +142,14 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
             <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Submit Operational Expense Claim</h2>
             <p className="mt-0.5 text-xs text-slate-500">Submit purchased items and invoice details to Finance.</p>
           </div>
-          <button type="button" aria-label="Close" onClick={handleClose} className="rounded-full p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white transition w-10 h-10">×</button>
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={handleClose}
+            className="flex items-center justify-center w-10 h-10 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white transition"
+          >
+            <X size={20} />
+          </button>
         </header>
         <form onSubmit={submit} className="flex flex-col h-full overflow-hidden">
           <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6 text-xs">
