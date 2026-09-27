@@ -268,12 +268,12 @@ export default function SearchableSelect({
           {/* Search Bar inside dropdown */}
           {shouldShowSearch && (
             <div className="p-2 border-b border-border/60 bg-muted/20 sticky top-0 z-10">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-background border border-border/80 rounded-xl focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-background border border-border/80 rounded-xl focus-within:ring-2 focus-within:ring-primary/40 focus-within:border-primary transition-all outline-none focus:outline-none focus-within:outline-none">
                 <Search size={14} className="text-muted-foreground shrink-0" />
                 <input
                   ref={searchInputRef}
                   type="text"
-                  className="w-full text-xs sm:text-sm bg-transparent border-none outline-none focus:ring-0 placeholder:text-muted-foreground text-foreground p-0"
+                  className="w-full text-xs sm:text-sm bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus:border-none focus-visible:outline-none focus-visible:ring-0 placeholder:text-muted-foreground text-foreground p-0 shadow-none"
                   placeholder="Search options..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -567,12 +567,12 @@ export function MultiSearchableSelect({
           className="bg-background dark:bg-slate-900 border border-border shadow-2xl rounded-2xl overflow-hidden flex flex-col animate-in fade-in-50 zoom-in-95"
         >
           <div className="p-2 border-b border-border/60 bg-muted/20 sticky top-0 z-10 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-background border border-border/80 rounded-xl focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all flex-1">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-background border border-border/80 rounded-xl focus-within:ring-2 focus-within:ring-primary/40 focus-within:border-primary transition-all outline-none focus:outline-none focus-within:outline-none flex-1">
               <Search size={14} className="text-muted-foreground shrink-0" />
               <input
                 ref={searchInputRef}
                 type="text"
-                className="w-full text-xs sm:text-sm bg-transparent border-none outline-none focus:ring-0 placeholder:text-muted-foreground text-foreground p-0"
+                className="w-full text-xs sm:text-sm bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus:border-none focus-visible:outline-none focus-visible:ring-0 placeholder:text-muted-foreground text-foreground p-0 shadow-none"
                 placeholder="Search options..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
