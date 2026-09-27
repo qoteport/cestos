@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/api';
 import { Modal } from './DataUI';
 import SearchableSelect from './SearchableSelect';
 import TrackerDetailsModal from './TrackerDetailsModal';
+import AppDateTimePicker from './ui/AppDateTimePicker';
 
 const today = new Date().toISOString().slice(0, 10);
 const fields = [
@@ -58,10 +59,17 @@ export default function PMTrackerWizard({ projectId, assets, employees, record, 
             placeholder="Yes or No"
           />
         )
+      ) : key === 'due_date' || key.endsWith('_date') ? (
+        <AppDateTimePicker
+          mode="date"
+          value={data[key] || ''}
+          onChange={(val) => set(key, val)}
+          placeholder="Select date..."
+        />
       ) : (
         <input
           className={`input-field w-full border-slate-300 opacity-100 font-medium focus-visible:ring-2 focus-visible:ring-[#184877] ${mode === 'FREE_FLOW' ? 'rounded-none' : 'rounded-xl'}`}
-          type={key === 'due_date' ? 'date' : 'text'}
+          type="text"
           value={data[key] || ''}
           onChange={(e) => set(key, e.target.value)}
         />

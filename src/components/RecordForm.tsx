@@ -6,6 +6,7 @@ import contract from '@/lib/contract.json';
 import { apiFetch } from '@/lib/api';
 import { Modal, Row, title, rows, display } from './DataUI';
 import EmployeeWizardForm from './EmployeeWizardForm';
+import AppDateTimePicker from './ui/AppDateTimePicker';
 import SearchableSelect, { SearchableSelectOption, MultiSearchableSelect } from './SearchableSelect';
 const schemas: Row = contract.schemas;
 export function resolve(s: Row): Row {
@@ -1117,6 +1118,16 @@ function Fields({
             checked={!!val}
             onChange={(e) => set(e.target.checked)}
           />
+        ) : s.format === 'date' || s.format === 'date-time' || key.endsWith('_date') || key.includes('date') || key === 'start_date' || key === 'end_date' || key === 'due_date' || key === 'effective_date' || key === 'expiry_date' ? (
+          <AppDateTimePicker
+            name={key}
+            mode={s.format === 'date-time' ? 'datetime' : 'date'}
+            value={val ? String(val) : ''}
+            placeholder={FIELD_PLACEHOLDERS[key] || s.placeholder || `Select ${title(key)}...`}
+            required={required.includes(key)}
+            onChange={(v) => set(v)}
+            ariaLabel={title(key)}
+          />
         ) : (
           <input
             id={fieldPrefix + '-' + key}
@@ -1124,13 +1135,9 @@ function Fields({
             value={val}
             placeholder={FIELD_PLACEHOLDERS[key] || s.placeholder || ''}
             type={
-              s.format === 'date'
-                ? 'date'
-                : s.format === 'date-time'
-                  ? 'datetime-local'
-                  : s.type === 'integer' || s.type === 'number'
-                    ? 'number'
-                    : 'text'
+              s.type === 'integer' || s.type === 'number'
+                ? 'number'
+                : 'text'
             }
             step="any"
             min={s.minimum}

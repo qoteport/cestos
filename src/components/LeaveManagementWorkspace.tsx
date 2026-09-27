@@ -24,103 +24,6 @@ import { useData, State, Row, rows, Modal, display } from './DataUI';
 import SearchableSelect from './SearchableSelect';
 import AppDateTimePicker from './ui/AppDateTimePicker';
 
-function buildSeedLeaveRequests(employees: Row[]): Row[] {
-  const getEmp = (idx: number, fallbackName: string, fallbackNum: string, fallbackDept: string) => {
-    if (employees && employees[idx]) {
-      const e = employees[idx];
-      const fullName = [e.first_name, e.last_name].filter(Boolean).join(' ');
-      return {
-        id: String(e.id),
-        name: fullName || e.name || e.full_name || fallbackName,
-        number: e.employee_number || fallbackNum,
-        department: e.department_name || e.department || fallbackDept,
-      };
-    }
-    return { id: `emp-00${idx + 1}`, name: fallbackName, number: fallbackNum, department: fallbackDept };
-  };
-
-  const emp0 = getEmp(0, 'Kwesi Mensah', 'EMP-2024-001', 'Mining Operations');
-  const emp1 = getEmp(1, 'Amara Okafor', 'EMP-2024-002', 'Heavy Fleet Maintenance');
-  const emp2 = getEmp(2, 'Yaw Boakye', 'EMP-2024-003', 'Processing Plant');
-  const emp3 = getEmp(3, 'Fatima Al-Hassan', 'EMP-2024-004', 'Geology & Exploration');
-  const emp4 = getEmp(4, 'Kofi Addo', 'EMP-2024-005', 'HSE & Compliance');
-
-  return [
-    {
-      id: 'leave-101',
-      employee_id: emp0.id,
-      employee_name: emp0.name,
-      employee_number: emp0.number,
-      department_name: emp0.department,
-      leave_type: 'Annual Leave',
-      start_date: '2026-09-20',
-      end_date: '2026-10-04',
-      total_days: 14,
-      status: 'PENDING',
-      reason: 'Annual family vacation and rest cycle following pit drilling shift completion.',
-      created_at: '2026-09-12T10:15:00Z',
-    },
-    {
-      id: 'leave-102',
-      employee_id: emp1.id,
-      employee_name: emp1.name,
-      employee_number: emp1.number,
-      department_name: emp1.department,
-      leave_type: 'Sick Leave',
-      start_date: '2026-09-14',
-      end_date: '2026-09-18',
-      total_days: 5,
-      status: 'APPROVED',
-      approved_at: '2026-09-11T14:30:00Z',
-      reason: 'Medical treatment and doctor-prescribed bed rest following influenza.',
-      created_at: '2026-09-10T14:30:00Z',
-    },
-    {
-      id: 'leave-103',
-      employee_id: emp2.id,
-      employee_name: emp2.name,
-      employee_number: emp2.number,
-      department_name: emp2.department,
-      leave_type: 'Rotational Off-duty',
-      start_date: '2026-09-01',
-      end_date: '2026-09-14',
-      total_days: 14,
-      status: 'APPROVED',
-      approved_at: '2026-08-26T08:00:00Z',
-      reason: 'Scheduled 2-week field rotation rest break.',
-      created_at: '2026-08-25T08:00:00Z',
-    },
-    {
-      id: 'leave-104',
-      employee_id: emp3.id,
-      employee_name: emp3.name,
-      employee_number: emp3.number,
-      department_name: emp3.department,
-      leave_type: 'Emergency Leave',
-      start_date: '2026-09-18',
-      end_date: '2026-09-22',
-      total_days: 4,
-      status: 'PENDING',
-      reason: 'Urgent family emergency requiring personal attendance.',
-      created_at: '2026-09-14T09:00:00Z',
-    },
-    {
-      id: 'leave-105',
-      employee_id: emp4.id,
-      employee_name: emp4.name,
-      employee_number: emp4.number,
-      department_name: emp4.department,
-      leave_type: 'Study / Exam Leave',
-      start_date: '2026-09-05',
-      end_date: '2026-09-08',
-      total_days: 3,
-      status: 'REJECTED',
-      reason: 'Professional HSE certification examination attendance.',
-      created_at: '2026-09-01T11:20:00Z',
-    },
-  ];
-}
-
 export default function LeaveManagementWorkspace() {
   const [loading, setLoading] = useState(true);
   const [leaveRequests, setLeaveRequests] = useState<Row[]>([]);
@@ -157,10 +60,7 @@ export default function LeaveManagementWorkspace() {
       const empMap = new Map<string, Row>();
       eList.forEach((e: Row) => empMap.set(String(e.id), e));
 
-      const seedList = buildSeedLeaveRequests(eList);
-      const rawList = lList.length > 0 ? lList : seedList;
-
-      const dynamicList = rawList.map((item: Row) => {
+      const dynamicList = lList.map((item: Row) => {
         const emp = empMap.get(String(item.employee_id));
         const empName = emp
           ? [emp.first_name, emp.last_name].filter(Boolean).join(' ') || emp.name || emp.full_name
@@ -263,7 +163,7 @@ export default function LeaveManagementWorkspace() {
           >
             <ArrowLeft size={12} /> Workforce Overview
           </Link>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
             <Palmtree className="text-primary" size={24} /> Leave & Time Off Management
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
@@ -386,7 +286,7 @@ export default function LeaveManagementWorkspace() {
             </div>
 
             {/* Leave Type Filter Dropdown */}
-            <div className="flex items-center gap-1 min-w-[170px]">
+            <div className="flex items-center gap-1 min-w-[170px] hidden">
               <Filter size={13} className="text-muted-foreground shrink-0" />
               <SearchableSelect
                 value={leaveTypeFilter}
