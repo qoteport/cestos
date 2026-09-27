@@ -372,8 +372,54 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
     { num: 5, label: 'Review & Confirm', icon: ShieldCheck },
   ];
 
+  const wizardFooter = (
+    <div className="flex flex-row items-center justify-between gap-2.5 sm:gap-3 w-full">
+      <div>
+        {step > 1 && (
+          <button
+            type="button"
+            onClick={prevStep}
+            className="btn-secondary rounded-xl text-xs w-full sm:w-auto"
+            disabled={busy}
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
+        )}
+      </div>
+      <div className="flex flex-row items-center gap-2.5 sm:gap-3 w-full sm:w-auto justify-end">
+        <button
+          type="button"
+          onClick={onClose}
+          className="btn-secondary rounded-xl text-xs w-full sm:w-auto"
+          disabled={busy}
+        >
+          Cancel
+        </button>
+
+        {step < 5 ? (
+          <button
+            type="button"
+            onClick={nextStep}
+            className="btn-primary rounded-xl text-xs w-full sm:w-auto shadow-xs"
+          >
+            Continue <ArrowRight size={14} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={busy || !reviewReady}
+            className={`btn-primary rounded-xl text-xs w-full sm:w-auto shadow-xs ${!reviewReady ? 'opacity-50 cursor-not-allowed' : 'bg-emerald-700 hover:bg-emerald-800'}`}
+          >
+            {busy ? 'Saving Employee...' : initial ? 'Save Changes' : 'Create Employee Profile'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
   return (
-    <Modal name={initial ? `Edit Employee Profile` : `New Employee Onboarding`} onClose={onClose}>
+    <Modal name={initial ? `Edit Employee Profile` : `New Employee Onboarding`} onClose={onClose} footer={wizardFooter}>
       <div className="space-y-6" ref={containerRef}>
         {/* Wizard Stepper Bar */}
         <div className="border-b pb-4">
@@ -1097,50 +1143,6 @@ export default function EmployeeWizardForm({ initial, onClose, onSaved }: Employ
             </div>
           )}
 
-          {/* Action Footer */}
-          <div className="sticky bottom-0 -mx-4 -mb-4 sm:-mx-6 sm:-mb-6 pt-3.5 pb-4 px-4 sm:px-6 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 z-10 flex flex-row items-center justify-between gap-2.5 sm:gap-3 mt-6 rounded-b-none sm:rounded-b-2xl">
-            <div>
-              {step > 1 && (
-                <button
-                  type="button"
-                  onClick={prevStep}
-                  className="btn-secondary rounded-xl text-xs w-full sm:w-auto"
-                  disabled={busy}
-                >
-                  <ArrowLeft size={14} /> Back
-                </button>
-              )}
-            </div>
-            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
-              <button
-                type="button"
-                onClick={onClose}
-                className="btn-secondary rounded-xl text-xs w-full sm:w-auto"
-                disabled={busy}
-              >
-                Cancel
-              </button>
-
-              {step < 5 ? (
-                <button
-                  type="button"
-                  onClick={nextStep}
-                  className="btn-primary rounded-xl text-xs w-full sm:w-auto shadow-xs"
-                >
-                  Continue <ArrowRight size={14} />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={busy || !reviewReady}
-                  className={`btn-primary rounded-xl text-xs w-full sm:w-auto shadow-xs ${!reviewReady ? 'opacity-50 cursor-not-allowed' : 'bg-emerald-700 hover:bg-emerald-800'}`}
-                >
-                  {busy ? 'Saving Employee...' : initial ? 'Save Changes' : 'Create Employee Profile'}
-                </button>
-              )}
-            </div>
-          </div>
         </form>
       </div>
     </Modal>
