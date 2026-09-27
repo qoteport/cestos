@@ -3004,151 +3004,155 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
       
     
       {showAddPoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-card border rounded-2xl p-6 max-w-3xl w-full max-h-[92vh] overflow-y-auto space-y-5 shadow-2xl my-8">
-            <div className="flex items-center justify-between border-b pb-3 border-border">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-0 sm:p-4 backdrop-blur-xs overflow-hidden">
+          <div className="bg-card border rounded-none sm:rounded-2xl max-w-3xl w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b px-4 py-3.5 sm:px-6 sm:py-4 border-border shrink-0 bg-card/95 backdrop-blur-md sticky top-0 z-10">
               <h3 className="font-bold text-base flex items-center gap-2 text-foreground">
                 <ShoppingBag className="h-5 w-5 text-indigo-600" /> Create Purchase Order
               </h3>
-              <button onClick={() => setShowAddPoModal(false)} className="p-1 rounded-lg hover:bg-muted text-muted-foreground"><X size={18} /></button>
+              <button type="button" onClick={() => setShowAddPoModal(false)} className="p-1 rounded-full hover:bg-muted text-muted-foreground"><X size={18} /></button>
             </div>
 
-            <form onSubmit={handleCreatePo} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-foreground mb-1">Vendor / Supplier Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Caterpillar Machinery Corp"
-                    value={newPoForm.supplier_name}
-                    onChange={(e) => setNewPoForm({ ...newPoForm, supplier_name: e.target.value })}
-                    className="w-full p-2.5 border rounded-xl bg-background text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-foreground mb-1">Project Assignment</label>
-                  <SearchableSelect
-                    value={newPoForm.project_id}
-                    onChange={(val) => setNewPoForm({ ...newPoForm, project_id: val })}
-                    options={[
-                      { value: '', label: 'Organization-Wide (All Projects)' },
-                      ...projects.map((p: any) => ({ value: p.id, label: p.name })),
-                    ]}
-                    placeholder="Organization-Wide (All Projects)"
-                    searchable={projects.length > 5}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-foreground mb-1">Category (Optional)</label>
-                <PurchaseOrderCategoryField value={newPoForm.category} onChange={(category) => setNewPoForm({ ...newPoForm, category })} className="w-full p-2.5 border rounded-xl bg-background text-xs" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-foreground mb-1">Currency &amp; Notes</label>
-                <div className="grid grid-cols-3 gap-2">
-                  <SearchableSelect
-                    value={newPoForm.currency}
-                    onChange={(val) => setNewPoForm({ ...newPoForm, currency: val })}
-                    options={[
-                      { value: 'USD', label: 'USD ($)' },
-                      { value: 'EUR', label: 'EUR (€)' },
-                      { value: 'GBP', label: 'GBP (£)' },
-                      { value: 'ZAR', label: 'ZAR (R)' },
-                    ]}
-                    searchable={false}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Purchase Order Notes / Specifications"
-                    value={newPoForm.notes}
-                    onChange={(e) => setNewPoForm({ ...newPoForm, notes: e.target.value })}
-                    className="col-span-2 p-2.5 border rounded-xl bg-background text-xs"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-foreground mb-1">Attachment / Quote Docket (Optional)</label>
-                <input
-                  type="file"
-                  onChange={(e) => setPoAttachmentFile(e.target.files?.[0] || null)}
-                  className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-violet-700 hover:file:bg-violet-100"
-                />
-                {poAttachmentFile && (
-                  <p className="text-[11px] text-indigo-600 font-medium mt-1 flex items-center gap-1">
-                    <Paperclip size={12} /> {poAttachmentFile.name} ({(poAttachmentFile.size / 1024).toFixed(1)} KB)
-                  </p>
-                )}
-              </div>
-
-              {/* Line Items List */}
-              <div className="space-y-2 border-t pt-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-foreground uppercase tracking-wider">Purchase Order Line Items</label>
-                  <button
-                    type="button"
-                    onClick={() => setNewPoForm({
-                      ...newPoForm,
-                      items: [...newPoForm.items, { item_name: '', description: '', quantity_ordered: 1, unit_price: 0 }],
-                    })}
-                    className="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1"
-                  >
-                    <Plus size={13} /> Add Item
-                  </button>
-                </div>
-
-                {newPoForm.items.map((it, idx) => (
-                  <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 border rounded-xl bg-muted/30">
-                    <label className="md:col-span-3 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Item / Service
-                      <input type="text" placeholder="e.g. Hydraulic filter" value={it.item_name || ''} onChange={(e) => {
-                        const updated = [...newPoForm.items]; updated[idx].item_name = e.target.value; setNewPoForm({ ...newPoForm, items: updated });
-                      }} className="w-full p-2.5 border rounded-lg bg-background text-xs text-foreground" />
-                    </label>
-                    <label className="md:col-span-5 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Description *
-                      <textarea required rows={1} maxLength={255} placeholder="Specification, purpose, or additional details" value={it.description} onChange={(e) => {
-                        const updated = [...newPoForm.items]; updated[idx].description = e.target.value; setNewPoForm({ ...newPoForm, items: updated });
-                      }} className="w-full p-2.5 border rounded-lg bg-background text-xs text-foreground resize-y" />
-                    </label>
-                    <label className="md:col-span-2 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Quantity
-                      <input type="number" min="1" value={it.quantity_ordered} onChange={(e) => {
-                        const updated = [...newPoForm.items]; updated[idx].quantity_ordered = Number(e.target.value) || 1; setNewPoForm({ ...newPoForm, items: updated });
-                      }} className="w-full p-2.5 border rounded-lg bg-background text-xs font-mono text-center text-foreground" />
-                    </label>
-                    <label className="md:col-span-2 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Unit price
-                      <input type="number" min="0" step="0.01" value={it.unit_price} onChange={(e) => {
-                        const updated = [...newPoForm.items]; updated[idx].unit_price = Number(e.target.value) || 0; setNewPoForm({ ...newPoForm, items: updated });
-                      }} className="w-full p-2.5 border rounded-lg bg-background text-xs font-mono text-right text-foreground" />
-                    </label>
-                    {newPoForm.items.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = newPoForm.items.filter((_, i) => i !== idx);
-                          setNewPoForm({ ...newPoForm, items: updated });
-                        }}
-                        className="p-1 text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
+            <form onSubmit={handleCreatePo} className="flex flex-col flex-1 overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-foreground mb-1">Vendor / Supplier Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Caterpillar Machinery Corp"
+                      value={newPoForm.supplier_name}
+                      onChange={(e) => setNewPoForm({ ...newPoForm, supplier_name: e.target.value })}
+                      className="w-full p-2.5 border rounded-xl bg-background text-xs"
+                    />
                   </div>
-                ))}
+                  <div>
+                    <label className="block text-xs font-bold text-foreground mb-1">Project Assignment</label>
+                    <SearchableSelect
+                      value={newPoForm.project_id}
+                      onChange={(val) => setNewPoForm({ ...newPoForm, project_id: val })}
+                      options={[
+                        { value: '', label: 'Organization-Wide (All Projects)' },
+                        ...projects.map((p: any) => ({ value: p.id, label: p.name })),
+                      ]}
+                      placeholder="Organization-Wide (All Projects)"
+                      searchable={projects.length > 5}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-foreground mb-1">Category (Optional)</label>
+                  <PurchaseOrderCategoryField value={newPoForm.category} onChange={(category) => setNewPoForm({ ...newPoForm, category })} className="w-full p-2.5 border rounded-xl bg-background text-xs" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-foreground mb-1">Currency &amp; Notes</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <SearchableSelect
+                      value={newPoForm.currency}
+                      onChange={(val) => setNewPoForm({ ...newPoForm, currency: val })}
+                      options={[
+                        { value: 'USD', label: 'USD ($)' },
+                        { value: 'EUR', label: 'EUR (€)' },
+                        { value: 'GBP', label: 'GBP (£)' },
+                        { value: 'ZAR', label: 'ZAR (R)' },
+                      ]}
+                      searchable={false}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Purchase Order Notes / Specifications"
+                      value={newPoForm.notes}
+                      onChange={(e) => setNewPoForm({ ...newPoForm, notes: e.target.value })}
+                      className="col-span-2 p-2.5 border rounded-xl bg-background text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-foreground mb-1">Attachment / Quote Docket (Optional)</label>
+                  <input
+                    type="file"
+                    onChange={(e) => setPoAttachmentFile(e.target.files?.[0] || null)}
+                    className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-violet-700 hover:file:bg-violet-100"
+                  />
+                  {poAttachmentFile && (
+                    <p className="text-[11px] text-indigo-600 font-medium mt-1 flex items-center gap-1">
+                      <Paperclip size={12} /> {poAttachmentFile.name} ({(poAttachmentFile.size / 1024).toFixed(1)} KB)
+                    </p>
+                  )}
+                </div>
+
+                {/* Line Items List */}
+                <div className="space-y-2 border-t pt-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-foreground uppercase tracking-wider">Purchase Order Line Items</label>
+                    <button
+                      type="button"
+                      onClick={() => setNewPoForm({
+                        ...newPoForm,
+                        items: [...newPoForm.items, { item_name: '', description: '', quantity_ordered: 1, unit_price: 0 }],
+                      })}
+                      className="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1"
+                    >
+                      <Plus size={13} /> Add Item
+                    </button>
+                  </div>
+
+                  {newPoForm.items.map((it, idx) => (
+                    <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 border rounded-xl bg-muted/30">
+                      <label className="md:col-span-3 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Item / Service
+                        <input type="text" placeholder="e.g. Hydraulic filter" value={it.item_name || ''} onChange={(e) => {
+                          const updated = [...newPoForm.items]; updated[idx].item_name = e.target.value; setNewPoForm({ ...newPoForm, items: updated });
+                        }} className="w-full p-2.5 border rounded-lg bg-background text-xs text-foreground" />
+                      </label>
+                      <label className="md:col-span-5 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Description *
+                        <textarea required rows={1} maxLength={255} placeholder="Specification, purpose, or additional details" value={it.description} onChange={(e) => {
+                          const updated = [...newPoForm.items]; updated[idx].description = e.target.value; setNewPoForm({ ...newPoForm, items: updated });
+                        }} className="w-full p-2.5 border rounded-lg bg-background text-xs text-foreground resize-y" />
+                      </label>
+                      <label className="md:col-span-2 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Quantity
+                        <input type="number" min="1" value={it.quantity_ordered} onChange={(e) => {
+                          const updated = [...newPoForm.items]; updated[idx].quantity_ordered = Number(e.target.value) || 1; setNewPoForm({ ...newPoForm, items: updated });
+                        }} className="w-full p-2.5 border rounded-lg bg-background text-xs font-mono text-center text-foreground" />
+                      </label>
+                      <label className="md:col-span-2 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Unit price
+                        <input type="number" min="0" step="0.01" value={it.unit_price} onChange={(e) => {
+                          const updated = [...newPoForm.items]; updated[idx].unit_price = Number(e.target.value) || 0; setNewPoForm({ ...newPoForm, items: updated });
+                        }} className="w-full p-2.5 border rounded-lg bg-background text-xs font-mono text-right text-foreground" />
+                      </label>
+                      {newPoForm.items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = newPoForm.items.filter((_, i) => i !== idx);
+                            setNewPoForm({ ...newPoForm, items: updated });
+                          }}
+                          className="p-1 text-red-500 hover:text-red-700"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t">
+              {/* Fixed Bottom Action Footer */}
+              <div className="sticky bottom-0 bg-card/95 backdrop-blur-md border-t border-border px-4 py-3.5 sm:px-6 sm:py-4 shrink-0 flex flex-row items-center justify-end gap-2.5 z-10">
                 <button
                   type="button"
                   onClick={() => { setShowAddPoModal(false); setPoAttachmentFile(null); }}
-                  className="px-4 py-2 border rounded-xl text-xs font-bold hover:bg-muted"
+                  className="px-4 py-2 border rounded-full text-xs font-bold hover:bg-muted transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={poSubmitBusy}
-                  className="px-5 py-2 bg-indigo-600 text-white font-bold rounded-xl text-xs hover:bg-indigo-700 flex items-center gap-1.5"
+                  className="px-5 py-2 bg-indigo-600 text-white font-bold rounded-full text-xs hover:bg-indigo-700 flex items-center gap-1.5 transition shadow-xs disabled:opacity-50"
                 >
                   {poSubmitBusy ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 size={15} />}
                   Issue Purchase Order

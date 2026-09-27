@@ -468,29 +468,29 @@ export default function FieldPurchaseOrdersPanel({
               <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
                 {formStep === 'EDIT' ? (
                   <>
-                    <button type="button" onClick={() => { setShowForm(false); setFormStep('EDIT'); }} className="rounded-lg border px-4 py-2 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition w-full sm:w-auto">
+                    <button type="button" onClick={() => { setShowForm(false); setFormStep('EDIT'); }} className="rounded-full border px-4 py-2 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition w-full sm:w-auto">
                       Cancel
                     </button>
                     {(!editing || editing.status === 'DRAFT') && (
-                      <button type="button" disabled={busy} onClick={() => void saveOrder(true)} className="rounded-lg border border-orange-300 px-4 py-2 text-xs font-bold text-orange-800 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/30 disabled:opacity-50 transition w-full sm:w-auto">
+                      <button type="button" disabled={busy} onClick={() => void saveOrder(true)} className="rounded-full border border-orange-300 px-4 py-2 text-xs font-bold text-orange-800 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/30 disabled:opacity-50 transition w-full sm:w-auto">
                         {busy ? 'Saving…' : 'Save as draft'}
                       </button>
                     )}
-                    <button type="submit" disabled={busy} className="rounded-lg bg-orange-600 px-4 py-2 text-xs font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto">
+                    <button type="submit" disabled={busy} className="rounded-full bg-orange-600 px-4 py-2 text-xs font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto">
                       Preview Purchase Order
                     </button>
                   </>
                 ) : (
                   <>
-                    <button type="button" onClick={() => setFormStep('EDIT')} className="rounded-lg border px-4 py-2 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition w-full sm:w-auto">
+                    <button type="button" onClick={() => setFormStep('EDIT')} className="rounded-full border px-4 py-2 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition w-full sm:w-auto">
                       Back to edit
                     </button>
                     {editing?.status === 'WAITING_APPROVAL' ? (
-                      <button type="button" disabled={busy} onClick={() => void saveOrder(false)} className="rounded-lg bg-orange-600 px-4 py-2 text-xs font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto">
+                      <button type="button" disabled={busy} onClick={() => void saveOrder(false)} className="rounded-full bg-orange-600 px-4 py-2 text-xs font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto">
                         {busy ? 'Saving…' : 'Save changes'}
                       </button>
                     ) : (
-                      <button type="button" disabled={busy} onClick={() => void saveOrder(false)} className="rounded-lg bg-orange-600 px-4 py-2 text-xs font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto">
+                      <button type="button" disabled={busy} onClick={() => void saveOrder(false)} className="rounded-full bg-orange-600 px-4 py-2 text-xs font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto">
                         {busy ? 'Submitting…' : 'Submit for Executive approval'}
                       </button>
                     )}
