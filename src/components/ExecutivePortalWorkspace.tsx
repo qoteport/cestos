@@ -2911,6 +2911,15 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                     {editPoForm.items.length > 1 && <button type="button" aria-label="Remove line item" onClick={() => setEditPoForm({ ...editPoForm, items: editPoForm.items.filter((_, i) => i !== index) })} className="self-end p-2 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={14} /></button>}
                   </div>
                 ))}
+                <div className="pt-1 flex justify-start">
+                  <button
+                    type="button"
+                    onClick={() => setEditPoForm({ ...editPoForm, items: [...editPoForm.items, { item_name: '', description: '', quantity_ordered: 1, unit_price: 0 }] })}
+                    className="w-full py-2.5 px-4 border border-dashed border-indigo-300 dark:border-indigo-700/60 rounded-xl text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <Plus size={14} /> Add Item
+                  </button>
+                </div>
               </div>
               <div className="flex justify-end gap-2 border-t border-slate-200 dark:border-slate-800 pt-3">
                 <button type="button" onClick={() => setEditingPO(null)} className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold">Cancel</button>
@@ -3137,6 +3146,19 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                       )}
                     </div>
                   ))}
+
+                  <div className="pt-1 flex justify-start">
+                    <button
+                      type="button"
+                      onClick={() => setNewPoForm({
+                        ...newPoForm,
+                        items: [...newPoForm.items, { item_name: '', description: '', quantity_ordered: 1, unit_price: 0 }],
+                      })}
+                      className="w-full py-2.5 px-4 border border-dashed border-indigo-300 dark:border-indigo-700/60 rounded-xl text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <Plus size={14} /> Add Item
+                    </button>
+                  </div>
                 </div>
               </div>
 

@@ -411,6 +411,13 @@ export default function FieldPurchaseOrdersPanel({
                         <button type="button" onClick={() => setLines((rows) => rows.filter((_, i) => i !== index))} className="self-center rounded-lg border px-2 py-2 text-xs text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 lg:col-span-1"><Trash></Trash></button>
                       </div>
                     ))}
+                    <button
+                      type="button"
+                      onClick={() => setLines((rows) => [...rows, blankLine()])}
+                      className="w-full py-2.5 px-4 border border-dashed border-orange-300 dark:border-orange-700/60 rounded-xl text-xs font-semibold text-orange-700 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/30 flex items-center justify-center gap-1.5 transition-colors mt-2"
+                    >
+                      <Plus size={14} /> Add Item
+                    </button>
                   </section>
                 </>
               ) : (

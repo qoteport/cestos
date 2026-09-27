@@ -3138,6 +3138,19 @@ Signed: Finance & Procurement Administration
                       )}
                     </div>
                   ))}
+
+                  <div className="pt-1 flex justify-start">
+                    <button
+                      type="button"
+                      onClick={() => setNewPoForm({
+                        ...newPoForm,
+                        items: [...newPoForm.items, { item_name: '', description: '', quantity_ordered: 1, unit_price: 0 }],
+                      })}
+                      className="w-full py-2.5 px-4 border border-dashed border-violet-300 dark:border-violet-700/60 rounded-xl text-xs font-semibold text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/30 flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <Plus size={14} /> Add Item
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -3505,6 +3518,19 @@ Signed: Finance & Procurement Administration
                     )}
                   </div>
                 ))}
+
+                <div className="pt-1 flex justify-start">
+                  <button
+                    type="button"
+                    onClick={() => setEditPoForm({
+                      ...editPoForm,
+                      items: [...editPoForm.items, { item_name: '', description: '', quantity_ordered: 1, unit_price: 0 }],
+                    })}
+                    className="w-full py-2.5 px-4 border border-dashed border-violet-300 dark:border-violet-700/60 rounded-xl text-xs font-semibold text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/30 flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <Plus size={14} /> Add Item
+                  </button>
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t">

@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { X, Plus } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import SearchableSelect from './SearchableSelect';
 import AppDateTimePicker from './AppDateTimePicker';
@@ -221,6 +221,13 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
                   <button type="button" onClick={() => setItems((rows) => rows.filter((_, i) => i !== index))} className="justify-self-start font-semibold text-red-700 hover:underline">Remove item</button>
                 </div>
               ))}
+              <button
+                type="button"
+                onClick={() => setItems((rows) => [...rows, blankItem()])}
+                className="w-full py-2.5 px-4 border border-dashed border-orange-300 dark:border-orange-700/60 rounded-xl text-xs font-semibold text-orange-700 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/30 flex items-center justify-center gap-1.5 transition-colors mt-2"
+              >
+                <Plus size={14} /> Add Item
+              </button>
             </section>
             <section className="grid gap-3 rounded-xl border p-3 sm:grid-cols-2">
               <label className="flex items-center gap-2 font-semibold sm:col-span-2"><input type="checkbox" checked={manualTotal} onChange={(event) => setManualTotal(event.target.checked)} /> Enter total manually</label>
