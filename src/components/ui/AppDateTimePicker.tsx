@@ -8,7 +8,7 @@ export interface AppDateTimePickerProps {
   value?: string;
   defaultValue?: string;
   onChange?: (value: string) => void;
-  mode?: 'date' | 'datetime' | 'time';
+  mode?: 'date' | 'datetime' | 'time' | 'month';
   placeholder?: string;
   name?: string;
   disabled?: boolean;
@@ -69,6 +69,13 @@ export default function AppDateTimePicker({
       }
       return null;
     }
+    if (mode === 'month') {
+      const parts = effectiveValue.split('-');
+      if (parts.length >= 2) {
+        const d = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
+        return isNaN(d.getTime()) ? null : d;
+      }
+    }
     const d = new Date(effectiveValue);
     return isNaN(d.getTime()) ? null : d;
   }, [effectiveValue, mode]);
@@ -85,6 +92,7 @@ export default function AppDateTimePicker({
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     if (!effectiveValue) return '';
     if (mode === 'time') return '';
+    if (mode === 'month') return effectiveValue.slice(0, 7);
     if (effectiveValue.includes('T')) return effectiveValue.split('T')[0];
     return effectiveValue.slice(0, 10);
   });
@@ -104,7 +112,11 @@ export default function AppDateTimePicker({
     if (parsedValue) {
       setViewYear(parsedValue.getFullYear());
       setViewMonth(parsedValue.getMonth());
-      if (mode !== 'time') {
+      if (mode === 'month') {
+        const yyyy = parsedValue.getFullYear();
+        const mm = String(parsedValue.getMonth() + 1).padStart(2, '0');
+        setSelectedDate(`${yyyy}-${mm}`);
+      } else if (mode !== 'time') {
         const yyyy = parsedValue.getFullYear();
         const mm = String(parsedValue.getMonth() + 1).padStart(2, '0');
         const dd = String(parsedValue.getDate()).padStart(2, '0');
@@ -199,6 +211,15 @@ export default function AppDateTimePicker({
       }
       return effectiveValue;
     }
+    if (mode === 'month') {
+      const d = parsedValue;
+      if (!d) return effectiveValue;
+      return d.toLocaleDateString('en-US', {
+        month: 'long',
+        year: 'numeric',
+      });
+    }
+
     const d = parsedValue;
     if (!d) return effectiveValue;
 
@@ -220,11 +241,24 @@ export default function AppDateTimePicker({
     return dateStr;
   }, [effectiveValue, parsedValue, mode]);
 
-  const defaultPlaceholder = mode === 'datetime'
+  const defaultPlaceholder = mode === 'month'
+    ? 'Select month...'
+    : mode === 'datetime'
     ? 'Select date & time...'
     : mode === 'time'
     ? 'Select time...'
     : 'Select date...';
+
+  const handleMonthSelect = (mIndex: number) => {
+    const mm = String(mIndex + 1).padStart(2, '0');
+    const monthStr = `${viewYear}-${mm}`;
+    setInternalVal(monthStr);
+    setSelectedDate(monthStr);
+    setViewMonth(mIndex);
+    onChange?.(monthStr);
+    setIsOpen(false);
+    triggerRef.current?.focus();
+  };
 
   // Navigation handlers
   const prevMonth = () => {
@@ -537,7 +571,31 @@ export default function AppDateTimePicker({
           )}
 
           {/* Month / Year Header */}
-          {mode !== 'time' && (
+          {mode === 'month' ? (
+            <div className="flex items-center justify-between px-1">
+              <button
+                type="button"
+                onClick={() => setViewYear((y) => y - 1)}
+                className="w-9 h-9 rounded-xl border border-border bg-card hover:bg-muted text-foreground flex items-center justify-center transition shadow-xs focus-visible:ring-2 focus-visible:ring-primary"
+                aria-label="Previous year"
+              >
+                <ChevronLeft size={18} />
+              </button>
+
+              <div className="flex items-center gap-1.5 text-base font-extrabold text-foreground tracking-tight">
+                <span className="text-primary">{viewYear}</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setViewYear((y) => y + 1)}
+                className="w-9 h-9 rounded-xl border border-border bg-card hover:bg-muted text-foreground flex items-center justify-center transition shadow-xs focus-visible:ring-2 focus-visible:ring-primary"
+                aria-label="Next year"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          ) : mode !== 'time' ? (
             <div className="flex items-center justify-between px-1">
               <button
                 type="button"
@@ -562,10 +620,34 @@ export default function AppDateTimePicker({
                 <ChevronRight size={18} />
               </button>
             </div>
-          )}
+          ) : null}
 
-          {/* Calendar Grid */}
-          {mode !== 'time' && (
+          {/* Month Selector Grid (for mode="month") */}
+          {mode === 'month' ? (
+            <div className="grid grid-cols-3 gap-2 p-1">
+              {MONTH_NAMES.map((mName, index) => {
+                const mm = String(index + 1).padStart(2, '0');
+                const isSelected = selectedDate === `${viewYear}-${mm}`;
+                const isCurrentMonthThisYear = new Date().getFullYear() === viewYear && new Date().getMonth() === index;
+                return (
+                  <button
+                    key={mName}
+                    type="button"
+                    onClick={() => handleMonthSelect(index)}
+                    className={`py-2.5 px-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+                      isSelected
+                        ? 'bg-primary text-primary-foreground font-extrabold shadow-md scale-105'
+                        : isCurrentMonthThisYear
+                        ? 'border-2 border-primary text-primary font-bold'
+                        : 'text-foreground hover:bg-primary/10 hover:text-primary'
+                    }`}
+                  >
+                    {mName.slice(0, 3)}
+                  </button>
+                );
+              })}
+            </div>
+          ) : mode !== 'time' ? (
             <div>
               {/* Day of Week Labels */}
               <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold text-muted-foreground/80 mb-1.5">
@@ -601,7 +683,7 @@ export default function AppDateTimePicker({
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Time Picker Section (for datetime or time mode) */}
           {(mode === 'datetime' || mode === 'time') && (
