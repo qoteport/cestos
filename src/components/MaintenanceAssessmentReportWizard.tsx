@@ -136,66 +136,103 @@ export default function MaintenanceAssessmentReportWizard({
 
   const tableSection = (sectionKey: string) => {
     const definition = sectionDefinitions[sectionKey];
-    if (sectionKey === 'manpower_requirements') return <section key={sectionKey} className="space-y-2"><h3 className={sectionHeadingClass}>{definition.title}</h3><textarea className="input-field min-h-32 w-full resize-y" aria-label={definition.title} value={data.manpower_requirements || ''} onChange={(event) => patch('manpower_requirements', event.target.value)} maxLength={20000} /></section>;
+    if (sectionKey === 'manpower_requirements') return <section key={sectionKey} className="space-y-2"><h3 className={sectionHeadingClass}>{definition.title}</h3><textarea className={`input-field min-h-32 w-full resize-y ${mode === 'FREE_FLOW' ? 'rounded-none' : ''}`} aria-label={definition.title} value={data.manpower_requirements || ''} onChange={(event) => patch('manpower_requirements', event.target.value)} maxLength={20000} /></section>;
     return <div className="space-y-3" key={sectionKey}>
-      <div className={`flex items-center justify-between gap-2 ${sectionHeadingClass}`}><h3 className="text-sm font-bold">{definition.title}</h3><button type="button" className="btn-secondary text-xs" onClick={() => addRow(sectionKey)}>+ Add row</button></div>
-      {(data[sectionKey] || []).map((row: ReportRow, index: number) => <div key={`${sectionKey}-${index}`} className="grid gap-3 rounded-lg border border-border bg-muted/10 p-3 sm:grid-cols-2 lg:grid-cols-3">
-        {definition.columns.map((column) => {
-          if (column.asset) {
-            const showCustom = row.asset_id === '__CUSTOM__' || (!row.asset_id && Boolean(row[column.key]));
-            return <div className="space-y-1" key={column.key}>
-              <span className="block font-medium">{column.label}</span>
-              {showCustom ? <div className="space-y-1">
-                <input autoFocus className="input-field" value={row[column.key] || ''} onChange={(event) => patchRow(sectionKey, index, column.key, event.target.value)} placeholder={`Enter custom ${column.label.toLowerCase()}`} />
-                <button type="button" className="text-primary underline" onClick={() => { patchRow(sectionKey, index, 'asset_id', ''); patchRow(sectionKey, index, column.key, ''); }}>Choose registered equipment</button>
-              </div> : <SearchableSelect
-                options={[{ value: '__CUSTOM__', label: `Enter custom ${column.label.toLowerCase()}…` }, ...assetOptions]}
-                value={row.asset_id || ''}
-                onChange={(value) => {
-                  if (value === '__CUSTOM__') { patchRow(sectionKey, index, 'asset_id', '__CUSTOM__'); patchRow(sectionKey, index, column.key, ''); return; }
-                  const asset = assets.find((item) => String(item.id) === String(value));
-                  patchRow(sectionKey, index, 'asset_id', value);
-                  patchRow(sectionKey, index, column.key, asset?.name || asset?.asset_name || asset?.asset_number || '');
-                }}
-                placeholder={`Search ${column.label.toLowerCase()} or enter custom`}
-              />}
-            </div>;
-          }
-          return <label className={column.wide ? 'space-y-1 sm:col-span-2' : 'space-y-1'} key={column.key}>
-            <span className="block font-medium">{column.label}</span>
-            {column.key === 'priority' ? (
-              <SearchableSelect
-                options={[
-                  { value: 'LOW', label: 'LOW' },
-                  { value: 'MEDIUM', label: 'MEDIUM' },
-                  { value: 'HIGH', label: 'HIGH' },
-                  { value: 'CRITICAL', label: 'CRITICAL' },
-                ]}
-                value={row[column.key] || ''}
-                onChange={(val) => patchRow(sectionKey, index, column.key, val)}
-                placeholder="Select priority"
-              />
-            ) : column.key === 'status' || column.key === 'current_status' ? (
-              <SearchableSelect
-                options={[
-                  { value: 'OPEN', label: 'OPEN' },
-                  { value: 'IN_PROGRESS', label: 'IN PROGRESS' },
-                  { value: 'COMPLETED', label: 'COMPLETED' },
-                  { value: 'ON_HOLD', label: 'ON HOLD' },
-                  { value: 'MONITORING', label: 'MONITORING' },
-                  { value: 'CANCELLED', label: 'CANCELLED' },
-                ]}
-                value={row[column.key] || ''}
-                onChange={(val) => patchRow(sectionKey, index, column.key, val)}
-                placeholder="Select status"
-              />
-            ) : ['observation_failure', 'action_taken_response', 'maintenance_focus', 'current_approach', 'purpose', 'justification'].includes(column.key)
-              ? <textarea className="input-field min-h-20 resize-y" value={row[column.key] || ''} onChange={(event) => patchRow(sectionKey, index, column.key, event.target.value)} />
-              : <input className="input-field" value={row[column.key] || ''} onChange={(event) => patchRow(sectionKey, index, column.key, event.target.value)} />}
-          </label>;
-        })}
-        <div className="flex items-end justify-end"><button type="button" className="text-xs font-semibold text-red-700" onClick={() => removeRow(sectionKey, index)} disabled={data[sectionKey].length <= 1}>Remove row</button></div>
-      </div>)}
+      <div className={`flex items-center justify-between gap-2 ${sectionHeadingClass}`}><h3 className="text-sm font-bold">{definition.title}</h3><button type="button" className={`btn-secondary text-xs rounded-none ${mode === 'FREE_FLOW' ? 'border-slate-400' : ''}`} onClick={() => addRow(sectionKey)}>+ Add row</button></div>
+      {(data[sectionKey] || []).map((row: ReportRow, index: number) => {
+        // Order columns for Maintenance Assessment & Corrective Action so status dropdown comes before text inputs
+        let columnsToRender = definition.columns;
+        if (sectionKey === 'maintenance_assessment') {
+          const areaCol = definition.columns.find((c) => c.key === 'area_equipment');
+          const statusCol = definition.columns.find((c) => c.key === 'current_status');
+          const obsCol = definition.columns.find((c) => c.key === 'observation_failure');
+          const actCol = definition.columns.find((c) => c.key === 'action_taken_response');
+          columnsToRender = [areaCol, statusCol, obsCol, actCol].filter((c): c is Column => Boolean(c));
+        }
+
+        const gridColsClass = sectionKey === 'equipment_fleet'
+          ? 'grid gap-3 border border-border bg-muted/10 p-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 ' + (mode === 'FREE_FLOW' ? 'rounded-none' : 'rounded-lg')
+          : sectionKey === 'maintenance_assessment'
+          ? 'grid gap-3 border border-border bg-muted/10 p-3 grid-cols-1 md:grid-cols-2 ' + (mode === 'FREE_FLOW' ? 'rounded-none' : 'rounded-lg')
+          : 'grid gap-3 border border-border bg-muted/10 p-3 sm:grid-cols-2 lg:grid-cols-3 ' + (mode === 'FREE_FLOW' ? 'rounded-none' : 'rounded-lg');
+
+        return (
+          <div key={`${sectionKey}-${index}`} className={gridColsClass}>
+            {columnsToRender.map((column) => {
+              if (column.asset) {
+                const showCustom = row.asset_id === '__CUSTOM__' || (!row.asset_id && Boolean(row[column.key]));
+                const colSpanClass = sectionKey === 'equipment_fleet' ? 'space-y-1 col-span-1 sm:col-span-2 lg:col-span-2' : sectionKey === 'maintenance_assessment' ? 'space-y-1 md:col-span-1' : 'space-y-1';
+                return <div className={colSpanClass} key={column.key}>
+                  <span className="block font-medium">{column.label}</span>
+                  {showCustom ? <div className="space-y-1">
+                    <input autoFocus className={`input-field ${mode === 'FREE_FLOW' ? 'rounded-none' : ''}`} value={row[column.key] || ''} onChange={(event) => patchRow(sectionKey, index, column.key, event.target.value)} placeholder={`Enter custom ${column.label.toLowerCase()}`} />
+                    <button type="button" className="text-primary underline" onClick={() => { patchRow(sectionKey, index, 'asset_id', ''); patchRow(sectionKey, index, column.key, ''); }}>Choose registered equipment</button>
+                  </div> : <SearchableSelect
+                    className={mode === 'FREE_FLOW' ? 'rounded-none' : ''}
+                    options={[{ value: '__CUSTOM__', label: `Enter custom ${column.label.toLowerCase()}…` }, ...assetOptions]}
+                    value={row.asset_id || ''}
+                    onChange={(value) => {
+                      if (value === '__CUSTOM__') { patchRow(sectionKey, index, 'asset_id', '__CUSTOM__'); patchRow(sectionKey, index, column.key, ''); return; }
+                      const asset = assets.find((item) => String(item.id) === String(value));
+                      patchRow(sectionKey, index, 'asset_id', value);
+                      patchRow(sectionKey, index, column.key, asset?.name || asset?.asset_name || asset?.asset_number || '');
+                    }}
+                    placeholder={`Search ${column.label.toLowerCase()} or enter custom`}
+                  />}
+                </div>;
+              }
+
+              let colSpanClass = 'space-y-1';
+              if (sectionKey === 'equipment_fleet') {
+                if (column.key === 'quantity') colSpanClass = 'space-y-1 col-span-1 sm:col-span-1 lg:col-span-1';
+                else if (column.key === 'maintenance_focus') colSpanClass = 'space-y-1 col-span-1 sm:col-span-1 lg:col-span-2';
+                else if (column.key === 'current_approach') colSpanClass = 'space-y-1 col-span-1 sm:col-span-2 lg:col-span-1';
+              } else if (sectionKey === 'maintenance_assessment') {
+                if (column.key === 'current_status') colSpanClass = 'space-y-1 md:col-span-1';
+                else if (column.wide || column.key === 'observation_failure' || column.key === 'action_taken_response') colSpanClass = 'space-y-1 md:col-span-2';
+              } else if (column.wide) {
+                colSpanClass = 'space-y-1 sm:col-span-2';
+              }
+
+              return <label className={colSpanClass} key={column.key}>
+                <span className="block font-medium">{column.label}</span>
+                {column.key === 'priority' ? (
+                  <SearchableSelect
+                    className={mode === 'FREE_FLOW' ? 'rounded-none' : ''}
+                    options={[
+                      { value: 'LOW', label: 'LOW' },
+                      { value: 'MEDIUM', label: 'MEDIUM' },
+                      { value: 'HIGH', label: 'HIGH' },
+                      { value: 'CRITICAL', label: 'CRITICAL' },
+                    ]}
+                    value={row[column.key] || ''}
+                    onChange={(val) => patchRow(sectionKey, index, column.key, val)}
+                    placeholder="Select priority"
+                  />
+                ) : column.key === 'status' || column.key === 'current_status' ? (
+                  <SearchableSelect
+                    className={mode === 'FREE_FLOW' ? 'rounded-none' : ''}
+                    options={[
+                      { value: 'OPEN', label: 'OPEN' },
+                      { value: 'IN_PROGRESS', label: 'IN PROGRESS' },
+                      { value: 'COMPLETED', label: 'COMPLETED' },
+                      { value: 'ON_HOLD', label: 'ON HOLD' },
+                      { value: 'MONITORING', label: 'MONITORING' },
+                      { value: 'CANCELLED', label: 'CANCELLED' },
+                    ]}
+                    value={row[column.key] || ''}
+                    onChange={(val) => patchRow(sectionKey, index, column.key, val)}
+                    placeholder="Select status"
+                  />
+                ) : ['observation_failure', 'action_taken_response', 'maintenance_focus', 'current_approach', 'purpose', 'justification'].includes(column.key)
+                  ? <textarea className={`input-field min-h-20 resize-y ${mode === 'FREE_FLOW' ? 'rounded-none' : ''}`} value={row[column.key] || ''} onChange={(event) => patchRow(sectionKey, index, column.key, event.target.value)} />
+                  : <input className={`input-field ${mode === 'FREE_FLOW' ? 'rounded-none' : ''}`} value={row[column.key] || ''} onChange={(event) => patchRow(sectionKey, index, column.key, event.target.value)} />}
+              </label>;
+            })}
+            <div className="flex items-end justify-end sm:col-span-2 lg:col-span-6"><button type="button" className="text-xs font-semibold text-red-700" onClick={() => removeRow(sectionKey, index)} disabled={data[sectionKey].length <= 1}>Remove row</button></div>
+          </div>
+        );
+      })}
     </div>;
   };
 
@@ -252,7 +289,7 @@ export default function MaintenanceAssessmentReportWizard({
       </div>
       {error && <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-red-800">{error}</div>}
       {mode === 'ASSISTED' && <div className="flex flex-wrap gap-1.5">{steps.map((item, index) => <button key={item.title} type="button" onClick={() => setStep(index)} className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${step === index ? 'border-blue-800 bg-blue-800 text-white' : 'text-muted-foreground'}`}>{index + 1}. {item.title}</button>)}</div>}
-      <div className={`max-h-[64vh] space-y-6 overflow-y-auto p-1 ${mode === 'FREE_FLOW' ? 'bg-slate-100 p-2 sm:p-4' : ''}`}>{mode === 'ASSISTED' ? steps[step].body : steps.map((item) => <section key={item.title} className="space-y-4 bg-white p-3 text-slate-900 shadow sm:p-4 rounded-none [&_input]:rounded-none [&_textarea]:rounded-none [&_div.rounded-lg]:rounded-none"><h2 className={sectionHeadingClass}>{item.title}</h2>{item.body}</section>)}</div>
+      <div className={`max-h-[64vh] space-y-6 overflow-y-auto p-1 ${mode === 'FREE_FLOW' ? 'bg-slate-100 p-2 sm:p-4' : ''}`}>{mode === 'ASSISTED' ? steps[step].body : steps.map((item) => <section key={item.title} className="space-y-4 bg-white p-3 text-slate-900 shadow sm:p-4 rounded-none [&_input]:rounded-none [&_textarea]:rounded-none [&_div]:rounded-none [&_button]:rounded-none"><h2 className={sectionHeadingClass}>{item.title}</h2>{item.body}</section>)}</div>
     </div>
   </Modal>;
 }
