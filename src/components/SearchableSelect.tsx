@@ -267,25 +267,27 @@ export default function SearchableSelect({
         >
           {/* Search Bar inside dropdown */}
           {shouldShowSearch && (
-            <div className="p-2.5 border-b border-border bg-muted/40 sticky top-0 z-10 flex items-center gap-2">
-              <Search size={15} className="text-muted-foreground shrink-0 ml-1" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                className="w-full text-xs sm:text-sm bg-transparent border-none outline-none focus:ring-0 placeholder:text-muted-foreground text-foreground"
-                placeholder="Search options..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="text-muted-foreground hover:text-foreground p-1 rounded-md"
-                >
-                  <X size={13} />
-                </button>
-              )}
+            <div className="p-2 border-b border-border/60 bg-muted/20 sticky top-0 z-10">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-background border border-border/80 rounded-xl focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
+                <Search size={14} className="text-muted-foreground shrink-0" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  className="w-full text-xs sm:text-sm bg-transparent border-none outline-none focus:ring-0 placeholder:text-muted-foreground text-foreground p-0"
+                  placeholder="Search options..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="text-muted-foreground hover:text-foreground p-0.5 rounded-md"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -564,17 +566,26 @@ export function MultiSearchableSelect({
           aria-multiselectable="true"
           className="bg-background dark:bg-slate-900 border border-border shadow-2xl rounded-2xl overflow-hidden flex flex-col animate-in fade-in-50 zoom-in-95"
         >
-          <div className="p-2.5 border-b border-border bg-muted/40 sticky top-0 z-10 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 flex-1">
-              <Search size={15} className="text-muted-foreground shrink-0 ml-1" />
+          <div className="p-2 border-b border-border/60 bg-muted/20 sticky top-0 z-10 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-background border border-border/80 rounded-xl focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all flex-1">
+              <Search size={14} className="text-muted-foreground shrink-0" />
               <input
                 ref={searchInputRef}
                 type="text"
-                className="w-full text-xs sm:text-sm bg-transparent border-none outline-none focus:ring-0 placeholder:text-muted-foreground text-foreground"
+                className="w-full text-xs sm:text-sm bg-transparent border-none outline-none focus:ring-0 placeholder:text-muted-foreground text-foreground p-0"
                 placeholder="Search options..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="text-muted-foreground hover:text-foreground p-0.5 rounded-md"
+                >
+                  <X size={13} />
+                </button>
+              )}
             </div>
             {values.length > 0 && (
               <span className="text-[10px] text-primary font-bold px-2 py-0.5 bg-primary/10 rounded-md border border-primary/20 shrink-0">
