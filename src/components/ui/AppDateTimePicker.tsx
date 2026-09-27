@@ -215,7 +215,7 @@ export default function AppDateTimePicker({
       const d = parsedValue;
       if (!d) return effectiveValue;
       return d.toLocaleDateString('en-US', {
-        month: 'long',
+        month: 'short',
         year: 'numeric',
       });
     }

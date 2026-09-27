@@ -18,11 +18,12 @@ type EmployeeOption = {
 
 type TimesheetRow = {
   id: string;
-  employee_id: string;
+  employee_id: string | null;
   employee_name: string;
   employee_number?: string;
   period: string;
   site_name?: string | null;
+  project_name?: string | null;
   daily_hours: Record<number, number>;
   total_hours: number;
   days_worked: number;
@@ -128,7 +129,7 @@ export default function EmployeeTimesheetsWorkspace({
 
   function openEdit(row: TimesheetRow) {
     setEditing(row);
-    setEmployeeId(row.employee_id);
+    setEmployeeId(row.employee_id || '');
     setFormPeriod(row.period);
     setSiteName(row.site_name || '');
     setDailyHours(Object.fromEntries(Object.entries(row.daily_hours || {}).map(([day, hours]) => [Number(day), String(hours)])));
@@ -233,14 +234,14 @@ export default function EmployeeTimesheetsWorkspace({
                 {rows.length === 0 ? <tr><td colSpan={daysInPeriod + (canReport ? 5 : 4)} className="p-10 text-center text-sm text-slate-500">No time sheets have been reported for this month.</td></tr> : rows.map((row) => (
                   <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                     <td className="sticky left-0 z-20 w-[210px] min-w-[210px] max-w-[210px] border-r border-slate-100 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900"><span className="block truncate font-bold text-slate-900 dark:text-white">{row.employee_name}</span><span className="mt-0.5 block truncate font-mono text-[10px] text-slate-500">{row.employee_number || '—'}</span></td>
-                    <td className="sticky left-[210px] z-20 w-[115px] min-w-[115px] max-w-[115px] border-r border-slate-100 bg-white px-3 py-2 text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"><span className="block truncate">{row.site_name || '—'}</span></td>
+                    <td className="sticky left-[210px] z-20 w-[115px] min-w-[115px] max-w-[115px] border-r border-slate-100 bg-white px-3 py-2 text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"><span className="block truncate">{row.site_name || '—'}</span>{row.project_name && <span className="block truncate text-[10px] text-slate-400" title={row.project_name}>{row.project_name}</span>}</td>
                     {calendarDays.map(({ day }) => {
                       const value = row.daily_hours?.[day];
                       return <td key={day} className={`px-2 py-2 text-center tabular-nums ${typeof value === 'number' && value > 0 ? 'font-semibold text-slate-800 dark:text-slate-200' : 'text-slate-400'}`}>{typeof value === 'number' ? value : '—'}</td>;
                     })}
                     <td className="border-l border-slate-100 px-3 py-2 text-right font-extrabold tabular-nums text-slate-900 dark:border-slate-800 dark:text-white">{Number(row.total_hours || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-slate-600 dark:text-slate-300">{row.days_worked}</td>
-                    {canReport && <td className="sticky right-0 border-l border-slate-100 bg-white px-2 py-2 text-center dark:border-slate-800 dark:bg-slate-900"><button type="button" onClick={() => openEdit(row)} className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-2 py-1.5 font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><Pencil size={12} /> Edit</button></td>}
+                    {canReport && <td className="sticky right-0 border-l border-slate-100 bg-white px-2 py-2 text-center dark:border-slate-800 dark:bg-slate-900">{row.employee_id && <button type="button" onClick={() => openEdit(row)} className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-2 py-1.5 font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><Pencil size={12} /> Edit</button>}</td>}
                   </tr>
                 ))}
               </tbody>

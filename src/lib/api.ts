@@ -48,8 +48,16 @@ export function invalidateMemoryApiCache() {
 let backendHealthCheckedAt = 0;
 let backendIsReachable = false;
 let backendHealthCheck: Promise<boolean> | null = null;
+let connectivityListenerConfigured = false;
 
 async function checkApiBackend(force = false): Promise<boolean> {
+  if (!connectivityListenerConfigured && typeof window !== 'undefined') {
+    connectivityListenerConfigured = true;
+    window.addEventListener('online', () => {
+      backendHealthCheckedAt = 0;
+      backendIsReachable = false;
+    });
+  }
   if (!force && Date.now() - backendHealthCheckedAt < 8_000) return backendIsReachable;
   if (backendHealthCheck) return backendHealthCheck;
   const controller = new AbortController();
@@ -141,6 +149,8 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, authe
   if (typeof window === 'undefined') return {} as T;
   const method = (options.method || 'GET').toUpperCase();
   const isRead = method === 'GET' || method === 'HEAD';
+  const isOnlineOnlyAuth = /\/(?:auth\/(?:login|refresh|logout|password-reset|reset-password|forgot-password)|hr\/password-reset)(?:\/|$)/i.test(path);
+  const mayQueue = policy.queueWhenOffline !== false && !isOnlineOnlyAuth;
   const token = authenticated ? getAccessToken() : null;
   setupCacheInvalidation();
   const cacheKey = memoryCacheKey(path, token);
@@ -155,7 +165,10 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, authe
     }
     throw new ApiError(0, 'This information is not available offline yet. Open it while connected, then it will be available on this device.');
   }
-  if (!isRead && policy.queueWhenOffline !== false && (navigator.onLine === false || !(await checkApiBackend()))) {
+  // Authentication requests must reach the server directly. In installed PWAs,
+  // navigator.onLine and a cached health probe can briefly be stale on resume;
+  // treating that as offline produces a misleading "cannot be queued" login error.
+  if (!isRead && mayQueue && (navigator.onLine === false || !(await checkApiBackend()))) {
     return enqueueRequest(path, options, method, authenticated, offlineScope);
   }
   const headers = new Headers(options.headers);
@@ -169,7 +182,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, authe
       const cached = await readCachedApiResponse<T>(offlineScope, path);
       if (cached !== undefined) return cached;
     }
-    if (!isRead && policy.queueWhenOffline !== false && !(await checkApiBackend(true))) {
+    if (!isRead && mayQueue && !(await checkApiBackend(true))) {
       return enqueueRequest(path, options, method, authenticated, offlineScope);
     }
     throw new ApiError(0, 'Cannot reach the server. Check your connection and try again.');
@@ -187,7 +200,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, authe
     const cached = await readCachedApiResponse<T>(offlineScope, path);
     if (cached !== undefined) return cached;
   }
-  if (!isRead && policy.queueWhenOffline !== false && response.status >= 500 && !(await checkApiBackend(true))) {
+  if (!isRead && mayQueue && response.status >= 500 && !(await checkApiBackend(true))) {
     return enqueueRequest(path, options, method, authenticated, offlineScope);
   }
   const result = await readResponse<T>(response);

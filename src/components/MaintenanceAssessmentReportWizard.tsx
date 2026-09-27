@@ -222,7 +222,7 @@ export default function MaintenanceAssessmentReportWizard({
       <label className="space-y-1"><span className="block font-medium">Position</span><input className="input-field" value={data.prepared_by_position || ''} onChange={(e) => patch('prepared_by_position', e.target.value)} maxLength={150} /></label>
       <label className="space-y-1"><span className="block font-medium">Submitted to</span><input className="input-field" value={data.submitted_to || ''} onChange={(e) => patch('submitted_to', e.target.value)} maxLength={200} /></label>
     </div>
-    {mode === 'ASSISTED' && <section className="space-y-2 border border-border p-3">
+    {mode === 'ASSISTED' && <section className="space-y-2 border border-border rounded-md p-3">
       <label className="block space-y-1 font-medium"><span className="flex items-center gap-2"><Paperclip size={14} /> Attach supporting files (.csv, .xlsx, .pdf, images)</span><input type="file" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.tsv" onChange={(event) => {
         const added = Array.from(event.target.files || []);
         setPendingFiles((files) => [...files, ...added]);
@@ -315,6 +315,7 @@ export default function MaintenanceAssessmentReportWizard({
                       { value: 'MEDIUM', label: 'MEDIUM' },
                       { value: 'HIGH', label: 'HIGH' },
                       { value: 'CRITICAL', label: 'CRITICAL' },
+                      ...(row[column.key] && !['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].includes(String(row[column.key]).toUpperCase()) ? [{ value: String(row[column.key]), label: String(row[column.key]) }] : []),
                     ]}
                     value={row[column.key] || ''}
                     onChange={(val) => patchRow(sectionKey, index, column.key, val)}
@@ -330,6 +331,7 @@ export default function MaintenanceAssessmentReportWizard({
                       { value: 'ON_HOLD', label: 'ON HOLD' },
                       { value: 'MONITORING', label: 'MONITORING' },
                       { value: 'CANCELLED', label: 'CANCELLED' },
+                      ...(row[column.key] && !['OPEN', 'IN_PROGRESS', 'COMPLETED', 'ON_HOLD', 'MONITORING', 'CANCELLED'].includes(String(row[column.key]).toUpperCase().replace(/\s+/g, '_')) ? [{ value: String(row[column.key]), label: String(row[column.key]) }] : []),
                     ]}
                     value={row[column.key] || ''}
                     onChange={(val) => patchRow(sectionKey, index, column.key, val)}
