@@ -18,6 +18,10 @@ import BreakdownJobCardWizard from './BreakdownJobCardWizard';
 import PreventiveMaintenanceWizard from './PreventiveMaintenanceWizard';
 import MaintenanceAssessmentReportWizard from './MaintenanceAssessmentReportWizard';
 import MaintenanceAssessmentReportDetailsModal from './MaintenanceAssessmentReportDetailsModal';
+import FleetKPIGrid from '@/app/fleet-dashboard/components/FleetKPIGrid';
+import FleetByProjectChart from '@/app/fleet-dashboard/components/FleetByProjectChart';
+import FleetAttentionPanel from '@/app/fleet-dashboard/components/FleetAttentionPanel';
+import AssetStatusTable from '@/app/fleet-dashboard/components/AssetStatusTable';
 import ActionTrackerWizard, { ActionTrackerDetails } from './ActionTrackerWizard';
 import PMTrackerWizard, { PMTrackerDetails } from './PMTrackerWizard';
 import EquipmentRegisterWizard, { EquipmentRegisterDetails } from './EquipmentRegisterWizard';
@@ -171,6 +175,7 @@ export default function FieldAdminPortalWorkspace() {
   const [editingEquipmentRegister, setEditingEquipmentRegister] = useState<any | null>(null);
   const [viewingEquipmentRegister, setViewingEquipmentRegister] = useState<any | null>(null);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [equipmentSubTab, setEquipmentSubTab] = useState<'ANALYTICS' | 'EQUIPMENT'>('ANALYTICS');
   const [showHseModal, setShowHseModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [selectedMaintenanceRecord, setSelectedMaintenanceRecord] = useState<{ record: any; kind: 'work_order' | 'preventive' | 'breakdown'; startEditing: boolean } | null>(null);
@@ -2209,6 +2214,38 @@ Signed: Field Operations Administration
             {/* EQUIPMENT TAB */}
             {activeTab === 'EQUIPMENT' && (
               <div className="space-y-4">
+                <div role="tablist" aria-label="Equipment sub-tabs" className="flex gap-2 border-b border-slate-200 dark:border-slate-800">
+                  {([{ id: 'ANALYTICS', label: 'Analytics' }, { id: 'EQUIPMENT', label: 'Equipment' }] as const).map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={equipmentSubTab === tab.id}
+                      onClick={() => setEquipmentSubTab(tab.id)}
+                      className={`border-b-2 px-4 py-2.5 text-sm font-bold ${
+                        equipmentSubTab === tab.id
+                          ? 'border-orange-600 text-orange-700 dark:text-orange-400'
+                          : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                {equipmentSubTab === 'ANALYTICS' ? (
+                  <div className="space-y-6">
+                    <FleetKPIGrid />
+                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                      <div className="xl:col-span-2">
+                        <FleetByProjectChart />
+                      </div>
+                      <div>
+                        <FleetAttentionPanel />
+                      </div>
+                    </div>
+                    <AssetStatusTable />
+                  </div>
+                ) : (
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
                     <div>
@@ -2310,6 +2347,7 @@ Signed: Field Operations Administration
                     </table>
                   </div>
                 </div>
+                )}
               </div>
             )}
 

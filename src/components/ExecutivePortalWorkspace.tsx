@@ -5,6 +5,10 @@ import SearchableSelect from './SearchableSelect';
 import AppDateTimePicker from './ui/AppDateTimePicker';
 import WorkforceKPIStrip from '@/app/workforce-overview/components/WorkforceKPIStrip';
 import WorkforceCharts from '@/app/workforce-overview/components/WorkforceCharts';
+import FleetKPIGrid from '@/app/fleet-dashboard/components/FleetKPIGrid';
+import FleetByProjectChart from '@/app/fleet-dashboard/components/FleetByProjectChart';
+import FleetAttentionPanel from '@/app/fleet-dashboard/components/FleetAttentionPanel';
+import AssetStatusTable from '@/app/fleet-dashboard/components/AssetStatusTable';
 import AppLogo from './ui/AppLogo';
 import NotificationWorkspace from './NotificationWorkspace';
 import useNotificationCount from './useNotificationCount';
@@ -204,7 +208,7 @@ export default function ExecutivePortalWorkspace() {
   const [activeTab, setActiveTab] = useState<ExecutiveTab>('EXPENSES');
   const [peopleSubTab, setPeopleSubTab] = useState<'ANALYTICS' | 'EMPLOYEES' | 'TIMESHEETS'>('ANALYTICS');
   const handledRecordLink = useRef('');
-  const [equipmentTab, setEquipmentTab] = useState<'ASSETS' | 'MAINTENANCE'>('ASSETS');
+  const [equipmentTab, setEquipmentTab] = useState<'ANALYTICS' | 'ASSETS' | 'MAINTENANCE'>('ANALYTICS');
   const [maintFilter, setMaintFilter] = useState<string>('ALL');
   useEffect(() => {
     const tabParam = new URLSearchParams(window.location.search).get('tab') as ExecutiveTab;
@@ -2045,13 +2049,26 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
               </p>
             </div>
             <div className="flex gap-1 border-b border-slate-200 dark:border-slate-800" role="tablist" aria-label="Equipment sections">
-              {([{ id: 'ASSETS', label: 'Assets', icon: Truck }, { id: 'MAINTENANCE', label: 'Maintenance', icon: Wrench }] as const).map((tab) => {
+              {([{ id: 'ANALYTICS', label: 'Analytics', icon: TrendingUp }, { id: 'ASSETS', label: 'Assets', icon: Truck }, { id: 'MAINTENANCE', label: 'Maintenance', icon: Wrench }] as const).map((tab) => {
                 const Icon = tab.icon;
                 const selected = equipmentTab === tab.id;
                 return <button key={tab.id} type="button" role="tab" aria-selected={selected} onClick={() => setEquipmentTab(tab.id)} className={`inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${selected ? 'border-indigo-600 text-indigo-700 dark:text-indigo-300' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}><Icon size={16} />{tab.label}</button>;
               })}
             </div>
-            {equipmentTab === 'ASSETS' ? (
+            {equipmentTab === 'ANALYTICS' ? (
+              <div role="tabpanel" className="space-y-6">
+                <FleetKPIGrid />
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                  <div className="xl:col-span-2">
+                    <FleetByProjectChart />
+                  </div>
+                  <div>
+                    <FleetAttentionPanel />
+                  </div>
+                </div>
+                <AssetStatusTable />
+              </div>
+            ) : equipmentTab === 'ASSETS' ? (
               <div role="tabpanel" className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
                 <ResourceWorkspace resource="assets" readOnly={true} />
               </div>
