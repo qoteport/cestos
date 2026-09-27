@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import SearchableSelect from './SearchableSelect';
 import { X, Upload, Download, FileSpreadsheet, CheckCircle2, Circle, ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import BreakdownJobCardWizard from './BreakdownJobCardWizard';
 import PreventiveMaintenanceWizard from './PreventiveMaintenanceWizard';
@@ -142,10 +143,8 @@ export default function CommandCenterMaintenanceCsvModal({ onClose, initialKind 
         <div className="flex-1 space-y-5 overflow-y-auto p-6">
           <p className="text-xs font-medium text-slate-600 dark:text-slate-400">Upload one record type at a time. Each row opens in its free-flow form for review and editing before it is saved.</p>
           <div className="grid gap-4 md:grid-cols-3">
-            <label className="block space-y-1.5"><span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Record type</span><select className="input-field w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-medium" value={kind} onChange={(event) => { setKind(event.target.value as Kind); setRows([]); setFileName(''); setError(''); }}>
-              {(Object.keys(definitions) as Kind[]).map((key) => <option key={key} value={key}>{definitions[key].label}</option>)}
-            </select></label>
-            <label className="block space-y-1.5"><span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Default project (optional)</span><select className="input-field w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-medium" value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="">Use project_id from CSV / form</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name || project.project_name || project.project_number || project.id}</option>)}</select></label>
+            <div className="block space-y-1.5"><span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Record type</span><SearchableSelect value={kind} onChange={(val) => { setKind(val as Kind); setRows([]); setFileName(''); setError(''); }} options={(Object.keys(definitions) as Kind[]).map((key) => ({ value: key, label: definitions[key].label }))} searchable={false} /></div>
+            <div className="block space-y-1.5"><span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Default project (optional)</span><SearchableSelect value={projectId} onChange={(val) => setProjectId(val)} options={[{ value: '', label: 'Use project_id from CSV / form' }, ...projectOptions]} placeholder="Use project_id from CSV / form" searchable /></div>
             <div className="flex items-end gap-2"><button type="button" onClick={downloadTemplate} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 px-3.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition shadow-xs"><Download size={15} />Download template</button><label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-[#184877] px-4 text-xs font-bold text-white hover:bg-[#123f68] transition shadow-xs"><Upload size={15} />Upload CSV<input type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => void loadCsv(event.target.files?.[0])} /></label></div>
           </div>
           <div className="rounded-2xl border-l-4 border-blue-500 border-y border-r border-blue-200 bg-blue-50/80 dark:bg-blue-950/40 p-4 text-xs text-blue-950 dark:text-blue-200 shadow-xs"><b>CSV format:</b> Use the template headers; nested form fields use dot notation (for example <code>job_control.equipment</code>). Array/object fields accept JSON in one quoted cell. You can also use a single <code>record_json</code> column containing a full JSON record.</div>

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Edit3, LoaderCircle, Search, Trash2 } from 'lucide-react';
 import { Modal, Row } from './DataUI';
 import { apiFetch } from '@/lib/api';
+import SearchableSelect from './SearchableSelect';
 import { toast } from 'sonner';
 
 type Entity = 'projects' | 'employees' | 'equipment' | 'suppliers';
@@ -143,7 +144,7 @@ export default function CommandCenterRecordManagerModal({ onClose, onChanged, ca
       <div className="grid min-h-[65vh] gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(420px,0.9fr)]">
         <section className="min-w-0 space-y-4">
           <div className="grid gap-3 sm:grid-cols-[220px_1fr]">
-            <label className="block space-y-1"><span className="text-xs font-semibold">Record type</span><select className="input-field w-full rounded-xl" value={entity} onChange={(event) => setEntity(event.target.value as Entity)}>{entities.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+            <div className="block space-y-1"><span className="text-xs font-semibold">Record type</span><SearchableSelect value={entity} onChange={(val) => setEntity(val as Entity)} options={entities.map((item) => ({ value: item.id, label: item.label }))} searchable={false} /></div>
             <label className="relative block space-y-1"><span className="text-xs font-semibold">Search records</span><Search size={15} className="absolute left-3 top-9 text-slate-400" /><input className="input-field w-full rounded-xl pl-9" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={`Search ${entity}...`} /></label>
           </div>
           <div className="max-h-[62vh] overflow-auto rounded-2xl border border-slate-200 dark:border-slate-700">
