@@ -79,6 +79,7 @@ import useNotificationData from './useNotificationData';
 import NotificationWorkspace from './NotificationWorkspace';
 import useNotificationCount from './useNotificationCount';
 import LeaveManagementWorkspace from './LeaveManagementWorkspace';
+import EmployeeTimesheetsWorkspace from './EmployeeTimesheetsWorkspace';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -162,6 +163,7 @@ export default function HRPortalWorkspace() {
   const [scopedIncidentsPage, setScopedincidentspage] = React.useState(1);
 
   const [activeTab, setActiveTab] = useState<HRTab>('PEOPLE');
+  const [peopleSubTab, setPeopleSubTab] = useState<'EMPLOYEES' | 'TIMESHEETS'>('EMPLOYEES');
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('tab') === 'NOTIFICATIONS') {
       setActiveTab('NOTIFICATIONS');
@@ -900,12 +902,12 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
             type="button"
             onClick={() => setActiveTab('DOC_REQUESTS')}
             className="relative group w-11 h-11 rounded-xl hover:bg-emerald-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 shrink-0"
-            aria-label="Document Requests"
+            aria-label="Download Requests"
           >
             <Download size={18} />
             <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              Document Requests
+              Download Requests
             </span>
           </button>
         </div>
@@ -1094,6 +1096,10 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
         {/* ─── TAB 1: PEOPLE (Employees Table) ──────────────────────────────── */}
         {activeTab === 'PEOPLE' && (
           <div className="space-y-6">
+            <div role="tablist" aria-label="Employee views" className="flex gap-2 border-b border-slate-200 dark:border-slate-800">
+              {([{ id: 'EMPLOYEES', label: 'Employees' }, { id: 'TIMESHEETS', label: 'Time sheet' }] as const).map((tab) => <button key={tab.id} type="button" role="tab" aria-selected={peopleSubTab === tab.id} onClick={() => setPeopleSubTab(tab.id)} className={`border-b-2 px-4 py-2.5 text-sm font-bold ${peopleSubTab === tab.id ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}>{tab.label}</button>)}
+            </div>
+            {peopleSubTab === 'TIMESHEETS' ? <EmployeeTimesheetsWorkspace employees={employees} canReport accent="emerald" /> : <>
             {/* Header Toolbar */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
@@ -1270,6 +1276,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
               </div>
 
             </div>
+            </>}
           </div>
         )}
 

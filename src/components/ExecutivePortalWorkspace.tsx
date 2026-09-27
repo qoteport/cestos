@@ -86,6 +86,7 @@ import TrackerDetailsModal from './TrackerDetailsModal';
 import { PurchaseOrderCategoryField, purchaseOrderCategoryLabel } from './PurchaseOrderCategoryField';
 import PurchaseOrderCategoryChart from './PurchaseOrderCategoryChart';
 import { useOperationalDataSync } from '@/lib/operationalDataSync';
+import EmployeeTimesheetsWorkspace from './EmployeeTimesheetsWorkspace';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -199,6 +200,7 @@ export default function ExecutivePortalWorkspace() {
   const [scopedIncidentsPage, setScopedincidentspage] = React.useState(1);
 
   const [activeTab, setActiveTab] = useState<ExecutiveTab>('EXPENSES');
+  const [peopleSubTab, setPeopleSubTab] = useState<'EMPLOYEES' | 'TIMESHEETS'>('EMPLOYEES');
   const handledRecordLink = useRef('');
   const [equipmentTab, setEquipmentTab] = useState<'ASSETS' | 'MAINTENANCE'>('ASSETS');
   const [maintFilter, setMaintFilter] = useState<string>('ALL');
@@ -1392,6 +1394,10 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
         {/* ─── TAB 1: PEOPLE (Employees Table) ──────────────────────────────── */}
         {activeTab === 'PEOPLE' && (
           <div className="space-y-6">
+            <div role="tablist" aria-label="Employee views" className="flex gap-2 border-b border-slate-200 dark:border-slate-800">
+              {([{ id: 'EMPLOYEES', label: 'Employees' }, { id: 'TIMESHEETS', label: 'Time sheet' }] as const).map((tab) => <button key={tab.id} type="button" role="tab" aria-selected={peopleSubTab === tab.id} onClick={() => setPeopleSubTab(tab.id)} className={`border-b-2 px-4 py-2.5 text-sm font-bold ${peopleSubTab === tab.id ? 'border-indigo-600 text-indigo-700 dark:text-indigo-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}>{tab.label}</button>)}
+            </div>
+            {peopleSubTab === 'TIMESHEETS' ? <EmployeeTimesheetsWorkspace employees={employees} accent="indigo" /> : <>
             {/* Header Toolbar */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
@@ -1568,6 +1574,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
               </div>
 
             </div>
+            </>}
           </div>
         )}
 
