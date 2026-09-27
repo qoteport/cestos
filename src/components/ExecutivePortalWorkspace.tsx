@@ -2043,7 +2043,6 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
               </div>
             ) : (
               <div role="tabpanel" className="space-y-6">
-                {renderFilterBar()}
                 <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-200 pb-4 dark:border-slate-800">
                   <div>
                     <h3 className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-white"><Wrench size={19} className="text-indigo-600" /> Active Site Work Orders &amp; PM Cards</h3>
