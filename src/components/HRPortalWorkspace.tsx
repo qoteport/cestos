@@ -887,7 +887,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
             className="relative group w-11 h-11 rounded-xl hover:bg-emerald-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 shrink-0"
             aria-label="Book Personnel Leave Request"
           >
-            <Calendar size={18} />
+            <User size={18} />
             <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               Book Personnel Leave Request
