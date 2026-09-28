@@ -8,7 +8,7 @@ import AppDateTimePicker from './ui/AppDateTimePicker';
 
 type Employee = { id: string; first_name?: string; middle_name?: string; last_name?: string; employee_number?: string; is_active?: boolean };
 type Site = { id: string; name?: string; location_number?: string; project_id?: string | null; project_name?: string | null; is_active?: boolean };
-type CsvRow = { cells: string[]; employeeId: string; siteId: string; projectMatchId: string; status: 'ready' | 'saved' | 'error'; error?: string; csvRow: number };
+type CsvRow = { cells: string[]; employeeId: string; siteId: string; projectMatchId: string; status: 'ready' | 'saved' | 'error' | 'summary'; error?: string; csvRow: number };
 
 function parseCsv(text: string): string[][] {
   const rows: string[][] = []; let row: string[] = []; let cell = ''; let quoted = false;
@@ -133,9 +133,10 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
     }));
   }, [projectColumn, projects, sites, siteColumn]);
   const rawEmployee = (row: CsvRow) => employeeColumn >= 0 ? (row.cells[employeeColumn] || '').trim() : '';
-  const readyCount = rows.filter((row) => row.status !== 'saved' && (row.employeeId || rawEmployee(row))).length;
-  const unmatchedCount = rows.filter((row) => row.status !== 'saved' && !(row.employeeId || rawEmployee(row))).length;
+  const readyCount = rows.filter((row) => row.status !== 'saved' && row.status !== 'summary' && (row.employeeId || rawEmployee(row))).length;
+  const unmatchedCount = rows.filter((row) => row.status !== 'saved' && row.status !== 'summary' && !(row.employeeId || rawEmployee(row))).length;
   const savedCount = rows.filter((row) => row.status === 'saved').length;
+  const summaryCount = rows.filter((row) => row.status === 'summary').length;
 
   async function upload(file?: File) {
     if (!file) return;
@@ -156,6 +157,7 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
       if (nextEmployeeCol < 0 && nextNumberCol < 0) throw new Error('Could not find an Employee or Employee Number column in this CSV.');
       const nextSiteCol = matchColumn(nextHeaders, ['site', 'site name', 'location', 'site location', 'work site']);
       const nextProjectCol = matchColumn(nextHeaders, ['project', 'project name', 'project site', 'project location']);
+      const nextDayColumns = nextHeaders.map((header, column) => parseDateHeader(header, inferredPeriod) ? column : -1).filter((column) => column >= 0);
       const imported = matrix.slice(detectedHeaderRow + 1).map((cells, index) => {
         const rawName = nextEmployeeCol >= 0 ? cells[nextEmployeeCol] || '' : '';
         const rawNumber = nextNumberCol >= 0 ? cells[nextNumberCol] || '' : '';
@@ -164,11 +166,17 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
           || employees.find((person) => rawName && normalize([person.first_name, person.middle_name, person.last_name].filter(Boolean).join(' ')) === normalize(rawName));
         const rawSite = nextSiteCol >= 0 ? cells[nextSiteCol] || '' : '';
         const rawProject = nextProjectCol >= 0 ? cells[nextProjectCol] || '' : '';
+        const summaryLabel = /(^|\s)(hrs?|hours?|grand total|total)(\s|$)/.test(normalize(rawName));
+        const hasAggregateHours = nextDayColumns.some((column) => {
+          const value = Number((cells[column] || '').replace(/[$,\s]/g, ''));
+          return Number.isFinite(value) && value > 24;
+        });
+        const isSummary = summaryLabel || (!rawName.trim() && !rawNumber.trim() && hasAggregateHours);
         const project = projects.find((item) => rawProject && normalize(item.name || item.project_name || '') === normalize(rawProject));
         const siteMatches = sites.filter((item) => rawSite && normalize(item.name || '') === normalize(rawSite));
         const site = siteMatches.find((item) => project && String(item.project_id) === String(project.id)) || (siteMatches.length === 1 ? siteMatches[0] : undefined);
         const inferredProject = site ? projects.find((item) => String(item.id) === String(site.project_id)) : undefined;
-        return { cells, employeeId: employee ? String(employee.id) : '', siteId: site ? String(site.id) : rawSite ? 'custom' : '', projectMatchId: project ? String(project.id) : rawProject ? 'custom' : inferredProject ? String(inferredProject.id) : '', status: 'ready' as const, csvRow: detectedHeaderRow + index + 2 };
+        return { cells, employeeId: employee ? String(employee.id) : '', siteId: site ? String(site.id) : rawSite ? 'custom' : '', projectMatchId: project ? String(project.id) : rawProject ? 'custom' : inferredProject ? String(inferredProject.id) : '', status: isSummary ? 'summary' as const : 'ready' as const, csvRow: detectedHeaderRow + index + 2 };
       });
       setHeaders(nextHeaders); setSourceHeaderRows(nextHeaderRows); setRows(imported); setFileName(file.name); setPeriod(inferredPeriod);
     } catch (err: any) { setHeaders([]); setSourceHeaderRows([]); setRows([]); setFileName(''); setError(err?.message || 'Could not read the selected CSV.'); }
@@ -189,11 +197,11 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
   async function saveMatchedRows() {
     setError(''); setNotice('');
     if (!period) { setError('Select the reporting month.'); return; }
-    if (unmatchedCount) { setError(`Enter or match an employee name for each row (${unmatchedCount} incomplete). Project and site assignments may be left blank.`); return; }
+    if (unmatchedCount) { setError(`Enter or match an employee name for each employee row (${unmatchedCount} incomplete). Blank-name totals are skipped; project and site assignments may be left blank.`); return; }
     setSaving(true);
     let failures = 0;
     for (let index = 0; index < rows.length; index += 1) {
-      const row = rows[index]; if (row.status === 'saved') continue;
+      const row = rows[index]; if (row.status === 'saved' || row.status === 'summary') continue;
       const mismatchedMonth = dayColumns.find((column) => column.month && column.month !== Number(period.slice(5, 7)));
       if (mismatchedMonth) {
         failures += 1; setRows((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, status: 'error', error: 'The selected month does not match the month shown in the CSV date headings.' } : item)); continue;
@@ -223,16 +231,16 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
     }
     setSaving(false);
     if (failures) setError(`${failures} row${failures === 1 ? '' : 's'} could not be saved. Review the row errors and retry.`);
-    else setNotice(`Saved ${rows.length - savedCount} employee time sheet${rows.length - savedCount === 1 ? '' : 's'} for ${period}.`);
+    else setNotice(`Saved ${readyCount} employee time sheet${readyCount === 1 ? '' : 's'} for ${period}.`);
   }
 
   const tableRows = rows.map((row, rowIndex) => <tr key={row.csvRow} className="border-t border-slate-200 align-top hover:bg-slate-50">
     <td className="sticky left-0 z-10 min-w-14 border-r border-slate-200 bg-white px-2 py-2 text-center font-mono text-xs text-slate-500">{row.csvRow}</td>
     {headers.map((_, columnIndex) => <td key={columnIndex} className="min-w-20 border-r border-slate-100 px-2 py-2 text-xs text-slate-700">{row.cells[columnIndex] || ''}</td>)}
-    <td className="min-w-56 border-r border-slate-100 p-2"><SearchableSelect key={`employee-${row.csvRow}`} value={row.employeeId} onChange={(value) => updateRow(rowIndex, 'employeeId', value)} options={[{ value: `csv-employee-${row.csvRow}`, label: `Keep CSV employee: ${rawEmployee(row) || '(blank)'}` }, ...employeeOptions]} placeholder={rawEmployee(row) || 'Keep CSV employee name'} searchable disabled={row.status === 'saved'} /></td>
-    <td className="min-w-56 border-r border-slate-100 p-2"><SearchableSelect value={row.projectMatchId} onChange={(value) => updateRow(rowIndex, 'projectMatchId', value)} options={[{ value: 'custom', label: `Keep CSV project: ${projectColumn >= 0 ? row.cells[projectColumn] || '(blank)' : 'Select a project'}` }, ...projectOptions]} placeholder="Select project for this row" searchable disabled={row.status === 'saved'} /></td>
-    <td className="min-w-56 border-r border-slate-100 p-2"><SearchableSelect value={row.siteId} onChange={(value) => updateRow(rowIndex, 'siteId', value)} options={[{ value: 'custom', label: `Keep CSV site: ${siteColumn >= 0 ? row.cells[siteColumn] || '(blank)' : 'No site'}` }, ...siteOptions.filter((option) => !row.projectMatchId || row.projectMatchId === 'custom' || sites.some((site) => String(site.id) === option.value && String(site.project_id) === row.projectMatchId))]} placeholder="Select site for this row" searchable disabled={row.status === 'saved'} /></td>
-    <td className="sticky right-0 z-10 min-w-44 border-l border-slate-200 bg-white px-2 py-2 text-xs">{row.status === 'saved' ? <span className="inline-flex items-center gap-1 font-semibold text-emerald-700"><CheckCircle2 size={14} />Saved</span> : row.error ? <span className="inline-flex items-start gap-1 text-red-700"><AlertTriangle size={14} className="mt-0.5 shrink-0" />{row.error}</span> : (row.employeeId || rawEmployee(row)) ? <span className="text-emerald-700">Ready</span> : <span className="text-amber-700">Needs employee</span>}</td>
+    <td className="min-w-56 border-r border-slate-100 p-2"><SearchableSelect key={`employee-${row.csvRow}`} value={row.employeeId} onChange={(value) => updateRow(rowIndex, 'employeeId', value)} options={[{ value: `csv-employee-${row.csvRow}`, label: `Keep CSV employee: ${rawEmployee(row) || '(blank)'}` }, ...employeeOptions]} placeholder={rawEmployee(row) || 'Keep CSV employee name'} searchable disabled={row.status === 'saved' || row.status === 'summary'} /></td>
+    <td className="min-w-56 border-r border-slate-100 p-2"><SearchableSelect value={row.projectMatchId} onChange={(value) => updateRow(rowIndex, 'projectMatchId', value)} options={[{ value: 'custom', label: `Keep CSV project: ${projectColumn >= 0 ? row.cells[projectColumn] || '(blank)' : 'Select a project'}` }, ...projectOptions]} placeholder="Select project for this row" searchable disabled={row.status === 'saved' || row.status === 'summary'} /></td>
+    <td className="min-w-56 border-r border-slate-100 p-2"><SearchableSelect value={row.siteId} onChange={(value) => updateRow(rowIndex, 'siteId', value)} options={[{ value: 'custom', label: `Keep CSV site: ${siteColumn >= 0 ? row.cells[siteColumn] || '(blank)' : 'No site'}` }, ...siteOptions.filter((option) => !row.projectMatchId || row.projectMatchId === 'custom' || sites.some((site) => String(site.id) === option.value && String(site.project_id) === row.projectMatchId))]} placeholder="Select site for this row" searchable disabled={row.status === 'saved' || row.status === 'summary'} /></td>
+    <td className="sticky right-0 z-10 min-w-44 border-l border-slate-200 bg-white px-2 py-2 text-xs">{row.status === 'saved' ? <span className="inline-flex items-center gap-1 font-semibold text-emerald-700"><CheckCircle2 size={14} />Saved</span> : row.status === 'summary' ? <span className="text-slate-500">Summary row · not imported</span> : row.error ? <span className="inline-flex items-start gap-1 text-red-700"><AlertTriangle size={14} className="mt-0.5 shrink-0" />{row.error}</span> : (row.employeeId || rawEmployee(row)) ? <span className="text-emerald-700">Ready</span> : <span className="text-amber-700">Needs employee</span>}</td>
   </tr>);
 
   return <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/65 p-2 sm:p-5" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
@@ -247,7 +255,7 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
         {loading && <p className="flex items-center gap-2 text-sm text-slate-500"><Loader2 size={16} className="animate-spin" />Loading employees and projects…</p>}
         {error && <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>}
         {notice && <p role="status" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{notice}</p>}
-        {fileName && <div className="flex flex-wrap items-center justify-between gap-2 text-sm"><span className="inline-flex items-center gap-2 font-semibold text-slate-800"><FileSpreadsheet size={17} className="text-emerald-700" />{fileName} · {rows.length} employee rows</span><span className="text-slate-600">{savedCount} saved · {readyCount} ready · {unmatchedCount} need matching</span></div>}
+        {fileName && <div className="flex flex-wrap items-center justify-between gap-2 text-sm"><span className="inline-flex items-center gap-2 font-semibold text-slate-800"><FileSpreadsheet size={17} className="text-emerald-700" />{fileName} · {rows.length - summaryCount} employee rows · {summaryCount} summary rows skipped</span><span className="text-slate-600">{savedCount} saved · {readyCount} ready · {unmatchedCount} need matching</span></div>}
         {rows.length > 0 && <div className="max-h-[62vh] overflow-auto rounded-2xl border border-slate-300 shadow-xs"><table className="w-full border-collapse text-left"><thead className="sticky top-0 z-20 bg-slate-100">{sourceHeaderRows.map((headerRow, rowIndex) => <tr key={rowIndex} className="bg-slate-100">{rowIndex === 0 && <th rowSpan={sourceHeaderRows.length} className="sticky left-0 z-30 min-w-14 border-r border-slate-200 bg-slate-100 px-2 py-2 text-[10px] font-bold uppercase text-slate-600">Row</th>}{headerRow.map((header, columnIndex) => <th key={columnIndex} className="min-w-20 border-r border-slate-200 px-2 py-2 text-[10px] font-bold uppercase text-slate-600">{header}</th>)}{rowIndex === sourceHeaderRows.length - 1 && <><th className="min-w-56 border-r border-slate-200 px-2 py-2 text-[10px] font-bold uppercase text-slate-600">Matched employee</th><th className="min-w-56 border-r border-slate-200 px-2 py-2 text-[10px] font-bold uppercase text-slate-600">Matched project</th><th className="min-w-56 border-r border-slate-200 px-2 py-2 text-[10px] font-bold uppercase text-slate-600">Matched site</th><th className="sticky right-0 z-30 min-w-44 border-l border-slate-200 bg-slate-100 px-2 py-2 text-[10px] font-bold uppercase text-slate-600">Import status</th></>}</tr>)}</thead><tbody>{tableRows}</tbody></table></div>}
         {!rows.length && !fileName && <div className="flex min-h-48 flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-300 bg-slate-50/50 p-8 text-center text-slate-500"><FileSpreadsheet size={36} className="text-slate-400" /><p className="mt-3 font-semibold text-slate-700">No timesheet CSV uploaded yet</p><p className="mt-1 text-xs text-slate-500">Select the reporting month, then upload the original timesheet CSV.</p></div>}
         {(employeeColumn < 0 && headers.length > 0) && <p className="text-xs text-amber-700">Employee name column was not detected. Use Employee Number or manually match employee rows.</p>}

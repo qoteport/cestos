@@ -8,6 +8,7 @@ import { useAuth } from './AuthProvider';
 export default function PwaRuntime() {
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [availableBuildVersion, setAvailableBuildVersion] = useState('');
   const [serviceWorkerReady, setServiceWorkerReady] = useState(false);
   const [notificationSettingsVersion, setNotificationSettingsVersion] = useState(0);
   const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
@@ -89,7 +90,6 @@ export default function PwaRuntime() {
 
   useEffect(() => {
     let active = true;
-    let current = '';
     let checking = false;
     const check = async () => {
       if (checking || document.visibilityState === 'hidden' || navigator.onLine === false) return;
@@ -100,8 +100,15 @@ export default function PwaRuntime() {
         const info = await response.json();
         const next = String(info.version || '');
         if (!next) return;
-        if (!current) current = next;
-        else if (next !== current && active) setUpdateAvailable(true);
+        const acknowledged = localStorage.getItem('cestos.pwa.acknowledgedBuildVersion');
+        if (!acknowledged) {
+          localStorage.setItem('cestos.pwa.acknowledgedBuildVersion', next);
+          return;
+        }
+        if (next !== acknowledged && active) {
+          setAvailableBuildVersion(next);
+          setUpdateAvailable(true);
+        }
       } catch { /* A temporary outage must not interrupt active work. */ }
       finally { checking = false; }
     };
@@ -171,6 +178,11 @@ export default function PwaRuntime() {
     }
   };
 
+  const reloadForUpdate = () => {
+    if (availableBuildVersion) localStorage.setItem('cestos.pwa.acknowledgedBuildVersion', availableBuildVersion);
+    window.location.reload();
+  };
+
   const showNotificationControl = Boolean(user?.id) && !notificationPromptDismissed && notificationPermission !== 'unsupported' && notificationPermission !== 'denied';
   const showRuntimeBanner = !online || offlineWrites.length > 0 || syncingOffline || offlineCacheWarning || updateAvailable || Boolean(installPrompt) || showNotificationControl;
   if (!showRuntimeBanner && !queueOpen) return null;
@@ -183,7 +195,7 @@ export default function PwaRuntime() {
         {online && offlineWrites.some((item) => item.state === 'pending') && <button type="button" disabled={syncingOffline} onClick={() => { setSyncingOffline(true); void syncOfflineWriteQueue().finally(() => { setSyncingOffline(false); void getOfflineWriteQueue().then(setOfflineWrites); }); }} className="border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-xl font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition">Sync now</button>}
         {installPrompt && <button type="button" onClick={() => void install()} className="bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition">Install app</button>}
         {showNotificationControl && <button type="button" onClick={() => void toggleNotifications()} className="border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-xl font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition">{browserNotificationsEnabled ? 'Turn off alerts' : 'Enable alerts'}</button>}
-        {updateAvailable && <button type="button" onClick={() => window.location.reload()} className="bg-[#184877] px-3 py-1.5 rounded-xl font-bold text-white hover:bg-[#123960] transition">Reload to update</button>}
+        {updateAvailable && <button type="button" onClick={reloadForUpdate} className="bg-[#184877] px-3 py-1.5 rounded-xl font-bold text-white hover:bg-[#123960] transition">Reload to update</button>}
         {!updateAvailable && !installPrompt && showNotificationControl && <button type="button" onClick={() => setNotificationPromptDismissed(true)} className="border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition">Later</button>}
         {!updateAvailable && installPrompt && <button type="button" onClick={() => setInstallPrompt(null)} className="border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition">Later</button>}
       </div>
