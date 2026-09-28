@@ -402,7 +402,7 @@ export default function FieldPurchaseOrdersPanel({
                     </div>
                     <label className="space-y-1 text-xs font-semibold">
                       <span className="block">Quotation / supporting file</span>
-                      <input type="file" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,.docx,.xls,.xlsx,.txt,.csv,.rtf" className={input} onChange={(e) => void handleQuotationChange(e.target.files?.[0] || null)} />
+                      <input type="file" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,.docx,.xls,.xlsx,.txt,.csv,.rtf" className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 dark:file:bg-orange-950/60 dark:file:text-orange-300 cursor-pointer transition" onChange={(e) => void handleQuotationChange(e.target.files?.[0] || null)} />
                       {existingQuotation && <span className="block text-slate-500">Current file: {existingQuotation}</span>}
                       {quotation && <span className="block truncate text-[11px] text-slate-500">{quotation.name}</span>}
                       {(extractingQuotation || extractionMessage) && <span role="status" className={`flex items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${extractingQuotation ? 'bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-200' : 'bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{extractingQuotation ? <><Loader2 size={13} className="animate-spin" />Reading quotation and identifying line items…</> : <><Sparkles size={13} />{extractionMessage}</>}</span>}

@@ -119,7 +119,7 @@ export default function LoginForm() {
             <label className="block text-sm font-semibold">
               Work email
               <input
-                className="input-field mt-2"
+                className="input-field mt-2 rounded-full px-5 py-2.5 shadow-xs transition-all"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 type="email"
@@ -133,7 +133,7 @@ export default function LoginForm() {
             {token ? 'New password' : 'Password'}
             <div className="relative mt-2">
               <input
-                className="input-field pr-10"
+                className="input-field pr-11 mt-2 rounded-full px-5 py-2.5 shadow-xs transition-all"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 type={show ? 'text' : 'password'}
@@ -144,7 +144,7 @@ export default function LoginForm() {
               />
               <button
                 type="button"
-                className="absolute right-3 top-3 text-muted-foreground"
+                className="absolute right-3.5 top-5 text-muted-foreground hover:text-foreground"
                 aria-label={show ? 'Hide password' : 'Show password'}
                 onClick={() => setShow(!show)}
               >
@@ -157,7 +157,7 @@ export default function LoginForm() {
             <label className="block text-sm font-semibold">
               Confirm password
               <input
-                className="input-field mt-2"
+                className="input-field mt-2 rounded-full px-5 py-2.5 shadow-xs transition-all"
                 type="password"
                 autoComplete="new-password"
                 required
@@ -167,17 +167,18 @@ export default function LoginForm() {
             </label>
           ) : (
             <div className="flex items-center justify-between gap-2 text-sm">
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={remember}
                   onChange={(e) => setRemember(e.target.checked)}
+                  className="h-4 w-4 rounded-md border-slate-300 accent-primary cursor-pointer"
                 />
                 Keep me signed in
               </label>
               <button
                 type="button"
-                className="text-primary"
+                className="text-primary hover:underline font-semibold"
                 onClick={() =>
                   setMessage(
                     'Ask your administrator to send a password reset email from your employee account.'
@@ -189,7 +190,7 @@ export default function LoginForm() {
             </div>
           )}
 
-          <button disabled={busy} className="btn-primary w-full justify-center py-3">
+          <button disabled={busy} className="btn-primary w-full justify-center py-3 rounded-full font-bold shadow-md hover:shadow-lg transition-all">
             {busy ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />}
             {busy ? 'Signing in…' : token ? 'Save password' : 'Sign in'}
           </button>
