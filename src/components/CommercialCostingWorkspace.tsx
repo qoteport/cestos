@@ -2303,7 +2303,7 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
                   type="file"
                   multiple
                   onChange={(e) => handleFileUpload(e, true)}
-                  className="text-xs text-muted-foreground file:mr-2 file:py-1 file:px-3 file:rounded file:border file:text-xs file:font-medium file:bg-muted hover:file:bg-muted/80 cursor-pointer"
+                  className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-950/60 dark:file:text-indigo-300 cursor-pointer"
                 />
 
                 <div className="flex items-center gap-2">
@@ -2688,7 +2688,7 @@ export default function CommercialCostingWorkspace({ subResource }: { subResourc
                   type="file"
                   multiple
                   onChange={(e) => handleFileUpload(e, false)}
-                  className="text-xs text-muted-foreground file:mr-2 file:py-1 file:px-3 file:rounded file:border file:text-xs file:font-medium file:bg-muted hover:file:bg-muted/80 cursor-pointer"
+                  className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-950/60 dark:file:text-indigo-300 cursor-pointer"
                 />
 
                 <div className="flex items-center gap-2">

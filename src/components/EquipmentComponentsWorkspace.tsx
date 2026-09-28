@@ -583,7 +583,7 @@ export default function EquipmentComponentsWorkspace() {
               <input
                 type="file"
                 onChange={(e) => setSpecFile(e.target.files?.[0] || null)}
-                className="input-field text-xs file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:opacity-90"
+                className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 dark:file:bg-sky-950/60 dark:file:text-sky-300 cursor-pointer"
               />
               <span className="text-[10px] text-muted-foreground block">
                 Accepted formats: PDF, DOCX, PNG, JPG (e.g. Component spec diagram, parts breakdown, warranty receipt).
@@ -770,7 +770,7 @@ export default function EquipmentComponentsWorkspace() {
               <input
                 type="file"
                 onChange={(e) => setEditSpecFile(e.target.files?.[0] || null)}
-                className="input-field text-xs file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:opacity-90"
+                className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 dark:file:bg-sky-950/60 dark:file:text-sky-300 cursor-pointer"
               />
               <p className="text-[11px] text-muted-foreground">
                 Uploading a new file will attach an updated technical manual to this equipment asset.

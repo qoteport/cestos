@@ -537,7 +537,7 @@ export default function TendersOverviewPage() {
               <input
                 type="file"
                 onChange={(e) => handleFileUpload(e, false)}
-                className="text-xs text-muted-foreground file:mr-2 file:py-1 file:px-3 file:rounded file:border file:text-xs file:font-medium file:bg-muted hover:file:bg-muted/80 cursor-pointer"
+                className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-950/60 dark:file:text-blue-300 cursor-pointer"
               />
               {newOpp.attachment_name && (
                 <p className="text-xs text-blue-600 font-medium mt-1">Attached: {newOpp.attachment_name}</p>
@@ -645,7 +645,7 @@ export default function TendersOverviewPage() {
               <input
                 type="file"
                 onChange={(e) => handleFileUpload(e, true)}
-                className="text-xs text-muted-foreground file:mr-2 file:py-1 file:px-3 file:rounded file:border file:text-xs file:font-medium file:bg-muted hover:file:bg-muted/80 cursor-pointer"
+                className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-950/60 dark:file:text-blue-300 cursor-pointer"
               />
               {editOppForm.attachment_name && (
                 <p className="text-xs text-blue-600 font-medium mt-1">Attached: {editOppForm.attachment_name}</p>

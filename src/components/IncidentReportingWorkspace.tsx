@@ -822,7 +822,7 @@ function CreateIncidentForm({
           type="file"
           multiple
           onChange={handleFileChange}
-          className="block w-full text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
+          className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 dark:file:bg-red-950/60 dark:file:text-red-300 cursor-pointer"
         />
         {files.length > 0 && (
           <div className="space-y-1 pt-1">

@@ -3098,7 +3098,7 @@ function ensureValidUUID(idStr: any): string {
                 type="file"
                 name="leave_file"
                 accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
-                className="input-field text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-muted"
+                className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 dark:file:bg-emerald-950/60 dark:file:text-emerald-300 cursor-pointer"
               />
             </div>
 
@@ -3716,7 +3716,7 @@ function ensureValidUUID(idStr: any): string {
                     type="file"
                     name="edit_leave_file"
                     accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
-                    className="input-field text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-muted"
+                    className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 dark:file:bg-emerald-950/60 dark:file:text-emerald-300 cursor-pointer"
                   />
                 </div>
               </>
