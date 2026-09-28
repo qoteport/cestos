@@ -2800,7 +2800,7 @@ Signed: Field Operations Administration
                     <div className="flex items-center gap-1 overflow-x-auto pb-0 border-b border-slate-200 dark:border-slate-800" role="tablist">
                       {[
                         { id: 'ALL' as const, label: 'All Records', count: filteredMaintenanceRecords.length, icon: null },
-                        { id: 'SCHEDULES' as const, label: 'Schedules Only', count: filteredMaintenanceRecords.filter((r) => r.record_category === 'work_order').length, icon: Calendar },
+                        { id: 'SCHEDULES' as const, label: 'Schedules', count: filteredMaintenanceRecords.filter((r) => r.record_category === 'work_order').length, icon: Calendar },
                         { id: 'BREAKDOWN' as const, label: 'Breakdown Cards', count: filteredMaintenanceRecords.filter((r) => r.record_category === 'breakdown').length, icon: Wrench },
                         { id: 'PREVENTIVE' as const, label: 'Preventive Cards', count: filteredMaintenanceRecords.filter((r) => r.record_category === 'preventive').length, icon: ShieldCheck },
                         { id: 'ASSESSMENTS' as const, label: 'Assessments', count: filteredMaintenanceRecords.filter((r) => r.record_category === 'assessment').length, icon: FileText },

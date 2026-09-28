@@ -32,6 +32,7 @@ type TimesheetRow = {
   source_file?: string | null;
 };
 type SiteOption = { id: string; name?: string; project_name?: string | null; is_active?: boolean };
+const CUSTOM_EMPLOYEE_VALUE = '__CUSTOM_EMPLOYEE__';
 
 const accents = {
   emerald: {
@@ -126,6 +127,8 @@ export default function EmployeeTimesheetsWorkspace({
   const [editing, setEditing] = useState<TimesheetRow | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [employeeId, setEmployeeId] = useState('');
+  const [customEmployee, setCustomEmployee] = useState(false);
+  const [employeeName, setEmployeeName] = useState('');
   const [formPeriod, setFormPeriod] = useState(currentMonth());
   const [siteName, setSiteName] = useState('');
   const [dailyHours, setDailyHours] = useState<Record<number, string>>({});
@@ -210,11 +213,11 @@ export default function EmployeeTimesheetsWorkspace({
     const [year, month] = (formPeriod || currentMonth()).split('-').map(Number);
     return new Date(year, month, 0).getDate();
   }, [formPeriod]);
-  const employeeOptions = useMemo(() => employees.map((employee) => ({
+  const employeeOptions = useMemo(() => [{ value: CUSTOM_EMPLOYEE_VALUE, label: 'Enter a custom employee name…' }, ...employees.map((employee) => ({
     value: String(employee.id),
     label: [employee.first_name, employee.middle_name, employee.last_name].filter(Boolean).join(' ') || 'Employee',
     sublabel: employee.employee_number || '',
-  })), [employees]);
+  }))], [employees]);
   const siteOptions = useMemo(() => {
     const options = sites.map((site) => ({
       value: site.name || '',
@@ -230,6 +233,8 @@ export default function EmployeeTimesheetsWorkspace({
   function openNew() {
     setEditing(null);
     setEmployeeId('');
+    setCustomEmployee(false);
+    setEmployeeName('');
     setFormPeriod(currentMonth());
     setSiteName('');
     setDailyHours({});
@@ -243,6 +248,8 @@ export default function EmployeeTimesheetsWorkspace({
   function openEdit(row: TimesheetRow) {
     setEditing(row);
     setEmployeeId(row.employee_id || '');
+    setCustomEmployee(!row.employee_id);
+    setEmployeeName(row.employee_id ? '' : row.employee_name || '');
     setFormPeriod(row.period);
     setSiteName(row.site_name || '');
     setDailyHours(Object.fromEntries(Object.entries(row.daily_hours || {}).map(([day, hours]) => [Number(day), String(hours)])));
@@ -256,7 +263,8 @@ export default function EmployeeTimesheetsWorkspace({
   async function saveTimesheet(event: React.FormEvent) {
     event.preventDefault();
     setFormError('');
-    if (!employeeId || !formPeriod) {
+    const enteredEmployeeName = customEmployee ? employeeName.trim() : '';
+    if ((!employeeId && !enteredEmployeeName) || !formPeriod) {
       setFormError('Select an employee and reporting month.');
       return;
     }
@@ -275,13 +283,15 @@ export default function EmployeeTimesheetsWorkspace({
       const endpoint = editing ? `/api/v1/employees/timesheets/${editing.id}` : '/api/v1/employees/timesheets';
       await apiFetch(endpoint, {
         method: editing ? 'PUT' : 'POST',
-        body: JSON.stringify({ employee_id: employeeId, project_id: projectId || null, period_start: `${formPeriod}-01`, site_name: siteName.trim() || null, entries }),
+        body: JSON.stringify({ employee_id: customEmployee ? null : employeeId, employee_name: enteredEmployeeName || null, project_id: projectId || null, period_start: `${formPeriod}-01`, site_name: siteName.trim() || null, entries }),
       });
       if (editing) {
         setShowForm(false);
       } else {
         setEditing(null);
         setEmployeeId('');
+        setCustomEmployee(false);
+        setEmployeeName('');
         setSiteName('');
         setDailyHours({});
         setBulkHours('');
@@ -355,7 +365,7 @@ export default function EmployeeTimesheetsWorkspace({
               />
             </div>
           </div>
-          {sourceCsvRow && <button type="button" onClick={() => void viewSourceFile(sourceCsvRow)} disabled={attachmentBusy === sourceCsvRow.id} className="mb-0.5 inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><Paperclip size={15} />{attachmentBusy === sourceCsvRow.id ? 'Opening source…' : 'Source CSV'}</button>}
+          {sourceCsvRow && <button type="button" onClick={() => void viewSourceFile(sourceCsvRow)} disabled={attachmentBusy === sourceCsvRow.id} className="mb-0.5 inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><Paperclip size={15} />{attachmentBusy === sourceCsvRow.id ? 'Opening source…' : 'Source File'}</button>}
           {canReport && <button type="button" onClick={openNew} className={`mb-0.5 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 ${colors.action}`}><Plus size={16} /> Report hours</button>}
         </div>
       </div>
@@ -430,7 +440,11 @@ export default function EmployeeTimesheetsWorkspace({
             <form onSubmit={saveTimesheet} className="flex min-h-0 flex-1 flex-col">
               <div ref={formScrollRef} className="grid gap-3 overflow-y-auto p-5 sm:grid-cols-2">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Employee <span className="text-red-600">*</span>
-                  <div className="mt-1"><SearchableSelect value={employeeId} onChange={setEmployeeId} options={employeeOptions} placeholder="Search employee…" disabled={Boolean(editing)} searchable /></div>
+                  <div className="mt-1">
+                    {customEmployee
+                      ? <div className="flex gap-2"><input autoFocus value={employeeName} onChange={(event) => setEmployeeName(event.target.value)} placeholder="Enter employee name" maxLength={200} className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white" /><button type="button" onClick={() => { setCustomEmployee(false); setEmployeeName(''); }} className="shrink-0 rounded-lg border border-slate-300 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Select employee</button></div>
+                      : <SearchableSelect value={employeeId} onChange={(value) => { if (value === CUSTOM_EMPLOYEE_VALUE) { setCustomEmployee(true); setEmployeeId(''); } else setEmployeeId(value); }} options={employeeOptions} placeholder="Search employee…" disabled={Boolean(editing)} searchable />}
+                  </div>
                 </label>
                 <div className="text-xs font-bold text-slate-700 dark:text-slate-300">
                   <span>Reporting month <span className="text-red-600">*</span></span>
