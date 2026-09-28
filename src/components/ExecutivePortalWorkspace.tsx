@@ -150,7 +150,7 @@ interface EmployeeRow {
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
-  const s = (status || '').toUpperCase();
+  const s = (status || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
   const map: Record<string, string> = {
     PAID: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300',
     APPROVED: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300',
@@ -174,18 +174,18 @@ function StatusBadge({ status }: { status: string }) {
         map[s] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
       }`}
     >
-      {String(status || '').replaceAll('_', ' ')}
+      {s === 'PARTIALLY_PAID' ? 'Outstanding' : String(status || '').replaceAll('_', ' ')}
     </span>
   );
 }
 
 function ExpensePaymentBadge({ status }: { status?: string | null }) {
-  const value = String(status || '').toUpperCase();
+  const value = String(status || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
   const style = value === 'PAID' ? 'bg-emerald-100 text-emerald-800'
     : value === 'PARTIALLY_PAID' ? 'bg-blue-100 text-blue-800'
     : 'bg-amber-100 text-amber-800';
   const label = value === 'PAID' ? 'Expense paid'
-    : value === 'PARTIALLY_PAID' ? 'Partially paid'
+    : value === 'PARTIALLY_PAID' ? 'Outstanding'
     : value === 'PAYMENT_RECONCILIATION_REQUIRED' ? 'Pending Payment'
     : 'Expense raised';
   return <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${style}`}>{label}</span>;
@@ -1835,7 +1835,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
               })()}
             </div>
 
-            <OperationalExpensesWorkspace readOnly={true} />
+            <OperationalExpensesWorkspace readOnly={true} accent="indigo" />
           </div>
         )}
 
@@ -2063,7 +2063,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                 High-level view of active and completed projects for the selected scope.
               </p>
             </div>
-            <ProjectRegister dashboard={false} readOnly={true} onSelectProject={(id) => router.push(`/executive-portal/projects/${id}`)} />
+            <ProjectRegister dashboard={false} readOnly={true} accent="indigo" onSelectProject={(id) => router.push(`/executive-portal/projects/${id}`)} />
           </div>
         )}
 

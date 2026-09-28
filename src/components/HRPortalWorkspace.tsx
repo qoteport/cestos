@@ -1583,7 +1583,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                 High-level view of all active and completed projects.
               </p>
             </div>
-            <ProjectRegister dashboard={false} onSelectProject={(id) => router.push(`/hr-portal/projects/${id}`)} />
+            <ProjectRegister dashboard={false} accent="emerald" onSelectProject={(id) => router.push(`/hr-portal/projects/${id}`)} />
           </div>
         )}
 

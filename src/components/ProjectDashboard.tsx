@@ -48,7 +48,17 @@ export function ReportMetrics({ data }: { data: Row }) {
 
 const PROJECT_STATUSES = ['PLANNING', 'MOBILIZING', 'ACTIVE', 'PAUSED', 'COMPLETED', 'CLOSED', 'CANCELLED'];
 
-export function ProjectRegister({ dashboard = false, onSelectProject, readOnly }: { dashboard?: boolean; onSelectProject?: (id: string) => void; readOnly?: boolean }) {
+export function ProjectRegister({
+  dashboard = false,
+  onSelectProject,
+  readOnly,
+  accent = 'indigo',
+}: {
+  dashboard?: boolean;
+  onSelectProject?: (id: string) => void;
+  readOnly?: boolean;
+  accent?: 'emerald' | 'indigo' | 'orange' | 'violet' | 'amber';
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialSearch = searchParams?.get('search') || '';
@@ -102,7 +112,19 @@ export function ProjectRegister({ dashboard = false, onSelectProject, readOnly }
         </div>
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <button
-            className={`btn-secondary text-xs flex items-center gap-1 ${hasActiveFilter ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : ''}`}
+            className={`btn-secondary text-xs flex items-center gap-1 ${
+              hasActiveFilter
+                ? accent === 'emerald'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
+                  : accent === 'orange'
+                    ? 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/50 dark:text-orange-300 dark:border-orange-800'
+                    : accent === 'violet'
+                      ? 'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/50 dark:text-violet-300 dark:border-violet-800'
+                      : accent === 'amber'
+                        ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800'
+                        : 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800'
+                : ''
+            }`}
             onClick={() => setFilterOpen(!filterOpen)}
           >
             <Filter size={14} /> Filters
@@ -116,7 +138,20 @@ export function ProjectRegister({ dashboard = false, onSelectProject, readOnly }
             <RefreshCw size={14} />
           </button>
           {auth?.can('projects.create') && !dashboard && !readOnly && (
-            <button className="btn-primary text-xs flex items-center gap-1" onClick={() => setCreating(true)}>
+            <button
+              className={`text-xs font-bold px-3 py-1.5 rounded-lg text-white transition flex items-center gap-1 ${
+                accent === 'emerald'
+                  ? 'bg-emerald-600 hover:bg-emerald-700'
+                  : accent === 'orange'
+                    ? 'bg-orange-600 hover:bg-orange-700'
+                    : accent === 'violet'
+                      ? 'bg-violet-600 hover:bg-violet-700'
+                      : accent === 'amber'
+                        ? 'bg-amber-600 hover:bg-amber-700'
+                        : 'bg-indigo-600 hover:bg-indigo-700'
+              }`}
+              onClick={() => setCreating(true)}
+            >
               <Plus size={14} /> Create project
             </button>
           )}
@@ -267,7 +302,17 @@ export function ProjectRegister({ dashboard = false, onSelectProject, readOnly }
                       <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={handleSelect}
-                          className="btn-secondary text-xs inline-flex items-center gap-1.5 py-1 px-2.5 rounded-md hover:bg-primary/10 hover:text-primary transition-colors"
+                          className={`text-xs inline-flex items-center gap-1.5 py-1 px-2.5 rounded-md font-semibold border transition-colors ${
+                            accent === 'emerald'
+                              ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
+                              : accent === 'orange'
+                                ? 'border-orange-200 bg-orange-50 text-orange-800 hover:bg-orange-100 dark:border-orange-800 dark:bg-orange-950/50 dark:text-orange-300'
+                                : accent === 'violet'
+                                  ? 'border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-300'
+                                  : accent === 'amber'
+                                    ? 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300'
+                                    : 'border-indigo-200 bg-indigo-50 text-indigo-800 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300'
+                          }`}
                         >
                           <Eye size={13} /> View
                         </button>

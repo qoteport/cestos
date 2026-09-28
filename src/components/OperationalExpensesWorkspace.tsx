@@ -42,7 +42,7 @@ const methods = [
 ];
 
 function StatusBadge({ status }: { status: string }) {
-  const s = (status || '').toUpperCase();
+  const s = (status || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
   const map: Record<string, string> = {
     PAID: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300',
     COMPLETED: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300',
@@ -55,7 +55,7 @@ function StatusBadge({ status }: { status: string }) {
     DRAFT: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300',
   };
   const labels: Record<string, string> = {
-    PARTIALLY_PAID: 'Partially Paid',
+    PARTIALLY_PAID: 'Outstanding',
     PAYMENT_RECONCILIATION_REQUIRED: 'Pending Payment',
   };
   return (
@@ -65,7 +65,13 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export default function OperationalExpensesWorkspace({ readOnly = false }: { readOnly?: boolean }) {
+export default function OperationalExpensesWorkspace({
+  readOnly = false,
+  accent = 'violet',
+}: {
+  readOnly?: boolean;
+  accent?: 'emerald' | 'indigo' | 'orange' | 'violet' | 'amber';
+}) {
   const auth = useAuth();
   const finance =
     !readOnly &&
@@ -752,7 +758,7 @@ export default function OperationalExpensesWorkspace({ readOnly = false }: { rea
               </div>
 
               <div className="flex items-center justify-between border-t px-4 py-3 sm:px-6 bg-card shrink-0 gap-2">
-                <span className="text-xs text-muted-foreground font-mono">Status: {viewingExpense.status || 'SUBMITTED'}</span>
+                <span className="text-xs text-muted-foreground font-mono">Status: {String(viewingExpense.status || 'SUBMITTED').trim().toUpperCase().replace(/[\s-]+/g, '_') === 'PARTIALLY_PAID' ? 'Outstanding' : (viewingExpense.status || 'SUBMITTED').replaceAll('_', ' ')}</span>
                 <div className="flex items-center gap-2">
                   {canPay && (
                     <button

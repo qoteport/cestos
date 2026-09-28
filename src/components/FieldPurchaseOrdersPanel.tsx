@@ -18,12 +18,12 @@ const blankLine = (): Line => ({ item_name: '', description: '', quantity_ordere
 const input = 'w-full rounded-lg border bg-background p-2.5';
 
 function ExpensePaymentBadge({ status }: { status?: string | null }) {
-  const value = String(status || '').toUpperCase();
+  const value = String(status || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
   const style = value === 'PAID' ? 'bg-emerald-100 text-emerald-800'
     : value === 'PARTIALLY_PAID' ? 'bg-blue-100 text-blue-800'
     : 'bg-amber-100 text-amber-800';
   const label = value === 'PAID' ? 'Expense paid'
-    : value === 'PARTIALLY_PAID' ? 'Partially paid'
+    : value === 'PARTIALLY_PAID' ? 'Outstanding'
     : value === 'PAYMENT_RECONCILIATION_REQUIRED' ? 'Pending Payment'
     : 'Expense raised';
   return <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${style}`}>{label}</span>;

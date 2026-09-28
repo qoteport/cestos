@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CalendarDays, Clock3, Maximize2, Minimize2, Paperclip, Pencil, Plus, X } from 'lucide-react';
+import { AlertTriangle, CalendarDays, Check, Clock3, Maximize2, Minimize2, Paperclip, Pencil, Plus, X } from 'lucide-react';
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import { openUniversalFileViewer } from '@/lib/fileViewer';
 import SearchableSelect from './SearchableSelect';
@@ -33,9 +33,11 @@ type TimesheetRow = {
 type SiteOption = { id: string; name?: string; project_name?: string | null; is_active?: boolean };
 
 const accents = {
-  emerald: { active: 'border-emerald-600 bg-emerald-50 text-emerald-800', action: 'bg-emerald-700 hover:bg-emerald-800 focus:ring-emerald-500', icon: 'text-emerald-700' },
-  indigo: { active: 'border-indigo-600 bg-indigo-50 text-indigo-800', action: 'bg-indigo-700 hover:bg-indigo-800 focus:ring-indigo-500', icon: 'text-indigo-700' },
-  orange: { active: 'border-orange-600 bg-orange-50 text-orange-800', action: 'bg-orange-600 hover:bg-orange-700 focus:ring-orange-500', icon: 'text-orange-700' },
+  emerald: { active: 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300', action: 'bg-emerald-700 hover:bg-emerald-800 focus:ring-emerald-500', icon: 'text-emerald-700 dark:text-emerald-400' },
+  indigo: { active: 'border-indigo-600 bg-indigo-50 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300', action: 'bg-indigo-700 hover:bg-indigo-800 focus:ring-indigo-500', icon: 'text-indigo-700 dark:text-indigo-400' },
+  orange: { active: 'border-orange-600 bg-orange-50 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300', action: 'bg-orange-600 hover:bg-orange-700 focus:ring-orange-500', icon: 'text-orange-700 dark:text-orange-400' },
+  violet: { active: 'border-violet-600 bg-violet-50 text-violet-800 dark:bg-violet-950/60 dark:text-violet-300', action: 'bg-violet-700 hover:bg-violet-800 focus:ring-violet-500', icon: 'text-violet-700 dark:text-violet-400' },
+  amber: { active: 'border-amber-600 bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300', action: 'bg-amber-600 hover:bg-amber-700 focus:ring-amber-500', icon: 'text-amber-700 dark:text-amber-400' },
 };
 
 function currentMonth() {
@@ -66,6 +68,8 @@ export default function EmployeeTimesheetsWorkspace({
   const [formPeriod, setFormPeriod] = useState(currentMonth());
   const [siteName, setSiteName] = useState('');
   const [dailyHours, setDailyHours] = useState<Record<number, string>>({});
+  const [bulkHours, setBulkHours] = useState('');
+  const [bulkDays, setBulkDays] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [attachmentBusy, setAttachmentBusy] = useState<string | null>(null);
@@ -166,6 +170,8 @@ export default function EmployeeTimesheetsWorkspace({
     setFormPeriod(currentMonth());
     setSiteName('');
     setDailyHours({});
+    setBulkHours('');
+    setBulkDays([]);
     setFormError('');
     setShowForm(true);
   }
@@ -176,6 +182,8 @@ export default function EmployeeTimesheetsWorkspace({
     setFormPeriod(row.period);
     setSiteName(row.site_name || '');
     setDailyHours(Object.fromEntries(Object.entries(row.daily_hours || {}).map(([day, hours]) => [Number(day), String(hours)])));
+    setBulkHours('');
+    setBulkDays([]);
     setFormError('');
     setShowForm(true);
   }
@@ -191,8 +199,8 @@ export default function EmployeeTimesheetsWorkspace({
     for (const [day, value] of Object.entries(dailyHours)) {
       if (!value.trim()) continue;
       const hours = Number(value);
-      if (!Number.isFinite(hours) || hours < 0 || hours > 24) {
-        setFormError(`Hours for day ${day} must be between 0 and 24.`);
+      if (!Number.isFinite(hours) || hours < 0 || hours > 15) {
+        setFormError(`Hours for day ${day} must be between 0 and 15.`);
         return;
       }
       entries.push({ work_date: `${formPeriod}-${String(day).padStart(2, '0')}`, hours });
@@ -212,6 +220,24 @@ export default function EmployeeTimesheetsWorkspace({
     } finally {
       setSaving(false);
     }
+  }
+
+  function applyHoursToSelectedDays() {
+    const value = Number(bulkHours);
+    if (!bulkHours.trim() || !Number.isFinite(value) || value < 0 || value > 15) {
+      setFormError('Enter a number from 0 to 15 hours to apply.');
+      return;
+    }
+    if (!bulkDays.length) {
+      setFormError('Select at least one day to apply the hours to.');
+      return;
+    }
+    setDailyHours((current) => ({
+      ...current,
+      ...Object.fromEntries(bulkDays.map((day) => [day, bulkHours])),
+    }));
+    setBulkDays([]);
+    setFormError('');
   }
 
   async function viewSourceFile(row: TimesheetRow, download = false) {
@@ -273,45 +299,45 @@ export default function EmployeeTimesheetsWorkspace({
             <table className="min-w-max border-separate border-spacing-0 text-left text-xs">
               <thead className="bg-slate-100 text-[10px] font-extrabold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                 <tr className="h-8">
-                  <th className="sticky left-0 top-0 z-50 h-8 w-[210px] min-w-[210px] max-w-[210px] border-b-2 border-r border-blue-950 bg-[#184877] px-3 text-white shadow-[0_2px_3px_rgba(15,23,42,0.16)] dark:border-slate-700" />
-                  <th className="sticky left-[210px] top-0 z-50 h-8 w-[115px] min-w-[115px] max-w-[115px] border-b-2 border-r border-blue-950 bg-[#184877] px-3 text-white shadow-[0_2px_3px_rgba(15,23,42,0.16)] dark:border-slate-700" />
-                  {calendarDays.map(({ day, weekday, isoDate }) => <th key={day} className="sticky top-0 z-40 h-8 min-w-[48px] border-b-2 border-r border-blue-950 bg-[#184877] px-2 text-center text-white shadow-[0_2px_3px_rgba(15,23,42,0.16)]" title={isoDate}>{weekday}</th>)}
-                  <th className="sticky top-0 z-40 h-8 min-w-[88px] border-b-2 border-l border-blue-950 bg-[#184877] px-3 shadow-[0_2px_3px_rgba(15,23,42,0.16)]" />
-                  <th className="sticky top-0 z-40 h-8 min-w-[85px] border-b-2 border-l border-blue-950 bg-[#184877] px-3 shadow-[0_2px_3px_rgba(15,23,42,0.16)]" />
-                  <th className="sticky right-0 top-0 z-50 h-8 min-w-[78px] border-b-2 border-l border-blue-950 bg-[#184877] px-3 shadow-[0_2px_3px_rgba(15,23,42,0.16)]" />
+                  <th className="md:sticky md:left-0 md:top-0 z-20 md:z-50 h-8 w-[210px] min-w-[210px] max-w-[210px] border-b-2 border-r border-blue-950 bg-[#184877] px-3 text-white shadow-[0_2px_3px_rgba(15,23,42,0.16)] dark:border-slate-700" />
+                  <th className="md:sticky md:left-[210px] md:top-0 z-20 md:z-50 h-8 w-[115px] min-w-[115px] max-w-[115px] border-b-2 border-r border-blue-950 bg-[#184877] px-3 text-white shadow-[0_2px_3px_rgba(15,23,42,0.16)] dark:border-slate-700" />
+                  {calendarDays.map(({ day, weekday, isoDate }) => <th key={day} className="md:sticky md:top-0 z-10 md:z-40 h-8 min-w-[48px] border-b-2 border-r border-blue-950 bg-[#184877] px-2 text-center text-white shadow-[0_2px_3px_rgba(15,23,42,0.16)]" title={isoDate}>{weekday}</th>)}
+                  <th className="md:sticky md:top-0 z-10 md:z-40 h-8 min-w-[88px] border-b-2 border-l border-blue-950 bg-[#184877] px-3 shadow-[0_2px_3px_rgba(15,23,42,0.16)]" />
+                  <th className="md:sticky md:top-0 z-10 md:z-40 h-8 min-w-[85px] border-b-2 border-l border-blue-950 bg-[#184877] px-3 shadow-[0_2px_3px_rgba(15,23,42,0.16)]" />
+                  <th className="md:sticky md:right-0 md:top-0 z-20 md:z-50 h-8 min-w-[78px] border-b-2 border-l border-blue-950 bg-[#184877] px-3 shadow-[0_2px_3px_rgba(15,23,42,0.16)]" />
                 </tr>
                 <tr className="h-10 bg-blue-50 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                  <th className="sticky left-0 top-8 z-50 h-10 w-[210px] min-w-[210px] max-w-[210px] border-b-2 border-r border-blue-200 bg-blue-100 px-3 shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800">Name</th>
-                  <th className="sticky left-[210px] top-8 z-50 h-10 w-[115px] min-w-[115px] max-w-[115px] border-b-2 border-r border-blue-200 bg-blue-100 px-3 shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800">Site</th>
-                  {calendarDays.map(({ day, dayMonth, isoDate }) => <th key={day} className="sticky top-8 z-40 h-10 min-w-[48px] border-b-2 border-r border-blue-200 bg-blue-100 px-2 text-center shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800" title={isoDate}>{dayMonth}</th>)}
-                  <th className="sticky top-8 z-40 h-10 min-w-[88px] border-b-2 border-l border-blue-200 bg-blue-100 px-3 text-right shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800">Hrs</th>
-                  <th className="sticky top-8 z-40 h-10 min-w-[85px] border-b-2 border-l border-blue-200 bg-blue-100 px-3 text-right shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800">Total days</th>
-                  <th className="sticky right-0 top-8 z-50 h-10 min-w-[78px] border-b-2 border-l border-blue-200 bg-blue-100 px-2 text-center shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800"><div className="flex items-center justify-center gap-1"><span>Action</span><button type="button" onClick={() => setFullView(true)} aria-label="View time sheet in full screen" title="Full view" className="rounded p-1 text-slate-600 hover:bg-white hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-700"><Maximize2 size={14} /></button></div></th>
+                  <th className="md:sticky md:left-0 md:top-8 z-20 md:z-50 h-10 w-[210px] min-w-[210px] max-w-[210px] border-b-2 border-r border-blue-200 bg-blue-100 px-3 shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800">Name</th>
+                  <th className="md:sticky md:left-[210px] md:top-8 z-20 md:z-50 h-10 w-[115px] min-w-[115px] max-w-[115px] border-b-2 border-r border-blue-200 bg-blue-100 px-3 shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800">Site</th>
+                  {calendarDays.map(({ day, dayMonth, isoDate }) => <th key={day} className="md:sticky md:top-8 z-10 md:z-40 h-10 min-w-[48px] border-b-2 border-r border-blue-200 bg-blue-100 px-2 text-center shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800" title={isoDate}>{dayMonth}</th>)}
+                  <th className="md:sticky md:top-8 z-10 md:z-40 h-10 min-w-[88px] border-b-2 border-l border-blue-200 bg-blue-100 px-3 text-right shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800">Hrs</th>
+                  <th className="md:sticky md:top-8 z-10 md:z-40 h-10 min-w-[85px] border-b-2 border-l border-blue-200 bg-blue-100 px-3 text-right shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800">Total days</th>
+                  <th className="md:sticky md:right-0 md:top-8 z-20 md:z-50 h-10 min-w-[78px] border-b-2 border-l border-blue-200 bg-blue-100 px-2 text-center shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800"><div className="flex items-center justify-center gap-1"><span>Action</span><button type="button" onClick={() => setFullView(true)} aria-label="View time sheet in full screen" title="Full view" className="rounded p-1 text-slate-600 hover:bg-white hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-700"><Maximize2 size={14} /></button></div></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {rows.length === 0 ? <tr><td colSpan={daysInPeriod + 5} className="p-10 text-center text-sm text-slate-500">No time sheets have been reported for this month.</td></tr> : rows.map((row) => (
                   <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                    <td className="sticky left-0 z-20 w-[210px] min-w-[210px] max-w-[210px] border-r border-slate-100 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900"><span className="block truncate font-bold text-slate-900 dark:text-white">{row.employee_name}</span><span className="mt-0.5 block truncate font-mono text-[10px] text-slate-500">{row.employee_number || '—'}</span></td>
-                    <td className="sticky left-[210px] z-20 w-[115px] min-w-[115px] max-w-[115px] border-r border-slate-100 bg-white px-3 py-2 text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"><span className="block truncate">{row.site_name || '—'}</span>{row.project_name && <span className="block truncate text-[10px] text-slate-400" title={row.project_name}>{row.project_name}</span>}</td>
+                    <td className="md:sticky md:left-0 z-20 w-[210px] min-w-[210px] max-w-[210px] border-r border-slate-100 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900"><span className="block truncate font-bold text-slate-900 dark:text-white">{row.employee_name}</span><span className="mt-0.5 block truncate font-mono text-[10px] text-slate-500">{row.employee_number || '—'}</span></td>
+                    <td className="md:sticky md:left-[210px] z-20 w-[115px] min-w-[115px] max-w-[115px] border-r border-slate-100 bg-white px-3 py-2 text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"><span className="block truncate">{row.site_name || '—'}</span>{row.project_name && <span className="block truncate text-[10px] text-slate-400" title={row.project_name}>{row.project_name}</span>}</td>
                     {calendarDays.map(({ day }) => {
                       const value = row.daily_hours?.[day];
                       return <td key={day} className={`px-2 py-2 text-center tabular-nums ${typeof value === 'number' && value > 0 ? 'font-semibold text-slate-800 dark:text-slate-200' : 'text-slate-400'}`}>{typeof value === 'number' ? value : '—'}</td>;
                     })}
                     <td className="border-l border-slate-100 px-3 py-2 text-right font-extrabold tabular-nums text-slate-900 dark:border-slate-800 dark:text-white">{Number(row.total_hours || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-slate-600 dark:text-slate-300">{row.days_worked}</td>
-                    <td className="sticky right-0 border-l border-slate-100 bg-white px-2 py-2 text-center dark:border-slate-800 dark:bg-slate-900">{canReport && row.employee_id && <button type="button" onClick={() => openEdit(row)} className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-2 py-1.5 font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><Pencil size={12} /></button>}</td>
+                    <td className="md:sticky md:right-0 border-l border-slate-100 bg-white px-2 py-2 text-center dark:border-slate-800 dark:bg-slate-900">{canReport && row.employee_id && <button type="button" onClick={() => openEdit(row)} className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-2 py-1.5 font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><Pencil size={12} /></button>}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot className="border-t-2 border-slate-400 bg-slate-100 font-extrabold text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white">
                 <tr>
-                  <td className="sticky left-0 z-20 w-[210px] min-w-[210px] max-w-[210px] border-r border-slate-200 bg-slate-100 px-3 py-3 dark:border-slate-700 dark:bg-slate-800" />
-                  <td className="sticky left-[210px] z-20 w-[115px] min-w-[115px] max-w-[115px] border-r border-slate-200 bg-slate-100 px-3 py-3 text-right dark:border-slate-700 dark:bg-slate-800">Hrs</td>
+                  <td className="md:sticky md:left-0 z-20 w-[210px] min-w-[210px] max-w-[210px] border-r border-slate-200 bg-slate-100 px-3 py-3 dark:border-slate-700 dark:bg-slate-800" />
+                  <td className="md:sticky md:left-[210px] z-20 w-[115px] min-w-[115px] max-w-[115px] border-r border-slate-200 bg-slate-100 px-3 py-3 text-right dark:border-slate-700 dark:bg-slate-800">Hrs</td>
                   {dailyHourTotals.map((hours, index) => <td key={index + 1} className="border-r border-slate-200 px-2 py-3 text-center tabular-nums dark:border-slate-700">{hours.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>)}
                   <td className="border-l border-slate-200 px-3 py-3 text-right tabular-nums dark:border-slate-700">{allHours.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
                   <td className="border-l border-slate-200 px-3 py-3 text-right tabular-nums dark:border-slate-700">{totalDaysWorked}</td>
-                  <td className="sticky right-0 border-l border-slate-200 bg-slate-100 px-2 py-3 dark:border-slate-700 dark:bg-slate-800" />
+                  <td className="md:sticky md:right-0 border-l border-slate-200 bg-slate-100 px-2 py-3 dark:border-slate-700 dark:bg-slate-800" />
                 </tr>
               </tfoot>
             </table>
@@ -347,12 +373,33 @@ export default function EmployeeTimesheetsWorkspace({
                   <div className="mt-1"><SearchableSelect value={siteName} onChange={setSiteName} options={siteOptions} placeholder="Select site / location" searchable /></div>
                 </label>
                 <div className="sm:col-span-2">
-                  <div className="mb-2 flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300"><Clock3 size={14} className={colors.icon} /> Daily hours</div>
+                  <div className="mb-2 flex flex-wrap items-end justify-between gap-3">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300"><Clock3 size={14} className={colors.icon} /> Daily hours (maximum 15 per day)</div>
+                    <div className="flex flex-wrap items-end gap-2">
+                      <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">Hours to apply
+                        <input type="number" min="0" max="15" step="0.25" inputMode="decimal" value={bulkHours} onChange={(event) => setBulkHours(event.target.value)} className="ml-2 w-24 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm font-medium text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
+                      </label>
+                      <button type="button" onClick={applyHoursToSelectedDays} className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Apply to selected days ({bulkDays.length})</button>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-4 gap-2 sm:grid-cols-7 lg:grid-cols-8">
                     {Array.from({ length: daysInForm }, (_, index) => {
                       const day = index + 1;
-                      return <label key={day} className="text-[10px] font-bold text-slate-500">{day}
-                        <input type="number" min="0" max="24" step="0.25" inputMode="decimal" value={dailyHours[day] ?? ''} onChange={(event) => setDailyHours((current) => ({ ...current, [day]: event.target.value }))} aria-label={`Hours for day ${day}`} className="mt-1 block w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm font-medium text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white" /></label>;
+                      const [formYear, formMonth] = (formPeriod || currentMonth()).split('-').map(Number);
+                      const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(new Date(formYear, formMonth - 1, day));
+                      const selected = bulkDays.includes(day);
+                      const inputId = `timesheet-hours-${day}`;
+                      return <div key={day} className={`overflow-hidden rounded-xl border transition-all ${selected ? 'border-blue-500 bg-blue-50/80 shadow-sm shadow-blue-100 ring-2 ring-blue-100 dark:border-blue-400 dark:bg-blue-950/40 dark:ring-blue-900' : 'border-slate-300 bg-white hover:border-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-500'}`}>
+                        <div className="flex items-center justify-between px-2.5 py-2">
+                          <label htmlFor={inputId} className={`cursor-pointer text-[10px] font-bold uppercase tracking-wide ${selected ? 'text-blue-800 dark:text-blue-200' : 'text-slate-500 dark:text-slate-400'}`}>Day {day} <span className="ml-1 normal-case opacity-75">· {weekday}</span></label>
+                          <button type="button" role="checkbox" aria-checked={selected} aria-label={`Select day ${day} for bulk hours`} onClick={() => setBulkDays((current) => selected ? current.filter((item) => item !== day) : [...current, day])} className={`flex h-6 w-6 items-center justify-center rounded-full border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${selected ? 'border-blue-600 bg-blue-600 text-white shadow-sm dark:border-blue-400 dark:bg-blue-400 dark:text-slate-950' : 'border-slate-300 bg-white text-transparent hover:border-blue-400 dark:border-slate-600 dark:bg-slate-900'}`}>
+                            <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                          </button>
+                        </div>
+                        <div className={`border-none ${selected ? 'border-blue-200 dark:border-blue-900' : 'border-slate-200 dark:border-slate-700'}`}>
+                          <input id={inputId} type="number" min="0" max="15" step="0.25" inputMode="decimal" value={dailyHours[day] ?? ''} onChange={(event) => setDailyHours((current) => ({ ...current, [day]: event.target.value }))} aria-label={`Hours for day ${day}`} className="block w-full border-0 bg-transparent px-2.5 py-2 text-sm font-semibold text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:ring-0 dark:text-white" />
+                        </div>
+                      </div>;
                     })}
                   </div>
                 </div>

@@ -84,7 +84,7 @@ function Banner({ message, type, onClose }: { message: string; type: 'error' | '
 // ─── Status Badge Component ───────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
-  const s = (status || '').toUpperCase();
+  const s = (status || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
   const map: Record<string, string> = {
     OPEN: 'bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-300',
     IN_PROGRESS: 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300',
@@ -92,6 +92,7 @@ function StatusBadge({ status }: { status: string }) {
     APPROVED: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300',
     ACTIVE: 'bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-300',
     PENDING: 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300',
+    PARTIALLY_PAID: 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300',
     REJECTED: 'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300',
     CANCELLED: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
     CRITICAL: 'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300',
@@ -101,7 +102,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${map[s] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}>
-      {String(status || '').replaceAll('_', ' ')}
+      {s === 'PARTIALLY_PAID' ? 'Outstanding' : String(status || '').replaceAll('_', ' ')}
     </span>
   );
 }
@@ -5423,7 +5424,7 @@ Signed: Field Operations Administration
 
             {/* Sticky Footer */}
             <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 px-4 py-3 sm:px-6 bg-white dark:bg-slate-900 shrink-0">
-              <span className="text-xs text-slate-400 font-mono">Status: {viewingExpense.status || 'SUBMITTED'}</span>
+              <span className="text-xs text-slate-400 font-mono">Status: {String(viewingExpense.status || 'SUBMITTED').trim().toUpperCase().replace(/[\s-]+/g, '_') === 'PARTIALLY_PAID' ? 'Outstanding' : (viewingExpense.status || 'SUBMITTED').replaceAll('_', ' ')}</span>
               <div className="flex items-center gap-2">
                 {(() => {
                   const receiptFile = viewingExpense.invoice_name || (!viewingExpense.payments?.length ? viewingExpense.receipt_name || viewingExpense.receipt_file_name || viewingExpense.attachment : null) || null;

@@ -32,7 +32,7 @@ export default function BrandPanel() {
         {/* Hero copy */}
         <div className="mb-10">
           <h1 className="text-3xl xl:text-4xl font-700 leading-tight mb-4" style={{ letterSpacing: '-0.02em' }}>
-            One platform for your entire operations.
+            Unified operations management
           </h1>
           <p className="text-blue-200 text-base leading-relaxed">
             Manage workforce, equipment fleet, and inventory across all active drill sites from a single command center.

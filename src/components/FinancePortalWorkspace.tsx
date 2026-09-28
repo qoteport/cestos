@@ -140,7 +140,7 @@ function Banner({ message, type, onClose }: { message: string; type: 'error' | '
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
-  const s = (status || '').toUpperCase();
+  const s = (status || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
   const map: Record<string, string> = {
     PAID: 'bg-violet-100 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300',
     APPROVED: 'bg-violet-100 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300',
@@ -156,18 +156,18 @@ function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${map[s] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}>
-      {s === 'PAYMENT_RECONCILIATION_REQUIRED' ? 'Pending Payment' : String(status || '').replaceAll('_', ' ')}
+      {s === 'PAYMENT_RECONCILIATION_REQUIRED' ? 'Pending Payment' : s === 'PARTIALLY_PAID' ? 'Outstanding' : String(status || '').replaceAll('_', ' ')}
     </span>
   );
 }
 
 function ExpensePaymentBadge({ status }: { status?: string | null }) {
-  const value = String(status || '').toUpperCase();
+  const value = String(status || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
   const style = value === 'PAID' ? 'bg-emerald-100 text-emerald-800'
     : value === 'PARTIALLY_PAID' ? 'bg-blue-100 text-blue-800'
     : 'bg-amber-100 text-amber-800';
   const label = value === 'PAID' ? 'Expense paid'
-    : value === 'PARTIALLY_PAID' ? 'Partially paid'
+    : value === 'PARTIALLY_PAID' ? 'Outstanding'
     : value === 'PAYMENT_RECONCILIATION_REQUIRED' ? 'Pending Payment'
     : 'Expense raised';
   return <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${style}`}>{label}</span>;
@@ -2441,13 +2441,7 @@ Signed: Finance & Procurement Administration
                   Expenditure tracking, vendor analytics, frequency intelligence, and expense claim management.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowExpenseModal(true)}
-                className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1.5 shrink-0"
-              >
-                <Plus size={15} /> Submit Operational Expense Claim
-              </button>
+           
             </div>
 
             {/* KPI Summary Cards */}
@@ -2698,7 +2692,7 @@ Signed: Finance & Procurement Administration
                               </div>
                             </td>
                             <td className="px-4 py-3 font-bold text-foreground">{exp.pay_to_name || exp.reference_number || exp.id.slice(0, 8)}</td>
-                            <td className="hidden sm:table-cell px-4 py-3 font-medium text-muted-foreground">{exp.payment_method || 'MOBILE_MONEY'}</td>
+                            <td className="hidden sm:table-cell px-4 py-3 font-medium text-muted-foreground">{String(exp.payment_method || 'MOBILE_MONEY').replaceAll('_', ' ')}</td>
                             <td className="px-4 py-3 font-bold text-violet-600">${cost.toLocaleString()}</td>
                             <td className="hidden lg:table-cell px-4 py-3">
                               {fileName ? (
