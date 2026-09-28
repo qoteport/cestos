@@ -214,54 +214,62 @@ export default function LeaveManagementWorkspace() {
 
       {/* KPI Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="card p-4 space-y-1.5 border-l-4 border-l-blue-500">
-          <span className="text-xs font-semibold text-muted-foreground block">
-            Total Leave Applications
-          </span>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-foreground">
-              {loading ? '—' : totalCount}
+        <div className="bg-card border border-border rounded-xl p-4 flex flex-col justify-between space-y-2 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground">
+              Total Leave Applications
             </span>
-            <FileText size={18} className="text-blue-500" />
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <FileText size={18} />
+            </div>
+          </div>
+          <div className="text-2xl font-extrabold text-foreground">
+            {loading ? '—' : totalCount}
           </div>
           <p className="text-[11px] text-muted-foreground">Logged leave bookings</p>
         </div>
 
-        <div className="card p-4 space-y-1.5 border-l-4 border-l-amber-500">
-          <span className="text-xs font-semibold text-muted-foreground block">
-            Pending Approval Queue
-          </span>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-foreground">
-              {loading ? '—' : pendingCount}
+        <div className="bg-card border border-border rounded-xl p-4 flex flex-col justify-between space-y-2 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground">
+              Pending Approval Queue
             </span>
-            <Clock size={18} className="text-amber-500" />
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <Clock size={18} />
+            </div>
+          </div>
+          <div className="text-2xl font-extrabold text-foreground">
+            {loading ? '—' : pendingCount}
           </div>
           <p className="text-[11px] text-muted-foreground">Requires managerial action</p>
         </div>
 
-        <div className="card p-4 space-y-1.5 border-l-4 border-l-emerald-500">
-          <span className="text-xs font-semibold text-muted-foreground block">
-            Approved Leaves
-          </span>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-foreground">
-              {loading ? '—' : approvedCount}
+        <div className="bg-card border border-border rounded-xl p-4 flex flex-col justify-between space-y-2 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground">
+              Approved Leaves
             </span>
-            <CheckCircle2 size={18} className="text-emerald-500" />
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <CheckCircle2 size={18} />
+            </div>
+          </div>
+          <div className="text-2xl font-extrabold text-foreground">
+            {loading ? '—' : approvedCount}
           </div>
           <p className="text-[11px] text-muted-foreground">Confirmed off-duty schedules</p>
         </div>
 
-        <div className="card p-4 space-y-1.5 border-l-4 border-l-rose-500">
-          <span className="text-xs font-semibold text-muted-foreground block">
-            Rejected Applications
-          </span>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-foreground">
-              {loading ? '—' : rejectedCount}
+        <div className="bg-card border border-border rounded-xl p-4 flex flex-col justify-between space-y-2 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground">
+              Rejected Applications
             </span>
-            <XCircle size={18} className="text-rose-500" />
+            <div className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+              <XCircle size={18} />
+            </div>
+          </div>
+          <div className="text-2xl font-extrabold text-foreground">
+            {loading ? '—' : rejectedCount}
           </div>
           <p className="text-[11px] text-muted-foreground">Declined requests</p>
         </div>

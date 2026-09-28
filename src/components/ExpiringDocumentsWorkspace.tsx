@@ -132,30 +132,36 @@ export default function ExpiringDocumentsWorkspace({ baseRoute = '/workspace' }:
 
       {/* Alert KPI Summary Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="card p-4 space-y-1.5 border-l-4 border-l-amber-500">
-          <span className="text-xs font-semibold text-muted-foreground block">Total Expiring Documents</span>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-amber-800">{loading ? '—' : totalExpiring}</span>
-            <AlertTriangle size={18} className="text-amber-600" />
+        <div className="bg-card border border-border rounded-xl p-4 flex flex-col justify-between space-y-2 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground">Total Expiring Documents</span>
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <AlertTriangle size={18} />
+            </div>
           </div>
+          <div className="text-2xl font-extrabold text-foreground">{loading ? '—' : totalExpiring}</div>
           <p className="text-[11px] text-muted-foreground">Due for renewal within next {daysFilter} days</p>
         </div>
 
-        <div className="card p-4 space-y-1.5 border-l-4 border-l-rose-500">
-          <span className="text-xs font-semibold text-muted-foreground block">Critical Expirations (≤ 7 Days)</span>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-rose-800">{loading ? '—' : criticalCount}</span>
-            <ShieldAlert size={18} className="text-rose-600" />
+        <div className="bg-card border border-border rounded-xl p-4 flex flex-col justify-between space-y-2 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground">Critical Expirations (≤ 7 Days)</span>
+            <div className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+              <ShieldAlert size={18} />
+            </div>
           </div>
+          <div className="text-2xl font-extrabold text-foreground">{loading ? '—' : criticalCount}</div>
           <p className="text-[11px] text-muted-foreground">Requires immediate renewal action</p>
         </div>
 
-        <div className="card p-4 space-y-1.5 border-l-4 border-l-blue-500">
-          <span className="text-xs font-semibold text-muted-foreground block">Compliance Window</span>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-blue-800">{daysFilter} Days</span>
-            <Clock size={18} className="text-blue-600" />
+        <div className="bg-card border border-border rounded-xl p-4 flex flex-col justify-between space-y-2 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground">Compliance Window</span>
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <Clock size={18} />
+            </div>
           </div>
+          <div className="text-2xl font-extrabold text-foreground">{daysFilter} Days</div>
           <p className="text-[11px] text-muted-foreground">Active monitoring filter window</p>
         </div>
       </div>
