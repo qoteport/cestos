@@ -1,7 +1,7 @@
 'use client';
 import { purchaseOrderCategoryLabel } from './PurchaseOrderCategoryField';
 import IncidentDetailModal from './IncidentDetailModal';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import SearchableSelect from './SearchableSelect';
 import AppDateTimePicker from './ui/AppDateTimePicker';
 import WorkforceKPIStrip from '@/app/workforce-overview/components/WorkforceKPIStrip';
@@ -9,6 +9,7 @@ import WorkforceCharts from '@/app/workforce-overview/components/WorkforceCharts
 import AppLogo from './ui/AppLogo';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useApiDataRefresh } from '@/lib/apiDataRefresh';
 import {
   Users,
   DollarSign,
@@ -146,7 +147,7 @@ function StatusBadge({ status }: { status: string }) {
         map[s] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
       }`}
     >
-      {status}
+      {String(status || '').replaceAll('_', ' ')}
     </span>
   );
 }
@@ -203,6 +204,7 @@ export default function HRPortalWorkspace() {
   const [showExpenseModal, setShowExpenseModal] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const hrDataLoaded = useRef(false);
 
   // Global Project & Date Range Filters
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
@@ -229,7 +231,7 @@ export default function HRPortalWorkspace() {
 
   // Fetch Core Data
   const loadData = async () => {
-    setLoading(true);
+    if (!hrDataLoaded.current) setLoading(true);
     try {
       const [empRes, expRes, invRes, poRes, fuelRes, allocRes, astRes, locRes, incRes, projRes, docReqRes] = await Promise.all([
         apiFetch<any>('/api/v1/employees?page_size=100').catch(() => []),
@@ -271,9 +273,12 @@ export default function HRPortalWorkspace() {
     } catch (e: any) {
       setBanner({ message: e?.message || 'Failed to load executive portal data', type: 'error' });
     } finally {
+      hrDataLoaded.current = true;
       setLoading(false);
     }
   };
+
+  useApiDataRefresh(() => { void loadData(); });
 
   useEffect(() => {
     void loadData();

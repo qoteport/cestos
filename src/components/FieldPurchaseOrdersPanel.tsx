@@ -13,7 +13,7 @@ import { useOperationalDataSync } from '@/lib/operationalDataSync';
 type Row = Record<string, any>;
 type Line = { item_name: string; description: string; quantity_ordered: string; unit_price: string };
 type FormStep = 'EDIT' | 'PREVIEW';
-const blankLine = (): Line => ({ item_name: '', description: '', quantity_ordered: '1', unit_price: '0' });
+const blankLine = (): Line => ({ item_name: '', description: '', quantity_ordered: '0', unit_price: '0' });
 const input = 'w-full rounded-lg border bg-background p-2.5';
 
 function ExpensePaymentBadge({ status }: { status?: string | null }) {
@@ -208,9 +208,8 @@ export default function FieldPurchaseOrdersPanel({
   }
   function submit(event: FormEvent) {
     event.preventDefault();
-    const enteredLines = lines.filter((line) => line.item_name.trim() || line.description.trim() || Number(line.unit_price) > 0);
-    if (!supplier.trim() || enteredLines.some((line) => !line.description.trim() || Number(line.quantity_ordered) <= 0 || Number(line.unit_price) < 0)) {
-      setMessage('Enter a supplier and complete each purchase order line.'); return;
+    if (!supplier.trim()) {
+      setMessage('Please enter a supplier name.'); return;
     }
     setMessage('');
     setFormStep('PREVIEW');
@@ -219,10 +218,18 @@ export default function FieldPurchaseOrdersPanel({
   async function saveOrder(saveAsDraft: boolean) {
     setBusy(true); setMessage('');
     try {
+      const validItems = lines
+        .filter((line) => line.item_name.trim() || line.description.trim() || (line.quantity_ordered !== '' && Number(line.quantity_ordered) > 0) || (line.unit_price !== '' && Number(line.unit_price) > 0))
+        .map((line) => ({
+          item_name: line.item_name.trim() || undefined,
+          description: line.description.trim() || line.item_name.trim() || 'Item line',
+          quantity_ordered: line.quantity_ordered === '' ? 0 : Number(line.quantity_ordered) || 0,
+          unit_price: line.unit_price === '' ? 0 : Number(line.unit_price) || 0,
+        }));
       const payload = {
         supplier_name: supplier.trim(), project_id: orderProjectId || undefined, currency, category: category.trim() || null, notes: notes.trim() || undefined,
         total_amount: lineTotal > 0 ? lineTotal : Number(manualTotal) || 0,
-        items: lines.filter((line) => line.item_name.trim() || line.description.trim() || Number(line.unit_price) > 0).map((line) => ({ item_name: line.item_name.trim() || undefined, description: line.description.trim(), quantity_ordered: Number(line.quantity_ordered), unit_price: Number(line.unit_price) })),
+        items: validItems,
         ...(!editing ? { save_as_draft: saveAsDraft } : {}),
       };
       let po: Row;
@@ -402,7 +409,7 @@ export default function FieldPurchaseOrdersPanel({
                         </label>
                         <label className="space-y-1 text-xs font-semibold lg:col-span-1">
                           <span className="block">Quantity</span>
-                          <input min="0.001" step="0.001" type="number" className={input} value={line.quantity_ordered} onChange={(e) => setLines((rows) => rows.map((r, i) => i === index ? { ...r, quantity_ordered: e.target.value } : r))} />
+                          <input min="0" step="0.001" type="number" className={input} value={line.quantity_ordered} onChange={(e) => setLines((rows) => rows.map((r, i) => i === index ? { ...r, quantity_ordered: e.target.value } : r))} />
                         </label>
                         <label className="space-y-1 text-xs font-semibold lg:col-span-2">
                           <span className="block">Unit price</span>

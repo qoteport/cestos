@@ -170,7 +170,7 @@ export default function ProcurementWorkspace({ subResource }: { subResource?: st
                     po.status === 'RECEIVED' ? 'bg-emerald-500/10 text-emerald-600' :
                     po.status === 'PARTIALLY_RECEIVED' ? 'bg-blue-500/10 text-blue-600' : 'bg-amber-500/10 text-amber-600'
                   }`}>
-                    {po.status}
+                    {String(po.status || '').replaceAll('_', ' ')}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right flex items-center justify-end gap-2">
@@ -215,7 +215,7 @@ export default function ProcurementWorkspace({ subResource }: { subResource?: st
               </div>
               <div>
                 <span className="text-xs text-muted-foreground block">Status</span>
-                <span className="font-semibold text-primary">{selectedPo.status}</span>
+                <span className="font-semibold text-primary">{String(selectedPo.status || '').replaceAll('_', ' ')}</span>
               </div>
               <div>
                 <span className="text-xs text-muted-foreground block">Category</span>

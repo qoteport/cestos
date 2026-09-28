@@ -303,7 +303,7 @@ export default function PreventiveMaintenanceWizard({
     { value: '__CUSTOM__', label: 'Enter a custom location…' },
   ];
   const workOrderOptions = [
-    ...workOrders.map((order) => ({ value: String(order.id), label: `${order.wo_number || order.title || 'Work order'}${order.status ? ` · ${order.status}` : ''}` })),
+    ...workOrders.map((order) => ({ value: String(order.id), label: `${order.wo_number || order.title || 'Work order'}${order.status ? ` · ${String(order.status).replaceAll('_', ' ')}` : ''}` })),
     { value: '__CUSTOM__', label: 'Enter a work order number…' },
   ];
   const workOrderItemOptions = inventoryItems.map((item) => ({ value: String(item.id), label: `${item.name} [Code: ${item.code || 'ITEM'}]`, sublabel: `Unit: ${item.unit_of_measure || 'PCS'}` }));
@@ -487,7 +487,7 @@ export default function PreventiveMaintenanceWizard({
               <label className="space-y-1">Work Order Title *<input required value={woForm.title} onChange={(e) => setWoForm({ ...woForm, title: e.target.value })} className="w-full border rounded-lg p-2 bg-background" /></label>
             </div>
             <div className="grid sm:grid-cols-3 gap-3">
-              <label className="space-y-1">Maintenance Type *<SearchableSelect value={woForm.maintenance_type} onChange={(value) => setWoForm({ ...woForm, maintenance_type: value })} options={['PREVENTIVE','CORRECTIVE','INSPECTION','SERVICE','OTHER'].map((v) => ({ value: v, label: v }))} placeholder="Select type..." /></label>
+              <label className="space-y-1">Maintenance Type *<SearchableSelect value={woForm.maintenance_type} onChange={(value) => setWoForm({ ...woForm, maintenance_type: value })} options={['PREVENTIVE','CORRECTIVE','INSPECTION','SERVICE','OTHER'].map((v) => ({ value: v, label: v.replaceAll('_', ' ') }))} placeholder="Select type..." /></label>
               <label className="space-y-1">Priority Level *<SearchableSelect value={woForm.priority} onChange={(value) => setWoForm({ ...woForm, priority: value })} options={['LOW','NORMAL','HIGH','CRITICAL'].map((v) => ({ value: v, label: v }))} placeholder="Select priority..." /></label>
               <label className="space-y-1">Estimated Cost ($)<input type="number" min="0" step="0.01" value={woForm.cost} onChange={(e) => setWoForm({ ...woForm, cost: Number(e.target.value) })} className="w-full border rounded-lg p-2 bg-background" /></label>
             </div>

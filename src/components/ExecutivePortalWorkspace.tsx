@@ -14,6 +14,7 @@ import NotificationWorkspace from './NotificationWorkspace';
 import useNotificationCount from './useNotificationCount';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useApiDataRefresh } from '@/lib/apiDataRefresh';
 import OperationalExpenseSubmissionModal from './OperationalExpenseSubmissionModal';
 import RegisterUserModal from './RegisterUserModal';
 import {
@@ -171,7 +172,7 @@ function StatusBadge({ status }: { status: string }) {
         map[s] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
       }`}
     >
-      {status}
+      {String(status || '').replaceAll('_', ' ')}
     </span>
   );
 }
@@ -293,12 +294,14 @@ export default function ExecutivePortalWorkspace() {
         currency: newPoForm.currency || 'USD',
         category: newPoForm.category.trim() || null,
         notes: newPoForm.notes || undefined,
-        items: newPoForm.items.map((it) => ({
-          item_name: it.item_name || undefined,
-          description: it.description,
-          quantity_ordered: Number(it.quantity_ordered) || 1,
-          unit_price: Number(it.unit_price) || 0,
-        })),
+        items: newPoForm.items
+          .filter((it) => (it.item_name || '').trim() || (it.description || '').trim() || Number(it.quantity_ordered) > 0 || Number(it.unit_price) > 0)
+          .map((it) => ({
+            item_name: (it.item_name || '').trim() || undefined,
+            description: (it.description || '').trim() || (it.item_name || '').trim() || 'Item line',
+            quantity_ordered: Number(it.quantity_ordered) || 0,
+            unit_price: Number(it.unit_price) || 0,
+          })),
       };
 
       const created = await apiFetch<any>('/api/v1/procurement/purchase-orders', {
@@ -343,6 +346,7 @@ export default function ExecutivePortalWorkspace() {
   const [viewingProject, setViewingProject] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
+  const executiveDataLoaded = useRef(false);
 
   // Global Project & Date Range Filters
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
@@ -369,7 +373,7 @@ export default function ExecutivePortalWorkspace() {
 
   // Fetch Core Data
   const loadData = async () => {
-    setLoading(true);
+    if (!executiveDataLoaded.current) setLoading(true);
     try {
       const [empRes, expRes, poRes, fuelRes, allocRes, astRes, locRes, incRes, projRes, woRes, pmRes, breakdownRes, assessmentsRes, actionTrackerRes, pmTrackerRes, equipmentRegisterRes] = await Promise.all([
         apiFetch<any>('/api/v1/employees?page_size=100').catch(() => []),
@@ -427,9 +431,12 @@ export default function ExecutivePortalWorkspace() {
     } catch (e: any) {
       setBanner({ message: e?.message || 'Failed to load executive portal data', type: 'error' });
     } finally {
+      executiveDataLoaded.current = true;
       setLoading(false);
     }
   };
+
+  useApiDataRefresh(() => { void loadData(); });
 
   useEffect(() => {
     void loadData();
@@ -3128,12 +3135,15 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                 {/* Line Items List */}
                 <div className="space-y-2 border-t pt-3">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-foreground uppercase tracking-wider">Purchase Order Line Items</label>
+                    <div>
+                      <label className="text-xs font-bold text-foreground uppercase tracking-wider block">Purchase Order Line Items <span className="font-normal text-muted-foreground font-sans text-xs lowercase">(optional)</span></label>
+                      <p className="text-[11px] text-muted-foreground">Add itemized breakdown if required, or leave blank.</p>
+                    </div>
                     <button
                       type="button"
                       onClick={() => setNewPoForm({
                         ...newPoForm,
-                        items: [...newPoForm.items, { item_name: '', description: '', quantity_ordered: 1, unit_price: 0 }],
+                        items: [...newPoForm.items, { item_name: '', description: '', quantity_ordered: 0, unit_price: 0 }],
                       })}
                       className="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1"
                     >
@@ -3142,39 +3152,38 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                   </div>
 
                   {newPoForm.items.map((it, idx) => (
-                    <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 border rounded-xl bg-muted/30">
+                    <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 border rounded-xl bg-muted/30 relative">
                       <label className="md:col-span-3 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Item / Service
                         <input type="text" placeholder="e.g. Hydraulic filter" value={it.item_name || ''} onChange={(e) => {
                           const updated = [...newPoForm.items]; updated[idx].item_name = e.target.value; setNewPoForm({ ...newPoForm, items: updated });
                         }} className="w-full p-2.5 border rounded-lg bg-background text-xs text-foreground" />
                       </label>
-                      <label className="md:col-span-5 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Description *
-                        <textarea required rows={1} maxLength={255} placeholder="Specification, purpose, or additional details" value={it.description} onChange={(e) => {
+                      <label className="md:col-span-5 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Description
+                        <textarea rows={1} maxLength={255} placeholder="Specification, purpose, or details" value={it.description} onChange={(e) => {
                           const updated = [...newPoForm.items]; updated[idx].description = e.target.value; setNewPoForm({ ...newPoForm, items: updated });
                         }} className="w-full p-2.5 border rounded-lg bg-background text-xs text-foreground resize-y" />
                       </label>
                       <label className="md:col-span-2 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Quantity
-                        <input type="number" min="1" value={it.quantity_ordered} onChange={(e) => {
-                          const updated = [...newPoForm.items]; updated[idx].quantity_ordered = Number(e.target.value) || 1; setNewPoForm({ ...newPoForm, items: updated });
+                        <input type="number" min="0" step="any" value={it.quantity_ordered === 0 ? '' : it.quantity_ordered} placeholder="0" onChange={(e) => {
+                          const updated = [...newPoForm.items]; updated[idx].quantity_ordered = e.target.value === '' ? 0 : (Number(e.target.value) || 0); setNewPoForm({ ...newPoForm, items: updated });
                         }} className="w-full p-2.5 border rounded-lg bg-background text-xs font-mono text-center text-foreground" />
                       </label>
                       <label className="md:col-span-2 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Unit price
-                        <input type="number" min="0" step="0.01" value={it.unit_price} onChange={(e) => {
-                          const updated = [...newPoForm.items]; updated[idx].unit_price = Number(e.target.value) || 0; setNewPoForm({ ...newPoForm, items: updated });
+                        <input type="number" min="0" step="any" value={it.unit_price === 0 ? '' : it.unit_price} placeholder="0" onChange={(e) => {
+                          const updated = [...newPoForm.items]; updated[idx].unit_price = e.target.value === '' ? 0 : (Number(e.target.value) || 0); setNewPoForm({ ...newPoForm, items: updated });
                         }} className="w-full p-2.5 border rounded-lg bg-background text-xs font-mono text-right text-foreground" />
                       </label>
-                      {newPoForm.items.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = newPoForm.items.filter((_, i) => i !== idx);
-                            setNewPoForm({ ...newPoForm, items: updated });
-                          }}
-                          className="p-1 text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = newPoForm.items.filter((_, i) => i !== idx);
+                          setNewPoForm({ ...newPoForm, items: updated });
+                        }}
+                        className="p-1 text-red-500 hover:text-red-700 absolute top-2 right-2 md:static md:self-center"
+                        title="Remove item"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   ))}
 
@@ -3183,7 +3192,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                       type="button"
                       onClick={() => setNewPoForm({
                         ...newPoForm,
-                        items: [...newPoForm.items, { item_name: '', description: '', quantity_ordered: 1, unit_price: 0 }],
+                        items: [...newPoForm.items, { item_name: '', description: '', quantity_ordered: 0, unit_price: 0 }],
                       })}
                       className="w-full py-2.5 px-4 border border-dashed border-indigo-300 dark:border-indigo-700/60 rounded-xl text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 flex items-center justify-center gap-1.5 transition-colors"
                     >

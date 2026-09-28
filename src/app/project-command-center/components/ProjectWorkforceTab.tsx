@@ -147,7 +147,7 @@ export default function ProjectWorkforceTab() {
                   <td className="text-sm text-muted-foreground">{getDept(emp)}</td>
                   <td className="text-sm text-foreground">{getPosition(emp)}</td>
                   <td className="text-sm text-muted-foreground">{getSite(emp)}</td>
-                  <td><span className={`badge ${getStatusClass(emp?.status)}`}>{emp?.status?.replace('_', ' ') ?? '—'}</span></td>
+                  <td><span className={`badge ${getStatusClass(emp?.status)}`}>{emp?.status?.replaceAll('_', ' ') ?? '—'}</span></td>
                   <td className="text-xs text-muted-foreground">{formatDate(emp?.start_date ?? emp?.assignment_start_date)}</td>
                 </tr>
               ))}

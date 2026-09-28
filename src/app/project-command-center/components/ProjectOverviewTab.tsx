@@ -164,7 +164,7 @@ export default function ProjectOverviewTab() {
                       <Link href="/workforce-overview" className="entity-link text-sm">{getEmpName(emp)}</Link>
                     </td>
                     <td className="text-sm text-muted-foreground">{getRole(emp)}</td>
-                    <td><span className={`badge ${getStatusClass(emp?.status)}`}>{emp?.status?.replace('_', ' ') ?? '—'}</span></td>
+                    <td><span className={`badge ${getStatusClass(emp?.status)}`}>{emp?.status?.replaceAll('_', ' ') ?? '—'}</span></td>
                   </tr>
                 ))}
               </tbody>

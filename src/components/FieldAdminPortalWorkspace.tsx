@@ -14,6 +14,7 @@ import {
 import { ResponsiveContainer, ComposedChart, BarChart, Bar, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { useAuth } from '@/components/AuthProvider';
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
+import { useApiDataRefresh } from '@/lib/apiDataRefresh';
 import BreakdownJobCardWizard from './BreakdownJobCardWizard';
 import PreventiveMaintenanceWizard from './PreventiveMaintenanceWizard';
 import MaintenanceAssessmentReportWizard from './MaintenanceAssessmentReportWizard';
@@ -100,7 +101,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${map[s] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}>
-      {status}
+      {String(status || '').replaceAll('_', ' ')}
     </span>
   );
 }
@@ -153,6 +154,7 @@ export default function FieldAdminPortalWorkspace() {
   const [expenses, setExpenses] = useState<any[]>([]);
   const [operationalExpenseRequests, setOperationalExpenseRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const fieldAdminDataLoaded = useRef(false);
 
   // Modals state
   const [poFormSignal, setPoFormSignal] = useState(0);
@@ -416,7 +418,7 @@ export default function FieldAdminPortalWorkspace() {
   // ─── Data Reload ─────────────────────────────────────────────────────────────
 
   const reloadData = useCallback(async () => {
-    setLoading(true);
+    if (!fieldAdminDataLoaded.current) setLoading(true);
     try {
       const projUrl = '/api/v1/projects?page_size=100';
       const pRes = await apiFetch<any>(projUrl);
@@ -430,6 +432,8 @@ export default function FieldAdminPortalWorkspace() {
         setProjectSites([]);
         setIncidents([]); setNotifications([]); setDownloadRequests([]); setExpenses([]); setProjectMetrics({});
         if (!firstProjectId) setBanner({ type: 'info', message: 'No assigned project sites are available for this account.' });
+        fieldAdminDataLoaded.current = true;
+        setLoading(false);
         return;
       }
       const assetUrl = `/api/v1/projects/${activeProject.id}/assets`;
@@ -541,9 +545,12 @@ export default function FieldAdminPortalWorkspace() {
     } catch (err: any) {
       setBanner({ type: 'error', message: err.message || 'Failed to refresh portal data.' });
     } finally {
+      fieldAdminDataLoaded.current = true;
       setLoading(false);
     }
   }, [selectedProjectId]);
+
+  useApiDataRefresh(() => { void reloadData(); });
 
   useEffect(() => {
     void reloadData();
@@ -3406,7 +3413,8 @@ Signed: Field Operations Administration
                         </thead>
                         <tbody className="divide-y">
                           {filteredOperationalExpenseRequests.slice((filteredOperationalExpenseRequestsPage - 1) * 15, filteredOperationalExpenseRequestsPage * 15).map((expense: any) => {
-                            const receiptFile = expense.invoice_name || expense.receipt_name || expense.receipt_file_name || expense.attachment || null;
+                            const hasInstallmentPayments = Array.isArray(expense.payments) && expense.payments.length > 0;
+                            const receiptFile = expense.invoice_name || (!hasInstallmentPayments ? expense.receipt_name || expense.receipt_file_name || expense.attachment : null) || null;
 
                             return (
                               <tr key={expense.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
@@ -3446,6 +3454,8 @@ Signed: Field Operations Administration
                                       <Paperclip size={12} className="shrink-0 text-orange-600" />
                                       <span className="truncate">{receiptFile}</span>
                                     </button>
+                                  ) : hasInstallmentPayments ? (
+                                    <button type="button" onClick={() => setViewingExpense(expense)} className="text-xs font-semibold text-blue-700 underline">View {expense.payments.length} payment receipt{expense.payments.length === 1 ? '' : 's'}</button>
                                   ) : (
                                     <span className="text-slate-400 italic">No file attached</span>
                                   )}
@@ -5433,7 +5443,7 @@ Signed: Field Operations Administration
                     {viewingExpense.payments.map((payment: any, index: number) => (
                       <div key={payment.id || index} className="rounded-lg border border-slate-100 dark:border-slate-800 bg-white p-3 dark:bg-slate-900">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Installment {viewingExpense.payments.length - index}</span>
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Installment {index + 1}</span>
                           <strong className="text-sm text-emerald-700 dark:text-emerald-300">${Number(payment.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                         </div>
                         <div className="mt-1 flex flex-wrap justify-between gap-2 text-[11px] text-slate-500">
@@ -5461,14 +5471,15 @@ Signed: Field Operations Administration
               <span className="text-xs text-slate-400 font-mono">Status: {viewingExpense.status || 'SUBMITTED'}</span>
               <div className="flex items-center gap-2">
                 {(() => {
-                  const receiptFile = viewingExpense.invoice_name || viewingExpense.receipt_name || viewingExpense.receipt_file_name || viewingExpense.attachment || null;
+                  const receiptFile = viewingExpense.invoice_name || (!viewingExpense.payments?.length ? viewingExpense.receipt_name || viewingExpense.receipt_file_name || viewingExpense.attachment : null) || null;
                   if (!receiptFile) return null;
+                  const kind = viewingExpense.invoice_name || viewingExpense.invoice_path ? 'invoice' : 'receipt';
                   return (
                     <button
                       type="button"
                       onClick={() => setFieldAdminViewerState({
                         isOpen: true,
-                        fileUrl: `/api/v1/operational-expenses/${viewingExpense.id}/invoice`,
+                        fileUrl: `/api/v1/operational-expenses/${viewingExpense.id}/files/${kind}`,
                         fileName: receiptFile,
                         title: 'Attached Receipt Docket File',
                       })}

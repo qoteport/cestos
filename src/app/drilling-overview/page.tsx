@@ -220,7 +220,7 @@ export default function DrillingOverviewPage() {
                           s.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-600' :
                           s.status === 'SUBMITTED' ? 'bg-blue-500/10 text-blue-600' : 'bg-amber-500/10 text-amber-600'
                         }`}>
-                          {s.status || 'DRAFT'}
+                          {String(s.status || 'DRAFT').replaceAll('_', ' ')}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -270,7 +270,7 @@ export default function DrillingOverviewPage() {
                   </div>
                   <div className="text-right">
                     <span className="font-mono font-bold text-sm block">{p.target_metres} m Target</span>
-                    <span className="text-xs font-medium text-emerald-600">{p.status}</span>
+                    <span className="text-xs font-medium text-emerald-600">{String(p.status || '').replaceAll('_', ' ')}</span>
                   </div>
                 </div>
               ))}
@@ -302,7 +302,7 @@ export default function DrillingOverviewPage() {
                   </div>
                   <div className="text-right">
                     <span className="font-mono font-bold text-sm block">{h.target_depth_m} m Planned</span>
-                    <span className="text-xs font-medium text-blue-600">{h.status}</span>
+                    <span className="text-xs font-medium text-blue-600">{String(h.status || '').replaceAll('_', ' ')}</span>
                   </div>
                 </div>
               ))}
@@ -351,7 +351,7 @@ export default function DrillingOverviewPage() {
                   selectedShift.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-600' :
                   selectedShift.status === 'SUBMITTED' ? 'bg-blue-500/10 text-blue-600' : 'bg-amber-500/10 text-amber-600'
                 }`}>
-                  {selectedShift.status || 'SUBMITTED'}
+                  {String(selectedShift.status || 'SUBMITTED').replaceAll('_', ' ')}
                 </span>
               </div>
             </div>

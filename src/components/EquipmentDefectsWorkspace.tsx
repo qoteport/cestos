@@ -479,11 +479,11 @@ export default function EquipmentDefectsWorkspace() {
               </div>
               <div className="bg-muted/30 p-2.5 rounded">
                 <span className="text-muted-foreground block">Severity Level</span>
-                <strong className="text-sm font-semibold">{selectedDefect.severity}</strong>
+                <strong className="text-sm font-semibold">{String(selectedDefect.severity || '').replaceAll('_', ' ')}</strong>
               </div>
               <div className="bg-muted/30 p-2.5 rounded">
                 <span className="text-muted-foreground block">Defect Status</span>
-                <strong className="text-sm font-semibold">{selectedDefect.status}</strong>
+                <strong className="text-sm font-semibold">{String(selectedDefect.status || '').replaceAll('_', ' ')}</strong>
               </div>
             </div>
 

@@ -46,10 +46,10 @@ export default function ProjectSitesTab() {
               </div>
               <div>
                 <p className="text-sm font-700 text-foreground">{site?.name}</p>
-                <p className="text-2xs text-muted-foreground">{site?.type?.replace('_', ' ')}</p>
+                <p className="text-2xs text-muted-foreground">{site?.type?.replaceAll('_', ' ')}</p>
               </div>
             </div>
-            <span className="badge badge-active">{site?.status}</span>
+            <span className="badge badge-active">{String(site?.status || '—').replaceAll('_', ' ')}</span>
           </div>
           <p className="text-xs text-muted-foreground mb-3">{site?.description}</p>
           <div className="flex items-center gap-4 text-xs">

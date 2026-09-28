@@ -151,10 +151,10 @@ export default function HseIncidentsWorkspace({ subResource }: { subResource?: s
             {filteredIncidents.map((inc) => (
               <tr key={inc.id} className="hover:bg-muted/30">
                 <td className="px-4 py-3 font-mono font-medium text-xs">{inc.incident_number}</td>
-                <td className="px-4 py-3 font-semibold text-xs">{inc.incident_type}</td>
+                <td className="px-4 py-3 font-semibold text-xs">{String(inc.incident_type || '').replaceAll('_', ' ')}</td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-0.5 rounded border text-xs font-semibold ${getSeverityBadge(inc.severity)}`}>
-                    {inc.severity}
+                    {String(inc.severity || '').replaceAll('_', ' ')}
                   </span>
                 </td>
                 <td className="px-4 py-3">
@@ -163,7 +163,7 @@ export default function HseIncidentsWorkspace({ subResource }: { subResource?: s
                 </td>
                 <td className="px-4 py-3">
                   <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
-                    {inc.status}
+                    {String(inc.status || '').replaceAll('_', ' ')}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-xs text-muted-foreground">{inc.occurred_at?.slice(0, 10)}</td>
@@ -196,17 +196,17 @@ export default function HseIncidentsWorkspace({ subResource }: { subResource?: s
             <div className="grid grid-cols-2 gap-4 border-b pb-3">
               <div>
                 <span className="text-xs text-muted-foreground block">Incident Type</span>
-                <span className="font-semibold">{selectedIncident.incident_type}</span>
+                <span className="font-semibold">{String(selectedIncident.incident_type || '').replaceAll('_', ' ')}</span>
               </div>
               <div>
                 <span className="text-xs text-muted-foreground block">Severity</span>
                 <span className={`px-2 py-0.5 rounded border text-xs font-semibold ${getSeverityBadge(selectedIncident.severity)}`}>
-                  {selectedIncident.severity}
+                  {String(selectedIncident.severity || '').replaceAll('_', ' ')}
                 </span>
               </div>
               <div>
                 <span className="text-xs text-muted-foreground block">Status</span>
-                <span className="font-semibold text-primary">{selectedIncident.status}</span>
+                <span className="font-semibold text-primary">{String(selectedIncident.status || '').replaceAll('_', ' ')}</span>
               </div>
               <div>
                 <span className="text-xs text-muted-foreground block">Occurred At</span>

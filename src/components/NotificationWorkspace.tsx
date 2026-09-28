@@ -665,7 +665,7 @@ export default function NotificationWorkspace({ fieldPortal = false, hideSchedul
                           {isImmediateFinanceRule(s.rule_type) ? 'Immediate event alert' : `${s.lead_time_days} Days Lead Time`}
                         </td>
                         <td className="px-4 py-3">
-                          <div>{isImmediateFinanceRule(s.rule_type) ? 'On Event' : (s.frequency || 'DAILY')}</div>
+                          <div>{isImmediateFinanceRule(s.rule_type) ? 'On Event' : String(s.frequency || 'DAILY').replaceAll('_', ' ')}</div>
                           {!isImmediateFinanceRule(s.rule_type) && <><div className="text-muted-foreground mt-1">Last run: {s.last_run_at ? new Date(s.last_run_at).toLocaleString() : 'Never'}</div>
                           <div className="text-muted-foreground">Next: {s.next_run_at ? new Date(s.next_run_at).toLocaleString() : s.frequency === 'ONCE' && s.last_run_at ? 'Completed' : 'Awaiting scheduler'}</div></>}
                         </td>

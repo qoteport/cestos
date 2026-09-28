@@ -100,9 +100,9 @@ export default function FieldTeamLeaveRequests({ projectId, search }: { projectI
               {visible.length === 0 ? <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No team leave requests match this view.</td></tr> : visible.map((request) => (
                 <tr key={request.id}>
                   <td className="p-3"><strong className="block">{request.employee_name}</strong><span className="text-xs text-muted-foreground">{request.employee_number} · {request.job_title || 'Team member'}</span></td>
-                  <td className="p-3">{request.leave_type || 'Leave'}</td>
+                  <td className="p-3">{String(request.leave_type || 'Leave').replaceAll('_', ' ')}</td>
                   <td className="p-3 whitespace-nowrap">{request.start_date} – {request.end_date}</td>
-                  <td className="p-3">{request.days}</td><td className="p-3">{request.status}</td>
+                  <td className="p-3">{request.days}</td><td className="p-3">{String(request.status || '').replaceAll('_', ' ')}</td>
                   <td className="p-3"><button type="button" onClick={() => setSelected(request)} className="btn-secondary text-xs" aria-label={`View leave details for ${request.employee_name}`}><Eye size={14} /> View details</button></td>
                 </tr>
               ))}
@@ -113,10 +113,10 @@ export default function FieldTeamLeaveRequests({ projectId, search }: { projectI
       {selected && <Modal title={`Leave request · ${selected.employee_name}`} onClose={() => setSelected(null)}>
         <dl className="grid grid-cols-2 gap-4 text-sm">
           <div><dt className="text-muted-foreground">Employee</dt><dd>{selected.employee_name} ({selected.employee_number})</dd></div>
-          <div><dt className="text-muted-foreground">Leave type</dt><dd>{selected.leave_type || 'Leave'}</dd></div>
+          <div><dt className="text-muted-foreground">Leave type</dt><dd>{String(selected.leave_type || 'Leave').replaceAll('_', ' ')}</dd></div>
           <div><dt className="text-muted-foreground">Dates</dt><dd>{selected.start_date} – {selected.end_date}</dd></div>
           <div><dt className="text-muted-foreground">Duration</dt><dd>{selected.days} calendar day(s)</dd></div>
-          <div><dt className="text-muted-foreground">Status</dt><dd>{selected.status}</dd></div>
+          <div><dt className="text-muted-foreground">Status</dt><dd>{String(selected.status || '').replaceAll('_', ' ')}</dd></div>
           <div><dt className="text-muted-foreground">Requested</dt><dd>{new Date(selected.created_at).toLocaleString()}</dd></div>
           <div className="col-span-2"><dt className="text-muted-foreground">Reason</dt><dd className="whitespace-pre-wrap break-words">{selected.reason || 'No reason provided.'}</dd></div>
           {selected.notes && <div className="col-span-2"><dt className="text-muted-foreground">Notes</dt><dd className="whitespace-pre-wrap break-words">{selected.notes}</dd></div>}

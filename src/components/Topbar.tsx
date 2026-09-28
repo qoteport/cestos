@@ -189,7 +189,7 @@ export default function Topbar() {
                             key={role}
                             className="inline-block px-1.5 py-0.5 text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 capitalize rounded-md"
                           >
-                            {role.replace('_', ' ')}
+                            {role.replaceAll('_', ' ')}
                           </span>
                         ))}
                       </div>

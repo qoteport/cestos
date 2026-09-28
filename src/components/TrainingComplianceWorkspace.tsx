@@ -341,7 +341,7 @@ export default function TrainingComplianceWorkspace() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredTraining.filter(course => ['PLANNED', 'IN_PROGRESS'].includes(course.status)).map(course => <div key={course.id} className="p-4 border rounded-lg bg-card space-y-2">
                 <h3 className="font-bold">{course.training_name}</h3>
-                <p className="text-xs">{course.employee_name} · {course.status.replace('_', ' ')}</p>
+                <p className="text-xs">{course.employee_name} · {course.status.replaceAll('_', ' ')}</p>
                 <p className="text-xs text-muted-foreground">Starts {course.start_date || 'Date to be confirmed'} · {course.provider || 'Provider to be confirmed'}</p>
               </div>)}
               {!filteredTraining.some(course => ['PLANNED', 'IN_PROGRESS'].includes(course.status)) && <p className="text-xs text-muted-foreground">No planned training programs.</p>}

@@ -262,7 +262,7 @@ export default function EquipmentExpiringDocumentsWorkspace() {
                             item.category === 'INSURANCE' ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' :
                             item.category === 'WARRANTY'? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
                           }`}>
-                            {item.category}
+                            {String(item.category || '').replaceAll('_', ' ')}
                           </span>
                           <span className="text-xs text-foreground">{item.document_type}</span>
                         </div>

@@ -1110,7 +1110,7 @@ function ensureValidUUID(idStr: any): string {
             <h2 className="text-base font-bold text-foreground border-b pb-2 flex items-center justify-between">
               <span>Work Readiness Overview</span>
               <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                {overview?.compliance?.status || 'VALID'}
+                {String(overview?.compliance?.status || 'VALID').replaceAll('_', ' ')}
               </span>
             </h2>
             {overview ? (
@@ -2591,7 +2591,7 @@ function ensureValidUUID(idStr: any): string {
                     {leaveRequests.map((item, idx) => (
                       <tr key={item.id || idx} className="border-t hover:bg-muted/30">
                         <td className="p-2.5 font-semibold text-foreground">
-                          {item.leave_type || 'Leave'}
+                          {String(item.leave_type || 'Leave').replaceAll('_', ' ')}
                         </td>
                         <td className="p-2.5">{display(item.start_date)}</td>
                         <td className="p-2.5">{display(item.end_date)}</td>

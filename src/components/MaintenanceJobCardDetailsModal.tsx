@@ -208,7 +208,7 @@ export default function MaintenanceJobCardDetailsModal({
             <div className="p-3 sm:p-4">
               <p className="text-xs font-bold uppercase tracking-wide text-slate-600">{record.job_card_number || record.wo_number || 'Record'}</p>
               <h3 className="mt-1 text-base font-bold text-slate-900 dark:text-white">{title}</h3>
-              <p className="mt-1 text-xs text-slate-500">Created {record.created_at ? new Date(record.created_at).toLocaleString() : '—'} · Status: {record.status || '—'}</p>
+              <p className="mt-1 text-xs text-slate-500">Created {record.created_at ? new Date(record.created_at).toLocaleString() : '—'} · Status: {String(record.status || '—').replaceAll('_', ' ')}</p>
             </div>
           </div>
           {kind === 'preventive' && (

@@ -329,7 +329,7 @@ export default function EquipmentInspectionsWorkspace() {
               </div>
               <div className="bg-muted/30 p-2.5 rounded">
                 <span className="text-muted-foreground block">Inspection Result</span>
-                <strong className="text-sm font-semibold">{selectedInspection.result || selectedInspection.status}</strong>
+                <strong className="text-sm font-semibold">{String(selectedInspection.result || selectedInspection.status || '').replaceAll('_', ' ')}</strong>
               </div>
               <div className="bg-muted/30 p-2.5 rounded">
                 <span className="text-muted-foreground block">Inspector</span>

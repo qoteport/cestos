@@ -394,7 +394,7 @@ export default function EquipmentWorkOrdersWorkspace() {
                                 : 'bg-slate-100 text-slate-700'
                           }`}
                         >
-                          {priority}
+                            {priority.replaceAll('_', ' ')}
                         </span>
                       </td>
 
@@ -409,7 +409,7 @@ export default function EquipmentWorkOrdersWorkspace() {
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-800 border border-slate-200">
-                            {status}
+                            {status.replaceAll('_', ' ')}
                           </span>
                         )}
                       </td>
@@ -607,10 +607,10 @@ export default function EquipmentWorkOrdersWorkspace() {
                     String(selectedOrder.priority || '').toUpperCase() === 'HIGH' ? 'bg-amber-100 text-amber-800' :
                     'bg-slate-100 text-slate-700'
                   }`}>
-                    {selectedOrder.priority || 'NORMAL'}
+                    {String(selectedOrder.priority || 'NORMAL').replaceAll('_', ' ')}
                   </span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary">
-                    {selectedOrder.status || 'SCHEDULED'}
+                    {String(selectedOrder.status || 'SCHEDULED').replaceAll('_', ' ')}
                   </span>
                 </div>
               </div>

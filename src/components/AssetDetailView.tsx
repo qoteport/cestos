@@ -1687,7 +1687,7 @@ const assetEditOp = {
                           : selected.priority === 'HIGH' ?'badge-maintenance' :'badge-neutral'
                       }`}
                     >
-                      {selected.priority || 'NORMAL'} Priority
+                      {String(selected.priority || 'NORMAL').replaceAll('_', ' ')} Priority
                     </span>
                     {selected.is_recurring && (
                       <span className="badge badge-active flex items-center gap-1">

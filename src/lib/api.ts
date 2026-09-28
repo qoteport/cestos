@@ -1,6 +1,7 @@
 // Browser calls stay on this origin; Next.js proxies to the configured backend.
 import {getAccessToken, getRefreshToken, setTokens, clearTokens, refreshSession} from './session';
 import { notifyOperationalDataUpdated } from './operationalDataSync';
+import { API_DATA_REFRESHED_EVENT } from './apiDataEvents';
 import { cacheApiResponse, currentOfflineScope, enqueueOfflineWrite, listOfflineWrites, readCachedApiResponse, removeOfflineWrite, restoreOfflineBody, serializeOfflineBody, updateOfflineWrite, type OfflineWrite } from './offlineStore';
 export {getAccessToken, getRefreshToken, setTokens, clearTokens} from './session';
 export const BASE_URL = '';
@@ -10,9 +11,9 @@ export class ApiError extends Error {
 export class OfflineQueuedError extends ApiError {
   constructor(public queueId: string) { super(0, 'Cestos is unreachable. This change is saved on this device and will sync when the server is available.'); this.name = 'OfflineQueuedError'; }
 }
-type ApiFetchPolicy = { queueWhenOffline?: boolean; cacheOfflineRead?: boolean; cacheResponse?: boolean; memoryCache?: boolean };
-type MemoryApiEntry = { value: unknown; savedAt: number };
-const MEMORY_API_TTL_MS = 45_000;
+type ApiFetchPolicy = { queueWhenOffline?: boolean; cacheOfflineRead?: boolean; cacheResponse?: boolean; memoryCache?: boolean; bypassMemoryRead?: boolean };
+type MemoryApiEntry = { value: unknown; savedAt: number; revalidating?: boolean };
+const MEMORY_API_REVALIDATE_MS = 15_000;
 const MEMORY_CACHE_INVALIDATED_EVENT = 'cestos:api-cache-invalidated';
 const MEMORY_CACHE_CHANNEL = 'cestos-api-cache-invalidation';
 const memoryApiCache = new Map<string, MemoryApiEntry>();
@@ -156,7 +157,20 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, authe
   const cacheKey = memoryCacheKey(path, token);
   const memoryCacheable = isRead && policy.memoryCache !== false && policy.cacheResponse !== false && !/\/notifications(?:\/|$)/i.test(path);
   const memoryEntry = memoryCacheable ? memoryApiCache.get(cacheKey) : undefined;
-  if (memoryEntry && (Date.now() - memoryEntry.savedAt < MEMORY_API_TTL_MS || navigator.onLine === false)) return memoryEntry.value as T;
+  if (memoryEntry && !policy.bypassMemoryRead) {
+    if (navigator.onLine !== false && Date.now() - memoryEntry.savedAt >= MEMORY_API_REVALIDATE_MS && !memoryEntry.revalidating) {
+      memoryEntry.revalidating = true;
+      void apiFetch<T>(path, { method: 'GET', headers: options.headers }, authenticated, { ...policy, bypassMemoryRead: true })
+        .then((latest) => {
+          let changed = true;
+          try { changed = JSON.stringify(latest) !== JSON.stringify(memoryEntry.value); } catch { /* Treat non-serializable responses as changed. */ }
+          if (changed && typeof window !== 'undefined') window.dispatchEvent(new CustomEvent(API_DATA_REFRESHED_EVENT, { detail: { path, data: latest, refreshedAt: Date.now() } }));
+        })
+        .catch(() => {})
+        .finally(() => { memoryEntry.revalidating = false; });
+    }
+    return memoryEntry.value as T;
+  }
   const offlineScope = await currentOfflineScope(token);
   if (isRead && navigator.onLine === false) {
     if (policy.cacheOfflineRead !== false && offlineScope) {

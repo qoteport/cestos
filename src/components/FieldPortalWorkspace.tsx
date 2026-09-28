@@ -2,6 +2,7 @@
 import { hasSupervisorRole, canOpenFieldTab } from '@/lib/fieldPortalAccess';
 
 import React, { useState, useEffect } from 'react';
+import { useApiDataRefresh } from '@/lib/apiDataRefresh';
 import { useRouter } from 'next/navigation';
 import FieldWorkEditModal, { canEditFieldWork } from './FieldWorkEditModal';
 import FieldEquipmentDetails from './FieldEquipmentDetails';
@@ -83,6 +84,7 @@ export default function FieldPortalWorkspace() {
 
   // Primary State
   const [loading, setLoading] = useState(true);
+  const portalDataLoaded = React.useRef(false);
   const [version, setVersion] = useState(0);
   const [activeTab, setActiveTab] = useState<
     | 'MY_WORK'
@@ -124,6 +126,7 @@ export default function FieldPortalWorkspace() {
   const [myBreakdowns, setMyBreakdowns] = useState<any[]>([]);
   const [teamEmployees, setTeamEmployees] = useState<any[]>([]);
   const [myLeaveRequests, setMyLeaveRequests] = useState<any[]>([]);
+  const leaveDataLoaded = React.useRef(false);
   const [leaveSubmitting, setLeaveSubmitting] = useState(false);
   const [leaveLoading, setLeaveLoading] = useState(false);
   const [leaveError, setLeaveError] = useState('');
@@ -148,6 +151,7 @@ export default function FieldPortalWorkspace() {
   const [showTimeLogModal, setShowTimeLogModal] = useState(false);
   const [timeLogBusy, setTimeLogBusy] = useState(false);
   const [myTimeLogs, setMyTimeLogs] = useState<any[]>([]);
+  const timeLogDataLoaded = React.useRef(false);
   const [timeLogsLoading, setTimeLogsLoading] = useState(false);
   const [showDefectModal, setShowDefectModal] = useState(false);
   const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
@@ -612,6 +616,7 @@ export default function FieldPortalWorkspace() {
   const [breakdownPage, setBreakdownPage] = useState(1);
 
   const reload = () => setVersion((v) => v + 1);
+  useApiDataRefresh(reload);
   useOperationalDataSync(() => reload());
 
   // Determine Greeting based on time of day
@@ -648,7 +653,7 @@ export default function FieldPortalWorkspace() {
   // Load Scoped Field Data
   useEffect(() => {
     let active = true;
-    setLoading(true);
+    if (!portalDataLoaded.current) setLoading(true);
 
     Promise.all([
       apiFetch<any>('/api/v1/field-portal/projects').catch((error) => {
@@ -782,6 +787,7 @@ export default function FieldPortalWorkspace() {
       }
 
       setLoading(false);
+      portalDataLoaded.current = true;
     });
 
     return () => {
@@ -791,7 +797,6 @@ export default function FieldPortalWorkspace() {
 
   useEffect(() => {
     let active = true;
-    setShiftReports([]);
     setShiftPage(1);
     setShiftsError('');
     if (!user || !isSupervisorOrAdmin || !selectedProjectId) {
@@ -817,10 +822,9 @@ export default function FieldPortalWorkspace() {
 
   useEffect(() => {
     let active = true;
-    setMyLeaveRequests([]);
     setLeaveError('');
     if (!user || activeTab !== 'PROFILE') return;
-    setLeaveLoading(true);
+    if (!leaveDataLoaded.current) setLeaveLoading(true);
     apiFetch<any[]>('/api/v1/hr/me/leave-requests')
       .then((requests) => {
         if (active)
@@ -839,7 +843,7 @@ export default function FieldPortalWorkspace() {
           setLeaveError(error instanceof Error ? error.message : 'Could not load leave requests.');
       })
       .finally(() => {
-        if (active) setLeaveLoading(false);
+        if (active) { leaveDataLoaded.current = true; setLeaveLoading(false); }
       });
     return () => {
       active = false;
@@ -849,9 +853,8 @@ export default function FieldPortalWorkspace() {
   // Fetch current user's time logs when PROFILE tab is active
   useEffect(() => {
     let active = true;
-    setMyTimeLogs([]);
     if (!user || activeTab !== 'PROFILE') return;
-    setTimeLogsLoading(true);
+    if (!timeLogDataLoaded.current) setTimeLogsLoading(true);
     apiFetch<any>('/api/v1/employees/me/time-logs')
       .then((d) => {
         if (active) {
@@ -863,7 +866,7 @@ export default function FieldPortalWorkspace() {
         if (active) setMyTimeLogs([]);
       })
       .finally(() => {
-        if (active) setTimeLogsLoading(false);
+        if (active) { timeLogDataLoaded.current = true; setTimeLogsLoading(false); }
       });
     return () => {
       active = false;
@@ -872,8 +875,6 @@ export default function FieldPortalWorkspace() {
 
   useEffect(() => {
     let active = true;
-    setMyWorkOrders([]);
-    setMaintenanceSchedules([]);
     if (!user || !selectedProjectId) return;
     const query = new URLSearchParams({ project_id: selectedProjectId });
     if (
@@ -909,8 +910,6 @@ export default function FieldPortalWorkspace() {
 
   useEffect(() => {
     const controller = new AbortController();
-    setMyAssets([]);
-    setSelectedEquipment(null);
     if (!user || !selectedProjectId) return;
     apiFetch<any[]>(
       `/api/v1/field-portal/equipment?project_id=${encodeURIComponent(selectedProjectId)}`,
@@ -980,7 +979,6 @@ export default function FieldPortalWorkspace() {
   useEffect(() => {
     let active = true;
     if (!user || activeTab !== 'EQUIPMENT' || filteredProjectAssets.length === 0) {
-      setProjectFuelLogs([]);
       return;
     }
     Promise.all(
@@ -2400,7 +2398,7 @@ export default function FieldPortalWorkspace() {
                                   : 'bg-muted text-foreground border'
                               }`}
                             >
-                              {wo.priority} PRIORITY
+                              {String(wo.priority || '').replaceAll('_', ' ')} PRIORITY
                             </span>
                             <span
                               className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -2411,7 +2409,7 @@ export default function FieldPortalWorkspace() {
                                     : 'bg-muted text-muted-foreground border'
                               }`}
                             >
-                              {wo.status.replace('_', ' ')}
+                              {wo.status.replaceAll('_', ' ')}
                             </span>
                           </div>
                         </div>
@@ -2737,7 +2735,7 @@ export default function FieldPortalWorkspace() {
                                       : 'bg-muted text-foreground border'
                                   }`}
                                 >
-                                  {s.status}
+                                  {String(s.status || '').replaceAll('_', ' ')}
                                 </span>
                               </td>
                               <td className="px-4 py-3">
@@ -2860,7 +2858,7 @@ export default function FieldPortalWorkspace() {
                                 : 'bg-muted text-foreground border'
                             }`}
                           >
-                            {b.severity}
+                            {String(b.severity || '').replaceAll('_', ' ')}
                           </span>
                         </td>
                         <td className="px-4 py-3 font-mono">{b.downtime_hours} hrs</td>
@@ -2882,7 +2880,7 @@ export default function FieldPortalWorkspace() {
                                 : 'bg-primary/10 text-primary border border-primary/20'
                             }`}
                           >
-                            {b.status}
+                            {String(b.status || '').replaceAll('_', ' ')}
                           </span>
                         </td>
                       </tr>
@@ -3053,7 +3051,7 @@ export default function FieldPortalWorkspace() {
                         <td className="px-4 py-3 font-mono">{m.scheduled_date}</td>
                         <td className="px-4 py-3">
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-muted text-foreground border">
-                            {m.maintenance_type}
+                            {String(m.maintenance_type || '').replaceAll('_', ' ')}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground font-semibold">
@@ -3061,7 +3059,7 @@ export default function FieldPortalWorkspace() {
                         </td>
                         <td className="px-4 py-3">
                           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
-                            {m.status}
+                            {String(m.status || '').replaceAll('_', ' ')}
                           </span>
                         </td>
                       </tr>
@@ -3176,7 +3174,7 @@ export default function FieldPortalWorkspace() {
                             <span
                               className={`px-2 py-0.5 rounded text-[10px] font-bold border ${['HIGH', 'CRITICAL', 'MAJOR'].includes(String(breakdown.severity).toUpperCase()) ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-muted text-foreground'}`}
                             >
-                              {breakdown.severity || 'MEDIUM'}
+                              {String(breakdown.severity || 'MEDIUM').replaceAll('_', ' ')}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right font-mono">
@@ -3189,7 +3187,7 @@ export default function FieldPortalWorkspace() {
                             <span
                               className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${['RESOLVED', 'CLOSED'].includes(String(breakdown.status).toUpperCase()) ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-destructive/10 text-destructive border border-destructive/20'}`}
                             >
-                              {breakdown.status || 'OPEN'}
+                              {String(breakdown.status || 'OPEN').replaceAll('_', ' ')}
                             </span>
                           </td>
                           {isSupervisorOrAdmin && (
@@ -3831,7 +3829,7 @@ export default function FieldPortalWorkspace() {
                               : 'bg-muted text-foreground border'
                           }`}
                         >
-                          {l.status}
+                          {String(l.status || '').replaceAll('_', ' ')}
                         </span>
                       </div>
                       <div className="flex flex-wrap items-center justify-between text-muted-foreground gap-2">
@@ -5880,7 +5878,7 @@ export default function FieldPortalWorkspace() {
                         : 'bg-muted text-foreground border'
                     }`}
                   >
-                    {selectedWorkOrder.priority} PRIORITY
+                    {String(selectedWorkOrder.priority || '').replaceAll('_', ' ')} PRIORITY
                   </span>
                   <span
                     className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
@@ -5891,7 +5889,7 @@ export default function FieldPortalWorkspace() {
                           : 'bg-muted text-muted-foreground border'
                     }`}
                   >
-                    {selectedWorkOrder.status.replace('_', ' ')}
+                    {selectedWorkOrder.status.replaceAll('_', ' ')}
                   </span>
                 </div>
               </div>

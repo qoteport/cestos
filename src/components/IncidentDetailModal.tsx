@@ -33,7 +33,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wider ${map[s] || 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300'}`}>
-      {s}
+      {s.replaceAll('_', ' ')}
     </span>
   );
 }

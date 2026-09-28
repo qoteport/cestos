@@ -243,7 +243,7 @@ export default function EmployeeCalendarModal({
                 }`}
               >
                 <Calendar size={10} className="shrink-0" />
-                <span className="truncate">{l.leave_type || 'Leave'} ({l.status})</span>
+                <span className="truncate">{String(l.leave_type || 'Leave').replaceAll('_', ' ')} ({String(l.status || '').replaceAll('_', ' ')})</span>
               </span>
             ))}
 
@@ -461,7 +461,7 @@ export default function EmployeeCalendarModal({
                         <div className="flex justify-between font-semibold text-emerald-900">
                           <span>{l.leave_type || 'Leave Request'}</span>
                           <span className="px-1.5 py-0.5 rounded bg-emerald-200 text-emerald-800 text-[10px]">
-                            {l.status}
+                            {String(l.status || '').replaceAll('_', ' ')}
                           </span>
                         </div>
                         <p className="text-emerald-800">
@@ -486,7 +486,7 @@ export default function EmployeeCalendarModal({
                       <div key={i} className="p-3 bg-orange-50/60 border border-orange-200 rounded text-xs space-y-1">
                         <div className="flex justify-between font-semibold text-orange-900">
                           <span>{wo.wo_number || wo.title || "Work Order"}</span>
-                          <span className="px-1.5 py-0.5 rounded bg-orange-200 text-orange-900 text-[10px]">{wo.status}</span>
+                          <span className="px-1.5 py-0.5 rounded bg-orange-200 text-orange-900 text-[10px]">{String(wo.status || '').replaceAll('_', ' ')}</span>
                         </div>
                         <p className="text-orange-800">{wo.title}</p>
                         {wo.scheduled_date && <p className="text-orange-700">Scheduled: {display(wo.scheduled_date)}</p>}

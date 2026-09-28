@@ -60,7 +60,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${map[s] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}>
-      {labels[s] || status}
+      {labels[s] || String(status || '').replaceAll('_', ' ')}
     </span>
   );
 }

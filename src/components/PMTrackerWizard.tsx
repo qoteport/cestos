@@ -84,6 +84,6 @@ export default function PMTrackerWizard({ projectId, assets, employees, record, 
 }
 
 export function PMTrackerDetails({ record, onClose, onEdit }: { record: any; onClose: () => void; onEdit: () => void }) {
-  const values: Array<[string, unknown]> = fields.map(([key, label]) => [label, key === 'pm_completed' ? (record[key] ? 'Yes' : 'No') : key === 'planned_actual' ? String(record[key] || '').replace('_', ' ') : record[key] || '—']);
+  const values: Array<[string, unknown]> = fields.map(([key, label]) => [label, key === 'pm_completed' ? (record[key] ? 'Yes' : 'No') : key === 'planned_actual' ? String(record[key] || '').replaceAll('_', ' ') : record[key] || '—']);
   return <TrackerDetailsModal title="PM tracker details" fields={values} onClose={onClose} onEdit={onEdit} />;
 }

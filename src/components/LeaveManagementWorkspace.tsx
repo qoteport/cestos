@@ -400,7 +400,7 @@ export default function LeaveManagementWorkspace() {
                       {l.status === 'PENDING' && <Clock size={12} />}
                       {l.status === 'APPROVED' && <CheckCircle2 size={12} />}
                       {l.status === 'REJECTED' && <XCircle size={12} />}
-                      {l.status}
+                      {String(l.status || '').replaceAll('_', ' ')}
                     </span>
                   </div>
 

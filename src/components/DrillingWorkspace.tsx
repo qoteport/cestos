@@ -1146,7 +1146,7 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
                             s.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-600' :
                             s.status === 'SUBMITTED' ? 'bg-blue-500/10 text-blue-600' : 'bg-amber-500/10 text-amber-600'
                           }`}>
-                            {s.status}
+                            {String(s.status || '').replaceAll('_', ' ')}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right flex items-center justify-end gap-1">
@@ -1225,7 +1225,7 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-muted-foreground">{p.drilling_type || 'RC'}</span>
-                    <span className="px-2 py-0.5 rounded text-xs bg-secondary">{p.status}</span>
+                    <span className="px-2 py-0.5 rounded text-xs bg-secondary">{String(p.status || '').replaceAll('_', ' ')}</span>
                   </div>
                   <h3 className="font-bold text-base">{p.name || p.program_name}</h3>
                   <div className="flex items-center justify-between text-sm pt-2">
@@ -1323,7 +1323,7 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
                             h.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-600' :
                             h.status === 'IN_PROGRESS' ? 'bg-blue-500/10 text-blue-600' : 'bg-slate-500/10 text-slate-600'
                           }`}>
-                            {h.status}
+                            {String(h.status || '').replaceAll('_', ' ')}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right flex items-center justify-end gap-1">
@@ -2139,7 +2139,7 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
                       : 'bg-amber-500/10 text-amber-600 border border-amber-500/30'
                   }`}
                 >
-                  {selectedShift.status}
+                {String(selectedShift.status || '').replaceAll('_', ' ')}
                 </span>
               </div>
 
@@ -2804,7 +2804,7 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
               <div>
                 <span className="text-muted-foreground">Method: {selectedProgram.drilling_type}</span>
               </div>
-              <span className="px-2 py-0.5 rounded bg-secondary text-xs font-semibold">{selectedProgram.status}</span>
+              <span className="px-2 py-0.5 rounded bg-secondary text-xs font-semibold">{String(selectedProgram.status || '').replaceAll('_', ' ')}</span>
             </div>
             <div className="p-4 border rounded-lg bg-card space-y-2">
               <div className="flex justify-between font-semibold text-sm">
@@ -2832,7 +2832,7 @@ export default function DrillingWorkspace({ subResource, holesOnly = false }: { 
                 </span>
               </div>
               <span className="px-2.5 py-0.5 rounded-full font-semibold bg-secondary text-foreground">
-                {selectedHole.status}
+                {String(selectedHole.status || '').replaceAll('_', ' ')}
               </span>
             </div>
 

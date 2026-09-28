@@ -461,14 +461,14 @@ export default function EquipmentMaintenanceWorkspace() {
                       </td>
 
                       <td className="p-3">
-                        <span className="block font-semibold text-foreground">{job.maintenance_type || 'SERVICE'}</span>
+                        <span className="block font-semibold text-foreground">{String(job.maintenance_type || 'SERVICE').replaceAll('_', ' ')}</span>
                         <span
                           className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold mt-0.5 ${
                             priority === 'CRITICAL' ? 'bg-rose-100 text-rose-800'
                               : priority === 'HIGH' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
                           }`}
                         >
-                          {priority}
+                          {priority.replaceAll('_', ' ')}
                         </span>
                       </td>
 
@@ -501,7 +501,7 @@ export default function EquipmentMaintenanceWorkspace() {
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-800 border border-slate-200">
-                            {status}
+                            {status.replaceAll('_', ' ')}
                           </span>
                         )}
                       </td>
@@ -565,7 +565,7 @@ export default function EquipmentMaintenanceWorkspace() {
               </div>
               <div className="bg-muted/30 p-2.5 rounded">
                 <span className="text-muted-foreground block">Maintenance Type</span>
-                <strong className="text-sm font-semibold">{selectedJob.maintenance_type}</strong>
+                <strong className="text-sm font-semibold">{String(selectedJob.maintenance_type || '').replaceAll('_', ' ')}</strong>
               </div>
               <div className="bg-muted/30 p-2.5 rounded">
                 <span className="text-muted-foreground block">Scheduled Date</span>

@@ -87,7 +87,7 @@ export default function ProjectAssetActions({
                     <div>
                       <p className="text-sm font-semibold">{r.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {r.asset_number} · {r.current_project?.name || 'Unassigned'} · {r.status}
+                        {r.asset_number} · {r.current_project?.name || 'Unassigned'} · {String(r.status || '').replaceAll('_', ' ')}
                       </p>
                     </div>
                   </button>

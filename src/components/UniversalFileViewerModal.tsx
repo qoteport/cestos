@@ -56,7 +56,11 @@ export default function UniversalFileViewerModal({
     if (!isOpen) return;
 
     let currentUrl = '';
+    let cancelled = false;
     setError('');
+    setLoading(false);
+    setActiveBlob(null);
+    setObjectUrl('');
     setZoomLevel(100);
     setRotation(0);
     setTextContent('');
@@ -64,6 +68,7 @@ export default function UniversalFileViewerModal({
 
     async function loadFile() {
       if (blob) {
+        if (cancelled) return;
         setActiveBlob(blob);
         const url = URL.createObjectURL(blob);
         currentUrl = url;
@@ -71,7 +76,7 @@ export default function UniversalFileViewerModal({
 
         if (blob.type.includes('text') || blob.type.includes('json') || fileName.match(/\.(txt|csv|log|json|md)$/i)) {
           const text = await blob.text().catch(() => '');
-          setTextContent(text);
+          if (!cancelled) setTextContent(text);
         }
         return;
       }
@@ -92,6 +97,7 @@ export default function UniversalFileViewerModal({
               return response.blob();
             })
           : await apiFetchBlob(fileUrl);
+        if (cancelled) return;
         setActiveBlob(fetchedBlob);
         const url = URL.createObjectURL(fetchedBlob);
         currentUrl = url;
@@ -103,18 +109,19 @@ export default function UniversalFileViewerModal({
           fileName.match(/\.(txt|csv|log|json|md)$/i)
         ) {
           const text = await fetchedBlob.text().catch(() => '');
-          setTextContent(text);
+          if (!cancelled) setTextContent(text);
         }
       } catch (err: any) {
-        setError(err?.message || 'Could not load document file. Check permissions.');
+        if (!cancelled) setError(err?.message || 'Could not load document file. Check permissions.');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     void loadFile();
 
     return () => {
+      cancelled = true;
       if (currentUrl) {
         URL.revokeObjectURL(currentUrl);
       }

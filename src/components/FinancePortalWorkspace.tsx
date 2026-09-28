@@ -6,6 +6,7 @@ import AppDateTimePicker from './ui/AppDateTimePicker';
 import AppLogo from './ui/AppLogo';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useApiDataRefresh } from '@/lib/apiDataRefresh';
 import {
   DollarSign,
   User,
@@ -150,7 +151,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${map[s] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}>
-      {status}
+      {String(status || '').replaceAll('_', ' ')}
     </span>
   );
 }
@@ -220,6 +221,7 @@ export default function FinancePortalWorkspace() {
   const [expenses, setExpenses] = useState<any[]>([]); // Cost Subledger
   const [operationalExpenseRequests, setOperationalExpenseRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const financeDataLoaded = useRef(false);
 
   // Modals state for Fuel
   const [showFuelBoughtModal, setShowFuelBoughtModal] = useState(false);
@@ -277,9 +279,7 @@ export default function FinancePortalWorkspace() {
     category: '',
     currency: 'USD',
     notes: '',
-    items: [
-      { item_name: '', description: 'Operational equipment part or supplies', quantity_ordered: 5, unit_price: 150 },
-    ] as PurchaseOrderItem[],
+    items: [] as PurchaseOrderItem[],
   });
 
   const [editPoForm, setEditPoForm] = useState({
@@ -308,6 +308,7 @@ export default function FinancePortalWorkspace() {
   const reload = useCallback(() => setVersion((v) => v + 1), []);
 
   useOperationalDataSync(() => setVersion((v) => v + 1));
+  useApiDataRefresh(() => setVersion((v) => v + 1));
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -333,7 +334,7 @@ export default function FinancePortalWorkspace() {
   useEffect(() => {
     if (!user?.id) return;
     let active = true;
-    setLoading(true);
+    if (!financeDataLoaded.current) setLoading(true);
 
     const fetches: Promise<any>[] = [
       apiFetch<any>('/api/v1/projects?page_size=100').then((res) => { if (active) setProjects(Array.isArray(res) ? res : res?.items || []); }).catch(() => []),
@@ -357,15 +358,16 @@ export default function FinancePortalWorkspace() {
         .catch(() => []),
     ];
 
-    if (activeTab === 'INVOICES') {
-      fetches.push(
-        apiFetch<any>('/api/v1/commercial/invoices')
-          .then((res) => { if (active) setInvoices(Array.isArray(res) ? res : res?.items || []); })
-          .catch((err) => { if (active && err?.status !== 404) setBanner({ type: 'error', message: err.message }); })
-      );
-    }
+    Promise.all(fetches).finally(() => { if (active) { financeDataLoaded.current = true; setLoading(false); } });
+    return () => { active = false; };
+  }, [user?.id, version]);
 
-    Promise.all(fetches).finally(() => { if (active) setLoading(false); });
+  useEffect(() => {
+    if (!user?.id || activeTab !== 'INVOICES') return;
+    let active = true;
+    apiFetch<any>('/api/v1/commercial/invoices')
+      .then((res) => { if (active) setInvoices(Array.isArray(res) ? res : res?.items || []); })
+      .catch((err) => { if (active && err?.status !== 404) setBanner({ type: 'error', message: err.message }); });
     return () => { active = false; };
   }, [activeTab, user?.id, version]);
 
@@ -797,10 +799,6 @@ Signed: Finance & Procurement Administration
       setBanner({ type: 'error', message: 'Please enter a vendor / supplier name.' });
       return;
     }
-    if (newPoForm.items.length === 0) {
-      setBanner({ type: 'error', message: 'Please add at least one line item.' });
-      return;
-    }
 
     setPoSubmitBusy(true);
     try {
@@ -810,12 +808,14 @@ Signed: Finance & Procurement Administration
         currency: newPoForm.currency || 'USD',
         category: newPoForm.category.trim() || null,
         notes: newPoForm.notes || undefined,
-        items: newPoForm.items.map((it) => ({
-          item_name: it.item_name || undefined,
-          description: it.description,
-          quantity_ordered: Number(it.quantity_ordered) || 1,
-          unit_price: Number(it.unit_price) || 0,
-        })),
+        items: newPoForm.items
+          .filter((it) => (it.item_name || '').trim() || (it.description || '').trim() || Number(it.quantity_ordered) > 0 || Number(it.unit_price) > 0)
+          .map((it) => ({
+            item_name: (it.item_name || '').trim() || undefined,
+            description: (it.description || '').trim() || (it.item_name || '').trim() || 'Item line',
+            quantity_ordered: Number(it.quantity_ordered) || 0,
+            unit_price: Number(it.unit_price) || 0,
+          })),
       };
 
       const created = await apiFetch<any>('/api/v1/procurement/purchase-orders', {
@@ -847,7 +847,7 @@ Signed: Finance & Procurement Administration
         category: '',
         currency: 'USD',
         notes: '',
-        items: [{ item_name: '', description: 'Operational equipment part or supplies', quantity_ordered: 5, unit_price: 150 }],
+        items: [],
       });
       reload();
     } catch (err: any) {
@@ -2611,7 +2611,8 @@ Signed: Finance & Procurement Administration
                     <tbody className="divide-y">
                       {scopedOperationalExpenseRequests.slice((scopedOperationalExpenseRequestsPage - 1) * 15, scopedOperationalExpenseRequestsPage * 15).map((exp) => {
                         const cost = Number(exp.total_cost || exp.amount || 0);
-                        const fileName = exp.invoice_name || exp.receipt_name || exp.receipt_file_name || exp.attachment || null;
+                        const hasInstallmentPayments = Array.isArray(exp.payments) && exp.payments.length > 0;
+                        const fileName = exp.invoice_name || (!hasInstallmentPayments ? exp.receipt_name || exp.receipt_file_name || exp.attachment : null) || null;
                         const sName = exp.submitted_by_name || exp.submitted_by?.full_name || (exp.submitted_by?.first_name ? `${exp.submitted_by.first_name} ${exp.submitted_by.last_name || ''}`.trim() : null) || exp.created_by_name || (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'Operations Supervisor');
                         const sPos = exp.submitted_by_position || exp.submitted_by_title || exp.submitted_by?.job_title || exp.submitted_by?.role || (user?.is_superuser ? 'Operations Director' : user?.portal_type ? `${user.portal_type.replace('_', ' ')} Admin` : 'Field Administrator');
                         const sEmail = exp.submitted_by_email || exp.submitted_by?.email || exp.email || user?.email || 'operations@cestos.com';
@@ -2663,11 +2664,13 @@ Signed: Finance & Procurement Administration
                                   <Paperclip size={13} className="shrink-0" />
                                   <span className="max-w-[150px] truncate">{fileName}</span>
                                 </button>
+                              ) : hasInstallmentPayments ? (
+                                <button type="button" onClick={() => setViewingExpense(exp)} className="text-xs font-semibold text-violet-700 underline">View {exp.payments.length} payment receipt{exp.payments.length === 1 ? '' : 's'}</button>
                               ) : (
                                 <span className="text-muted-foreground text-[11px]">No docket</span>
                               )}
                             </td>
-                            <td className="hidden md:table-cell px-4 py-3"><div className="min-w-[205px] space-y-1.5"><div className="flex justify-between gap-2 rounded-md border border-violet-100 bg-violet-50 px-2 py-1.5 dark:border-violet-900 dark:bg-violet-950/30"><span className="text-muted-foreground">Paid to date</span><strong className="whitespace-nowrap">${Number(exp.paid_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div><div className="flex justify-between gap-2 px-1 text-[10px] text-muted-foreground"><span>Balance</span><span className="whitespace-nowrap">${Number(exp.balance_due ?? Math.max(0, cost - Number(exp.paid_amount || 0))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>{Array.isArray(exp.payments) && exp.payments.length ? exp.payments.map((payment: any, index: number) => <div key={payment.id} className="rounded-md border px-2 py-1.5"><div className="flex justify-between gap-2"><span className="text-[10px] font-semibold text-muted-foreground">Installment {exp.payments.length - index}</span><strong className="whitespace-nowrap">${Number(payment.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div><div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-muted-foreground"><span>{payment.payment_date ? new Date(`${payment.payment_date}T00:00:00`).toLocaleDateString() : 'Date unavailable'}</span>{payment.reference && <span className="max-w-20 truncate" title={payment.reference}>Ref: {payment.reference}</span>}</div>{payment.receipt_name ? <div className="mt-1 flex items-center gap-2 border-t pt-1"><span className="max-w-20 truncate text-[10px] text-muted-foreground" title={payment.receipt_name}>{payment.receipt_name}</span><button type="button" onClick={() => handleOpenFile(`/api/v1/operational-expenses/${exp.id}/payments/${payment.id}/receipt`, payment.receipt_name || 'Payment receipt')} className="text-[10px] font-bold text-violet-700 hover:underline">View</button><button type="button" onClick={() => void downloadPurchaseOrderPaymentReceipt({ ...payment, expense_id: exp.id })} className="text-[10px] font-bold text-violet-700 hover:underline">Download</button></div> : <span className="mt-1 block text-[10px] text-muted-foreground">No receipt attached</span>}</div>) : <span className="text-[10px] text-muted-foreground">No payments recorded</span>}</div></td>
+                            <td className="hidden md:table-cell px-4 py-3"><div className="min-w-[205px] space-y-1.5"><div className="flex justify-between gap-2 rounded-md border border-violet-100 bg-violet-50 px-2 py-1.5 dark:border-violet-900 dark:bg-violet-950/30"><span className="text-muted-foreground">Paid to date</span><strong className="whitespace-nowrap">${Number(exp.paid_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div><div className="flex justify-between gap-2 px-1 text-[10px] text-muted-foreground"><span>Balance</span><span className="whitespace-nowrap">${Number(exp.balance_due ?? Math.max(0, cost - Number(exp.paid_amount || 0))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>{Array.isArray(exp.payments) && exp.payments.length ? exp.payments.map((payment: any, index: number) => <div key={payment.id} className="rounded-md border px-2 py-1.5"><div className="flex justify-between gap-2"><span className="text-[10px] font-semibold text-muted-foreground">Installment {index + 1}</span><strong className="whitespace-nowrap">${Number(payment.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div><div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-muted-foreground"><span>{payment.payment_date ? new Date(`${payment.payment_date}T00:00:00`).toLocaleDateString() : 'Date unavailable'}</span>{payment.reference && <span className="max-w-20 truncate" title={payment.reference}>Ref: {payment.reference}</span>}</div>{payment.receipt_name ? <div className="mt-1 flex items-center gap-2 border-t pt-1"><span className="max-w-20 truncate text-[10px] text-muted-foreground" title={payment.receipt_name}>{payment.receipt_name}</span><button type="button" onClick={() => handleOpenFile(`/api/v1/operational-expenses/${exp.id}/payments/${payment.id}/receipt`, payment.receipt_name || 'Payment receipt')} className="text-[10px] font-bold text-violet-700 hover:underline">View</button><button type="button" onClick={() => void downloadPurchaseOrderPaymentReceipt({ ...payment, expense_id: exp.id })} className="text-[10px] font-bold text-violet-700 hover:underline">Download</button></div> : <span className="mt-1 block text-[10px] text-muted-foreground">No receipt attached</span>}</div>) : <span className="text-[10px] text-muted-foreground">No payments recorded</span>}</div></td>
                             <td className="px-4 py-3"><StatusBadge status={exp.status || 'SUBMITTED'} /></td>
                             <td className="px-4 py-3">
                               <button
@@ -3089,12 +3092,15 @@ Signed: Finance & Procurement Administration
                 {/* Line Items List */}
                 <div className="space-y-2 border-t pt-3">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-foreground uppercase tracking-wider">Purchase Order Line Items</label>
+                    <div>
+                      <label className="text-xs font-bold text-foreground uppercase tracking-wider block">Purchase Order Line Items <span className="font-normal text-muted-foreground font-sans text-xs lowercase">(optional)</span></label>
+                      <p className="text-[11px] text-muted-foreground">Add itemized breakdown if required, or leave blank.</p>
+                    </div>
                     <button
                       type="button"
                       onClick={() => setNewPoForm({
                         ...newPoForm,
-                        items: [...newPoForm.items, { item_name: '', description: '', quantity_ordered: 1, unit_price: 0 }],
+                        items: [...newPoForm.items, { item_name: '', description: '', quantity_ordered: 0, unit_price: 0 }],
                       })}
                       className="text-xs font-bold text-violet-600 hover:underline flex items-center gap-1"
                     >
@@ -3103,39 +3109,38 @@ Signed: Finance & Procurement Administration
                   </div>
 
                   {newPoForm.items.map((it, idx) => (
-                    <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 border rounded-xl bg-muted/30">
+                    <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 border rounded-xl bg-muted/30 relative">
                       <label className="md:col-span-3 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Item / Service
                         <input type="text" placeholder="e.g. Hydraulic filter" value={it.item_name || ''} onChange={(e) => {
                           const updated = [...newPoForm.items]; updated[idx].item_name = e.target.value; setNewPoForm({ ...newPoForm, items: updated });
                         }} className="w-full p-2.5 border rounded-lg bg-background text-xs text-foreground" />
                       </label>
-                      <label className="md:col-span-5 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Description *
-                        <textarea required rows={1} maxLength={255} placeholder="Specification, purpose, or additional details" value={it.description} onChange={(e) => {
+                      <label className="md:col-span-5 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Description
+                        <textarea rows={1} maxLength={255} placeholder="Specification, purpose, or details" value={it.description} onChange={(e) => {
                           const updated = [...newPoForm.items]; updated[idx].description = e.target.value; setNewPoForm({ ...newPoForm, items: updated });
                         }} className="w-full p-2.5 border rounded-lg bg-background text-xs text-foreground resize-y" />
                       </label>
                       <label className="md:col-span-2 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Quantity
-                        <input type="number" min="1" value={it.quantity_ordered} onChange={(e) => {
-                          const updated = [...newPoForm.items]; updated[idx].quantity_ordered = Number(e.target.value) || 1; setNewPoForm({ ...newPoForm, items: updated });
+                        <input type="number" min="0" step="any" value={it.quantity_ordered === 0 ? '' : it.quantity_ordered} placeholder="0" onChange={(e) => {
+                          const updated = [...newPoForm.items]; updated[idx].quantity_ordered = e.target.value === '' ? 0 : (Number(e.target.value) || 0); setNewPoForm({ ...newPoForm, items: updated });
                         }} className="w-full p-2.5 border rounded-lg bg-background text-xs font-mono text-center text-foreground" />
                       </label>
                       <label className="md:col-span-2 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Unit price
-                        <input type="number" min="0" step="0.01" value={it.unit_price} onChange={(e) => {
-                          const updated = [...newPoForm.items]; updated[idx].unit_price = Number(e.target.value) || 0; setNewPoForm({ ...newPoForm, items: updated });
+                        <input type="number" min="0" step="any" value={it.unit_price === 0 ? '' : it.unit_price} placeholder="0" onChange={(e) => {
+                          const updated = [...newPoForm.items]; updated[idx].unit_price = e.target.value === '' ? 0 : (Number(e.target.value) || 0); setNewPoForm({ ...newPoForm, items: updated });
                         }} className="w-full p-2.5 border rounded-lg bg-background text-xs font-mono text-right text-foreground" />
                       </label>
-                      {newPoForm.items.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = newPoForm.items.filter((_, i) => i !== idx);
-                            setNewPoForm({ ...newPoForm, items: updated });
-                          }}
-                          className="p-1 text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = newPoForm.items.filter((_, i) => i !== idx);
+                          setNewPoForm({ ...newPoForm, items: updated });
+                        }}
+                        className="p-1 text-red-500 hover:text-red-700 absolute top-2 right-2 md:static md:self-center"
+                        title="Remove item"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   ))}
 
@@ -3144,7 +3149,7 @@ Signed: Finance & Procurement Administration
                       type="button"
                       onClick={() => setNewPoForm({
                         ...newPoForm,
-                        items: [...newPoForm.items, { item_name: '', description: '', quantity_ordered: 1, unit_price: 0 }],
+                        items: [...newPoForm.items, { item_name: '', description: '', quantity_ordered: 0, unit_price: 0 }],
                       })}
                       className="w-full py-2.5 px-4 border border-dashed border-violet-300 dark:border-violet-700/60 rounded-xl text-xs font-semibold text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/30 flex items-center justify-center gap-1.5 transition-colors"
                     >
@@ -3829,7 +3834,7 @@ Signed: Finance & Procurement Administration
                       {viewingExpense.payments.map((payment: any, index: number) => (
                         <div key={payment.id || index} className="rounded-lg border border-slate-100 dark:border-slate-800 bg-white p-3 dark:bg-slate-900">
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Installment {viewingExpense.payments.length - index}</span>
+                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Installment {index + 1}</span>
                             <strong className="text-sm text-emerald-700 dark:text-emerald-300">${Number(payment.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                           </div>
                           <div className="mt-1 flex flex-wrap justify-between gap-2 text-[11px] text-slate-500">
@@ -3857,7 +3862,7 @@ Signed: Finance & Procurement Administration
                 <span className="text-xs text-slate-400 font-mono">Status: {viewingExpense.status || 'SUBMITTED'}</span>
                 <div className="flex items-center gap-2">
                   {(() => {
-                    const receiptFile = viewingExpense.invoice_name || viewingExpense.receipt_name || viewingExpense.receipt_file_name || viewingExpense.attachment || null;
+                    const receiptFile = viewingExpense.invoice_name || (!viewingExpense.payments?.length ? viewingExpense.receipt_name || viewingExpense.receipt_file_name || viewingExpense.attachment : null) || null;
                     if (!receiptFile) return null;
                     const kind = viewingExpense.invoice_name || viewingExpense.invoice_path ? 'invoice' : 'receipt';
                     return (

@@ -69,7 +69,7 @@ export default function ProjectCards() {
                       {project?.project_number && (
                         <span className="text-xs font-500 text-muted-foreground">{project.project_number}</span>
                       )}
-                      <span className={`badge ${getStatusClass(project?.status)}`}>{project?.status}</span>
+                      <span className={`badge ${getStatusClass(project?.status)}`}>{String(project?.status || '—').replaceAll('_', ' ')}</span>
                     </div>
                     <Link href="/project-command-center" className="text-sm font-700 text-foreground hover:text-primary transition-colors">
                       {project.name}

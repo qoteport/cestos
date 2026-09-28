@@ -621,7 +621,7 @@ export default function EquipmentComponentsWorkspace() {
               </div>
               <div className="bg-muted/30 p-2.5 rounded">
                 <span className="text-muted-foreground block">Component Status</span>
-                <strong className="text-sm font-semibold">{selectedComponent.status}</strong>
+                <strong className="text-sm font-semibold">{String(selectedComponent.status || '').replaceAll('_', ' ')}</strong>
               </div>
             </div>
 

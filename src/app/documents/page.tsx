@@ -436,7 +436,7 @@ export default function DocumentsPage() {
                           {row.file_name}
                         </p>
                         <p className="text-[11px] text-muted-foreground mt-2">
-                          {row.category} · {size(row.size_bytes)} ·{' '}
+                          {String(row.category || '').replaceAll('_', ' ')} · {size(row.size_bytes)} ·{' '}
                           {new Date(row.created_at).toLocaleDateString()}
                         </p>
                         {row.owner_name && (

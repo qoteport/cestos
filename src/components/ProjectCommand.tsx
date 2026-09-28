@@ -107,7 +107,7 @@ export default function ProjectCommand({
                       : 'badge-neutral'
                 }`}
               >
-                {d.project.status}
+                {String(d.project.status || '').replaceAll('_', ' ')}
               </span>
             )}
           </div>

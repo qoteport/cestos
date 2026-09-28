@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { apiFetch, discardOfflineWrite, getOfflineWriteQueue, retryOfflineWrite, syncOfflineWriteQueue } from '@/lib/api';
+import { apiFetch, discardOfflineWrite, getOfflineWriteQueue, invalidateMemoryApiCache, retryOfflineWrite, syncOfflineWriteQueue } from '@/lib/api';
 import type { OfflineWrite } from '@/lib/offlineStore';
 import { useAuth } from './AuthProvider';
+import { API_DATA_REFRESHED_EVENT } from '@/lib/apiDataEvents';
 
 export default function PwaRuntime() {
   const [installPrompt, setInstallPrompt] = useState<any>(null);
@@ -19,6 +20,7 @@ export default function PwaRuntime() {
   const [queueOpen, setQueueOpen] = useState(false);
   const [syncingOffline, setSyncingOffline] = useState(false);
   const [offlineCacheWarning, setOfflineCacheWarning] = useState(false);
+  const [dataRefreshedAt, setDataRefreshedAt] = useState(0);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -47,6 +49,56 @@ export default function PwaRuntime() {
       window.removeEventListener('offline', onOffline);
       window.removeEventListener('cestos:offline-queue-changed', refreshQueue);
       window.removeEventListener('cestos:offline-cache-error', onCacheError);
+    };
+  }, [user?.id]);
+
+  // Database trigger revisions are shared across API instances and devices;
+  // unlike BroadcastChannel, this also detects edits made by other users.
+  useEffect(() => {
+    if (!user?.id) return;
+    const storageKey = `cestos.databaseChangeRevisions.${user.id}`;
+    let active = true;
+    let polling = false;
+    let baseline: Record<string, number> | null = null;
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) baseline = JSON.parse(saved) as Record<string, number>;
+    } catch { baseline = null; }
+
+    const poll = async () => {
+      if (!active || polling || navigator.onLine === false || document.visibilityState === 'hidden') return;
+      polling = true;
+      try {
+        const rows = await apiFetch<Array<{ table_name: string; revision: number }>>(
+          '/api/v1/sync/changes',
+          { method: 'GET' },
+          true,
+          { memoryCache: false, cacheResponse: false, cacheOfflineRead: false },
+        );
+        if (!active || !Array.isArray(rows)) return;
+        const next = Object.fromEntries(rows.map((row) => [row.table_name, Number(row.revision)]));
+        const changed = baseline !== null && Object.entries(next).some(([table, revision]) => revision > (baseline?.[table] || 0));
+        baseline = next;
+        try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* Polling still works without local persistence. */ }
+        if (changed) {
+          invalidateMemoryApiCache();
+          window.dispatchEvent(new CustomEvent(API_DATA_REFRESHED_EVENT, { detail: { source: 'database-trigger', refreshedAt: Date.now() } }));
+        }
+      } catch { /* Missing migration or temporary network loss must not affect app use. */ }
+      finally { polling = false; }
+    };
+
+    void poll();
+    const timer = window.setInterval(() => void poll(), 10_000);
+    const onVisible = () => { if (document.visibilityState === 'visible') void poll(); };
+    const onOnline = () => { void poll(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', onOnline);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', onOnline);
     };
   }, [user?.id]);
 
@@ -80,6 +132,20 @@ export default function PwaRuntime() {
     const onSettingsChanged = () => setNotificationSettingsVersion((value) => value + 1);
     window.addEventListener('cestos:browser-notifications-changed', onSettingsChanged);
     return () => window.removeEventListener('cestos:browser-notifications-changed', onSettingsChanged);
+  }, []);
+
+  useEffect(() => {
+    let timer: number | undefined;
+    const onDataRefreshed = () => {
+      setDataRefreshedAt(Date.now());
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(() => setDataRefreshedAt(0), 2800);
+    };
+    window.addEventListener(API_DATA_REFRESHED_EVENT, onDataRefreshed);
+    return () => {
+      window.removeEventListener(API_DATA_REFRESHED_EVENT, onDataRefreshed);
+      if (timer) window.clearTimeout(timer);
+    };
   }, []);
 
   useEffect(() => {
@@ -185,8 +251,9 @@ export default function PwaRuntime() {
 
   const showNotificationControl = Boolean(user?.id) && !notificationPromptDismissed && notificationPermission !== 'unsupported' && notificationPermission !== 'denied';
   const showRuntimeBanner = !online || offlineWrites.length > 0 || syncingOffline || offlineCacheWarning || updateAvailable || Boolean(installPrompt) || showNotificationControl;
-  if (!showRuntimeBanner && !queueOpen) return null;
+  if (!showRuntimeBanner && !queueOpen && !dataRefreshedAt) return null;
   return <>
+    {dataRefreshedAt > 0 && <div className="fixed right-4 top-4 z-[2147483646] rounded-full border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-800 shadow-lg dark:border-emerald-900 dark:bg-slate-900 dark:text-emerald-300" role="status" aria-live="polite">Data refreshed</div>}
     {showRuntimeBanner && <div className="fixed bottom-4 left-1/2 z-[2147483646] flex w-[min(94vw,680px)] -translate-x-1/2 flex-wrap items-center justify-between gap-3 border border-slate-300/80 bg-white dark:bg-slate-900 p-3.5 sm:p-4 text-sm text-slate-900 dark:text-slate-100 shadow-2xl rounded-2xl backdrop-blur-md" role="status" aria-live="polite">
       <span className="min-w-0 flex-1 font-medium">{offlineCacheWarning ? 'Some data could not be saved for offline use. Check this device’s available storage, then reload the data.' : !online ? 'Offline mode. Changes are saved on this device and will sync when connected.' : offlineWrites.some((item) => item.state === 'failed') ? `${offlineWrites.filter((item) => item.state === 'failed').length} offline change(s) need attention.` : offlineWrites.length || syncingOffline ? `${offlineWrites.length} change(s) waiting to sync${syncingOffline ? '…' : '.'}` : updateAvailable ? 'A new Cestos version is ready.' : installPrompt ? 'Install Cestos Operations for quick access.' : browserNotificationsEnabled ? 'Browser notifications are enabled.' : 'Get browser alerts for new Cestos notifications.'}</span>
       <div className="flex shrink-0 flex-wrap gap-2">
