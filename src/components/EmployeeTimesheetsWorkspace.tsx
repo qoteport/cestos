@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CalendarDays, Clock3, Pencil, Plus, RefreshCw, X } from 'lucide-react';
-import { apiFetch } from '@/lib/api';
+import { AlertTriangle, CalendarDays, Clock3, Paperclip, Pencil, Plus, RefreshCw, X } from 'lucide-react';
+import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
+import { openUniversalFileViewer } from '@/lib/fileViewer';
 import SearchableSelect from './SearchableSelect';
 import AppDateTimePicker from './ui/AppDateTimePicker';
 
@@ -67,6 +68,7 @@ export default function EmployeeTimesheetsWorkspace({
   const [dailyHours, setDailyHours] = useState<Record<number, string>>({});
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [attachmentBusy, setAttachmentBusy] = useState<string | null>(null);
 
   const reload = useCallback(async (requestedPeriod: string) => {
     setLoading(true);
@@ -197,6 +199,20 @@ export default function EmployeeTimesheetsWorkspace({
     }
   }
 
+  async function viewSourceFile(row: TimesheetRow, download = false) {
+    setAttachmentBusy(row.id);
+    try {
+      const result = await apiFetch<any>(`/api/v1/documents?view=all&page_size=10&source_type=employee_timesheet_import&source_id=${encodeURIComponent(row.id)}`);
+      const file = (Array.isArray(result) ? result : result?.items || [])[0];
+      if (!file) throw new Error('No source file is attached to this time sheet.');
+      const blob = await apiFetchBlob(`/api/v1/documents/${file.id}/${download ? 'download' : 'view?disposition=inline'}`);
+      const name = file.file_name || file.title || 'timesheet-import.csv';
+      if (download) downloadBlob(blob, name);
+      else openUniversalFileViewer({ blob, fileName: name, title: 'Imported time sheet source' });
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not open the imported source file.'); }
+    finally { setAttachmentBusy(null); }
+  }
+
   const allHours = rows.reduce((sum, row) => sum + Number(row.total_hours || 0), 0);
   const activeRows = rows.length;
 
@@ -259,7 +275,7 @@ export default function EmployeeTimesheetsWorkspace({
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {rows.length === 0 ? <tr><td colSpan={daysInPeriod + (canReport ? 5 : 4)} className="p-10 text-center text-sm text-slate-500">No time sheets have been reported for this month.</td></tr> : rows.map((row) => (
                   <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                    <td className="sticky left-0 z-20 w-[210px] min-w-[210px] max-w-[210px] border-r border-slate-100 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900"><span className="block truncate font-bold text-slate-900 dark:text-white">{row.employee_name}</span><span className="mt-0.5 block truncate font-mono text-[10px] text-slate-500">{row.employee_number || '—'}</span></td>
+                    <td className="sticky left-0 z-20 w-[210px] min-w-[210px] max-w-[210px] border-r border-slate-100 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900"><span className="block truncate font-bold text-slate-900 dark:text-white">{row.employee_name}</span><span className="mt-0.5 block truncate font-mono text-[10px] text-slate-500">{row.employee_number || '—'}</span>{row.source_file && <button type="button" onClick={() => void viewSourceFile(row)} disabled={attachmentBusy === row.id} className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 hover:underline disabled:opacity-50 dark:text-blue-300"><Paperclip size={11} />{attachmentBusy === row.id ? 'Opening…' : 'Source CSV'}</button>}</td>
                     <td className="sticky left-[210px] z-20 w-[115px] min-w-[115px] max-w-[115px] border-r border-slate-100 bg-white px-3 py-2 text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"><span className="block truncate">{row.site_name || '—'}</span>{row.project_name && <span className="block truncate text-[10px] text-slate-400" title={row.project_name}>{row.project_name}</span>}</td>
                     {calendarDays.map(({ day }) => {
                       const value = row.daily_hours?.[day];

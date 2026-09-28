@@ -112,9 +112,12 @@ export default function MaintenanceJobCardDetailsModal({
     setAttachmentsLoading(true);
     const sourceType = kind === 'preventive' ? 'pm_job_card' : 'breakdown_job_card';
     let active = true;
-    apiFetch<any>(`/api/v1/documents?view=all&page_size=20&source_type=${sourceType}&source_id=${encodeURIComponent(record.id)}`)
-      .then(async (result) => {
-        let files = Array.isArray(result) ? result : result?.items || [];
+    Promise.all([
+      apiFetch<any>(`/api/v1/documents?view=all&page_size=20&source_type=${sourceType}&source_id=${encodeURIComponent(record.id)}`),
+      apiFetch<any>(`/api/v1/documents?view=all&page_size=20&source_type=${sourceType}_import&source_id=${encodeURIComponent(record.id)}`),
+    ])
+      .then(async ([result, importResult]) => {
+        let files = [...(Array.isArray(result) ? result : result?.items || []), ...(Array.isArray(importResult) ? importResult : importResult?.items || [])];
         // Older job cards uploaded files as ordinary library documents before
         // source links were supported; locate those by their established title.
         if (!files.length && record.job_card_number) {

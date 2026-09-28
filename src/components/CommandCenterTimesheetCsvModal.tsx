@@ -69,6 +69,7 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
   const [sites, setSites] = useState<Site[]>([]);
   const [period, setPeriod] = useState(new Date().toISOString().slice(0, 7));
   const [fileName, setFileName] = useState('');
+  const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -178,8 +179,8 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
         const inferredProject = site ? projects.find((item) => String(item.id) === String(site.project_id)) : undefined;
         return { cells, employeeId: employee ? String(employee.id) : '', siteId: site ? String(site.id) : rawSite ? 'custom' : '', projectMatchId: project ? String(project.id) : rawProject ? 'custom' : inferredProject ? String(inferredProject.id) : '', status: isSummary ? 'summary' as const : 'ready' as const, csvRow: detectedHeaderRow + index + 2 };
       });
-      setHeaders(nextHeaders); setSourceHeaderRows(nextHeaderRows); setRows(imported); setFileName(file.name); setPeriod(inferredPeriod);
-    } catch (err: any) { setHeaders([]); setSourceHeaderRows([]); setRows([]); setFileName(''); setError(err?.message || 'Could not read the selected CSV.'); }
+      setHeaders(nextHeaders); setSourceHeaderRows(nextHeaderRows); setRows(imported); setFileName(file.name); setSourceFile(file); setPeriod(inferredPeriod);
+    } catch (err: any) { setHeaders([]); setSourceHeaderRows([]); setRows([]); setFileName(''); setSourceFile(null); setError(err?.message || 'Could not read the selected CSV.'); }
   }
 
   function updateRow(index: number, key: 'employeeId' | 'siteId' | 'projectMatchId', value: string) {
@@ -223,7 +224,11 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
       const projectName = projectColumn >= 0 ? (row.cells[projectColumn] || '').trim() : '';
       const rawSite = siteColumn >= 0 ? (row.cells[siteColumn] || '').trim() : '';
       try {
-        await apiFetch('/api/v1/employees/timesheets', { method: 'POST', body: JSON.stringify({ employee_id: row.employeeId || null, employee_name: employeeName || null, project_id: row.projectMatchId === 'custom' ? null : matchedProject?.id || null, project_name: row.projectMatchId === 'custom' ? projectName || null : matchedProject?.name || matchedProject?.project_name || projectName || null, scope_project_id: matchedProject?.id || null, period_start: `${period}-01`, site_name: site ? site.name || null : rawSite || null, entries }) });
+        const saved = await apiFetch<any>('/api/v1/employees/timesheets', { method: 'POST', body: JSON.stringify({ employee_id: row.employeeId || null, employee_name: employeeName || null, project_id: row.projectMatchId === 'custom' ? null : matchedProject?.id || null, project_name: row.projectMatchId === 'custom' ? projectName || null : matchedProject?.name || matchedProject?.project_name || projectName || null, scope_project_id: matchedProject?.id || null, period_start: `${period}-01`, site_name: site ? site.name || null : rawSite || null, source_file: sourceFile?.name || null, entries }) });
+        if (sourceFile && saved?.id) {
+          const form = new FormData(); form.append('file', sourceFile); form.append('title', `Imported time sheet ${period} — ${sourceFile.name}`.slice(0, 250)); form.append('category', 'Workforce'); form.append('tags', 'timesheet,import'); form.append('source_type', 'employee_timesheet_import'); form.append('source_id', String(saved.id)); form.append('visibility', 'PUBLIC');
+          await apiFetch('/api/v1/documents', { method: 'POST', body: form });
+        }
         setRows((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, status: 'saved', error: undefined } : item));
       } catch (err: any) {
         failures += 1; setRows((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, status: 'error', error: err?.message || 'Could not save this row.' } : item));

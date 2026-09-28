@@ -270,6 +270,7 @@ export default function CommandCenterMaintenanceCsvModal({ onClose, initialKind 
   const [error, setError] = useState('');
   const [activeWizard, setActiveWizard] = useState(false);
   const [fileName, setFileName] = useState('');
+  const [sourceFile, setSourceFile] = useState<File | null>(null);
   const definition = definitions[kind];
 
   useEffect(() => {
@@ -293,14 +294,14 @@ export default function CommandCenterMaintenanceCsvModal({ onClose, initialKind 
   })), [projects]);
 
   async function loadCsv(file?: File) {
-    setError(''); setFileName(''); if (!file) return;
+    setError(''); setFileName(''); setSourceFile(null); if (!file) return;
     try {
       const parsed = parseCsv(await file.text());
       if (parsed.length < 2) throw new Error('The CSV needs a header row and at least one data row.');
       if (kind === 'assessment') {
         const report = assessmentCsvRecord(parsed, projectId, assets);
         if (report) {
-          setRows([{ record: report, saved: false, sourceLine: 1 }]); setSelected(0); setFileName(file.name);
+          setRows([{ record: report, saved: false, sourceLine: 1 }]); setSelected(0); setFileName(file.name); setSourceFile(file);
           return;
         }
       }
@@ -308,7 +309,7 @@ export default function CommandCenterMaintenanceCsvModal({ onClose, initialKind 
         const registerRows = equipmentRegisterCsvRecords(parsed, projectId);
         if (registerRows) {
           if (!registerRows.length) throw new Error('The equipment register CSV has a header row but no equipment records.');
-          setRows(registerRows); setSelected(0); setFileName(file.name);
+          setRows(registerRows); setSelected(0); setFileName(file.name); setSourceFile(file);
           return;
         }
       }
@@ -316,7 +317,7 @@ export default function CommandCenterMaintenanceCsvModal({ onClose, initialKind 
         const trackerRows = actionTrackerCsvRecords(parsed, projectId);
         if (trackerRows) {
           if (!trackerRows.length) throw new Error('The Action Tracker CSV has a header row but no action records.');
-          setRows(trackerRows); setSelected(0); setFileName(file.name);
+          setRows(trackerRows); setSelected(0); setFileName(file.name); setSourceFile(file);
           return;
         }
       }
@@ -324,7 +325,7 @@ export default function CommandCenterMaintenanceCsvModal({ onClose, initialKind 
         const trackerRows = pmTrackerCsvRecords(parsed, projectId);
         if (trackerRows) {
           if (!trackerRows.length) throw new Error('The PM Tracker CSV has a header row but no maintenance records.');
-          setRows(trackerRows); setSelected(0); setFileName(file.name);
+          setRows(trackerRows); setSelected(0); setFileName(file.name); setSourceFile(file);
           return;
         }
       }
@@ -343,7 +344,7 @@ export default function CommandCenterMaintenanceCsvModal({ onClose, initialKind 
         if (!record.project_id && projectId) record.project_id = projectId;
         return { record, saved: false, sourceLine: rowIndex + 2 };
       });
-      setRows(imported); setSelected(0); setFileName(file.name);
+      setRows(imported); setSelected(0); setFileName(file.name); setSourceFile(file);
     } catch (e: any) { setRows([]); setError(e?.message || 'Could not read this CSV.'); }
   }
 
@@ -353,8 +354,21 @@ export default function CommandCenterMaintenanceCsvModal({ onClose, initialKind 
     const anchor = document.createElement('a'); anchor.href = url; anchor.download = `${kind}-maintenance-template.csv`; anchor.click(); URL.revokeObjectURL(url);
   }
 
-  async function handleSaved() {
-    setRows((old) => old.map((row, index) => index === selected ? { ...row, saved: true } : row));
+  async function handleSaved(recordId?: string) {
+    const sourceTypes: Partial<Record<Kind, string>> = { breakdown: 'breakdown_job_card_import', preventive: 'pm_job_card_import', assessment: 'maintenance_assessment_import', action: 'action_tracker_import', pm: 'pm_tracker_import', equipment: 'equipment_register_import' };
+    const sourceType = sourceTypes[kind];
+    if (sourceFile && recordId && sourceType) {
+      try {
+        const form = new FormData(); form.append('file', sourceFile); form.append('title', `Imported ${definition.label.toLowerCase()} — ${sourceFile.name}`.slice(0, 250)); form.append('category', 'Equipment'); form.append('tags', 'maintenance,import'); form.append('source_type', sourceType); form.append('source_id', recordId); form.append('visibility', 'PUBLIC');
+        await apiFetch('/api/v1/documents', { method: 'POST', body: form });
+      } catch (err: any) {
+        setRows((old) => old.map((row, index) => index === selected ? { ...row, record: { ...row.record, id: recordId }, saved: false } : row));
+        setError(`The maintenance record was saved, but its source CSV could not be attached. Reopen the row and save again to retry. ${err?.message || ''}`);
+        setActiveWizard(false);
+        return;
+      }
+    }
+    setRows((old) => old.map((row, index) => index === selected ? { ...row, record: recordId ? { ...row.record, id: recordId } : row.record, saved: true } : row));
     setActiveWizard(false);
   }
 

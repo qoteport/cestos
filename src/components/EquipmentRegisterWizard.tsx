@@ -14,7 +14,7 @@ const statusOptions = ['Operational / Monitoring', 'Under Assessment', 'Operatio
 const priorityOptions = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 
 export default function EquipmentRegisterWizard({ projectId, assets, record, onClose, onSaved, initialMode = 'ASSISTED' }: {
-  projectId: string; assets: any[]; record?: any; onClose: () => void; onSaved: () => void; initialMode?: 'ASSISTED' | 'FREE_FLOW';
+  projectId: string; assets: any[]; record?: any; onClose: () => void; onSaved: (recordId?: string) => void; initialMode?: 'ASSISTED' | 'FREE_FLOW';
 }) {
   const [mode, setMode] = useState<'ASSISTED' | 'FREE_FLOW'>(initialMode);
   const [data, setData] = useState<any>(() => ({ equipment: '', unit_number: '', equipment_type: '', status: 'Operational / Monitoring', open_defects: '', action_required: '', priority: 'MEDIUM', remarks: '', ...record }));
@@ -28,7 +28,7 @@ export default function EquipmentRegisterWizard({ projectId, assets, record, onC
     if (!String(data.equipment || '').trim()) { setError('Equipment is required.'); return; }
     setSaving(true); setError('');
     const payload = { ...data, project_id: projectId || null, asset_id: data.asset_id || null, priority: data.priority || 'MEDIUM' };
-    try { await apiFetch(record?.id ? `/api/v1/equipment-register/${record.id}` : '/api/v1/equipment-register', { method: record?.id ? 'PATCH' : 'POST', body: JSON.stringify(payload) }); onSaved(); onClose(); }
+    try { const saved = await apiFetch<any>(record?.id ? `/api/v1/equipment-register/${record.id}` : '/api/v1/equipment-register', { method: record?.id ? 'PATCH' : 'POST', body: JSON.stringify(payload) }); onSaved(saved.id); onClose(); }
     catch (e: any) { setError(e?.message || 'Could not save equipment register entry.'); }
     finally { setSaving(false); }
   }
@@ -74,5 +74,5 @@ export default function EquipmentRegisterWizard({ projectId, assets, record, onC
 }
 
 export function EquipmentRegisterDetails({ record, onClose, onEdit }: { record: any; onClose: () => void; onEdit: () => void }) {
-  return <TrackerDetailsModal title="Equipment register details" fields={fields.map(([key, label]) => [label, record[key]])} onClose={onClose} onEdit={onEdit} />;
+  return <TrackerDetailsModal title="Equipment register details" fields={fields.map(([key, label]) => [label, record[key]])} onClose={onClose} onEdit={onEdit} recordId={String(record.id)} importSourceType="equipment_register_import" />;
 }

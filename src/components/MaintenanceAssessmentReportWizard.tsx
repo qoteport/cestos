@@ -96,7 +96,7 @@ export default function MaintenanceAssessmentReportWizard({
   assets, employees, projects = [], projectId, record, onClose, onSaved, initialMode = 'ASSISTED',
 }: {
   assets: Row[]; employees: Row[]; projects?: Row[]; projectId: string; record?: Row;
-  onClose: () => void; onSaved: () => void;
+  onClose: () => void; onSaved: (recordId?: string) => void;
   initialMode?: 'ASSISTED' | 'FREE_FLOW';
 }) {
   const [data, setData] = useState<ReportData>(() => makeInitial(record, projectId));
@@ -385,7 +385,7 @@ export default function MaintenanceAssessmentReportWizard({
         await apiFetch('/api/v1/documents', { method: 'POST', body: form });
         setPendingFiles((files) => files.filter((pending) => pending !== file));
       }
-      onSaved(); onClose();
+      onSaved(reportId); onClose();
     } catch (err: any) { setError(`${err?.message || 'Could not save maintenance assessment report.'}${reportWasSaved ? ' The report was saved; retry to upload any remaining attachments.' : ''}`); }
     finally { setSaving(false); }
   }

@@ -44,6 +44,8 @@ import {
   Zap,
   Droplet,
   MoreHorizontal,
+  Upload,
+  Check,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -258,6 +260,11 @@ export default function FinancePortalWorkspace() {
   // Modals state for Expenses
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [viewingExpense, setViewingExpense] = useState<any | null>(null);
+  const [payingExpense, setPayingExpense] = useState<any | null>(null);
+  const [expensePaymentReceiptFile, setExpensePaymentReceiptFile] = useState<File | null>(null);
+  const [expensePaymentAmount, setExpensePaymentAmount] = useState('');
+  const [expensePaymentDate, setExpensePaymentDate] = useState(new Date().toISOString().slice(0, 10));
+  const [expensePaymentBusy, setExpensePaymentBusy] = useState(false);
 
   // Modals & Forms state for Purchase Orders
   const [showAddPoModal, setShowAddPoModal] = useState(false);
@@ -678,6 +685,29 @@ export default function FinancePortalWorkspace() {
       setBanner({ type: 'error', message: err?.message || 'Could not download the payment receipt.' });
     }
   };
+
+  async function handleConfirmExpensePayment(e: React.FormEvent) {
+    e.preventDefault();
+    if (!payingExpense) return;
+    setExpensePaymentBusy(true);
+    try {
+      const form = new FormData();
+      form.append('amount', expensePaymentAmount);
+      form.append('payment_date', expensePaymentDate);
+      if (expensePaymentReceiptFile) form.append('receipt', expensePaymentReceiptFile);
+      else if (!payingExpense.receipt_name) throw new Error('Upload the receipt or payment proof for this disbursement.');
+      await apiFetch(`/api/v1/operational-expenses/${payingExpense.id}/payment-receipt`, { method: 'POST', body: form });
+      setPayingExpense(null);
+      setExpensePaymentReceiptFile(null);
+      setBanner({ type: 'success', message: 'Payment disbursement recorded successfully.' });
+      await reload();
+      window.dispatchEvent(new CustomEvent('operational-expenses:updated'));
+    } catch (err: any) {
+      setBanner({ type: 'error', message: err instanceof Error ? err.message : 'Could not complete payment receipt processing.' });
+    } finally {
+      setExpensePaymentBusy(false);
+    }
+  }
 
   // Receipt Download Helper
   const handleDownloadFuelReceipt = async (delivery: any) => {
@@ -3861,6 +3891,22 @@ Signed: Finance & Procurement Administration
               <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 px-4 py-3 sm:px-6 bg-white dark:bg-slate-900 shrink-0">
                 <span className="text-xs text-slate-400 font-mono">Status: {viewingExpense.status || 'SUBMITTED'}</span>
                 <div className="flex items-center gap-2">
+                  {Number(viewingExpense.balance_due ?? Math.max(0, Number(viewingExpense.total_cost || viewingExpense.amount || 0) - Number(viewingExpense.paid_amount || 0))) > 0 && ['SUBMITTED', 'PENDING', 'PARTIALLY_PAID', 'PARTIAL_PAYMENT', 'PAYMENT_RECONCILIATION_REQUIRED', 'APPROVED'].includes((viewingExpense.status || '').toUpperCase()) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const target = viewingExpense;
+                        setViewingExpense(null);
+                        setPayingExpense(target);
+                        setExpensePaymentAmount(String(Math.max(0, Number(target.total_cost || target.amount || 0) - Number(target.paid_amount || 0)).toFixed(2)));
+                        setExpensePaymentDate(new Date().toISOString().slice(0, 10));
+                        setExpensePaymentReceiptFile(null);
+                      }}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 transition shadow-xs cursor-pointer"
+                    >
+                      <DollarSign size={14} /> Record Payment
+                    </button>
+                  )}
                   {(() => {
                     const receiptFile = viewingExpense.invoice_name || (!viewingExpense.payments?.length ? viewingExpense.receipt_name || viewingExpense.receipt_file_name || viewingExpense.attachment : null) || null;
                     if (!receiptFile) return null;
@@ -3892,6 +3938,159 @@ Signed: Finance & Procurement Administration
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Process Payment Disbursement Modal in Finance Portal */}
+      {payingExpense && (() => {
+        const pName = payingExpense.submitted_by_name || payingExpense.submitted_by?.full_name || (payingExpense.submitted_by?.first_name ? `${payingExpense.submitted_by.first_name} ${payingExpense.submitted_by.last_name || ''}`.trim() : null) || payingExpense.created_by_name || (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'Operations Supervisor');
+        const pPos = payingExpense.submitted_by_position || payingExpense.submitted_by_title || payingExpense.submitted_by?.job_title || payingExpense.submitted_by?.role || (user?.is_superuser ? 'Operations Director' : user?.portal_type ? `${user.portal_type.replace('_', ' ')} Admin` : 'Field Administrator');
+        const pEmail = payingExpense.submitted_by_email || payingExpense.submitted_by?.email || payingExpense.email || user?.email || 'operations@cestos.com';
+        const pPhone = payingExpense.pay_to_phone || payingExpense.phone || payingExpense.phone_number || payingExpense.payee_phone || payingExpense.payee?.phone || payingExpense.contact_phone;
+        const pBank = payingExpense.bank_account_details || payingExpense.bank_details || payingExpense.account_number || payingExpense.bank_account || payingExpense.payee?.bank_account_details || payingExpense.account_details;
+        const recordedPayments = Array.isArray(payingExpense.payments) ? payingExpense.payments : [];
+        const paidToDate = Number(payingExpense.paid_amount || 0);
+
+        return (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+            <div className="bg-card border rounded-2xl p-6 max-w-xl sm:max-w-2xl w-full max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden shadow-2xl">
+              <div className="flex shrink-0 items-center justify-between border-b pb-3 border-border">
+                <h3 className="font-bold text-base flex items-center gap-2 text-foreground">
+                  <DollarSign className="h-5 w-5 text-emerald-600" /> Process Payment Disbursement
+                </h3>
+                <button onClick={() => setPayingExpense(null)} className="p-1 rounded-lg hover:bg-muted text-muted-foreground"><X size={18} /></button>
+              </div>
+
+              <form onSubmit={handleConfirmExpensePayment} className="flex min-h-0 flex-col overflow-hidden">
+                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain py-4 px-1">
+                  {/* Voucher Details Card */}
+                  <div className="p-4 bg-muted/40 rounded-xl space-y-2 text-xs border">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Voucher Ref #:</span>
+                      <span className="font-mono font-bold text-foreground">{payingExpense.expense_number || payingExpense.id}</span>
+                    </div>
+                    <div className="flex justify-between items-start">
+                      <span className="text-muted-foreground">Submitted By:</span>
+                      <div className="text-right">
+                        <p className="font-bold text-foreground flex items-center justify-end gap-1"><User size={12} className="text-violet-600" /> {pName}</p>
+                        <p className="text-[11px] text-muted-foreground font-medium">{pPos}</p>
+                        <a href={`mailto:${pEmail}`} className="text-violet-600 dark:text-violet-400 hover:underline font-mono text-[11px] font-bold inline-flex items-center gap-1">
+                          <Mail size={11} /> {pEmail}
+                        </a>
+                      </div>
+                    </div>
+                    <div className="flex justify-between pt-1 border-t border-border">
+                      <span className="text-muted-foreground">Payee Name:</span>
+                      <span className="font-bold text-foreground">{payingExpense.pay_to_name || 'New Supplier'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Disbursement Method:</span>
+                      <span className="font-medium text-foreground">{String(payingExpense.payment_method || 'BANK_TRANSFER').replaceAll('_', ' ')}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Phone Number:</span>
+                      <span className="font-mono font-semibold text-foreground">{pPhone || '—'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Bank Account Details:</span>
+                      <span className="font-mono font-semibold text-foreground">{pBank || '—'}</span>
+                    </div>
+                    <div className="flex justify-between pt-1 border-t border-border">
+                      <span className="font-bold text-foreground">Expense total:</span>
+                      <span className="font-mono font-black text-sm">${Number(payingExpense.total_cost || payingExpense.amount || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Paid to date:</span>
+                      <span className="font-mono font-bold text-emerald-600">${paidToDate.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-bold text-foreground">Remaining balance:</span>
+                      <span className="font-mono font-black text-sm text-amber-600">${Math.max(0, Number(payingExpense.total_cost || payingExpense.amount || 0) - paidToDate).toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  {recordedPayments.length > 0 && (
+                    <div className="rounded-xl border p-3 space-y-2 max-h-36 overflow-y-auto">
+                      <p className="text-xs font-bold text-foreground">Payments already recorded</p>
+                      {recordedPayments.map((payment: any) => (
+                        <div key={payment.id} className="flex justify-between gap-3 text-xs border-t pt-2">
+                          <span className="text-muted-foreground">{payment.payment_date ? new Date(`${payment.payment_date}T00:00:00`).toLocaleDateString() : 'Date unavailable'}{payment.reference ? ` · ${payment.reference}` : ''}</span>
+                          <strong className="text-emerald-700">${Number(payment.amount || 0).toLocaleString()}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-1">
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold text-foreground">Amount paid now ($) *</label>
+                      <input
+                        type="number"
+                        min="0.01"
+                        max={Math.max(0, Number(payingExpense.total_cost || payingExpense.amount || 0) - paidToDate)}
+                        step="0.01"
+                        required
+                        value={expensePaymentAmount}
+                        onChange={(e) => setExpensePaymentAmount(e.target.value)}
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold text-foreground mb-1">Payment date *</label>
+                      <AppDateTimePicker
+                        mode="date"
+                        required
+                        value={expensePaymentDate}
+                        onChange={(val) => setExpensePaymentDate(val)}
+                        placeholder="Select payment date"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Payment Receipt Upload Box */}
+                  <div>
+                    <label className="block text-xs font-bold text-foreground mb-1">
+                      Payment Receipt / Bank Transfer Proof {payingExpense.receipt_name ? '(optional: existing receipt will be reused)' : '(required)'}
+                    </label>
+                    <div className="border border-dashed rounded-xl p-3.5 bg-muted/30 flex flex-col items-center justify-center gap-2 text-center">
+                      <Upload size={20} className="text-violet-600" />
+                      <input
+                        type="file"
+                        accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.txt"
+                        onChange={(e) => setExpensePaymentReceiptFile(e.target.files?.[0] || null)}
+                        className="text-xs text-muted-foreground file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-violet-100 file:text-violet-700 hover:file:bg-violet-200 cursor-pointer"
+                      />
+                      {expensePaymentReceiptFile ? (
+                        <span className="text-xs font-bold text-emerald-600 flex items-center gap-1 mt-1">
+                          <Paperclip size={13} /> {expensePaymentReceiptFile.name} ({(expensePaymentReceiptFile.size / 1024).toFixed(1)} KB)
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-muted-foreground">Upload payment voucher image or PDF receipt</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex shrink-0 justify-end gap-2 border-t border-border bg-card pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setPayingExpense(null)}
+                    className="px-4 py-2 border rounded-xl text-xs font-bold hover:bg-muted"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={expensePaymentBusy}
+                    className="px-5 py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 flex items-center gap-1.5 shadow-xs disabled:opacity-50"
+                  >
+                    {expensePaymentBusy ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Check size={16} />}
+                    Record Payment
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         );

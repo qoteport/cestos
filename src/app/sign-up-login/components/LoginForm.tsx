@@ -99,7 +99,7 @@ export default function LoginForm() {
         </h2>
         <p className="text-sm text-muted-foreground mt-2 mb-8">
           {token
-            ? 'Choose a password with at least 12 characters.'
+            ? 'Choose a password with at least 6 characters.'
             : 'Sign in with the account provided by your administrator.'}
         </p>
 
@@ -139,7 +139,7 @@ export default function LoginForm() {
                 type={show ? 'text' : 'password'}
                 autoComplete={token ? 'new-password' : 'current-password'}
                 required
-                minLength={token ? 12 : 1}
+                minLength={token ? 6 : 1}
                 maxLength={128}
               />
               <button

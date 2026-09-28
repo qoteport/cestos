@@ -2255,6 +2255,8 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                     ['Equipment', viewingMaintenanceTracker.equipment], ['Unit no.', viewingMaintenanceTracker.unit_number], ['Type', viewingMaintenanceTracker.equipment_type], ['Status', viewingMaintenanceTracker.status], ['Open defects', viewingMaintenanceTracker.open_defects], ['Action required', viewingMaintenanceTracker.action_required], ['Priority', viewingMaintenanceTracker.priority], ['Remarks', viewingMaintenanceTracker.remarks],
                   ]}
                   readOnly onClose={() => setViewingMaintenanceTracker(null)}
+                  recordId={String(viewingMaintenanceTracker.id)}
+                  importSourceType={viewingMaintenanceTracker.record_category === 'action_tracker' ? 'action_tracker_import' : viewingMaintenanceTracker.record_category === 'pm_tracker' ? 'pm_tracker_import' : 'equipment_register_import'}
                 />}
               </div>
             )}

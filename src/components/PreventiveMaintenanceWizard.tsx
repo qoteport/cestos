@@ -77,7 +77,7 @@ export default function PreventiveMaintenanceWizard({
   assets: any[];
   projectId: string;
   onClose: () => void;
-  onSaved?: () => void;
+  onSaved?: (recordId?: string) => void;
   record?: any;
   initialView?: 'ASSISTED' | 'FREE_FLOW';
 }) {
@@ -283,7 +283,7 @@ export default function PreventiveMaintenanceWizard({
         const form = new FormData(); form.append('file', pdf, `${created.job_card_number || 'preventive-maintenance-job-card'}.pdf`); form.append('title', `PM Job Card ${created.job_card_number}`); form.append('category', 'Equipment'); form.append('source_type', 'pm_job_card'); form.append('source_id', created.id); form.append('visibility', 'PUBLIC');
         await apiFetch('/api/v1/documents', { method: 'POST', body: form });
       }
-      onSaved?.();
+      onSaved?.(created.id);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save preventive maintenance job card.');

@@ -835,11 +835,11 @@ function AdminWorkspaceContent({
               <input
                 type="password"
                 required
-                minLength={12}
+                minLength={6}
                 value={newUserPassword}
                 onChange={(e) => setNewUserPassword(e.target.value)}
                 className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
-                placeholder="Minimum 12 characters"
+                placeholder="Minimum 6 characters"
               />
             </div>
 

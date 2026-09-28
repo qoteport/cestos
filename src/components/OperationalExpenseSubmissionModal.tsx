@@ -8,7 +8,7 @@ import SearchableSelect from './SearchableSelect';
 import AppDateTimePicker from './AppDateTimePicker';
 
 type Row = Record<string, any>;
-type ExpenseItem = { inventory_item_id: string; name: string; quantity: string; unit_cost: string; custom_item?: boolean };
+type ExpenseItem = { inventory_item_id: string; name: string; description?: string; quantity: string; unit_cost: string; custom_item?: boolean };
 const blankItem = (): ExpenseItem => ({ inventory_item_id: '', name: '', quantity: '1', unit_cost: '0', custom_item: false });
 const inputClass = 'w-full rounded-lg border bg-background p-2.5';
 
@@ -35,6 +35,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
     const orderItems = (po.items || []).map((line: Row) => ({
       inventory_item_id: line.inventory_item_id || '',
       name: line.item_name || line.description || '',
+      description: line.description || '',
       quantity: String(line.quantity_ordered || 1),
       unit_cost: String(line.unit_price || 0),
       custom_item: !line.inventory_item_id,
@@ -113,7 +114,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
         bank_account_details: bank.trim() || undefined,
         expense_date: date,
         payment_method: method,
-        items: items.map((item) => ({ inventory_item_id: item.inventory_item_id || undefined, name: item.name.trim(), quantity: Number(item.quantity), unit_cost: Number(item.unit_cost) })),
+        items: items.map((item) => ({ inventory_item_id: item.inventory_item_id || undefined, name: item.name.trim(), description: item.description?.trim() || undefined, quantity: Number(item.quantity), unit_cost: Number(item.unit_cost) })),
         total_cost: manualTotal ? Number(manualAmount) : undefined,
         manual_total: manualTotal,
       };
@@ -167,6 +168,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
                   options={purchaseOrders.map((po) => ({ value: String(po.id), label: `${po.po_number} · ${po.currency} ${Number(po.total_amount || 0).toLocaleString()}` }))}
                   placeholder="Link an approved purchase order…"
                 />
+                {purchaseOrderId && <p className="mt-1 font-normal text-slate-500">Purchase order items are prefilled. Update quantities, descriptions, and unit costs from the invoice; the linked purchase order will sync when you submit.</p>}
               </label>
               <label className="block space-y-1 font-semibold sm:col-span-2">
                 <span className="block">Pay to name *</span>
@@ -217,6 +219,10 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
                   <label className="block space-y-1 font-semibold">
                     <span className="block">Unit cost *</span>
                     <input required type="number" min="0" step="0.01" className={inputClass} value={item.unit_cost} onChange={(event) => updateItem(index, { unit_cost: event.target.value })} />
+                  </label>
+                  <label className="block space-y-1 font-semibold sm:col-span-2">
+                    <span className="block">Description</span>
+                    <textarea rows={2} className={inputClass} value={item.description || ''} onChange={(event) => updateItem(index, { description: event.target.value })} placeholder="Optional line item specifications" />
                   </label>
                   <button type="button" onClick={() => setItems((rows) => rows.filter((_, i) => i !== index))} className="justify-self-start font-semibold text-red-700 hover:underline">Remove item</button>
                 </div>

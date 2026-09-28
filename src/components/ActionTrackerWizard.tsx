@@ -14,7 +14,7 @@ const fields = [
 ] as const;
 
 export default function ActionTrackerWizard({ projectId, assets, employees, record, onClose, onSaved, initialMode = 'ASSISTED' }: {
-  projectId: string; assets: any[]; employees: any[]; record?: any; onClose: () => void; onSaved: () => void; initialMode?: 'ASSISTED' | 'FREE_FLOW';
+  projectId: string; assets: any[]; employees: any[]; record?: any; onClose: () => void; onSaved: (recordId?: string) => void; initialMode?: 'ASSISTED' | 'FREE_FLOW';
 }) {
   const [mode, setMode] = useState<'ASSISTED' | 'FREE_FLOW'>(initialMode);
   const [data, setData] = useState<any>(() => ({ action_date: today, equipment_area: '', issue_finding: '', action_taken: '', parts_required: '', responsible_name: '', priority: 'MEDIUM', status: 'OPEN', completion_date: '', remarks: '', ...record }));
@@ -31,8 +31,8 @@ export default function ActionTrackerWizard({ projectId, assets, employees, reco
     setSaving(true); setError('');
     const payload = { ...data, project_id: projectId || null, asset_id: data.asset_id || null, responsible_employee_id: data.responsible_employee_id || null, completion_date: data.completion_date || null };
     try {
-      await apiFetch(record?.id ? `/api/v1/action-tracker/${record.id}` : '/api/v1/action-tracker', { method: record?.id ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
-      onSaved(); onClose();
+      const saved = await apiFetch<any>(record?.id ? `/api/v1/action-tracker/${record.id}` : '/api/v1/action-tracker', { method: record?.id ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
+      onSaved(saved.id); onClose();
     } catch (e: any) { setError(e?.message || 'Could not save action tracker entry.'); }
     finally { setSaving(false); }
   }
@@ -153,5 +153,5 @@ export default function ActionTrackerWizard({ projectId, assets, employees, reco
 
 export function ActionTrackerDetails({ record, onClose, onEdit }: { record: any; onClose: () => void; onEdit: () => void }) {
   const values: Array<[string, unknown]> = fields.map(([key, label]) => [label, record[key] || '—']);
-  return <TrackerDetailsModal title="Action tracker details" fields={values} onClose={onClose} onEdit={onEdit} />;
+  return <TrackerDetailsModal title="Action tracker details" fields={values} onClose={onClose} onEdit={onEdit} recordId={String(record.id)} importSourceType="action_tracker_import" />;
 }

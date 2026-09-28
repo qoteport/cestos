@@ -15,7 +15,7 @@ const fields = [
 ] as const;
 
 export default function PMTrackerWizard({ projectId, assets, employees, record, onClose, onSaved, initialMode = 'ASSISTED' }: {
-  projectId: string; assets: any[]; employees: any[]; record?: any; onClose: () => void; onSaved: () => void; initialMode?: 'ASSISTED' | 'FREE_FLOW';
+  projectId: string; assets: any[]; employees: any[]; record?: any; onClose: () => void; onSaved: (recordId?: string) => void; initialMode?: 'ASSISTED' | 'FREE_FLOW';
 }) {
   const [mode, setMode] = useState<'ASSISTED' | 'FREE_FLOW'>(initialMode);
   const [data, setData] = useState<any>(() => ({ equipment: '', service_type: '', due_date: today, planned_actual: 'PLANNED', pm_completed: false, defects_found: '', parts_required: '', technician_name: '', remarks: '', ...record }));
@@ -29,7 +29,7 @@ export default function PMTrackerWizard({ projectId, assets, employees, record, 
     if (!String(data.equipment || '').trim() || !String(data.service_type || '').trim() || !data.due_date) { setError('Equipment, Service Type, and Due Date are required.'); return; }
     setSaving(true); setError('');
     const payload = { ...data, project_id: projectId || null, asset_id: data.asset_id || null, technician_employee_id: data.technician_employee_id || null, pm_completed: typeof data.pm_completed === 'string' ? /^(yes|true|completed|1)$/i.test(data.pm_completed.trim()) : Boolean(data.pm_completed) };
-    try { await apiFetch(record?.id ? `/api/v1/pm-tracker/${record.id}` : '/api/v1/pm-tracker', { method: record?.id ? 'PATCH' : 'POST', body: JSON.stringify(payload) }); onSaved(); onClose(); }
+    try { const saved = await apiFetch<any>(record?.id ? `/api/v1/pm-tracker/${record.id}` : '/api/v1/pm-tracker', { method: record?.id ? 'PATCH' : 'POST', body: JSON.stringify(payload) }); onSaved(saved.id); onClose(); }
     catch (e: any) { setError(e?.message || 'Could not save PM tracker entry.'); }
     finally { setSaving(false); }
   }
@@ -85,5 +85,5 @@ export default function PMTrackerWizard({ projectId, assets, employees, record, 
 
 export function PMTrackerDetails({ record, onClose, onEdit }: { record: any; onClose: () => void; onEdit: () => void }) {
   const values: Array<[string, unknown]> = fields.map(([key, label]) => [label, key === 'pm_completed' ? (record[key] ? 'Yes' : 'No') : key === 'planned_actual' ? String(record[key] || '').replaceAll('_', ' ') : record[key] || '—']);
-  return <TrackerDetailsModal title="PM tracker details" fields={values} onClose={onClose} onEdit={onEdit} />;
+  return <TrackerDetailsModal title="PM tracker details" fields={values} onClose={onClose} onEdit={onEdit} recordId={String(record.id)} importSourceType="pm_tracker_import" />;
 }

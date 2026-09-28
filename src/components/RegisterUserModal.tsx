@@ -78,8 +78,8 @@ export default function RegisterUserModal({ onClose, onSaved }: RegisterUserModa
       setError('Password is required.');
       return;
     }
-    if (password.length < 12) {
-      setError('Password must be at least 12 characters long.');
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long.');
       return;
     }
 
@@ -203,7 +203,7 @@ export default function RegisterUserModal({ onClose, onSaved }: RegisterUserModa
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold mb-1">Initial Password * (min 12 chars)</label>
+              <label className="block text-xs font-semibold mb-1">Initial Password * (min 6 chars)</label>
               <div className="relative">
                 <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
                 <input

@@ -91,6 +91,9 @@ export default function OperationalExpensesWorkspace({ readOnly = false }: { rea
   const [manualTotal, setManualTotal] = useState('');
   const [items, setItems] = useState<Row[]>([{ inventory_item_id: '', name: '', quantity: '1', unit_cost: '0' }]);
 
+  const [showForm, setShowForm] = useState(!finance);
+  const [viewingExpense, setViewingExpense] = useState<Row | null>(null);
+
   // Disbursement Modal State
   const [payingRow, setPayingRow] = useState<Row | null>(null);
   const [paymentReceiptFile, setPaymentReceiptFile] = useState<File | null>(null);
@@ -235,6 +238,15 @@ export default function OperationalExpensesWorkspace({ readOnly = false }: { rea
             Submit purchases for payment and track Finance processing and disbursement.
           </p>
         </div>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={() => setShowForm((prev) => !prev)}
+            className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs shadow-sm transition flex items-center gap-1.5 shrink-0"
+          >
+            <Plus size={15} /> {showForm ? 'Hide Claim Form' : 'Submit Operational Expense Claim'}
+          </button>
+        )}
       </div>
 
       {/* Error Alert */}
@@ -249,7 +261,7 @@ export default function OperationalExpensesWorkspace({ readOnly = false }: { rea
       )}
 
       {/* Expense Submission Form */}
-      {!readOnly && !finance && (
+      {!readOnly && showForm && (
         <form onSubmit={submit} className="bg-card border rounded-2xl p-5 shadow-sm space-y-5">
           <div className="flex items-center justify-between border-b pb-3 border-border">
             <h2 className="font-bold text-sm text-foreground flex items-center gap-2">
@@ -515,7 +527,16 @@ export default function OperationalExpensesWorkspace({ readOnly = false }: { rea
 
                   return (
                     <tr id={`operational-expense-${row.id}`} key={row.id} className={`hover:bg-muted/30 transition ${String(row.id) === focusedExpenseId ? 'bg-amber-100 outline outline-2 outline-amber-500 dark:bg-amber-950/50' : ''}`}>
-                      <td className="px-4 py-3 font-mono font-bold text-foreground">{row.expense_number || row.id.slice(0, 8)}</td>
+                      <td className="px-4 py-3 font-mono font-bold text-foreground">
+                        <button
+                          type="button"
+                          onClick={() => setViewingExpense(row)}
+                          className="hover:underline text-violet-600 dark:text-violet-400 font-bold text-xs"
+                          title="Click to view Operational Expense Voucher"
+                        >
+                          {row.expense_number || row.id.slice(0, 8)}
+                        </button>
+                      </td>
                       <td className="px-4 py-3 space-y-0.5">
                         <div className="font-bold text-foreground flex items-center gap-1">
                           <User size={12} className="text-violet-600 shrink-0" />
@@ -622,6 +643,145 @@ export default function OperationalExpensesWorkspace({ readOnly = false }: { rea
         </div>
       </div>
 
+      {/* View Operational Expense Voucher Modal */}
+      {viewingExpense && (() => {
+        const vName = viewingExpense.submitted_by_name || viewingExpense.submitted_by?.full_name || (viewingExpense.submitted_by?.first_name ? `${viewingExpense.submitted_by.first_name} ${viewingExpense.submitted_by.last_name || ''}`.trim() : null) || viewingExpense.created_by_name || (auth.user?.first_name ? `${auth.user.first_name} ${auth.user.last_name || ''}`.trim() : 'Operations Supervisor');
+        const vPos = viewingExpense.submitted_by_position || viewingExpense.submitted_by_title || viewingExpense.submitted_by?.job_title || viewingExpense.submitted_by?.role || (auth.user?.is_superuser ? 'Operations Director' : auth.user?.portal_type ? `${auth.user.portal_type.replace('_', ' ')} Admin` : 'Field Administrator');
+        const vEmail = viewingExpense.submitted_by_email || viewingExpense.submitted_by?.email || viewingExpense.email || auth.user?.email || 'operations@cestos.com';
+        const bal = Number(viewingExpense.balance_due ?? Math.max(0, Number(viewingExpense.total_cost || viewingExpense.amount || 0) - paidAmountFor(viewingExpense)));
+        const canPay = finance && bal > 0 && ['SUBMITTED', 'PENDING', 'PARTIALLY_PAID', 'PARTIAL_PAYMENT', 'PAYMENT_RECONCILIATION_REQUIRED', 'APPROVED'].includes((viewingExpense.status || '').toUpperCase());
+
+        return (
+          <div className="fixed inset-0 bg-slate-950/75 z-[9999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
+            <div className="bg-card border rounded-none sm:rounded-2xl max-w-full sm:max-w-4xl w-full h-full sm:h-auto sm:max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+              <div className="flex items-center justify-between border-b px-4 py-3.5 sm:px-6 sm:py-4 bg-card shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-950 text-violet-600 flex items-center justify-center font-bold">
+                    <DollarSign size={18} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base text-foreground">Operational Expense Voucher</h3>
+                    <p className="text-xs text-muted-foreground font-mono">
+                      Ref #: {viewingExpense.expense_number || viewingExpense.id?.slice(0, 8)}
+                    </p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => setViewingExpense(null)} className="p-1.5 rounded-full hover:bg-muted text-muted-foreground">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 rounded-xl border bg-muted/20">
+                  <div className="space-y-4">
+                    <div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-violet-600">Official Expense Claim</span>
+                      <h4 className="text-lg font-black text-foreground mt-1">{viewingExpense.pay_to_name || 'Operational Vendor'}</h4>
+                      <p className="text-xs text-muted-foreground mt-1">Payment Method: {String(viewingExpense.payment_method || 'BANK_TRANSFER').replaceAll('_', ' ')}</p>
+                    </div>
+
+                    <div className="flex items-center gap-3 pt-1">
+                      <StatusBadge status={viewingExpense.status || 'SUBMITTED'} />
+                      <span className="text-xs text-muted-foreground font-mono">{viewingExpense.expense_date || '—'}</span>
+                    </div>
+
+                    <div className="p-3 rounded-xl border bg-violet-50/50 dark:bg-violet-950/20 text-xs space-y-1">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-violet-600 dark:text-violet-400 block">Submitted By</span>
+                      <p className="font-bold text-foreground flex items-center gap-1.5"><User size={13} className="text-violet-600 shrink-0" /> {vName}</p>
+                      <p className="text-[11px] text-muted-foreground font-medium">{vPos}</p>
+                      <a href={`mailto:${vEmail}`} className="text-violet-600 dark:text-violet-400 hover:underline font-mono text-[11px] font-bold inline-flex items-center gap-1">
+                        <Mail size={11} /> {vEmail}
+                      </a>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl border bg-background">
+                      <div>
+                        <span className="block text-[10px] uppercase font-bold text-muted-foreground">Payable To</span>
+                        <span className="text-sm font-bold text-foreground">{viewingExpense.pay_to_name || '—'}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="block text-[10px] uppercase font-bold text-muted-foreground">Total Expenditure</span>
+                        <span className="text-lg font-black text-emerald-600">
+                          ${Number(viewingExpense.total_cost || viewingExpense.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-4 rounded-xl border bg-background text-sm">
+                    <div>
+                      <span className="block text-[10px] uppercase font-bold text-muted-foreground">Payee phone</span>
+                      <span className="font-medium text-foreground">{viewingExpense.pay_to_phone || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase font-bold text-muted-foreground">Bank account details</span>
+                      <span className="font-medium text-foreground whitespace-pre-wrap">{viewingExpense.bank_account_details || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase font-bold text-muted-foreground">Paid to date</span>
+                      <span className="font-bold text-emerald-600">${paidAmountFor(viewingExpense).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase font-bold text-muted-foreground">Remaining Balance</span>
+                      <span className="font-bold text-amber-600">${bal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {Array.isArray(viewingExpense.items) && viewingExpense.items.length > 0 && (
+                  <div className="rounded-xl border overflow-hidden bg-background">
+                    <div className="px-4 py-2.5 border-b bg-muted/40 text-xs font-bold uppercase tracking-wide text-foreground">
+                      Items purchased
+                    </div>
+                    <div className="divide-y">
+                      {viewingExpense.items.map((item: any, index: number) => (
+                        <div key={`${item.name || 'item'}-${index}`} className="px-4 py-3 flex justify-between gap-4 text-sm">
+                          <span className="text-foreground">
+                            {item.name || 'Item'} <span className="text-muted-foreground font-mono text-xs">× {item.quantity}</span>
+                          </span>
+                          <span className="font-semibold text-foreground">
+                            ${Number(item.total ?? Number(item.quantity || 0) * Number(item.unit_cost || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between border-t px-4 py-3 sm:px-6 bg-card shrink-0 gap-2">
+                <span className="text-xs text-muted-foreground font-mono">Status: {viewingExpense.status || 'SUBMITTED'}</span>
+                <div className="flex items-center gap-2">
+                  {canPay && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const target = viewingExpense;
+                        setViewingExpense(null);
+                        setPayingRow(target);
+                        setPaymentReceiptFile(null);
+                        setPaymentAmount(String(Math.max(0, Number(target.total_cost || 0) - paidAmountFor(target)).toFixed(2)));
+                        setPaymentDate(new Date().toISOString().slice(0, 10));
+                      }}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition shadow-sm cursor-pointer"
+                    >
+                      <DollarSign size={14} /> Record Payment
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setViewingExpense(null)}
+                    className="px-4 py-2 border rounded-xl font-semibold text-xs hover:bg-muted transition cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Pay & Upload Disbursement Modal */}
       {payingRow && (() => {
         const pName = payingRow.submitted_by_name || payingRow.submitted_by?.full_name || (payingRow.submitted_by?.first_name ? `${payingRow.submitted_by.first_name} ${payingRow.submitted_by.last_name || ''}`.trim() : null) || payingRow.created_by_name || (auth.user?.first_name ? `${auth.user.first_name} ${auth.user.last_name || ''}`.trim() : 'Operations Supervisor');
@@ -634,7 +794,7 @@ export default function OperationalExpensesWorkspace({ readOnly = false }: { rea
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-            <div className="bg-card border rounded-2xl p-6 max-w-lg w-full max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden shadow-2xl">
+            <div className="bg-card border rounded-2xl p-6 max-w-xl sm:max-w-2xl w-full max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden shadow-2xl">
               <div className="flex shrink-0 items-center justify-between border-b pb-3 border-border">
                 <h3 className="font-bold text-base flex items-center gap-2 text-foreground">
                   <DollarSign className="h-5 w-5 text-emerald-600" /> Process Payment Disbursement
@@ -643,7 +803,7 @@ export default function OperationalExpensesWorkspace({ readOnly = false }: { rea
               </div>
 
               <form onSubmit={handleConfirmPayment} className="flex min-h-0 flex-col overflow-hidden">
-                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain py-4 pr-1">
+                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain py-4 px-1">
                 {/* Voucher Details Card */}
                 <div className="p-4 bg-muted/40 rounded-xl space-y-2 text-xs border">
                   <div className="flex justify-between">
@@ -702,10 +862,20 @@ export default function OperationalExpensesWorkspace({ readOnly = false }: { rea
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block text-xs font-bold">Amount paid now
-                  <input type="number" min="0.01" max={Math.max(0, Number(payingRow.total_cost || 0) - paidToDate)} step="0.01" required value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-sm" />
-                </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-1">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-foreground">Amount paid now ($) *</label>
+                  <input
+                    type="number"
+                    min="0.01"
+                    max={Math.max(0, Number(payingRow.total_cost || 0) - paidToDate)}
+                    step="0.01"
+                    required
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-xs"
+                  />
+                </div>
                 <div>
                   <label className="block text-xs font-bold mb-1">Payment date</label>
                   <AppDateTimePicker

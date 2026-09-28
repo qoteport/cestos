@@ -39,8 +39,11 @@ export default function MaintenanceAssessmentReportDetailsModal({
   useEffect(() => {
     let active = true;
     setAttachmentsLoading(true);
-    apiFetch<any>(`/api/v1/documents?view=all&page_size=100&source_type=maintenance_assessment&source_id=${encodeURIComponent(record.id)}`)
-      .then((result) => { if (active) setAttachments(Array.isArray(result) ? result : result?.items || []); })
+    Promise.all([
+      apiFetch<any>(`/api/v1/documents?view=all&page_size=100&source_type=maintenance_assessment&source_id=${encodeURIComponent(record.id)}`),
+      apiFetch<any>(`/api/v1/documents?view=all&page_size=100&source_type=maintenance_assessment_import&source_id=${encodeURIComponent(record.id)}`),
+    ])
+      .then(([result, imported]) => { if (active) setAttachments([...(Array.isArray(result) ? result : result?.items || []), ...(Array.isArray(imported) ? imported : imported?.items || [])]); })
       .catch(() => { if (active) setAttachments([]); })
       .finally(() => { if (active) setAttachmentsLoading(false); });
     return () => { active = false; };

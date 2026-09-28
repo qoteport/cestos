@@ -103,7 +103,7 @@ async function makeBreakdownPdf(data: { control: any; failure: string; action: s
   return canvasPdf(canvas);
 }
 
-export default function BreakdownJobCardWizard({ assets, projectId, onClose, onSaved, record, initialView = 'ASSISTED' }: { assets: any[]; projectId: string; onClose: () => void; onSaved?: () => void; record?: any; initialView?: 'ASSISTED' | 'FREE_FLOW' }) {
+export default function BreakdownJobCardWizard({ assets, projectId, onClose, onSaved, record, initialView = 'ASSISTED' }: { assets: any[]; projectId: string; onClose: () => void; onSaved?: (recordId?: string) => void; record?: any; initialView?: 'ASSISTED' | 'FREE_FLOW' }) {
   const initialControl = record?.job_control || {};
   const [step, setStep] = useState(0);
   const [view, setView] = useState<'ASSISTED' | 'FREE_FLOW'>(initialView);
@@ -260,7 +260,7 @@ export default function BreakdownJobCardWizard({ assets, projectId, onClose, onS
         form.append('visibility', 'PUBLIC');
         await apiFetch('/api/v1/documents', { method: 'POST', body: form });
       }
-      onSaved?.(); onClose();
+      onSaved?.(saved.id); onClose();
     } catch (error: any) {
       setSaveError(error?.message || 'Could not save the breakdown job card. Please retry.');
     } finally { setSaving(false); }
