@@ -267,15 +267,15 @@ export default function ExpiringDocumentsWorkspace({ baseRoute = '/workspace', c
             <p className="text-xs text-muted-foreground">All employee compliance documents are currently up to date.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-muted text-muted-foreground font-semibold border-b">
+          <div className="overflow-x-auto rounded-xl border border-border">
+            <table className="w-full text-xs text-left border-collapse">
+              <thead className="bg-muted text-muted-foreground font-semibold border-b border-border">
                 <tr>
-                  <th className="p-3">Document Title / Type</th>
+                  <th className="p-3 first:rounded-tl-xl">Document Title / Type</th>
                   <th className="p-3">Employee Name</th>
                   <th className="p-3">Expiry Date</th>
                   <th className="p-3">Urgency / Days Remaining</th>
-                  <th className="p-3 text-right">Actions</th>
+                  <th className="p-3 text-right last:rounded-tr-xl">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
