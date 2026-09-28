@@ -467,16 +467,18 @@ export default function OperationalExpensesWorkspace({ readOnly = false }: { rea
               <label className="block text-xs font-bold text-foreground mb-1">
                 Invoice / Docket Document Upload *
               </label>
-              <div className="border border-dashed rounded-xl p-3 bg-muted/30 flex items-center justify-between gap-2">
-                <input
-                  type="file"
-                  required
-                  accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt,.csv"
-                  className="text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-violet-100 file:text-violet-700 hover:file:bg-violet-200 cursor-pointer"
-                  onChange={(e) => setInvoice(e.target.files?.[0] || null)}
-                />
-                {invoice && <Paperclip size={15} className="text-violet-600 shrink-0" />}
-              </div>
+              <input
+                type="file"
+                required
+                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100 dark:file:bg-violet-950/60 dark:file:text-violet-300 cursor-pointer"
+                onChange={(e) => setInvoice(e.target.files?.[0] || null)}
+              />
+              {invoice && (
+                <p className="text-[11px] text-violet-600 dark:text-violet-400 font-medium mt-1 flex items-center gap-1">
+                  <Paperclip size={12} /> {invoice.name} ({(invoice.size / 1024).toFixed(1)} KB)
+                </p>
+              )}
             </div>
           </div>
 
@@ -873,7 +875,7 @@ export default function OperationalExpensesWorkspace({ readOnly = false }: { rea
                     required
                     value={paymentAmount}
                     onChange={(e) => setPaymentAmount(e.target.value)}
-                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-xs"
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm  font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-xs"
                   />
                 </div>
                 <div>
@@ -893,22 +895,17 @@ export default function OperationalExpensesWorkspace({ readOnly = false }: { rea
                 <label className="block text-xs font-bold text-foreground mb-1">
                   Payment Receipt / Bank Transfer Proof {payingRow.receipt_name ? '(optional: existing receipt will be reused)' : '(required)'}
                 </label>
-                <div className="border border-dashed rounded-xl p-3.5 bg-muted/30 flex flex-col items-center justify-center gap-2 text-center">
-                  <Upload size={20} className="text-violet-600" />
-                  <input
-                    type="file"
-                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.txt"
-                    onChange={(e) => setPaymentReceiptFile(e.target.files?.[0] || null)}
-                    className="text-xs text-muted-foreground file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-violet-100 file:text-violet-700 hover:file:bg-violet-200 cursor-pointer"
-                  />
-                  {paymentReceiptFile ? (
-                    <span className="text-xs font-bold text-emerald-600 flex items-center gap-1 mt-1">
-                      <Paperclip size={13} /> {paymentReceiptFile.name} ({(paymentReceiptFile.size / 1024).toFixed(1)} KB)
-                    </span>
-                  ) : (
-                    <span className="text-[11px] text-muted-foreground">Upload payment voucher image or PDF receipt</span>
-                  )}
-                </div>
+                <input
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.txt"
+                  onChange={(e) => setPaymentReceiptFile(e.target.files?.[0] || null)}
+                  className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 dark:file:bg-emerald-950/60 dark:file:text-emerald-300 cursor-pointer"
+                />
+                {paymentReceiptFile && (
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-1 flex items-center gap-1">
+                    <Paperclip size={12} /> {paymentReceiptFile.name} ({(paymentReceiptFile.size / 1024).toFixed(1)} KB)
+                  </p>
+                )}
               </div>
 
               {payingRow.payment_history_missing && (

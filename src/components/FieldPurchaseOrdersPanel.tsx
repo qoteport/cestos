@@ -3,12 +3,13 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { apiFetch, apiFetchBlob, downloadBlob, receivePurchaseOrderGoods } from '@/lib/api';
-import { Eye, Download, FileText, Paperclip, X, Plus, CheckCircle2, ShoppingCart, Truck, PackageCheck, RefreshCw, Trash } from 'lucide-react';
+import { Eye, Download, FileText, Paperclip, X, Plus, CheckCircle2, ShoppingCart, Truck, PackageCheck, RefreshCw, Trash, Loader2, Sparkles } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
 import OperationalExpenseSubmissionModal from './OperationalExpenseSubmissionModal';
 import UniversalFileViewerModal from './UniversalFileViewerModal';
 import { PurchaseOrderCategoryField, purchaseOrderCategoryLabel } from './PurchaseOrderCategoryField';
 import { useOperationalDataSync } from '@/lib/operationalDataSync';
+import { extractDocumentLineItems } from '@/lib/lineItemExtraction';
 
 type Row = Record<string, any>;
 type Line = { item_name: string; description: string; quantity_ordered: string; unit_price: string };
@@ -58,6 +59,8 @@ export default function FieldPurchaseOrdersPanel({
   const [lines, setLines] = useState<Line[]>([]);
   const [manualTotal, setManualTotal] = useState('0');
   const [quotation, setQuotation] = useState<File | null>(null);
+  const [extractingQuotation, setExtractingQuotation] = useState(false);
+  const [extractionMessage, setExtractionMessage] = useState('');
   const [existingQuotation, setExistingQuotation] = useState('');
   const [expensePO, setExpensePO] = useState<Row | null>(null);
   const [raisedPurchaseOrderIds, setRaisedPurchaseOrderIds] = useState<Set<string>>(new Set());
@@ -184,8 +187,26 @@ export default function FieldPurchaseOrdersPanel({
   const canReceive = (po: Row) => ['APPROVED', 'SENT_TO_SUPPLIER', 'PARTIALLY_RECEIVED'].includes(String(po.status || '').toUpperCase()) && (po.items || []).some((item: Row) => Number(item.quantity_received || 0) < Number(item.quantity_ordered || 0));
   const lineTotal = lines.reduce((sum, row) => sum + (Number(row.quantity_ordered) || 0) * (Number(row.unit_price) || 0), 0);
   const total = lineTotal > 0 ? lineTotal : (Number(manualTotal) || 0);
+  async function handleQuotationChange(file: File | null) {
+    setQuotation(file);
+    setExtractionMessage('');
+    if (!file) return;
+    setExtractingQuotation(true);
+    try {
+      const result = await extractDocumentLineItems(file, 'purchase_order');
+      const parsed = result.items.map((line) => ({ item_name: line.item_name, description: line.description, quantity_ordered: String(line.quantity || 0), unit_price: String(line.unit_price || 0) }));
+      setLines(parsed);
+      const parsedTotal = parsed.reduce((sum, line) => sum + Number(line.quantity_ordered) * Number(line.unit_price), 0);
+      setManualTotal(parsedTotal > 0 ? '0' : String(result.total_amount || 0));
+      if (!supplier.trim() && result.supplier_name) setSupplier(result.supplier_name);
+      if (result.currency && ['USD', 'EUR', 'GBP', 'ZAR'].includes(result.currency)) setCurrency(result.currency);
+      setExtractionMessage(`${parsed.length} line item${parsed.length === 1 ? '' : 's'} extracted. Review and correct before saving.`);
+    } catch (error) {
+      setExtractionMessage(`${error instanceof Error ? error.message : 'Could not parse this file.'} You can still enter the items manually.`);
+    } finally { setExtractingQuotation(false); }
+  }
   const openCreate = () => {
-    setEditing(null); setOrderProjectId(projectId); setFormStep('EDIT'); setSupplier(''); setCurrency('USD'); setCategory(''); setNotes(''); setLines([]); setManualTotal('0'); setQuotation(null); setExistingQuotation(''); setShowForm(true);
+    setEditing(null); setOrderProjectId(projectId); setFormStep('EDIT'); setSupplier(''); setCurrency('USD'); setCategory(''); setNotes(''); setLines([]); setManualTotal('0'); setQuotation(null); setExtractingQuotation(false); setExtractionMessage(''); setExistingQuotation(''); setShowForm(true);
   };
   const lastHandledCreateSignal = useRef(openCreateSignal);
   useEffect(() => {
@@ -199,7 +220,7 @@ export default function FieldPurchaseOrdersPanel({
     const existingLines = (po.items || []).map((row: Row) => ({ item_name: row.item_name || '', description: row.description || '', quantity_ordered: String(row.quantity_ordered || 1), unit_price: String(row.unit_price || 0) }));
     setLines(existingLines);
     setManualTotal(String(existingLines.reduce((sum: number, row: Line) => sum + (Number(row.quantity_ordered) || 0) * (Number(row.unit_price) || 0), 0) > 0 ? 0 : Number(po.total_amount || 0)));
-    setQuotation(null); setExistingQuotation(po.attachment_file_name || ''); setShowForm(true);
+    setQuotation(null); setExtractingQuotation(false); setExtractionMessage(''); setExistingQuotation(po.attachment_file_name || ''); setShowForm(true);
   };
   async function upload(poId: string) {
     if (!quotation) return;
@@ -381,8 +402,10 @@ export default function FieldPurchaseOrdersPanel({
                     </div>
                     <label className="space-y-1 text-xs font-semibold">
                       <span className="block">Quotation / supporting file</span>
-                      <input type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx" className={input} onChange={(e) => setQuotation(e.target.files?.[0] || null)} />
+                      <input type="file" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,.docx,.xls,.xlsx,.txt,.csv,.rtf" className={input} onChange={(e) => void handleQuotationChange(e.target.files?.[0] || null)} />
                       {existingQuotation && <span className="block text-slate-500">Current file: {existingQuotation}</span>}
+                      {quotation && <span className="block truncate text-[11px] text-slate-500">{quotation.name}</span>}
+                      {(extractingQuotation || extractionMessage) && <span role="status" className={`flex items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${extractingQuotation ? 'bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-200' : 'bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{extractingQuotation ? <><Loader2 size={13} className="animate-spin" />Reading quotation and identifying line items…</> : <><Sparkles size={13} />{extractionMessage}</>}</span>}
                     </label>
                     <label className="space-y-1 text-xs font-semibold sm:col-span-2">
                       <span className="block">Notes / specifications</span>
@@ -403,11 +426,11 @@ export default function FieldPurchaseOrdersPanel({
                           <span className="block">Item / service</span>
                           <input className={input} value={line.item_name} onChange={(e) => setLines((rows) => rows.map((r, i) => i === index ? { ...r, item_name: e.target.value } : r))} />
                         </label>
-                        <label className="space-y-1 text-xs font-semibold lg:col-span-5">
+                        <label className="space-y-1 text-xs font-semibold lg:col-span-3">
                           <span className="block">Description</span>
                           <textarea rows={1} maxLength={255} className={input} value={line.description} onChange={(e) => setLines((rows) => rows.map((r, i) => i === index ? { ...r, description: e.target.value } : r))} />
                         </label>
-                        <label className="space-y-1 text-xs font-semibold lg:col-span-1">
+                        <label className="space-y-1 text-xs font-semibold lg:col-span-3">
                           <span className="block">Quantity</span>
                           <input min="0" step="0.001" type="number" className={input} value={line.quantity_ordered} onChange={(e) => setLines((rows) => rows.map((r, i) => i === index ? { ...r, quantity_ordered: e.target.value } : r))} />
                         </label>
@@ -415,7 +438,9 @@ export default function FieldPurchaseOrdersPanel({
                           <span className="block">Unit price</span>
                           <input min="0" step="0.01" type="number" className={input} value={line.unit_price} onChange={(e) => setLines((rows) => rows.map((r, i) => i === index ? { ...r, unit_price: e.target.value } : r))} />
                         </label>
-                        <button type="button" onClick={() => setLines((rows) => rows.filter((_, i) => i !== index))} className="self-center rounded-lg border px-2 py-2 text-xs text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 lg:col-span-1"><Trash></Trash></button>
+                        <div className="lg:col-span-1 flex items-end justify-center pb-1">
+                          <button type="button" onClick={() => setLines((rows) => rows.filter((_, i) => i !== index))} className="rounded-lg p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors" title="Remove item"><Trash size={12} className="shrink-0" /></button>
+                        </div>
                       </div>
                     ))}
                     <button
@@ -486,12 +511,12 @@ export default function FieldPurchaseOrdersPanel({
                       Cancel
                     </button>
                     {(!editing || editing.status === 'DRAFT') && (
-                      <button type="button" disabled={busy} onClick={() => void saveOrder(true)} className="rounded-full border border-orange-300 px-4 py-2 text-xs font-bold text-orange-800 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/30 disabled:opacity-50 transition w-full sm:w-auto">
-                        {busy ? 'Saving…' : 'Save as draft'}
+                      <button type="button" disabled={busy || extractingQuotation} onClick={() => void saveOrder(true)} className="rounded-full border border-orange-300 px-4 py-2 text-xs font-bold text-orange-800 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/30 disabled:opacity-50 transition w-full sm:w-auto">
+                        {extractingQuotation ? 'Reading file…' : busy ? 'Saving…' : 'Save as draft'}
                       </button>
                     )}
-                    <button type="submit" disabled={busy} className="rounded-full bg-orange-600 px-4 py-2 text-xs font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto">
-                      Preview Purchase Order
+                    <button type="submit" disabled={busy || extractingQuotation} className="rounded-full bg-orange-600 px-4 py-2 text-xs font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto">
+                      {extractingQuotation ? 'Reading file…' : 'Preview Purchase Order'}
                     </button>
                   </>
                 ) : (

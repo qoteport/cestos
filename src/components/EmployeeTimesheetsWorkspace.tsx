@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CalendarDays, Clock3, Paperclip, Pencil, Plus, RefreshCw, X } from 'lucide-react';
+import { AlertTriangle, CalendarDays, Clock3, Maximize2, Minimize2, Paperclip, Pencil, Plus, RefreshCw, X } from 'lucide-react';
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import { openUniversalFileViewer } from '@/lib/fileViewer';
 import SearchableSelect from './SearchableSelect';
@@ -69,6 +69,7 @@ export default function EmployeeTimesheetsWorkspace({
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [attachmentBusy, setAttachmentBusy] = useState<string | null>(null);
+  const [fullView, setFullView] = useState(false);
 
   const reload = useCallback(async (requestedPeriod: string) => {
     setLoading(true);
@@ -91,6 +92,15 @@ export default function EmployeeTimesheetsWorkspace({
   }, [projectId]);
 
   useEffect(() => { void reload(period); }, [period, refreshKey, reload]);
+
+  useEffect(() => {
+    if (!fullView) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setFullView(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [fullView]);
 
   useEffect(() => {
     let active = true;
@@ -239,6 +249,7 @@ export default function EmployeeTimesheetsWorkspace({
             </div>
           </div>
           <button type="button" onClick={() => setRefreshKey((value) => value + 1)} disabled={loading} aria-label="Refresh time sheet" className="mb-0.5 rounded-lg border border-slate-300 p-2 text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><RefreshCw size={16} className={loading ? 'animate-spin' : ''} /></button>
+          <button type="button" onClick={() => setFullView(true)} aria-label="View time sheet in full screen" className="mb-0.5 inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><Maximize2 size={15} /> Full view</button>
           {canReport && <button type="button" onClick={openNew} className={`mb-0.5 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 ${colors.action}`}><Plus size={16} /> Report hours</button>}
         </div>
       </div>
@@ -250,9 +261,10 @@ export default function EmployeeTimesheetsWorkspace({
 
       {error && <div role="alert" className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200"><AlertTriangle size={16} />{error}<button type="button" className="ml-auto font-bold underline" onClick={() => setRefreshKey((value) => value + 1)}>Retry</button></div>}
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900">
+      <div className={`${fullView ? 'fixed inset-2 z-[90] flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:inset-4' : 'overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900'}`} role={fullView ? 'dialog' : undefined} aria-modal={fullView || undefined} aria-label={fullView ? 'Monthly time sheet full view' : undefined}>
+        {fullView && <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900"><div><p className="text-sm font-bold text-slate-900 dark:text-white">Monthly time sheet</p><p className="text-xs text-slate-500">{period || currentMonth()}</p></div><button type="button" onClick={() => setFullView(false)} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800" aria-label="Exit full view"><Minimize2 size={15} /> Exit full view</button></div>}
         {loading ? <div role="status" className="p-8 text-center text-sm text-slate-500">Loading time sheet…</div> : (
-          <div className="max-h-[70vh] overflow-auto">
+          <div className={`${fullView ? 'min-h-0 flex-1 overflow-auto' : 'max-h-[70vh] overflow-auto'}`}>
             <table className="min-w-max border-collapse text-left text-xs">
               <thead className="bg-slate-100 text-[10px] font-extrabold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                 <tr className="h-8">

@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApiDataRefresh } from '@/lib/apiDataRefresh';
 import OperationalExpenseSubmissionModal from './OperationalExpenseSubmissionModal';
+import { extractDocumentLineItems } from '@/lib/lineItemExtraction';
 import RegisterUserModal from './RegisterUserModal';
 import {
   Zap,
@@ -39,6 +40,8 @@ import {
   TrendingUp,
   Paperclip,
   Download,
+  Loader2,
+  Sparkles,
   Eye,
   Building2,
   Mail,
@@ -61,7 +64,6 @@ import {
   Filter,
   Briefcase,
   Truck,
-  Sparkles,
   ShoppingBag,
   MoreHorizontal } from 'lucide-react';
 import EmployeeDetailView from './EmployeeDetailView';
@@ -275,8 +277,30 @@ export default function ExecutivePortalWorkspace() {
 //   const [selectedReceiptItemIds, setSelectedReceiptItemIds] = useState<string[]>([]);
   const [poSubmitBusy, setPoSubmitBusy] = useState(false);
   const [poAttachmentFile, setPoAttachmentFile] = useState<File | null>(null);
+  const [extractingPoDocument, setExtractingPoDocument] = useState(false);
+  const [poExtractionMessage, setPoExtractionMessage] = useState('');
+  const handlePoDocumentChange = async (file: File | null) => {
+    setPoAttachmentFile(file);
+    setPoExtractionMessage('');
+    if (!file) return;
+    setExtractingPoDocument(true);
+    try {
+      const result = await extractDocumentLineItems(file, 'purchase_order');
+      const items = result.items.map((line) => ({ item_name: line.item_name, description: line.description, quantity_ordered: line.quantity, unit_price: line.unit_price }));
+      setNewPoForm((current) => ({
+        ...current,
+        supplier_name: current.supplier_name || result.supplier_name || '',
+        currency: result.currency && ['USD', 'EUR', 'GBP', 'ZAR'].includes(result.currency) ? result.currency : current.currency,
+        items,
+      }));
+      setPoExtractionMessage(`${items.length} line item${items.length === 1 ? '' : 's'} extracted. Review and correct before saving.`);
+    } catch (error) {
+      setPoExtractionMessage(`${error instanceof Error ? error.message : 'Could not parse this file.'} You can still enter the items manually.`);
+    } finally { setExtractingPoDocument(false); }
+  };
   const handleCreatePo = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (extractingPoDocument) return;
     if (!newPoForm.supplier_name.trim()) {
       setBanner({ type: 'error', message: 'Please enter a vendor / supplier name.' });
       return;
@@ -3124,7 +3148,8 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                   <label className="block text-xs font-bold text-foreground mb-1">Attachment / Quote Docket (Optional)</label>
                   <input
                     type="file"
-                    onChange={(e) => setPoAttachmentFile(e.target.files?.[0] || null)}
+                    accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,.docx,.xls,.xlsx,.txt,.csv,.rtf"
+                    onChange={(e) => void handlePoDocumentChange(e.target.files?.[0] || null)}
                     className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-violet-700 hover:file:bg-violet-100"
                   />
                   {poAttachmentFile && (
@@ -3132,6 +3157,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                       <Paperclip size={12} /> {poAttachmentFile.name} ({(poAttachmentFile.size / 1024).toFixed(1)} KB)
                     </p>
                   )}
+                  {(extractingPoDocument || poExtractionMessage) && <p role="status" className={`mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${extractingPoDocument ? 'bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-200' : 'bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{extractingPoDocument ? <><Loader2 size={13} className="animate-spin" />Reading quotation and identifying line items…</> : <><Sparkles size={13} />{poExtractionMessage}</>}</p>}
                 </div>
 
                 {/* Line Items List */}
@@ -3154,18 +3180,18 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                   </div>
 
                   {newPoForm.items.map((it, idx) => (
-                    <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 border rounded-xl bg-muted/30 relative">
+                    <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 border rounded-xl bg-muted/30">
                       <label className="md:col-span-3 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Item / Service
                         <input type="text" placeholder="e.g. Hydraulic filter" value={it.item_name || ''} onChange={(e) => {
                           const updated = [...newPoForm.items]; updated[idx].item_name = e.target.value; setNewPoForm({ ...newPoForm, items: updated });
                         }} className="w-full p-2.5 border rounded-lg bg-background text-xs text-foreground" />
                       </label>
-                      <label className="md:col-span-5 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Description
+                      <label className="md:col-span-3 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Description
                         <textarea rows={1} maxLength={255} placeholder="Specification, purpose, or details" value={it.description} onChange={(e) => {
                           const updated = [...newPoForm.items]; updated[idx].description = e.target.value; setNewPoForm({ ...newPoForm, items: updated });
                         }} className="w-full p-2.5 border rounded-lg bg-background text-xs text-foreground resize-y" />
                       </label>
-                      <label className="md:col-span-2 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Quantity
+                      <label className="md:col-span-3 space-y-1.5 text-[11px] font-semibold text-muted-foreground">Quantity
                         <input type="number" min="0" step="any" value={it.quantity_ordered === 0 ? '' : it.quantity_ordered} placeholder="0" onChange={(e) => {
                           const updated = [...newPoForm.items]; updated[idx].quantity_ordered = e.target.value === '' ? 0 : (Number(e.target.value) || 0); setNewPoForm({ ...newPoForm, items: updated });
                         }} className="w-full p-2.5 border rounded-lg bg-background text-xs font-mono text-center text-foreground" />
@@ -3175,17 +3201,19 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                           const updated = [...newPoForm.items]; updated[idx].unit_price = e.target.value === '' ? 0 : (Number(e.target.value) || 0); setNewPoForm({ ...newPoForm, items: updated });
                         }} className="w-full p-2.5 border rounded-lg bg-background text-xs font-mono text-right text-foreground" />
                       </label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = newPoForm.items.filter((_, i) => i !== idx);
-                          setNewPoForm({ ...newPoForm, items: updated });
-                        }}
-                        className="p-1 text-red-500 hover:text-red-700 absolute top-2 right-2 md:static md:self-center"
-                        title="Remove item"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <div className="md:col-span-1 flex items-end justify-center pb-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = newPoForm.items.filter((_, i) => i !== idx);
+                            setNewPoForm({ ...newPoForm, items: updated });
+                          }}
+                          className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
+                          title="Remove item"
+                        >
+                          <Trash2 size={12} className="shrink-0" />
+                        </button>
+                      </div>
                     </div>
                   ))}
 
@@ -3215,11 +3243,11 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                 </button>
                 <button
                   type="submit"
-                  disabled={poSubmitBusy}
+                  disabled={poSubmitBusy || extractingPoDocument}
                   className="px-5 py-2 bg-indigo-600 text-white font-bold rounded-full text-xs hover:bg-indigo-700 flex items-center gap-1.5 transition shadow-xs disabled:opacity-50"
                 >
-                  {poSubmitBusy ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 size={15} />}
-                  Issue Purchase Order
+                  {poSubmitBusy || extractingPoDocument ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 size={15} />}
+                  {extractingPoDocument ? 'Reading document…' : 'Issue Purchase Order'}
                 </button>
               </div>
             </form>
