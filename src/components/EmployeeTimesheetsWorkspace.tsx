@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CalendarDays, Check, Clock3, Maximize2, Minimize2, Paperclip, Pencil, Plus, X } from 'lucide-react';
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import { openUniversalFileViewer } from '@/lib/fileViewer';
@@ -72,6 +72,8 @@ export default function EmployeeTimesheetsWorkspace({
   const [bulkDays, setBulkDays] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [savedForAnother, setSavedForAnother] = useState(false);
+  const formScrollRef = useRef<HTMLDivElement>(null);
   const [attachmentBusy, setAttachmentBusy] = useState<string | null>(null);
   const [fullView, setFullView] = useState(false);
 
@@ -173,6 +175,7 @@ export default function EmployeeTimesheetsWorkspace({
     setBulkHours('');
     setBulkDays([]);
     setFormError('');
+    setSavedForAnother(false);
     setShowForm(true);
   }
 
@@ -185,6 +188,7 @@ export default function EmployeeTimesheetsWorkspace({
     setBulkHours('');
     setBulkDays([]);
     setFormError('');
+    setSavedForAnother(false);
     setShowForm(true);
   }
 
@@ -212,7 +216,17 @@ export default function EmployeeTimesheetsWorkspace({
         method: editing ? 'PUT' : 'POST',
         body: JSON.stringify({ employee_id: employeeId, project_id: projectId || null, period_start: `${formPeriod}-01`, site_name: siteName.trim() || null, entries }),
       });
-      setShowForm(false);
+      if (editing) {
+        setShowForm(false);
+      } else {
+        setEditing(null);
+        setEmployeeId('');
+        setSiteName('');
+        setDailyHours({});
+        setBulkHours('');
+        setBulkDays([]);
+        setSavedForAnother(true);
+      }
       if (period !== formPeriod) setPeriod(formPeriod);
       else setRefreshKey((value) => value + 1);
     } catch (err) {
@@ -353,7 +367,7 @@ export default function EmployeeTimesheetsWorkspace({
               <button type="button" onClick={() => setShowForm(false)} aria-label="Close" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"><X size={18} /></button>
             </div>
             <form onSubmit={saveTimesheet} className="flex min-h-0 flex-1 flex-col">
-              <div className="grid gap-3 overflow-y-auto p-5 sm:grid-cols-2">
+              <div ref={formScrollRef} className="grid gap-3 overflow-y-auto p-5 sm:grid-cols-2">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Employee <span className="text-red-600">*</span>
                   <div className="mt-1"><SearchableSelect value={employeeId} onChange={setEmployeeId} options={employeeOptions} placeholder="Search employee…" disabled={Boolean(editing)} searchable /></div>
                 </label>
@@ -404,10 +418,13 @@ export default function EmployeeTimesheetsWorkspace({
                   </div>
                 </div>
               </div>
+              {savedForAnother && <p role="status" className="mx-5 mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">Time sheet saved. Select another employee and site to continue.</p>}
               {formError && <p role="alert" className="mx-5 mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{formError}</p>}
               <div className="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 px-5 py-3 dark:border-slate-800 dark:bg-slate-950/40">
                 <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Cancel</button>
-                <button type="submit" disabled={saving} className={`rounded-lg px-4 py-2 text-sm font-bold text-white disabled:opacity-60 ${colors.action}`}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Save time sheet'}</button>
+                {savedForAnother
+                  ? <button type="button" onClick={() => { formScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); setSavedForAnother(false); }} className={`rounded-lg px-4 py-2 text-sm font-bold text-white ${colors.action}`}>Log another</button>
+                  : <button type="submit" disabled={saving} className={`rounded-lg px-4 py-2 text-sm font-bold text-white disabled:opacity-60 ${colors.action}`}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Save time sheet'}</button>}
               </div>
             </form>
           </div>

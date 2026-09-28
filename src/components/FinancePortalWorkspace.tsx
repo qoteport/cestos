@@ -1,5 +1,6 @@
 'use client';
 
+import { createPortal } from 'react-dom';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import SearchableSelect from './SearchableSelect';
 import AppDateTimePicker from './ui/AppDateTimePicker';
@@ -237,6 +238,33 @@ export default function FinancePortalWorkspace() {
   const [showEditFuelAllocModal, setShowEditFuelAllocModal] = useState(false);
   const [editingFuelAlloc, setEditingFuelAlloc] = useState<any | null>(null);
 
+  const [fuelBoughtForm, setFuelBoughtForm] = useState({
+    project_id: '',
+    site_location_id: '',
+    supplier: '',
+    fuel_type: 'DIESEL',
+    quantity_litres: '',
+    unit_cost: '',
+    total_cost: '',
+    currency: 'USD',
+    reference_number: '',
+    recorded_at: new Date().toISOString().slice(0, 16),
+    notes: '',
+  });
+  const [fuelReceiptFile, setFuelReceiptFile] = useState<File | null>(null);
+  const [fuelAllocForm, setFuelAllocForm] = useState({
+    project_id: '',
+    site_location_id: '',
+    delivery_id: '',
+    asset_id: '',
+    quantity_litres: '',
+    odometer_km: '',
+    operating_hours: '',
+    allocated_at: new Date().toISOString().slice(0, 16),
+    notes: '',
+  });
+  const [fuelSubmitBusy, setFuelSubmitBusy] = useState(false);
+
   const [editFuelForm, setEditFuelForm] = useState({
     recorded_at: '',
     supplier: '',
@@ -284,6 +312,8 @@ export default function FinancePortalWorkspace() {
   const [viewerState, setViewerState] = useState<{ isOpen: boolean; fileUrl?: string; fileName?: string; title?: string }>({ isOpen: false });
   const [viewingProject, setViewingProject] = useState<any | null>(null);
   const [projectSearch, setProjectSearch] = useState<string>('');
+
+  const MULTI_PROJECT_SCOPE = '__MULTIPLE_PROJECTS__';
 
   const [newPoForm, setNewPoForm] = useState({
     supplier_name: '',
@@ -734,6 +764,135 @@ export default function FinancePortalWorkspace() {
     }
   }
 
+  // Fuel Delivery & Allocation Submit Handlers
+  const handleCreateFuelBought = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fuelBoughtForm.quantity_litres || Number(fuelBoughtForm.quantity_litres) <= 0) {
+      setBanner({ type: 'error', message: 'Fuel quantity must be greater than 0.' });
+      return;
+    }
+
+    const projId = fuelBoughtForm.project_id || (selectedProjectId !== 'ALL' ? selectedProjectId : projects[0]?.id || '');
+    const availableSites = projectSites.filter((site) => String(site.project_id) === String(projId));
+    const siteLocationId = fuelBoughtForm.site_location_id || availableSites[0]?.id || projectSites[0]?.id;
+    if (!siteLocationId) {
+      setBanner({ type: 'error', message: 'Please select a valid Project Site location.' });
+      return;
+    }
+
+    setFuelSubmitBusy(true);
+    try {
+      const costInfo = [
+        fuelBoughtForm.total_cost ? `Total Cost: ${fuelBoughtForm.total_cost} ${fuelBoughtForm.currency}` : '',
+        fuelBoughtForm.unit_cost ? `Unit Cost: ${fuelBoughtForm.unit_cost} ${fuelBoughtForm.currency}/L` : '',
+      ].filter(Boolean).join(' | ');
+      const costNote = costInfo ? `[Financial Info: ${costInfo}]` : '';
+      const attachmentNote = fuelReceiptFile ? `[Attached Docket: ${fuelReceiptFile.name} (${(fuelReceiptFile.size / 1024).toFixed(1)} KB)]` : '';
+      const combinedNotes = [fuelBoughtForm.notes, costNote, attachmentNote].filter(Boolean).join('\n');
+
+      const payload = {
+        project_id: projId,
+        site_location_id: siteLocationId,
+        recorded_at: fuelBoughtForm.recorded_at ? new Date(fuelBoughtForm.recorded_at).toISOString() : new Date().toISOString(),
+        fuel_type: fuelBoughtForm.fuel_type || 'DIESEL',
+        quantity_litres: Number(fuelBoughtForm.quantity_litres),
+        supplier: fuelBoughtForm.supplier || undefined,
+        reference_number: fuelBoughtForm.reference_number || undefined,
+        notes: combinedNotes || undefined,
+      };
+
+      const createdDelivery = await apiFetch<any>('/api/v1/field-portal/fuel-deliveries', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      let uploadedReceipt: any = null;
+      let receiptWarning = '';
+      if (fuelReceiptFile) {
+        const receiptForm = new FormData();
+        receiptForm.append('receipt', fuelReceiptFile);
+        try {
+          uploadedReceipt = await apiFetch<any>(`/api/v1/field-portal/fuel-deliveries/${createdDelivery.id}/receipt`, { method: 'POST', body: receiptForm });
+        } catch (uploadError: any) {
+          receiptWarning = ` Fuel delivery was saved, but its receipt upload failed: ${uploadError?.message || 'please edit the delivery and retry.'}`;
+        }
+      }
+      const visibleDelivery = { ...createdDelivery, ...uploadedReceipt, project_id: createdDelivery?.project_id || projId, site_location_id: createdDelivery?.site_location_id || siteLocationId };
+      setFuelDeliveries((current) => [visibleDelivery, ...current.filter((row) => String(row.id) !== String(visibleDelivery.id))]);
+      setBanner({ type: receiptWarning ? 'error' : 'success', message: `Fuel delivery of ${fuelBoughtForm.quantity_litres} L logged successfully.${receiptWarning}` });
+      setShowFuelBoughtModal(false);
+      setFuelBoughtForm({
+        project_id: '', site_location_id: '', supplier: '', fuel_type: 'DIESEL',
+        quantity_litres: '', unit_cost: '', total_cost: '', currency: 'USD',
+        reference_number: '', recorded_at: new Date().toISOString().slice(0, 16), notes: '',
+      });
+      setFuelReceiptFile(null);
+      void reload();
+    } catch (err: any) {
+      setBanner({ type: 'error', message: err?.message || 'Failed to log fuel delivery.' });
+    } finally {
+      setFuelSubmitBusy(false);
+    }
+  };
+
+  const handleCreateFuelAlloc = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fuelAllocForm.asset_id) {
+      setBanner({ type: 'error', message: 'Please select an asset to allocate fuel.' });
+      return;
+    }
+    if (!fuelAllocForm.quantity_litres || Number(fuelAllocForm.quantity_litres) <= 0) {
+      setBanner({ type: 'error', message: 'Fuel quantity must be greater than 0.' });
+      return;
+    }
+
+    const projId = fuelAllocForm.project_id || (selectedProjectId !== 'ALL' ? selectedProjectId : projects[0]?.id || '');
+    const assetObj = assets.find((a) => String(a.id) === String(fuelAllocForm.asset_id));
+    const availableSites = projectSites.filter((site) => String(site.project_id) === String(projId));
+    const siteLocationId = fuelAllocForm.site_location_id || assetObj?.site_location_id || availableSites[0]?.id || projectSites[0]?.id;
+    if (!siteLocationId) {
+      setBanner({ type: 'error', message: 'Please select a valid Project Site location.' });
+      return;
+    }
+
+    setFuelSubmitBusy(true);
+    try {
+      const meterInfo = [
+        fuelAllocForm.odometer_km ? `Odometer: ${fuelAllocForm.odometer_km} km` : '',
+        fuelAllocForm.operating_hours ? `Engine Hours: ${fuelAllocForm.operating_hours} hrs` : '',
+      ].filter(Boolean).join(' | ');
+      const meterNote = meterInfo ? `[Meter Info: ${meterInfo}]` : '';
+      const combinedNotes = [fuelAllocForm.notes, meterNote].filter(Boolean).join('\n');
+
+      const payload = {
+        project_id: projId,
+        site_location_id: siteLocationId,
+        asset_id: fuelAllocForm.asset_id,
+        delivery_id: fuelAllocForm.delivery_id || undefined,
+        recorded_at: fuelAllocForm.allocated_at ? new Date(fuelAllocForm.allocated_at).toISOString() : new Date().toISOString(),
+        quantity_litres: Number(fuelAllocForm.quantity_litres),
+        notes: combinedNotes || undefined,
+      };
+
+      const createdAllocation = await apiFetch<any>('/api/v1/field-portal/fuel-allocations', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      const visibleAllocation = { ...createdAllocation, project_id: createdAllocation?.project_id || projId, site_location_id: createdAllocation?.site_location_id || siteLocationId };
+      setFuelAllocations((current) => [visibleAllocation, ...current.filter((row) => String(row.id) !== String(visibleAllocation.id))]);
+      setBanner({ type: 'success', message: 'Fuel allocation to asset recorded.' });
+      setShowFuelAllocModal(false);
+      setFuelAllocForm({
+        project_id: '', site_location_id: '', delivery_id: '', asset_id: '', quantity_litres: '', odometer_km: '',
+        operating_hours: '', allocated_at: new Date().toISOString().slice(0, 16), notes: '',
+      });
+      void reload();
+    } catch (err: any) {
+      setBanner({ type: 'error', message: err?.message || 'Failed to log fuel allocation.' });
+    } finally {
+      setFuelSubmitBusy(false);
+    }
+  };
+
   // Receipt Download Helper
   const handleDownloadFuelReceipt = async (delivery: any) => {
     if (!delivery) return;
@@ -811,7 +970,7 @@ CESTOS SMART FINANCE PORTAL - PURCHASE ORDER DOCKET
 ===========================================================
 PO Number:         ${po.po_number || po.id}
 Vendor / Supplier: ${po.supplier_name || po.vendor_name || po.vendor || po.supplier || 'Site Vendor'}
-Project Scope:     ${projects.find((p) => String(p.id) === String(po.project_id))?.name || po.project_id || 'All Projects'}
+Project Scope:     ${projects.find((p) => String(p.id) === String(po.project_id))?.name || po.project_id || 'General / Multiple Projects'}
 Order Date:        ${po.created_at ? new Date(po.created_at).toLocaleString() : '—'}
 Status:            ${po.status || 'PENDING'}
 Currency:          ${po.currency || 'USD'}
@@ -860,7 +1019,7 @@ Signed: Finance & Procurement Administration
     try {
       const payload = {
         supplier_name: newPoForm.supplier_name,
-        project_id: newPoForm.project_id || selectedProjectId || projects[0]?.id || undefined,
+        project_id: newPoForm.project_id === MULTI_PROJECT_SCOPE ? null : newPoForm.project_id || selectedProjectId || projects[0]?.id || undefined,
         currency: newPoForm.currency || 'USD',
         category: newPoForm.category.trim() || null,
         notes: newPoForm.notes || undefined,
@@ -958,7 +1117,7 @@ Signed: Finance & Procurement Administration
 
       const payload = {
         supplier_name: editPoForm.supplier_name,
-        project_id: editPoForm.project_id || undefined,
+        project_id: editPoForm.project_id === MULTI_PROJECT_SCOPE ? null : editPoForm.project_id || undefined,
         currency: editPoForm.currency || 'USD',
         category: editPoForm.category.trim() || null,
         status: editPoForm.status,
@@ -1836,7 +1995,7 @@ Signed: Finance & Procurement Administration
                       {scopedPurchaseOrders.slice((scopedPurchaseOrdersPage - 1) * 15, scopedPurchaseOrdersPage * 15).map((po, i) => {
                         const poNum = po.po_number || po.number || `PO-${i + 1}`;
                         const vendor = po.supplier_name || po.vendor_name || po.vendor || po.supplier || 'Site Vendor';
-                        const projName = projects.find((p) => String(p.id) === String(po.project_id))?.name || po.project_id || 'All Projects';
+                        const projName = projects.find((p) => String(p.id) === String(po.project_id))?.name || po.project_id || 'General / Multiple Projects';
                         const amount = Number(po.total_amount || po.total || 0);
                         const curr = po.currency || 'USD';
                         const itemCount = Array.isArray(po.items) ? po.items.length : 1;
@@ -2708,19 +2867,19 @@ Signed: Finance & Procurement Administration
                                       setBanner({ type: 'error', message: err?.message || 'Failed to open docket file.' });
                                     }
                                   }}
-                                  className="inline-flex items-center gap-1.5 text-violet-600 hover:text-violet-800 dark:text-violet-400 dark:hover:text-violet-300 font-bold underline text-xs cursor-pointer"
+                                  className="inline-flex items-center gap-1.5 text-violet-600 hover:text-violet-800 dark:text-violet-400 dark:hover:text-violet-300 font-bold text-xs cursor-pointer"
                                   title={`Click to view docket file: ${fileName}`}
                                 >
                                   <Paperclip size={13} className="shrink-0" />
                                   <span className="max-w-[150px] truncate">{fileName}</span>
                                 </button>
                               ) : hasInstallmentPayments ? (
-                                <button type="button" onClick={() => setViewingExpense(exp)} className="text-xs font-semibold text-violet-700 underline">View {exp.payments.length} payment receipt{exp.payments.length === 1 ? '' : 's'}</button>
+                                <button type="button" onClick={() => setViewingExpense(exp)} className="text-xs font-semibold text-violet-700 hover:text-violet-900 transition-colors">View {exp.payments.length} payment receipt{exp.payments.length === 1 ? '' : 's'}</button>
                               ) : (
                                 <span className="text-muted-foreground text-[11px]">No docket</span>
                               )}
                             </td>
-                            <td className="hidden md:table-cell px-4 py-3"><div className="min-w-[205px] space-y-1.5"><div className="flex justify-between gap-2 rounded-md border border-violet-100 bg-violet-50 px-2 py-1.5 dark:border-violet-900 dark:bg-violet-950/30"><span className="text-muted-foreground">Paid to date</span><strong className="whitespace-nowrap">${Number(exp.paid_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div><div className="flex justify-between gap-2 px-1 text-[10px] text-muted-foreground"><span>Balance</span><span className="whitespace-nowrap">${Number(exp.balance_due ?? Math.max(0, cost - Number(exp.paid_amount || 0))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>{Array.isArray(exp.payments) && exp.payments.length ? exp.payments.map((payment: any, index: number) => <div key={payment.id} className="rounded-md border px-2 py-1.5"><div className="flex justify-between gap-2"><span className="text-[10px] font-semibold text-muted-foreground">Installment {index + 1}</span><strong className="whitespace-nowrap">${Number(payment.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div><div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-muted-foreground"><span>{payment.payment_date ? new Date(`${payment.payment_date}T00:00:00`).toLocaleDateString() : 'Date unavailable'}</span>{payment.reference && <span className="max-w-20 truncate" title={payment.reference}>Ref: {payment.reference}</span>}</div>{payment.receipt_name ? <div className="mt-1 flex items-center gap-2 border-t pt-1"><span className="max-w-20 truncate text-[10px] text-muted-foreground" title={payment.receipt_name}>{payment.receipt_name}</span><button type="button" onClick={() => handleOpenFile(`/api/v1/operational-expenses/${exp.id}/payments/${payment.id}/receipt`, payment.receipt_name || 'Payment receipt')} className="text-[10px] font-bold text-violet-700 hover:underline">View</button><button type="button" onClick={() => void downloadPurchaseOrderPaymentReceipt({ ...payment, expense_id: exp.id })} className="text-[10px] font-bold text-violet-700 hover:underline">Download</button></div> : <span className="mt-1 block text-[10px] text-muted-foreground">No receipt attached</span>}</div>) : <span className="text-[10px] text-muted-foreground">No payments recorded</span>}</div></td>
+                            <td className="hidden md:table-cell px-4 py-3"><div className="min-w-[205px] space-y-1.5"><div className="flex justify-between gap-2 rounded-md border border-violet-100 bg-violet-50 px-2 py-1.5 dark:border-violet-900 dark:bg-violet-950/30"><span className="text-muted-foreground">Paid to date</span><strong className="whitespace-nowrap">${Number(exp.paid_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div><div className="flex justify-between gap-2 px-1 text-[10px] text-muted-foreground"><span>Balance</span><span className="whitespace-nowrap">${Number(exp.balance_due ?? Math.max(0, cost - Number(exp.paid_amount || 0))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>{Array.isArray(exp.payments) && exp.payments.length ? exp.payments.map((payment: any, index: number) => <div key={payment.id} className="rounded-md border px-2 py-1.5"><div className="flex justify-between gap-2"><span className="text-[10px] font-semibold text-muted-foreground">Installment {index + 1}</span><strong className="whitespace-nowrap">${Number(payment.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div><div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-muted-foreground"><span>{payment.payment_date ? new Date(`${payment.payment_date}T00:00:00`).toLocaleDateString() : 'Date unavailable'}</span>{payment.reference && <span className="max-w-20 truncate" title={payment.reference}>Ref: {payment.reference}</span>}</div>{payment.receipt_name ? <div className="mt-1 flex items-center gap-2 border-t pt-1"><span className="max-w-20 truncate text-[10px] text-muted-foreground" title={payment.receipt_name}>{payment.receipt_name}</span><button type="button" onClick={() => handleOpenFile(`/api/v1/operational-expenses/${exp.id}/payments/${payment.id}/receipt`, payment.receipt_name || 'Payment receipt')} className="text-[10px] font-bold text-violet-700 hover:text-violet-900 transition-colors">View</button><button type="button" onClick={() => void downloadPurchaseOrderPaymentReceipt({ ...payment, expense_id: exp.id })} className="text-[10px] font-bold text-violet-700 hover:text-violet-900 transition-colors">Download</button></div> : <span className="mt-1 block text-[10px] text-muted-foreground">No receipt attached</span>}</div>) : <span className="text-[10px] text-muted-foreground">No payments recorded</span>}</div></td>
                             <td className="px-4 py-3"><StatusBadge status={exp.status || 'SUBMITTED'} /></td>
                             <td className="px-4 py-3">
                               <button
@@ -3089,6 +3248,7 @@ Signed: Finance & Procurement Administration
                       onChange={(val) => setNewPoForm({ ...newPoForm, project_id: val })}
                       options={[
                         { value: '', label: 'Organization-Wide (All Projects)' },
+                        { value: MULTI_PROJECT_SCOPE, label: 'General / Multiple Projects' },
                         ...projects.map((p) => ({ value: p.id, label: p.name })),
                       ]}
                       placeholder="Organization-Wide (All Projects)"
@@ -3456,6 +3616,7 @@ Signed: Finance & Procurement Administration
                     onChange={(val) => setEditPoForm({ ...editPoForm, project_id: val })}
                     options={[
                       { value: '', label: 'Organization-Wide (All Projects)' },
+                      { value: MULTI_PROJECT_SCOPE, label: 'General / Multiple Projects' },
                       ...projects.map((p) => ({ value: p.id, label: p.name })),
                     ]}
                     placeholder="Organization-Wide (All Projects)"
@@ -4619,6 +4780,294 @@ Signed: Finance & Procurement Administration
           </div>
         </div>
       )}
+      {/* Log Fuel Delivery Purchased Modal */}
+      {showFuelBoughtModal && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-2xl border-0 sm:border border-slate-200 dark:border-slate-800 rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
+              <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                <Fuel className="text-violet-600" size={20} /> Log Equipment Fuel Refill &amp; Delivery Receipt
+              </h3>
+              <button type="button" onClick={() => setShowFuelBoughtModal(false)} className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"><X size={20} /></button>
+            </div>
+
+            <form onSubmit={handleCreateFuelBought} className="flex-1 flex flex-col min-h-0 overflow-hidden text-xs">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+                {/* SECTION 1: SITE & FUEL TYPE */}
+                <div className="p-3.5 border rounded-xl border-violet-200 dark:border-violet-900 space-y-3">
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-violet-900 dark:text-violet-300 flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-1.5">
+                    <Fuel size={14} className="text-violet-600" /> Target Site &amp; Fuel Grade
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold mb-1">Project Site *</label>
+                      <SearchableSelect
+                        required
+                        value={fuelBoughtForm.site_location_id}
+                        onChange={(val) => {
+                          const site = projectSites.find((row) => String(row.id) === val);
+                          setFuelBoughtForm({ ...fuelBoughtForm, site_location_id: val, project_id: site?.project_id || selectedProjectId });
+                        }}
+                        placeholder="-- Select Project Site --"
+                        options={projectSites.map((site) => ({
+                          value: site.id,
+                          label: `${site.name}${site.project_name ? ` | ${site.project_name}` : ''}`,
+                        }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold mb-1">Fuel Grade / Type *</label>
+                      <SearchableSelect
+                        value={fuelBoughtForm.fuel_type}
+                        onChange={(val) => setFuelBoughtForm({ ...fuelBoughtForm, fuel_type: val })}
+                        options={[
+                          { value: 'DIESEL', label: 'Low-Sulfur Diesel (AGO)' },
+                          { value: 'PETROL', label: 'Super Unleaded Gasoline (PMS)' },
+                          { value: 'OTHER', label: 'Other / Specialty Fuel' },
+                        ]}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* SECTION 2: VOLUME & COST */}
+                <div className="p-3.5 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-800/30 space-y-3">
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-1.5">
+                    <DollarSign size={14} className="text-emerald-600" /> Refueling Volume &amp; Cost Calculation
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block font-bold mb-0.5">Refueled Quantity (Litres) *</label>
+                      <span className="block text-[10px] text-slate-400 mb-1">Volume delivered</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        required
+                        min="0.1"
+                        placeholder="e.g. 500"
+                        value={fuelBoughtForm.quantity_litres}
+                        onChange={(e) => {
+                          const qty = e.target.value;
+                          const uCost = fuelBoughtForm.unit_cost;
+                          const calcTotal = qty && uCost ? (Number(qty) * Number(uCost)).toFixed(2) : fuelBoughtForm.total_cost;
+                          setFuelBoughtForm({ ...fuelBoughtForm, quantity_litres: qty, total_cost: calcTotal });
+                        }}
+                        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-white dark:bg-slate-950 font-mono font-bold text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold mb-0.5">Unit Price / Litre ($)</label>
+                      <span className="block text-[10px] text-slate-400 mb-1">Rate per litre</span>
+                      <input
+                        type="number"
+                        step="0.0001"
+                        placeholder="e.g. 1.45"
+                        value={fuelBoughtForm.unit_cost}
+                        onChange={(e) => {
+                          const uCost = e.target.value;
+                          const qty = fuelBoughtForm.quantity_litres;
+                          const calcTotal = qty && uCost ? (Number(qty) * Number(uCost)).toFixed(2) : fuelBoughtForm.total_cost;
+                          setFuelBoughtForm({ ...fuelBoughtForm, unit_cost: uCost, total_cost: calcTotal });
+                        }}
+                        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-white dark:bg-slate-950 font-mono text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold mb-0.5">Total Amount ($)</label>
+                      <span className="block text-[10px] text-slate-400 mb-1">Total expenditure</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Total cost"
+                        value={fuelBoughtForm.total_cost}
+                        onChange={(e) => {
+                          const tot = e.target.value;
+                          const qty = fuelBoughtForm.quantity_litres;
+                          const calcUnit = qty && tot && Number(qty) > 0 ? (Number(tot) / Number(qty)).toFixed(4) : fuelBoughtForm.unit_cost;
+                          setFuelBoughtForm({ ...fuelBoughtForm, total_cost: tot, unit_cost: calcUnit });
+                        }}
+                        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-white dark:bg-slate-950 font-mono font-bold text-sm text-violet-600"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* SECTION 3: SUPPLIER, DATE & RECEIPT DOCKET */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold mb-1">Supplier / Vendor Name</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. TotalEnergies / GOIL Bulk Fleet"
+                      value={fuelBoughtForm.supplier}
+                      onChange={(e) => setFuelBoughtForm({ ...fuelBoughtForm, supplier: e.target.value })}
+                      className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-white dark:bg-slate-950"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold mb-1">Delivery Reference / Waybill #</label>
+                    <input
+                      type="text"
+                      placeholder="Waybill, invoice, or receipt #"
+                      value={fuelBoughtForm.reference_number}
+                      onChange={(e) => setFuelBoughtForm({ ...fuelBoughtForm, reference_number: e.target.value })}
+                      className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-white dark:bg-slate-950 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold mb-1">Delivery Date &amp; Time *</label>
+                    <AppDateTimePicker
+                      mode="datetime"
+                      value={fuelBoughtForm.recorded_at}
+                      onChange={(val) => setFuelBoughtForm({ ...fuelBoughtForm, recorded_at: val })}
+                      placeholder="Select date & time"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold mb-1">Receipt / Docket Attachment</label>
+                    <input
+                      type="file"
+                      accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                      onChange={(e) => setFuelReceiptFile(e.target.files?.[0] || null)}
+                      className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-xs bg-white dark:bg-slate-950 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold mb-1">Notes / Remarks</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Additional delivery instructions, driver details, or meter notes..."
+                    value={fuelBoughtForm.notes}
+                    onChange={(e) => setFuelBoughtForm({ ...fuelBoughtForm, notes: e.target.value })}
+                    className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-white dark:bg-slate-950 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-200 dark:border-slate-800 px-4 py-3 bg-white dark:bg-slate-900">
+                <button type="button" onClick={() => setShowFuelBoughtModal(false)} className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800">Cancel</button>
+                <button type="submit" disabled={fuelSubmitBusy} className="px-5 py-2 bg-violet-600 text-white font-bold rounded-xl text-xs hover:bg-violet-700 flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-50">
+                  {fuelSubmitBusy ? 'Saving...' : 'Log Fuel Purchase'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Allocate Fuel to Asset Modal */}
+      {showFuelAllocModal && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-xl border-0 sm:border border-slate-200 dark:border-slate-800 rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
+              <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                <Truck className="text-violet-600" size={20} /> Allocate Fuel to Asset / Rig
+              </h3>
+              <button type="button" onClick={() => setShowFuelAllocModal(false)} className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"><X size={20} /></button>
+            </div>
+
+            <form onSubmit={handleCreateFuelAlloc} className="flex-1 flex flex-col min-h-0 overflow-hidden text-xs">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+                <div className="p-3 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-800/30">
+                  <label className="block font-bold mb-1">Target Asset / Equipment *</label>
+                  <SearchableSelect
+                    required
+                    value={fuelAllocForm.asset_id}
+                    onChange={(val) => {
+                      const asset = assets.find((row) => String(row.id) === val);
+                      setFuelAllocForm({
+                        ...fuelAllocForm,
+                        asset_id: val,
+                        project_id: asset?.project_id || selectedProjectId,
+                        site_location_id: asset?.site_location_id || fuelAllocForm.site_location_id,
+                      });
+                    }}
+                    placeholder="-- Select Fleet Unit / Heavy Rig --"
+                    options={assets.map((asset) => ({
+                      value: asset.id,
+                      label: `${asset.asset_number || asset.fleet_number || asset.name || 'Asset'} | ${asset.name || asset.model || ''}`,
+                    }))}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold mb-1">Issued Quantity (Litres) *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      min="0.1"
+                      placeholder="e.g. 150"
+                      value={fuelAllocForm.quantity_litres}
+                      onChange={(e) => setFuelAllocForm({ ...fuelAllocForm, quantity_litres: e.target.value })}
+                      className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-white dark:bg-slate-950 font-mono font-bold text-sm text-emerald-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold mb-1">Dispense Date &amp; Time *</label>
+                    <AppDateTimePicker
+                      mode="datetime"
+                      value={fuelAllocForm.allocated_at}
+                      onChange={(val) => setFuelAllocForm({ ...fuelAllocForm, allocated_at: val })}
+                      placeholder="Select date & time"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold mb-1">Odometer Reading (KM)</label>
+                    <input
+                      type="number"
+                      placeholder="Current mileage"
+                      value={fuelAllocForm.odometer_km}
+                      onChange={(e) => setFuelAllocForm({ ...fuelAllocForm, odometer_km: e.target.value })}
+                      className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-white dark:bg-slate-950 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold mb-1">Engine Operating Hours</label>
+                    <input
+                      type="number"
+                      placeholder="Current hour meter"
+                      value={fuelAllocForm.operating_hours}
+                      onChange={(e) => setFuelAllocForm({ ...fuelAllocForm, operating_hours: e.target.value })}
+                      className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-white dark:bg-slate-950 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold mb-1">Allocation Notes</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Operator name, shift details, or dispensing pump notes..."
+                    value={fuelAllocForm.notes}
+                    onChange={(e) => setFuelAllocForm({ ...fuelAllocForm, notes: e.target.value })}
+                    className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-white dark:bg-slate-950 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-200 dark:border-slate-800 px-4 py-3 bg-white dark:bg-slate-900">
+                <button type="button" onClick={() => setShowFuelAllocModal(false)} className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800">Cancel</button>
+                <button type="submit" disabled={fuelSubmitBusy} className="px-5 py-2 bg-violet-600 text-white font-bold rounded-xl text-xs hover:bg-violet-700 flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-50">
+                  {fuelSubmitBusy ? 'Allocating...' : 'Allocate Fuel'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
       <UniversalFileViewerModal isOpen={viewerState.isOpen} onClose={() => setViewerState({ isOpen: false })} fileUrl={viewerState.fileUrl} fileName={viewerState.fileName} title={viewerState.title} />
       </div>
     </div>

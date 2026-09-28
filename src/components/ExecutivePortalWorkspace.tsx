@@ -253,6 +253,8 @@ export default function ExecutivePortalWorkspace() {
   const [viewingMaintenanceTracker, setViewingMaintenanceTracker] = useState<any | null>(null);
   const [viewingMaintenanceAssessment, setViewingMaintenanceAssessment] = useState<any | null>(null);
   const [viewingIncident, setViewingIncident] = useState<any>(null);
+  const MULTI_PROJECT_SCOPE = '__MULTIPLE_PROJECTS__';
+
   const [newPoForm, setNewPoForm] = useState({
     supplier_name: '',
     project_id: '',
@@ -314,7 +316,7 @@ export default function ExecutivePortalWorkspace() {
     try {
       const payload = {
         supplier_name: newPoForm.supplier_name,
-        project_id: newPoForm.project_id || selectedProjectId || projects[0]?.id || undefined,
+        project_id: newPoForm.project_id === MULTI_PROJECT_SCOPE ? null : newPoForm.project_id || selectedProjectId || projects[0]?.id || undefined,
         currency: newPoForm.currency || 'USD',
         category: newPoForm.category.trim() || null,
         notes: newPoForm.notes || undefined,
@@ -921,7 +923,7 @@ Signed: Executive Operations Administration
     try {
       const po = purchaseOrders.find((item) => String(item.id) === String(poId));
       if (po && !po.attachment_file_name) {
-        const projectName = projects.find((project: any) => String(project.id) === String(po.project_id))?.name || po.project_id || 'All Projects';
+        const projectName = projects.find((project: any) => String(project.id) === String(po.project_id))?.name || po.project_id || 'General / Multiple Projects';
         const content = `CESTOS SMART EXECUTIVE PORTAL - PURCHASE ORDER DOCKET
 ===========================================================
 PO Number:         ${po.po_number || po.id}
@@ -1011,7 +1013,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
         method: 'PATCH',
         body: JSON.stringify({
           supplier_name: editPoForm.supplier_name.trim(),
-          project_id: editPoForm.project_id || null,
+          project_id: editPoForm.project_id === MULTI_PROJECT_SCOPE ? null : editPoForm.project_id || null,
           currency: editPoForm.currency,
           category: editPoForm.category.trim() || null,
           notes: editPoForm.notes.trim() || null,
@@ -2317,7 +2319,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                         {scopedPurchaseOrders.slice((scopedPurchaseOrdersPage - 1) * 15, scopedPurchaseOrdersPage * 15).map((po, i) => {
                           const poNum = po.po_number || po.number || `PO-${i + 1}`;
                           const vendor = po.supplier_name || po.vendor_name || po.vendor || po.supplier || 'Site Vendor';
-                          const projName = projects.find((p: any) => String(p.id) === String(po.project_id))?.name || po.project_id || 'All Projects';
+                          const projName = projects.find((p: any) => String(p.id) === String(po.project_id))?.name || po.project_id || 'General / Multiple Projects';
                           const amount = Number(po.total_amount || po.total || po.total_cost || 0);
                           const curr = po.currency || 'USD';
                           const itemCount = Array.isArray(po.items) ? po.items.length : 1;
@@ -2704,7 +2706,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
               const totalOrdered = poItems.reduce((sum: number, item: any) => sum + (Number(item.quantity_ordered || 0) * Number(item.unit_price || 0)), 0) || Number(selectedPO.total_amount || 0);
               const totalReceived = poItems.reduce((sum: number, item: any) => sum + (Number(item.quantity_received || 0) * Number(item.unit_price || 0)), 0);
               const remaining = Math.max(0, totalOrdered - totalReceived);
-              const projectName = projects.find((project: any) => String(project.id) === String(selectedPO.project_id))?.name || selectedPO.project_id || 'Organization-wide';
+              const projectName = projects.find((project: any) => String(project.id) === String(selectedPO.project_id))?.name || selectedPO.project_id || 'General / Multiple Projects';
               const notes = String(selectedPO.notes || '').replace(/\[Attached Docket:\s*([^\]]+)\]/gi, '').trim();
 
               return (
@@ -2887,6 +2889,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                     onChange={(val) => setEditPoForm({ ...editPoForm, project_id: val })}
                     options={[
                       { value: '', label: 'Organization-wide' },
+                      { value: MULTI_PROJECT_SCOPE, label: 'General / Multiple Projects' },
                       ...projects.map((project: any) => ({ value: project.id, label: project.name })),
                     ]}
                     placeholder="Organization-wide"
@@ -3064,6 +3067,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                       onChange={(val) => setNewPoForm({ ...newPoForm, project_id: val })}
                       options={[
                         { value: '', label: 'Organization-Wide (All Projects)' },
+                        { value: MULTI_PROJECT_SCOPE, label: 'General / Multiple Projects' },
                         ...projects.map((p: any) => ({ value: p.id, label: p.name })),
                       ]}
                       placeholder="Organization-Wide (All Projects)"

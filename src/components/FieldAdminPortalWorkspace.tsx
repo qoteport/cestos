@@ -3898,7 +3898,7 @@ Signed: Field Operations Administration
       {/* ─── ENLARGED MODALS (MATCHING FIELD PORTAL FORM DESIGN & FIELDS) ─────────────────────────────── */}
 
       {/* 1. Log Fuel Delivery Purchased Modal (ENLARGED & MATCHING FIELD PORTAL FIELDS) */}
-      {showFuelBoughtModal && createPortal(
+      {showFuelBoughtModal && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
           <div className="bg-white dark:bg-slate-900 w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-2xl border-0 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
@@ -4124,7 +4124,7 @@ Signed: Field Operations Administration
       )}
 
       {/* 2. Allocate Fuel to Asset Modal (ENLARGED & RICH FORM) */}
-      {showFuelAllocModal && createPortal(
+      {showFuelAllocModal && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
           <div className="bg-white dark:bg-slate-900 w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-xl border-0 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between border-b px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
