@@ -2662,7 +2662,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
         {/* ─── TAB 7: COMPLIANCE ────────────────────────────────────────────── */}
         {activeTab === 'COMPLIANCE' && (
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
-            <ExpiringDocumentsWorkspace baseRoute="/executive-portal" />
+            <ExpiringDocumentsWorkspace baseRoute="/executive-portal" colorScheme="indigo" />
           </div>
         )}
 

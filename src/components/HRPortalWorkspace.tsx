@@ -1295,7 +1295,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
         {/* ─── TAB: LEAVE REQUESTS ──────────────────────────────────────────────── */}
         {activeTab === 'LEAVE' && (
           <div className="space-y-6">
-            <LeaveManagementWorkspace />
+            <LeaveManagementWorkspace colorScheme="emerald" />
           </div>
         )}
 
@@ -1587,10 +1587,10 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
           </div>
         )}
 
-        {/* ─── TAB: EQUIPMENTS ─────────────────────────────────────────────── */}
+        {/* ─── TAB: COMPLIANCE ─────────────────────────────────────────────── */}
         {activeTab === 'COMPLIANCE' && (
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
-            <ExpiringDocumentsWorkspace baseRoute="/hr-portal" />
+            <ExpiringDocumentsWorkspace baseRoute="/hr-portal" colorScheme="emerald" />
           </div>
         )}
 

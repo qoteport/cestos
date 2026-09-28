@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   Calendar,
   Users,
@@ -24,7 +25,83 @@ import { useData, State, Row, rows, Modal, display } from './DataUI';
 import SearchableSelect from './SearchableSelect';
 import AppDateTimePicker from './ui/AppDateTimePicker';
 
-export default function LeaveManagementWorkspace() {
+export interface LeaveManagementWorkspaceProps {
+  colorScheme?: 'emerald' | 'indigo' | 'violet' | 'orange' | 'blue' | 'primary';
+}
+
+function getPortalTheme(schemeProp?: string, pathname?: string) {
+  const path = pathname || '';
+  const scheme = schemeProp || (
+    path.includes('/hr-portal') ? 'emerald' :
+    path.includes('/executive-portal') ? 'indigo' :
+    path.includes('/finance-portal') ? 'violet' :
+    path.includes('/field-admin-portal') ? 'orange' :
+    'blue'
+  );
+
+  switch (scheme) {
+    case 'emerald':
+      return {
+        text: 'text-emerald-600 dark:text-emerald-400',
+        textHover: 'hover:text-emerald-700 dark:hover:text-emerald-300',
+        bg: 'bg-emerald-600 text-white hover:bg-emerald-700',
+        lightBg: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20',
+        activeToggle: 'bg-emerald-600 text-white font-bold shadow-xs',
+        badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+        border: 'border-emerald-500/30',
+        ring: 'focus:ring-emerald-500',
+      };
+    case 'indigo':
+      return {
+        text: 'text-indigo-600 dark:text-indigo-400',
+        textHover: 'hover:text-indigo-700 dark:hover:text-indigo-300',
+        bg: 'bg-indigo-600 text-white hover:bg-indigo-700',
+        lightBg: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/20',
+        activeToggle: 'bg-indigo-600 text-white font-bold shadow-xs',
+        badge: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400',
+        border: 'border-indigo-500/30',
+        ring: 'focus:ring-indigo-500',
+      };
+    case 'violet':
+      return {
+        text: 'text-violet-600 dark:text-violet-400',
+        textHover: 'hover:text-violet-700 dark:hover:text-violet-300',
+        bg: 'bg-violet-600 text-white hover:bg-violet-700',
+        lightBg: 'bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/20',
+        activeToggle: 'bg-violet-600 text-white font-bold shadow-xs',
+        badge: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+        border: 'border-violet-500/30',
+        ring: 'focus:ring-violet-500',
+      };
+    case 'orange':
+      return {
+        text: 'text-orange-600 dark:text-orange-400',
+        textHover: 'hover:text-orange-700 dark:hover:text-orange-300',
+        bg: 'bg-orange-600 text-white hover:bg-orange-700',
+        lightBg: 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/20',
+        activeToggle: 'bg-orange-600 text-white font-bold shadow-xs',
+        badge: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+        border: 'border-orange-500/30',
+        ring: 'focus:ring-orange-500',
+      };
+    default:
+      return {
+        text: 'text-blue-600 dark:text-blue-400',
+        textHover: 'hover:text-blue-700 dark:hover:text-blue-300',
+        bg: 'bg-blue-600 text-white hover:bg-blue-700',
+        lightBg: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20',
+        activeToggle: 'bg-blue-600 text-white font-bold shadow-xs',
+        badge: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+        border: 'border-blue-500/30',
+        ring: 'focus:ring-blue-500',
+      };
+  }
+}
+
+export default function LeaveManagementWorkspace({ colorScheme }: LeaveManagementWorkspaceProps) {
+  const pathname = usePathname();
+  const theme = getPortalTheme(colorScheme, pathname);
+
   const [loading, setLoading] = useState(true);
   const [leaveRequests, setLeaveRequests] = useState<Row[]>([]);
   const [employees, setEmployees] = useState<Row[]>([]);
@@ -159,12 +236,12 @@ export default function LeaveManagementWorkspace() {
         <div>
           <Link
             href="/workforce-overview"
-            className="text-xs text-primary flex items-center gap-1 mb-2 hover:underline"
+            className={`text-xs ${theme.text} flex items-center gap-1 mb-2 hover:underline`}
           >
             <ArrowLeft size={12} /> Workforce Overview
           </Link>
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Palmtree className="text-primary" size={24} /> Leave & Time Off Management
+            <Palmtree className={theme.text} size={24} /> Leave & Time Off Management
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
             Review employee leave applications, approve vacation requests, track leave quotas and duty coverage.
@@ -182,7 +259,7 @@ export default function LeaveManagementWorkspace() {
 
           <button
             onClick={() => setShowCreateModal(true)}
-            className="btn-primary text-xs flex items-center gap-1.5"
+            className={`text-xs px-3.5 py-2.5 rounded-xl font-semibold flex items-center gap-1.5 shadow-sm transition ${theme.bg}`}
           >
             <Plus size={14} /> Log New Leave Request
           </button>
@@ -321,7 +398,7 @@ export default function LeaveManagementWorkspace() {
                   onClick={() => setStatusFilter(st)}
                   className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
                     statusFilter === st
-                      ? 'bg-background text-primary shadow-sm'
+                      ? theme.activeToggle
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
@@ -490,6 +567,7 @@ export default function LeaveManagementWorkspace() {
         >
           <CreateLeaveForm
             employees={employees}
+            colorScheme={colorScheme}
             onClose={() => setShowCreateModal(false)}
             onSuccess={(newLeave) => {
               setLeaveRequests((prev) => [newLeave, ...prev]);
@@ -505,13 +583,17 @@ export default function LeaveManagementWorkspace() {
 
 function CreateLeaveForm({
   employees,
+  colorScheme,
   onClose,
   onSuccess,
 }: {
   employees: Row[];
+  colorScheme?: 'emerald' | 'indigo' | 'violet' | 'orange' | 'blue' | 'primary';
   onClose: () => void;
   onSuccess: (newLeave: Row) => void;
 }) {
+  const pathname = usePathname();
+  const theme = getPortalTheme(colorScheme, pathname);
   const [employeeId, setEmployeeId] = useState('');
   const [leaveType, setLeaveType] = useState('Annual Leave');
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
@@ -677,7 +759,7 @@ function CreateLeaveForm({
         <button
           type="submit"
           disabled={submitting}
-          className="btn-primary text-xs"
+          className={`text-xs px-4 py-2 font-bold rounded-xl shadow-md transition ${theme.bg}`}
         >
           {submitting ? 'Submitting...' : 'Submit Leave Booking'}
         </button>

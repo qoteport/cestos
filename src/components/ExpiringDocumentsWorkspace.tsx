@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { FileText, AlertTriangle, Search, RefreshCw, ArrowLeft, Eye, CheckCircle, ArrowRight, ShieldAlert, Clock } from 'lucide-react';
 import { apiFetch, apiFetchBlob } from '@/lib/api';
 import { openUniversalFileViewer } from '@/lib/fileViewer';
@@ -10,8 +10,85 @@ import { toast } from 'sonner';
 import { normalizeExpiringDocument } from '@/lib/expiringDocuments';
 import { Row, display } from './DataUI';
 
-export default function ExpiringDocumentsWorkspace({ baseRoute = '/workspace' }: { baseRoute?: string }) {
+export interface ExpiringDocumentsWorkspaceProps {
+  baseRoute?: string;
+  colorScheme?: 'emerald' | 'indigo' | 'violet' | 'orange' | 'blue' | 'primary';
+}
+
+function getPortalTheme(schemeProp?: string, pathname?: string) {
+  const path = pathname || '';
+  const scheme = schemeProp || (
+    path.includes('/hr-portal') ? 'emerald' :
+    path.includes('/executive-portal') ? 'indigo' :
+    path.includes('/finance-portal') ? 'violet' :
+    path.includes('/field-admin-portal') ? 'orange' :
+    'blue'
+  );
+
+  switch (scheme) {
+    case 'emerald':
+      return {
+        text: 'text-emerald-600 dark:text-emerald-400',
+        textHover: 'hover:text-emerald-700 dark:hover:text-emerald-300',
+        bg: 'bg-emerald-600 text-white hover:bg-emerald-700',
+        lightBg: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20',
+        activeToggle: 'bg-emerald-600 text-white font-bold shadow-xs',
+        badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+        border: 'border-emerald-500/30',
+        ring: 'focus:ring-emerald-500',
+      };
+    case 'indigo':
+      return {
+        text: 'text-indigo-600 dark:text-indigo-400',
+        textHover: 'hover:text-indigo-700 dark:hover:text-indigo-300',
+        bg: 'bg-indigo-600 text-white hover:bg-indigo-700',
+        lightBg: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/20',
+        activeToggle: 'bg-indigo-600 text-white font-bold shadow-xs',
+        badge: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400',
+        border: 'border-indigo-500/30',
+        ring: 'focus:ring-indigo-500',
+      };
+    case 'violet':
+      return {
+        text: 'text-violet-600 dark:text-violet-400',
+        textHover: 'hover:text-violet-700 dark:hover:text-violet-300',
+        bg: 'bg-violet-600 text-white hover:bg-violet-700',
+        lightBg: 'bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/20',
+        activeToggle: 'bg-violet-600 text-white font-bold shadow-xs',
+        badge: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+        border: 'border-violet-500/30',
+        ring: 'focus:ring-violet-500',
+      };
+    case 'orange':
+      return {
+        text: 'text-orange-600 dark:text-orange-400',
+        textHover: 'hover:text-orange-700 dark:hover:text-orange-300',
+        bg: 'bg-orange-600 text-white hover:bg-orange-700',
+        lightBg: 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/20',
+        activeToggle: 'bg-orange-600 text-white font-bold shadow-xs',
+        badge: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+        border: 'border-orange-500/30',
+        ring: 'focus:ring-orange-500',
+      };
+    default:
+      return {
+        text: 'text-blue-600 dark:text-blue-400',
+        textHover: 'hover:text-blue-700 dark:hover:text-blue-300',
+        bg: 'bg-blue-600 text-white hover:bg-blue-700',
+        lightBg: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20',
+        activeToggle: 'bg-blue-600 text-white font-bold shadow-xs',
+        badge: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+        border: 'border-blue-500/30',
+        ring: 'focus:ring-blue-500',
+      };
+  }
+}
+
+export default function ExpiringDocumentsWorkspace({ baseRoute = '/workspace', colorScheme }: ExpiringDocumentsWorkspaceProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const theme = getPortalTheme(colorScheme, pathname);
+
   const [loading, setLoading] = useState(true);
   const [documents, setDocuments] = useState<Row[]>([]);
   const [employeesMap, setEmployeesMap] = useState<Record<string, Row>>({});
@@ -93,7 +170,7 @@ export default function ExpiringDocumentsWorkspace({ baseRoute = '/workspace' }:
       {/* Header Bar */}
       <div className="flex flex-wrap justify-between items-center gap-4 border-b pb-4">
         <div>
-          <Link href={baseRoute === '/workspace' ? '/workforce-overview' : baseRoute} className="text-xs text-primary inline-flex items-center gap-1.5 mb-2 hover:underline text-left justify-start font-semibold">
+          <Link href={baseRoute === '/workspace' ? '/workforce-overview' : baseRoute} className={`text-xs ${theme.text} inline-flex items-center gap-1.5 mb-2 hover:underline text-left justify-start font-semibold`}>
             <ArrowLeft size={12} /> {baseRoute === '/workspace' ? 'Workforce Overview' : 'Back to Portal'}
           </Link>
           <h1 className="text-2xl font-bold text-foreground">Expiring Employee Documents & Licences</h1>
@@ -108,24 +185,17 @@ export default function ExpiringDocumentsWorkspace({ baseRoute = '/workspace' }:
           </button>
 
           <div className="flex items-center border rounded-lg overflow-hidden bg-muted/40 p-0.5 text-xs">
-            <button
-              onClick={() => setDaysFilter('30')}
-              className={`px-2.5 py-1 font-semibold rounded-md transition-all ${daysFilter === '30' ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}
-            >
-              30 Days
-            </button>
-            <button
-              onClick={() => setDaysFilter('60')}
-              className={`px-2.5 py-1 font-semibold rounded-md transition-all ${daysFilter === '60' ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}
-            >
-              60 Days
-            </button>
-            <button
-              onClick={() => setDaysFilter('90')}
-              className={`px-2.5 py-1 font-semibold rounded-md transition-all ${daysFilter === '90' ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}
-            >
-              90 Days
-            </button>
+            {(['30', '60', '90'] as const).map((d) => (
+              <button
+                key={d}
+                onClick={() => setDaysFilter(d)}
+                className={`px-2.5 py-1 font-semibold rounded-md transition-all ${
+                  daysFilter === d ? theme.activeToggle : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {d} Days
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -226,7 +296,7 @@ export default function ExpiringDocumentsWorkspace({ baseRoute = '/workspace' }:
                     <tr key={doc.id || idx} className="hover:bg-muted/30 transition-colors">
                       <td className="p-3">
                         <div className="flex items-center gap-2.5">
-                          <div className="p-2 rounded bg-primary/10 text-primary shrink-0 border border-primary/20">
+                          <div className={`p-2 rounded ${theme.lightBg} shrink-0 border ${theme.border}`}>
                             <FileText size={16} />
                           </div>
                           <div>
@@ -238,7 +308,7 @@ export default function ExpiringDocumentsWorkspace({ baseRoute = '/workspace' }:
 
                       <td className="p-3">
                         {doc.employee_id ? (
-                          <Link href={`${baseRoute}/employees/${doc.employee_id}`} className="font-bold text-foreground hover:text-primary transition-colors block">
+                          <Link href={`${baseRoute}/employees/${doc.employee_id}`} className={`font-bold text-foreground ${theme.textHover} transition-colors block`}>
                             {fullName}
                           </Link>
                         ) : (
@@ -275,7 +345,7 @@ export default function ExpiringDocumentsWorkspace({ baseRoute = '/workspace' }:
                           {doc.employee_id && (
                             <Link
                               href={`${baseRoute}/employees/${doc.employee_id}?tab=documents`}
-                              className="btn-primary py-1 px-2.5 text-[11px] flex items-center gap-1"
+                              className={`py-1 px-2.5 text-[11px] flex items-center gap-1 font-bold rounded-lg transition shadow-xs ${theme.bg}`}
                               title="Resolve / Renew Document on Employee Profile"
                             >
                               Resolve <ArrowRight size={12} />
