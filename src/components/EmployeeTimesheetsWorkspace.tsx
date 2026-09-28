@@ -29,6 +29,7 @@ type TimesheetRow = {
   days_worked: number;
   source_file?: string | null;
 };
+type SiteOption = { id: string; name?: string; project_name?: string | null; is_active?: boolean };
 
 const accents = {
   emerald: { active: 'border-emerald-600 bg-emerald-50 text-emerald-800', action: 'bg-emerald-700 hover:bg-emerald-800 focus:ring-emerald-500', icon: 'text-emerald-700' },
@@ -54,6 +55,7 @@ export default function EmployeeTimesheetsWorkspace({
   const colors = accents[accent];
   const [period, setPeriod] = useState('');
   const [rows, setRows] = useState<TimesheetRow[]>([]);
+  const [sites, setSites] = useState<SiteOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
@@ -88,6 +90,19 @@ export default function EmployeeTimesheetsWorkspace({
 
   useEffect(() => { void reload(period); }, [period, refreshKey, reload]);
 
+  useEffect(() => {
+    let active = true;
+    const path = projectId
+      ? `/api/v1/projects/${encodeURIComponent(projectId)}/sites`
+      : '/api/v1/locations?page_size=100';
+    apiFetch<any>(path).then((result) => {
+      if (!active) return;
+      const items = Array.isArray(result) ? result : result?.items || [];
+      setSites(items.filter((site: SiteOption) => site.is_active !== false));
+    }).catch(() => { if (active) setSites([]); });
+    return () => { active = false; };
+  }, [projectId]);
+
   const daysInPeriod = useMemo(() => {
     const [year, month] = (period || currentMonth()).split('-').map(Number);
     return new Date(year, month, 0).getDate();
@@ -116,6 +131,17 @@ export default function EmployeeTimesheetsWorkspace({
     label: [employee.first_name, employee.middle_name, employee.last_name].filter(Boolean).join(' ') || 'Employee',
     sublabel: employee.employee_number || '',
   })), [employees]);
+  const siteOptions = useMemo(() => {
+    const options = sites.map((site) => ({
+      value: site.name || '',
+      label: site.name || 'Site',
+      sublabel: site.project_name || '',
+    })).filter((option) => option.value);
+    if (siteName && !options.some((option) => option.value === siteName)) {
+      options.unshift({ value: siteName, label: siteName, sublabel: 'Current value' });
+    }
+    return [{ value: '', label: 'Blank (Sab Leave)' }, ...options];
+  }, [sites, siteName]);
 
   function openNew() {
     setEditing(null);
@@ -285,7 +311,7 @@ export default function EmployeeTimesheetsWorkspace({
                   </div>
                 </div>
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 sm:col-span-2">Site / location
-                  <input value={siteName} onChange={(event) => setSiteName(event.target.value)} maxLength={200} placeholder="Enter the work site" className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
+                  <div className="mt-1"><SearchableSelect value={siteName} onChange={setSiteName} options={siteOptions} placeholder="Select site / location" searchable /></div>
                 </label>
                 <div className="sm:col-span-2">
                   <div className="mb-2 flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300"><Clock3 size={14} className={colors.icon} /> Daily hours</div>
