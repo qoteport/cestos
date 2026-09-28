@@ -2117,7 +2117,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                       { id: 'ALL' as const, label: 'All Records', count: scopedMaintenanceRecords.length, icon: null },
                       { id: 'SCHEDULES' as const, label: 'Schedules Only', count: scopedMaintenanceRecords.filter((r) => r.record_category === 'work_order').length, icon: Calendar },
                       { id: 'BREAKDOWN' as const, label: 'Breakdown Cards', count: scopedMaintenanceRecords.filter((r) => r.record_category === 'breakdown').length, icon: Wrench },
-                      { id: 'PREVENTIVE' as const, label: 'Preventive Cards', count: scopedMaintenanceRecords.filter((r) => r.record_category === 'preventive').length, icon: Sparkles },
+                      { id: 'PREVENTIVE' as const, label: 'Preventive Cards', count: scopedMaintenanceRecords.filter((r) => r.record_category === 'preventive').length, icon: ShieldCheck },
                       { id: 'ASSESSMENTS' as const, label: 'Assessments', count: scopedMaintenanceRecords.filter((r) => r.record_category === 'assessment').length, icon: FileText },
                       { id: 'ACTIONS' as const, label: 'Action Tracker', count: scopedMaintenanceRecords.filter((r) => r.record_category === 'action_tracker').length, icon: CheckCircle2 },
                       { id: 'PM_TRACKER' as const, label: 'PM Tracker', count: scopedMaintenanceRecords.filter((r) => r.record_category === 'pm_tracker').length, icon: Calendar },

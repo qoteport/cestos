@@ -2743,50 +2743,50 @@ Signed: Field Operations Administration
                     <h2 className="text-xl font-bold text-slate-900 dark:text-white">Maintenance Schedules and Job Cards</h2>
                     <p className="text-xs text-slate-500">Manage Breakdown Work Orders & Preventive Maintenance Job Cards</p>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <button
-                      onClick={() => setShowScheduleModal(true)}
-                      className="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition shadow-sm"
-                    >
-                      <Calendar size={15} /> Create & Dispatch Maintenance Schedule
-                    </button>
-                    <button
-                      onClick={() => setShowWOModal(true)}
-                      className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition"
-                    >
-                      <Wrench size={15} /> 1. Breakdown / Daily Repair Job Card
-                    </button>
-                    <button
-                      onClick={() => setShowPmModal(true)}
-                      className="flex items-center gap-1.5 bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition"
-                    >
-                      <Sparkles size={15} /> 2. Preventive Maintenance Job Card
-                    </button>
-                    <button
-                      onClick={() => setShowAssessmentModal(true)}
-                      className="flex items-center gap-1.5 bg-blue-800 hover:bg-blue-900 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition"
-                    >
-                      <FileText size={15} /> New Maintenance Assessment Report
-                    </button>
-                    <button
-                      onClick={() => setShowActionTracker(true)}
-                      className="flex items-center gap-1.5 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition"
-                    >
-                      <CheckCircle2 size={15} /> New Action Tracker
-                    </button>
-                    <button
-                      onClick={() => setShowPmTracker(true)}
-                      className="flex items-center gap-1.5 bg-indigo-700 hover:bg-indigo-800 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition"
-                    >
-                      <Calendar size={15} /> New PM Tracker
-                    </button>
-                    <button
-                      onClick={() => setShowEquipmentRegister(true)}
-                      className="flex items-center gap-1.5 bg-sky-700 hover:bg-sky-800 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition"
-                    >
-                      <Truck size={15} /> New Equipment Register
-                    </button>
-                  </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        onClick={() => setShowScheduleModal(true)}
+                        className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition shadow-xs"
+                      >
+                        <Calendar size={15} /> Create & Dispatch Maintenance Schedule
+                      </button>
+                      <button
+                        onClick={() => setShowWOModal(true)}
+                        className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition shadow-xs"
+                      >
+                        <Wrench size={15} /> 1. Breakdown / Daily Repair Job Card
+                      </button>
+                      <button
+                        onClick={() => setShowPmModal(true)}
+                        className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition shadow-xs"
+                      >
+                        <ShieldCheck size={15} /> 2. Preventive Maintenance Job Card
+                      </button>
+                      <button
+                        onClick={() => setShowAssessmentModal(true)}
+                        className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition shadow-xs"
+                      >
+                        <FileText size={15} /> New Maintenance Assessment Report
+                      </button>
+                      <button
+                        onClick={() => setShowActionTracker(true)}
+                        className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition shadow-xs"
+                      >
+                        <CheckCircle2 size={15} /> New Action Tracker
+                      </button>
+                      <button
+                        onClick={() => setShowPmTracker(true)}
+                        className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition shadow-xs"
+                      >
+                        <Calendar size={15} /> New PM Tracker
+                      </button>
+                      <button
+                        onClick={() => setShowEquipmentRegister(true)}
+                        className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition shadow-xs"
+                      >
+                        <Truck size={15} /> New Equipment Register
+                      </button>
+                    </div>
                 </div>
 
                 {/* Work Orders & Maintenance Cards List */}
@@ -2800,7 +2800,7 @@ Signed: Field Operations Administration
                         { id: 'ALL' as const, label: 'All Records', count: filteredMaintenanceRecords.length, icon: null },
                         { id: 'SCHEDULES' as const, label: 'Schedules Only', count: filteredMaintenanceRecords.filter((r) => r.record_category === 'work_order').length, icon: Calendar },
                         { id: 'BREAKDOWN' as const, label: 'Breakdown Cards', count: filteredMaintenanceRecords.filter((r) => r.record_category === 'breakdown').length, icon: Wrench },
-                        { id: 'PREVENTIVE' as const, label: 'Preventive Cards', count: filteredMaintenanceRecords.filter((r) => r.record_category === 'preventive').length, icon: Sparkles },
+                        { id: 'PREVENTIVE' as const, label: 'Preventive Cards', count: filteredMaintenanceRecords.filter((r) => r.record_category === 'preventive').length, icon: ShieldCheck },
                         { id: 'ASSESSMENTS' as const, label: 'Assessments', count: filteredMaintenanceRecords.filter((r) => r.record_category === 'assessment').length, icon: FileText },
                         { id: 'ACTIONS' as const, label: 'Action Tracker', count: filteredMaintenanceRecords.filter((r) => r.record_category === 'action_tracker').length, icon: CheckCircle2 },
                         { id: 'PM_TRACKER' as const, label: 'PM Tracker', count: filteredMaintenanceRecords.filter((r) => r.record_category === 'pm_tracker').length, icon: Calendar },
@@ -2869,7 +2869,7 @@ Signed: Field Operations Administration
                                   </span>
                                   <h4 className="font-bold text-sm text-slate-900 dark:text-white mt-1">{wo.display_title || wo.title || wo.job_card_number}</h4>
                                 </div>
-                                <StatusBadge status={wo.status || 'OPEN'} />
+                                
                               </div>
                               <p className="text-xs text-slate-500 font-medium">{isAssessment ? `Reporting period: ${wo.reporting_period_start || '—'} to ${wo.reporting_period_end || '—'}` : isActionTracker ? `Date: ${wo.action_date || '—'} · Responsible: ${wo.responsible_name || '—'}` : isPmTracker ? `Due: ${wo.due_date || '—'} · Technician: ${wo.technician_name || '—'}` : isEquipmentRegister ? `Unit: ${wo.unit_number || '—'} · Type: ${wo.equipment_type || '—'}` : `Equipment: ${assetObj ? `${assetObj.name} (${assetObj.asset_number || 'Unit'})` : wo.pm_control?.fleet_unit_id || wo.job_control?.fleet_unit_id || '—'}`}</p>
                               <p className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-line line-clamp-3">{wo.description || wo.reported_failure || wo.corrective_action || 'No notes provided.'}</p>
