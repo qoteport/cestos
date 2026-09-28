@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CalendarDays, Clock3, Maximize2, Minimize2, Paperclip, Pencil, Plus, RefreshCw, X } from 'lucide-react';
+import { AlertTriangle, CalendarDays, Clock3, Maximize2, Minimize2, Paperclip, Pencil, Plus, X } from 'lucide-react';
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import { openUniversalFileViewer } from '@/lib/fileViewer';
 import SearchableSelect from './SearchableSelect';
@@ -230,6 +230,7 @@ export default function EmployeeTimesheetsWorkspace({
 
   const allHours = rows.reduce((sum, row) => sum + Number(row.total_hours || 0), 0);
   const activeRows = rows.length;
+  const sourceCsvRow = rows.find((row) => row.source_file);
 
   return (
     <section className="space-y-4" aria-label="Employee timesheets">
@@ -253,7 +254,7 @@ export default function EmployeeTimesheetsWorkspace({
               />
             </div>
           </div>
-          <button type="button" onClick={() => setRefreshKey((value) => value + 1)} disabled={loading} aria-label="Refresh time sheet" className="mb-0.5 rounded-lg border border-slate-300 p-2 text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><RefreshCw size={16} className={loading ? 'animate-spin' : ''} /></button>
+          {sourceCsvRow && <button type="button" onClick={() => void viewSourceFile(sourceCsvRow)} disabled={attachmentBusy === sourceCsvRow.id} className="mb-0.5 inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><Paperclip size={15} />{attachmentBusy === sourceCsvRow.id ? 'Opening source…' : 'Source CSV'}</button>}
           {canReport && <button type="button" onClick={openNew} className={`mb-0.5 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 ${colors.action}`}><Plus size={16} /> Report hours</button>}
         </div>
       </div>
@@ -269,29 +270,29 @@ export default function EmployeeTimesheetsWorkspace({
         {fullView && <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900"><div><p className="text-sm font-bold text-slate-900 dark:text-white">Monthly time sheet</p><p className="text-xs text-slate-500">{period || currentMonth()}</p></div><button type="button" onClick={() => setFullView(false)} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800" aria-label="Exit full view"><Minimize2 size={15} /> Exit full view</button></div>}
         {loading ? <div role="status" className="p-8 text-center text-sm text-slate-500">Loading time sheet…</div> : (
           <div className={`${fullView ? 'min-h-0 flex-1 overflow-auto' : 'max-h-[70vh] overflow-auto'}`}>
-            <table className="min-w-max border-collapse text-left text-xs">
+            <table className="min-w-max border-separate border-spacing-0 text-left text-xs">
               <thead className="bg-slate-100 text-[10px] font-extrabold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                 <tr className="h-8">
-                  <th className="sticky left-0 top-0 z-50 h-8 w-[210px] min-w-[210px] max-w-[210px] border-b border-r border-blue-800 bg-[#184877] px-3 text-white dark:border-slate-700" />
-                  <th className="sticky left-[210px] top-0 z-50 h-8 w-[115px] min-w-[115px] max-w-[115px] border-b border-r border-blue-800 bg-[#184877] px-3 text-white dark:border-slate-700" />
-                  {calendarDays.map(({ day, weekday, isoDate }) => <th key={day} className="sticky top-0 z-20 h-8 min-w-[48px] border-b border-r border-blue-800 bg-[#184877] px-2 text-center text-white" title={isoDate}>{weekday}</th>)}
-                  <th className="sticky top-0 z-20 h-8 min-w-[88px] border-b border-l border-blue-800 bg-[#184877] px-3" />
-                  <th className="sticky top-0 z-20 h-8 min-w-[85px] border-b border-l border-blue-800 bg-[#184877] px-3" />
-                  <th className="sticky right-0 top-0 z-50 h-8 min-w-[78px] border-b border-l border-blue-800 bg-[#184877] px-3" />
+                  <th className="sticky left-0 top-0 z-50 h-8 w-[210px] min-w-[210px] max-w-[210px] border-b-2 border-r border-blue-950 bg-[#184877] px-3 text-white shadow-[0_2px_3px_rgba(15,23,42,0.16)] dark:border-slate-700" />
+                  <th className="sticky left-[210px] top-0 z-50 h-8 w-[115px] min-w-[115px] max-w-[115px] border-b-2 border-r border-blue-950 bg-[#184877] px-3 text-white shadow-[0_2px_3px_rgba(15,23,42,0.16)] dark:border-slate-700" />
+                  {calendarDays.map(({ day, weekday, isoDate }) => <th key={day} className="sticky top-0 z-40 h-8 min-w-[48px] border-b-2 border-r border-blue-950 bg-[#184877] px-2 text-center text-white shadow-[0_2px_3px_rgba(15,23,42,0.16)]" title={isoDate}>{weekday}</th>)}
+                  <th className="sticky top-0 z-40 h-8 min-w-[88px] border-b-2 border-l border-blue-950 bg-[#184877] px-3 shadow-[0_2px_3px_rgba(15,23,42,0.16)]" />
+                  <th className="sticky top-0 z-40 h-8 min-w-[85px] border-b-2 border-l border-blue-950 bg-[#184877] px-3 shadow-[0_2px_3px_rgba(15,23,42,0.16)]" />
+                  <th className="sticky right-0 top-0 z-50 h-8 min-w-[78px] border-b-2 border-l border-blue-950 bg-[#184877] px-3 shadow-[0_2px_3px_rgba(15,23,42,0.16)]" />
                 </tr>
                 <tr className="h-10 bg-blue-50 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                  <th className="sticky left-0 top-8 z-40 h-10 w-[210px] min-w-[210px] max-w-[210px] border-b border-r border-slate-200 bg-blue-50 px-3 dark:border-slate-700 dark:bg-slate-800">Name</th>
-                  <th className="sticky left-[210px] top-8 z-40 h-10 w-[115px] min-w-[115px] max-w-[115px] border-b border-r border-slate-200 bg-blue-50 px-3 dark:border-slate-700 dark:bg-slate-800">Site</th>
-                  {calendarDays.map(({ day, dayMonth, isoDate }) => <th key={day} className="sticky top-8 z-20 h-10 min-w-[48px] border-b border-r border-slate-200 bg-blue-50 px-2 text-center dark:border-slate-700 dark:bg-slate-800" title={isoDate}>{dayMonth}</th>)}
-                  <th className="sticky top-8 z-20 h-10 min-w-[88px] border-b border-l border-slate-200 bg-blue-50 px-3 text-right dark:border-slate-700 dark:bg-slate-800">Hrs</th>
-                  <th className="sticky top-8 z-20 h-10 min-w-[85px] border-b border-l border-slate-200 bg-blue-50 px-3 text-right dark:border-slate-700 dark:bg-slate-800">Total days</th>
-                  <th className="sticky right-0 top-8 z-50 h-10 min-w-[78px] border-b border-l border-slate-200 bg-blue-50 px-2 text-center dark:border-slate-700 dark:bg-slate-800"><div className="flex items-center justify-center gap-1"><span>Action</span><button type="button" onClick={() => setFullView(true)} aria-label="View time sheet in full screen" title="Full view" className="rounded p-1 text-slate-600 hover:bg-white hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-700"><Maximize2 size={14} /></button></div></th>
+                  <th className="sticky left-0 top-8 z-50 h-10 w-[210px] min-w-[210px] max-w-[210px] border-b-2 border-r border-blue-200 bg-blue-100 px-3 shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800">Name</th>
+                  <th className="sticky left-[210px] top-8 z-50 h-10 w-[115px] min-w-[115px] max-w-[115px] border-b-2 border-r border-blue-200 bg-blue-100 px-3 shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800">Site</th>
+                  {calendarDays.map(({ day, dayMonth, isoDate }) => <th key={day} className="sticky top-8 z-40 h-10 min-w-[48px] border-b-2 border-r border-blue-200 bg-blue-100 px-2 text-center shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800" title={isoDate}>{dayMonth}</th>)}
+                  <th className="sticky top-8 z-40 h-10 min-w-[88px] border-b-2 border-l border-blue-200 bg-blue-100 px-3 text-right shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800">Hrs</th>
+                  <th className="sticky top-8 z-40 h-10 min-w-[85px] border-b-2 border-l border-blue-200 bg-blue-100 px-3 text-right shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800">Total days</th>
+                  <th className="sticky right-0 top-8 z-50 h-10 min-w-[78px] border-b-2 border-l border-blue-200 bg-blue-100 px-2 text-center shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800"><div className="flex items-center justify-center gap-1"><span>Action</span><button type="button" onClick={() => setFullView(true)} aria-label="View time sheet in full screen" title="Full view" className="rounded p-1 text-slate-600 hover:bg-white hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-700"><Maximize2 size={14} /></button></div></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {rows.length === 0 ? <tr><td colSpan={daysInPeriod + 5} className="p-10 text-center text-sm text-slate-500">No time sheets have been reported for this month.</td></tr> : rows.map((row) => (
                   <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                    <td className="sticky left-0 z-20 w-[210px] min-w-[210px] max-w-[210px] border-r border-slate-100 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900"><span className="block truncate font-bold text-slate-900 dark:text-white">{row.employee_name}</span><span className="mt-0.5 block truncate font-mono text-[10px] text-slate-500">{row.employee_number || '—'}</span>{row.source_file && <button type="button" onClick={() => void viewSourceFile(row)} disabled={attachmentBusy === row.id} className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 hover:underline disabled:opacity-50 dark:text-blue-300"><Paperclip size={11} />{attachmentBusy === row.id ? 'Opening…' : 'Source CSV'}</button>}</td>
+                    <td className="sticky left-0 z-20 w-[210px] min-w-[210px] max-w-[210px] border-r border-slate-100 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900"><span className="block truncate font-bold text-slate-900 dark:text-white">{row.employee_name}</span><span className="mt-0.5 block truncate font-mono text-[10px] text-slate-500">{row.employee_number || '—'}</span></td>
                     <td className="sticky left-[210px] z-20 w-[115px] min-w-[115px] max-w-[115px] border-r border-slate-100 bg-white px-3 py-2 text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"><span className="block truncate">{row.site_name || '—'}</span>{row.project_name && <span className="block truncate text-[10px] text-slate-400" title={row.project_name}>{row.project_name}</span>}</td>
                     {calendarDays.map(({ day }) => {
                       const value = row.daily_hours?.[day];
@@ -299,7 +300,7 @@ export default function EmployeeTimesheetsWorkspace({
                     })}
                     <td className="border-l border-slate-100 px-3 py-2 text-right font-extrabold tabular-nums text-slate-900 dark:border-slate-800 dark:text-white">{Number(row.total_hours || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-slate-600 dark:text-slate-300">{row.days_worked}</td>
-                    <td className="sticky right-0 border-l border-slate-100 bg-white px-2 py-2 text-center dark:border-slate-800 dark:bg-slate-900">{canReport && row.employee_id && <button type="button" onClick={() => openEdit(row)} className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-2 py-1.5 font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><Pencil size={12} /> Edit</button>}</td>
+                    <td className="sticky right-0 border-l border-slate-100 bg-white px-2 py-2 text-center dark:border-slate-800 dark:bg-slate-900">{canReport && row.employee_id && <button type="button" onClick={() => openEdit(row)} className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-2 py-1.5 font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><Pencil size={12} /></button>}</td>
                   </tr>
                 ))}
               </tbody>

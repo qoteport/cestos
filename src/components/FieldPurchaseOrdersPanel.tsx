@@ -24,7 +24,7 @@ function ExpensePaymentBadge({ status }: { status?: string | null }) {
     : 'bg-amber-100 text-amber-800';
   const label = value === 'PAID' ? 'Expense paid'
     : value === 'PARTIALLY_PAID' ? 'Partially paid'
-    : value === 'PAYMENT_RECONCILIATION_REQUIRED' ? 'Payment reconciliation required'
+    : value === 'PAYMENT_RECONCILIATION_REQUIRED' ? 'Pending Payment'
     : 'Expense raised';
   return <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${style}`}>{label}</span>;
 }

@@ -93,14 +93,14 @@ export function ProjectRegister({ dashboard = false, onSelectProject, readOnly }
 
   return (
     <section className="card p-5 space-y-4">
-      <div className="flex flex-wrap justify-between gap-3 items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">{dashboard ? 'Projects register' : 'All projects'}</h2>
           <p className="text-xs text-muted-foreground">
             Open a project to manage its team, sites and updates.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <button
             className={`btn-secondary text-xs flex items-center gap-1 ${hasActiveFilter ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : ''}`}
             onClick={() => setFilterOpen(!filterOpen)}

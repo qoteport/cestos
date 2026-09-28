@@ -156,7 +156,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${map[s] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}>
-      {String(status || '').replaceAll('_', ' ')}
+      {s === 'PAYMENT_RECONCILIATION_REQUIRED' ? 'Pending Payment' : String(status || '').replaceAll('_', ' ')}
     </span>
   );
 }
@@ -168,7 +168,7 @@ function ExpensePaymentBadge({ status }: { status?: string | null }) {
     : 'bg-amber-100 text-amber-800';
   const label = value === 'PAID' ? 'Expense paid'
     : value === 'PARTIALLY_PAID' ? 'Partially paid'
-    : value === 'PAYMENT_RECONCILIATION_REQUIRED' ? 'Payment reconciliation required'
+    : value === 'PAYMENT_RECONCILIATION_REQUIRED' ? 'Pending Payment'
     : 'Expense raised';
   return <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${style}`}>{label}</span>;
 }

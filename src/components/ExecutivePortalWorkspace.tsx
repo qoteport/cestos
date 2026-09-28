@@ -186,7 +186,7 @@ function ExpensePaymentBadge({ status }: { status?: string | null }) {
     : 'bg-amber-100 text-amber-800';
   const label = value === 'PAID' ? 'Expense paid'
     : value === 'PARTIALLY_PAID' ? 'Partially paid'
-    : value === 'PAYMENT_RECONCILIATION_REQUIRED' ? 'Payment reconciliation required'
+    : value === 'PAYMENT_RECONCILIATION_REQUIRED' ? 'Pending Payment'
     : 'Expense raised';
   return <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${style}`}>{label}</span>;
 }
@@ -1082,13 +1082,13 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
 
   const renderFilterBar = () => (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-3 relative z-30 mb-4">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         {/* Left: Project Selector */}
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
+        <div className="flex items-center gap-2 min-w-0 w-full lg:w-auto">
+          <div className="p-2 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 shrink-0">
             <Building2 size={16} />
           </div>
-          <div className="flex-1 min-w-[200px]">
+          <div className="flex-1 min-w-0">
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Project Scope</label>
             <SearchableSelect
               value={selectedProjectId}
@@ -1106,16 +1106,16 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
           </div>
         </div>
         {/* Right: Date Presets */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 w-full sm:w-auto">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mr-1 mb-0.5 sm:mb-0 block">Date Range:</span>
-          <div className="flex items-center flex-wrap gap-1.5">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 w-full lg:w-auto">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mr-1 block shrink-0">Date Range:</span>
+          <div className="flex items-center flex-wrap gap-1.5 w-full sm:w-auto">
           {(['ALL', 'TODAY', '10_DAYS', '30_DAYS'] as const).map((preset) => (
             <button
               key={preset}
               type="button"
               onClick={() => { setDatePreset(preset); setShowCustomDatePopover(false); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                datePreset === preset ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex-1 sm:flex-initial text-center whitespace-nowrap ${
+                datePreset === preset ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
               }`}
             >
               {preset === 'ALL' ? 'All Time' : preset === 'TODAY' ? 'Today' : preset === '10_DAYS' ? 'Last 10 Days' : 'Last 30 Days'}
@@ -1124,8 +1124,8 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
           <button
             type="button"
             onClick={() => { setDatePreset('CUSTOM'); setShowCustomDatePopover((p) => !p); }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
-              datePreset === 'CUSTOM' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 flex-1 sm:flex-initial text-center whitespace-nowrap ${
+              datePreset === 'CUSTOM' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
             }`}
           >
             <Clock size={13} /> Custom Range <ChevronRight size={13} className={`transition-transform duration-200 ${showCustomDatePopover ? 'rotate-90' : ''}`} />
