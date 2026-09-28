@@ -50,8 +50,9 @@ let backendHealthCheckedAt = 0;
 let backendIsReachable = false;
 let backendHealthCheck: Promise<boolean> | null = null;
 let connectivityListenerConfigured = false;
+const BACKEND_HEALTH_CACHE_MS = 60_000;
 
-async function checkApiBackend(force = false): Promise<boolean> {
+async function checkApiBackend(): Promise<boolean> {
   if (!connectivityListenerConfigured && typeof window !== 'undefined') {
     connectivityListenerConfigured = true;
     window.addEventListener('online', () => {
@@ -59,7 +60,9 @@ async function checkApiBackend(force = false): Promise<boolean> {
       backendIsReachable = false;
     });
   }
-  if (!force && Date.now() - backendHealthCheckedAt < 8_000) return backendIsReachable;
+  // Reuse recent positive and negative results. When the API is down, failed
+  // writes must not each trigger another health request.
+  if (backendHealthCheckedAt && Date.now() - backendHealthCheckedAt < BACKEND_HEALTH_CACHE_MS) return backendIsReachable;
   if (backendHealthCheck) return backendHealthCheck;
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 4_000);
@@ -196,7 +199,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, authe
       const cached = await readCachedApiResponse<T>(offlineScope, path);
       if (cached !== undefined) return cached;
     }
-    if (!isRead && mayQueue && !(await checkApiBackend(true))) {
+    if (!isRead && mayQueue && !(await checkApiBackend())) {
       return enqueueRequest(path, options, method, authenticated, offlineScope);
     }
     throw new ApiError(0, 'Cannot reach the server. Check your connection and try again.');
@@ -210,11 +213,11 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, authe
       handleSessionExpired();
     }
   }
-  if (isRead && response.status >= 500 && policy.cacheOfflineRead !== false && offlineScope && !(await checkApiBackend(true))) {
+  if (isRead && response.status >= 500 && policy.cacheOfflineRead !== false && offlineScope && !(await checkApiBackend())) {
     const cached = await readCachedApiResponse<T>(offlineScope, path);
     if (cached !== undefined) return cached;
   }
-  if (!isRead && mayQueue && response.status >= 500 && !(await checkApiBackend(true))) {
+  if (!isRead && mayQueue && response.status >= 500 && !(await checkApiBackend())) {
     return enqueueRequest(path, options, method, authenticated, offlineScope);
   }
   const result = await readResponse<T>(response);
@@ -270,7 +273,7 @@ export async function syncOfflineWriteQueue(): Promise<void> {
         await removeOfflineWrite(row.id);
         window.dispatchEvent(new CustomEvent('cestos:offline-write-synced', { detail: { id: row.id, path: row.path } }));
       } catch (error) {
-        const reachable = await checkApiBackend(true);
+        const reachable = await checkApiBackend();
         const current: OfflineWrite = {
           ...row,
           attempts: row.attempts + 1,
@@ -317,7 +320,7 @@ export async function apiFetchBlob(path: string, options: RequestInit = {}, auth
     }
   }
   if (!response.ok) {
-    if (method === 'GET' && response.status >= 500 && !(await checkApiBackend(true))) {
+    if (method === 'GET' && response.status >= 500 && !(await checkApiBackend())) {
       const cached = await cachedFile();
       if (cached) return cached;
     }

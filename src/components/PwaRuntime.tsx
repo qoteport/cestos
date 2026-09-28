@@ -89,7 +89,9 @@ export default function PwaRuntime() {
     };
 
     void poll();
-    const timer = window.setInterval(() => void poll(), 10_000);
+    // This revision feed is cross-device freshness polling, not a live stream.
+    // A minute interval avoids multiplying requests across open portal tabs.
+    const timer = window.setInterval(() => void poll(), 60_000);
     const onVisible = () => { if (document.visibilityState === 'visible') void poll(); };
     const onOnline = () => { void poll(); };
     document.addEventListener('visibilitychange', onVisible);

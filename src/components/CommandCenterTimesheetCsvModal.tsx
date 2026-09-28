@@ -200,13 +200,17 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
     if (!period) { setError('Select the reporting month.'); return; }
     if (unmatchedCount) { setError(`Enter or match an employee name for each employee row (${unmatchedCount} incomplete). Blank-name totals are skipped; project and site assignments may be left blank.`); return; }
     setSaving(true);
-    let failures = 0;
-    for (let index = 0; index < rows.length; index += 1) {
-      const row = rows[index]; if (row.status === 'saved' || row.status === 'summary') continue;
-      const mismatchedMonth = dayColumns.find((column) => column.month && column.month !== Number(period.slice(5, 7)));
-      if (mismatchedMonth) {
-        failures += 1; setRows((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, status: 'error', error: 'The selected month does not match the month shown in the CSV date headings.' } : item)); continue;
-      }
+    const pendingRows = rows.map((row, index) => ({ row, index })).filter(({ row }) => row.status !== 'saved' && row.status !== 'summary');
+    const mismatchedMonth = dayColumns.find((column) => column.month && column.month !== Number(period.slice(5, 7)));
+    if (mismatchedMonth) {
+      setError('The selected month does not match the month shown in the CSV date headings.');
+      setSaving(false);
+      return;
+    }
+    const batch: any[] = [];
+    let invalidRows = 0;
+    const invalidByIndex = new Map<number, string>();
+    for (const { row, index } of pendingRows) {
       const entries = dayColumns.flatMap(({ day, index: column }) => {
         const raw = (row.cells[column] || '').replace(/[$,\s]/g, '');
         if (!raw) return [];
@@ -216,27 +220,70 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
       });
       const invalid = entries.find((entry) => !Number.isFinite(entry.hours));
       if (invalid) {
-        failures += 1; setRows((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, status: 'error', error: `Invalid hours for day ${Number(invalid.work_date.slice(-2))}; use a number from 0 to 24.` } : item)); continue;
+        invalidRows += 1;
+        invalidByIndex.set(index, `Invalid hours for day ${Number(invalid.work_date.slice(-2))}; use a number from 0 to 24.`);
+        continue;
       }
       const site = sites.find((item) => String(item.id) === row.siteId && String(item.project_id) === row.projectMatchId);
       const matchedProject = projects.find((item) => String(item.id) === row.projectMatchId);
       const employeeName = rawEmployee(row);
       const projectName = projectColumn >= 0 ? (row.cells[projectColumn] || '').trim() : '';
       const rawSite = siteColumn >= 0 ? (row.cells[siteColumn] || '').trim() : '';
-      try {
-        const saved = await apiFetch<any>('/api/v1/employees/timesheets', { method: 'POST', body: JSON.stringify({ employee_id: row.employeeId || null, employee_name: employeeName || null, project_id: row.projectMatchId === 'custom' ? null : matchedProject?.id || null, project_name: row.projectMatchId === 'custom' ? projectName || null : matchedProject?.name || matchedProject?.project_name || projectName || null, scope_project_id: matchedProject?.id || null, period_start: `${period}-01`, site_name: site ? site.name || null : rawSite || null, source_file: sourceFile?.name || null, entries }) });
-        if (sourceFile && saved?.id) {
-          const form = new FormData(); form.append('file', sourceFile); form.append('title', `Imported time sheet ${period} — ${sourceFile.name}`.slice(0, 250)); form.append('category', 'Workforce'); form.append('tags', 'timesheet,import'); form.append('source_type', 'employee_timesheet_import'); form.append('source_id', String(saved.id)); form.append('visibility', 'PUBLIC');
-          await apiFetch('/api/v1/documents', { method: 'POST', body: form });
-        }
-        setRows((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, status: 'saved', error: undefined } : item));
-      } catch (err: any) {
-        failures += 1; setRows((current) => current.map((item, rowIndex) => rowIndex === index ? { ...item, status: 'error', error: err?.message || 'Could not save this row.' } : item));
-      }
+      batch.push({
+        employee_id: row.employeeId || null,
+        employee_name: employeeName || null,
+        project_id: row.projectMatchId === 'custom' ? null : matchedProject?.id || null,
+        project_name: row.projectMatchId === 'custom' ? projectName || null : matchedProject?.name || matchedProject?.project_name || projectName || null,
+        scope_project_id: matchedProject?.id || null,
+        period_start: `${period}-01`,
+        site_name: site ? site.name || null : rawSite || null,
+        source_file: sourceFile?.name || null,
+        entries,
+      });
     }
-    setSaving(false);
-    if (failures) setError(`${failures} row${failures === 1 ? '' : 's'} could not be saved. Review the row errors and retry.`);
-    else setNotice(`Saved ${readyCount} employee time sheet${readyCount === 1 ? '' : 's'} for ${period}.`);
+    if (invalidRows) {
+      setRows((current) => current.map((row, index) => invalidByIndex.has(index) ? { ...row, status: 'error', error: invalidByIndex.get(index) } : row));
+      setError(`${invalidRows} row${invalidRows === 1 ? '' : 's'} contain invalid daily hours. Correct them before saving the batch.`);
+      setSaving(false);
+      return;
+    }
+    try {
+      const result = await apiFetch<{ items: any[]; saved_count: number }>('/api/v1/employees/timesheets/batch', {
+        method: 'POST',
+        body: JSON.stringify({ items: batch }),
+      });
+      const savedRows = result.items || [];
+      setRows((current) => current.map((row) => row.status === 'summary' || row.status === 'saved' ? row : { ...row, status: 'saved', error: undefined }));
+
+      // Keep the source CSV linked to each imported timesheet, after the
+      // transactional data batch has committed.
+      let attachmentFailures = 0;
+      if (sourceFile) {
+        for (let start = 0; start < savedRows.length; start += 8) {
+          const group = savedRows.slice(start, start + 8);
+          const uploads = await Promise.allSettled(group.map((saved) => {
+            const form = new FormData();
+            form.append('file', sourceFile);
+            form.append('title', `Imported time sheet ${period} — ${sourceFile.name}`.slice(0, 250));
+            form.append('category', 'Workforce');
+            form.append('tags', 'timesheet,import');
+            form.append('source_type', 'employee_timesheet_import');
+            form.append('source_id', String(saved.id));
+            form.append('visibility', 'PUBLIC');
+            return apiFetch('/api/v1/documents', { method: 'POST', body: form });
+          }));
+          attachmentFailures += uploads.filter((upload) => upload.status === 'rejected').length;
+        }
+      }
+      const savedCount = result.saved_count ?? savedRows.length;
+      setNotice(`Saved ${savedCount} employee time sheet${savedCount === 1 ? '' : 's'} for ${period}.${attachmentFailures ? ` ${attachmentFailures} source CSV attachment${attachmentFailures === 1 ? '' : 's'} could not be uploaded.` : ''}`);
+    } catch (err: any) {
+      const message = err?.message || 'Could not save the time sheet batch.';
+      setRows((current) => current.map((row) => row.status === 'summary' || row.status === 'saved' ? row : { ...row, status: 'error', error: message }));
+      setError(`No rows were saved. ${message}`);
+    } finally {
+      setSaving(false);
+    }
   }
 
   const tableRows = rows.map((row, rowIndex) => <tr key={row.csvRow} className="border-t border-slate-200 align-top hover:bg-slate-50">
@@ -266,7 +313,7 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
         {(employeeColumn < 0 && headers.length > 0) && <p className="text-xs text-amber-700">Employee name column was not detected. Use Employee Number or manually match employee rows.</p>}
         {(siteColumn < 0 && headers.length > 0) && <p className="text-xs text-amber-700">No site column was detected; select a project site for each row.</p>}
       </div>
-      <footer className="flex flex-wrap items-center justify-between gap-3 rounded-b-3xl border-t border-slate-200 bg-slate-50 px-6 py-4"><p className="text-xs text-slate-500">Reimporting the same employee and month updates that timesheet with the CSV values instead of creating a duplicate.</p><div className="flex gap-2"><button type="button" disabled={saving} onClick={onClose} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50">Close</button><button type="button" disabled={saving || !rows.length || unmatchedCount > 0 || readyCount === 0} onClick={() => void saveMatchedRows()} className="inline-flex items-center gap-2 rounded-xl bg-[#184877] px-5 py-2 text-sm font-bold text-white shadow-xs transition hover:bg-[#123f68] disabled:cursor-not-allowed disabled:bg-slate-300">{saving && <Loader2 size={15} className="animate-spin" />}{saving ? 'Saving rows…' : `Save ${readyCount} matched row${readyCount === 1 ? '' : 's'}`}</button></div></footer>
+      <footer className="flex flex-wrap items-center justify-between gap-3 rounded-b-3xl border-t border-slate-200 bg-slate-50 px-6 py-4"><p className="text-xs text-slate-500">All matched employee rows are saved together. Reimporting the same employee and month updates that time sheet instead of creating a duplicate.</p><div className="flex gap-2"><button type="button" disabled={saving} onClick={onClose} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50">Close</button><button type="button" disabled={saving || !rows.length || unmatchedCount > 0 || readyCount === 0} onClick={() => void saveMatchedRows()} className="inline-flex items-center gap-2 rounded-xl bg-[#184877] px-5 py-2 text-sm font-bold text-white shadow-xs transition hover:bg-[#123f68] disabled:cursor-not-allowed disabled:bg-slate-300">{saving && <Loader2 size={15} className="animate-spin" />}{saving ? 'Saving all rows…' : `Save ${readyCount} matched row${readyCount === 1 ? '' : 's'}`}</button></div></footer>
     </section>
   </div>;
 }

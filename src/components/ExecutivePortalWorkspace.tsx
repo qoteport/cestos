@@ -2105,88 +2105,44 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
               </div>
             ) : (
               <div role="tabpanel" className="space-y-6">
-                <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-200 pb-4 dark:border-slate-800">
+                <div className="space-y-3 border-b border-slate-200 pb-0 dark:border-slate-800">
                   <div>
                     <h3 className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-white"><Wrench size={19} className="text-indigo-600" /> Active Site Work Orders &amp; PM Cards</h3>
                     <p className="mt-1 text-xs text-slate-500">Read-only work orders, breakdown repair cards, preventive maintenance cards, and supporting files.</p>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <button
-                      type="button"
-                      onClick={() => { setMaintFilter('ALL'); setScopedmaintenancerecordspage(1); }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                        maintFilter === 'ALL'
-                          ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
-                          : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      All Records ({scopedMaintenanceRecords.length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setMaintFilter('SCHEDULES'); setScopedmaintenancerecordspage(1); }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
-                        maintFilter === 'SCHEDULES'
-                          ? 'bg-slate-700 text-white shadow-xs'
-                          : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      <Calendar size={13} /> Schedules Only ({scopedMaintenanceRecords.filter((r) => r.record_category === 'work_order').length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setMaintFilter('BREAKDOWN'); setScopedmaintenancerecordspage(1); }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
-                        maintFilter === 'BREAKDOWN'
-                          ? 'bg-orange-600 text-white shadow-xs'
-                          : 'bg-orange-50 hover:bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300'
-                      }`}
-                    >
-                      <Wrench size={13} /> Breakdown Cards ({scopedMaintenanceRecords.filter((r) => r.record_category === 'breakdown').length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setMaintFilter('PREVENTIVE'); setScopedmaintenancerecordspage(1); }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
-                        maintFilter === 'PREVENTIVE'
-                          ? 'bg-purple-700 text-white shadow-xs'
-                          : 'bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300'
-                      }`}
-                    >
-                      <Sparkles size={13} /> Preventive Cards ({scopedMaintenanceRecords.filter((r) => r.record_category === 'preventive').length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setMaintFilter('ASSESSMENTS'); setScopedmaintenancerecordspage(1); }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
-                        maintFilter === 'ASSESSMENTS'
-                          ? 'bg-blue-800 text-white shadow-xs'
-                          : 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300'
-                      }`}
-                    >
-                      <FileText size={13} /> Assessments ({scopedMaintenanceRecords.filter((r) => r.record_category === 'assessment').length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setMaintFilter('ACTIONS'); setScopedmaintenancerecordspage(1); }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${maintFilter === 'ACTIONS' ? 'bg-teal-700 text-white shadow-xs' : 'bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 text-teal-800 dark:text-teal-300'}`}
-                    >
-                      <CheckCircle2 size={13} /> Action Tracker ({scopedMaintenanceRecords.filter((r) => r.record_category === 'action_tracker').length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setMaintFilter('PM_TRACKER'); setScopedmaintenancerecordspage(1); }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${maintFilter === 'PM_TRACKER' ? 'bg-indigo-700 text-white shadow-xs' : 'bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300'}`}
-                    >
-                      <Calendar size={13} /> PM Tracker ({scopedMaintenanceRecords.filter((r) => r.record_category === 'pm_tracker').length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setMaintFilter('EQUIPMENT_REGISTER'); setScopedmaintenancerecordspage(1); }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${maintFilter === 'EQUIPMENT_REGISTER' ? 'bg-sky-700 text-white shadow-xs' : 'bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/40 text-sky-800 dark:text-sky-300'}`}
-                    >
-                      <Truck size={13} /> Equipment Register ({scopedMaintenanceRecords.filter((r) => r.record_category === 'equipment_register').length})
-                    </button>
+                  
+                  {/* Filter Tabs */}
+                  <div className="flex items-center gap-1 overflow-x-auto pb-0 border-b border-slate-200 dark:border-slate-800" role="tablist">
+                    {[
+                      { id: 'ALL' as const, label: 'All Records', count: scopedMaintenanceRecords.length, icon: null },
+                      { id: 'SCHEDULES' as const, label: 'Schedules Only', count: scopedMaintenanceRecords.filter((r) => r.record_category === 'work_order').length, icon: Calendar },
+                      { id: 'BREAKDOWN' as const, label: 'Breakdown Cards', count: scopedMaintenanceRecords.filter((r) => r.record_category === 'breakdown').length, icon: Wrench },
+                      { id: 'PREVENTIVE' as const, label: 'Preventive Cards', count: scopedMaintenanceRecords.filter((r) => r.record_category === 'preventive').length, icon: Sparkles },
+                      { id: 'ASSESSMENTS' as const, label: 'Assessments', count: scopedMaintenanceRecords.filter((r) => r.record_category === 'assessment').length, icon: FileText },
+                      { id: 'ACTIONS' as const, label: 'Action Tracker', count: scopedMaintenanceRecords.filter((r) => r.record_category === 'action_tracker').length, icon: CheckCircle2 },
+                      { id: 'PM_TRACKER' as const, label: 'PM Tracker', count: scopedMaintenanceRecords.filter((r) => r.record_category === 'pm_tracker').length, icon: Calendar },
+                      { id: 'EQUIPMENT_REGISTER' as const, label: 'Equipment Register', count: scopedMaintenanceRecords.filter((r) => r.record_category === 'equipment_register').length, icon: Truck },
+                    ].map((tab) => {
+                      const Icon = tab.icon;
+                      const selected = maintFilter === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          role="tab"
+                          aria-selected={selected}
+                          onClick={() => { setMaintFilter(tab.id); setScopedmaintenancerecordspage(1); }}
+                          className={`px-3 py-2 text-xs font-semibold whitespace-nowrap border-b-2 transition-colors flex items-center gap-1.5 ${
+                            selected
+                              ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 font-bold'
+                              : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:border-slate-700'
+                          }`}
+                        >
+                          {Icon && <Icon size={14} />}
+                          {tab.label} ({tab.count})
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
                 {(() => {
