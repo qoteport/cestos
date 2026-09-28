@@ -84,7 +84,7 @@ import {
   Legend,
 } from 'recharts';
 import { useAuth } from '@/components/AuthProvider';
-import { apiFetch, apiFetchBlob, downloadBlob, receivePurchaseOrderGoods } from '@/lib/api';
+import { apiFetch, apiFetchBlob, downloadBlob, invalidateMemoryApiCache, receivePurchaseOrderGoods } from '@/lib/api';
 import { openUniversalFileViewer } from '@/lib/fileViewer';
 import OperationalExpensesWorkspace from './OperationalExpensesWorkspace';
 import ExpiringDocumentsWorkspace from './ExpiringDocumentsWorkspace';
@@ -1282,7 +1282,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => void loadData()}
+              onClick={() => { invalidateMemoryApiCache(); void loadData(); }}
               disabled={loading}
               className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition"
               title="Refresh Portal Data"

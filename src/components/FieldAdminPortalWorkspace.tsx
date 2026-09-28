@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { ResponsiveContainer, ComposedChart, BarChart, Bar, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { useAuth } from '@/components/AuthProvider';
-import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
+import { apiFetch, apiFetchBlob, downloadBlob, invalidateMemoryApiCache } from '@/lib/api';
 import { useApiDataRefresh } from '@/lib/apiDataRefresh';
 import BreakdownJobCardWizard from './BreakdownJobCardWizard';
 import PreventiveMaintenanceWizard from './PreventiveMaintenanceWizard';
@@ -1798,6 +1798,7 @@ Signed: Field Operations Administration
 
             <button
               onClick={() => {
+                invalidateMemoryApiCache();
                 void reloadData();
                 void loadLeaveRequests();
               }}

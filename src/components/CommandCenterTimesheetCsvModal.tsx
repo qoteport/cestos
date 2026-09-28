@@ -237,7 +237,9 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
         scope_project_id: matchedProject?.id || null,
         period_start: `${period}-01`,
         site_name: site ? site.name || null : rawSite || null,
-        source_file: sourceFile?.name || null,
+        // One import has one source CSV. Store the filename once and link its
+        // document to the first saved timesheet.
+        source_file: batch.length === 0 ? sourceFile?.name || null : null,
         entries,
       });
     }
@@ -255,25 +257,20 @@ export default function CommandCenterTimesheetCsvModal({ onClose }: { onClose: (
       const savedRows = result.items || [];
       setRows((current) => current.map((row) => row.status === 'summary' || row.status === 'saved' ? row : { ...row, status: 'saved', error: undefined }));
 
-      // Keep the source CSV linked to each imported timesheet, after the
-      // transactional data batch has committed.
+      // Keep one copy of the source CSV for this batch instead of duplicating
+      // the same file for every employee row.
       let attachmentFailures = 0;
-      if (sourceFile) {
-        for (let start = 0; start < savedRows.length; start += 8) {
-          const group = savedRows.slice(start, start + 8);
-          const uploads = await Promise.allSettled(group.map((saved) => {
-            const form = new FormData();
-            form.append('file', sourceFile);
-            form.append('title', `Imported time sheet ${period} — ${sourceFile.name}`.slice(0, 250));
-            form.append('category', 'Workforce');
-            form.append('tags', 'timesheet,import');
-            form.append('source_type', 'employee_timesheet_import');
-            form.append('source_id', String(saved.id));
-            form.append('visibility', 'PUBLIC');
-            return apiFetch('/api/v1/documents', { method: 'POST', body: form });
-          }));
-          attachmentFailures += uploads.filter((upload) => upload.status === 'rejected').length;
-        }
+      if (sourceFile && savedRows[0]?.id) {
+        const form = new FormData();
+        form.append('file', sourceFile);
+        form.append('title', `Imported time sheet ${period} — ${sourceFile.name}`.slice(0, 250));
+        form.append('category', 'Workforce');
+        form.append('tags', 'timesheet,import');
+        form.append('source_type', 'employee_timesheet_import');
+        form.append('source_id', String(savedRows[0].id));
+        form.append('visibility', 'PUBLIC');
+        try { await apiFetch('/api/v1/documents', { method: 'POST', body: form }); }
+        catch { attachmentFailures = 1; }
       }
       const savedCount = result.saved_count ?? savedRows.length;
       setNotice(`Saved ${savedCount} employee time sheet${savedCount === 1 ? '' : 's'} for ${period}.${attachmentFailures ? ` ${attachmentFailures} source CSV attachment${attachmentFailures === 1 ? '' : 's'} could not be uploaded.` : ''}`);

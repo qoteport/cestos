@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { apiFetchBlob, downloadBlob } from '@/lib/api';
 
+import * as XLSX from 'xlsx';
+
 export interface UniversalFileViewerModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -43,6 +45,8 @@ export default function UniversalFileViewerModal({
   const [activeBlob, setActiveBlob] = useState<Blob | null>(blob || null);
   const [objectUrl, setObjectUrl] = useState<string>('');
   const [textContent, setTextContent] = useState<string>('');
+  const [spreadsheetSheets, setSpreadsheetSheets] = useState<{ name: string; rows: string[][] }[]>([]);
+  const [activeSheetIndex, setActiveSheetIndex] = useState<number>(0);
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [rotation, setRotation] = useState<number>(0);
   const [closing, setClosing] = useState(false);
@@ -64,7 +68,40 @@ export default function UniversalFileViewerModal({
     setZoomLevel(100);
     setRotation(0);
     setTextContent('');
+    setSpreadsheetSheets([]);
+    setActiveSheetIndex(0);
     setClosing(false);
+
+    async function parseSpreadsheet(targetBlob: Blob) {
+      try {
+        const buffer = await targetBlob.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: 'array', cellDates: true, cellFormula: false });
+        const sheetsData: { name: string; rows: string[][] }[] = [];
+
+        for (const sheetName of workbook.SheetNames) {
+          const worksheet = workbook.Sheets[sheetName];
+          if (!worksheet) continue;
+          const rawRows: (string | number | boolean | null)[][] = XLSX.utils.sheet_to_json(worksheet, {
+            header: 1,
+            defval: '',
+            blankrows: false,
+          });
+          const stringRows = rawRows.map((row) =>
+            (row || []).map((cell) => (cell === null || cell === undefined ? '' : String(cell).trim()))
+          );
+
+          if (stringRows.length > 0) {
+            sheetsData.push({ name: sheetName, rows: stringRows });
+          }
+        }
+
+        if (!cancelled && sheetsData.length > 0) {
+          setSpreadsheetSheets(sheetsData);
+        }
+      } catch (err) {
+        console.warn('Could not parse spreadsheet table in viewer:', err);
+      }
+    }
 
     async function loadFile() {
       if (blob) {
@@ -73,6 +110,11 @@ export default function UniversalFileViewerModal({
         const url = URL.createObjectURL(blob);
         currentUrl = url;
         setObjectUrl(url);
+
+        const isExcelOrCsv = blob.type.includes('csv') || blob.type.includes('spreadsheet') || blob.type.includes('excel') || fileName.match(/\.(csv|xlsx|xls|tsv)$/i);
+        if (isExcelOrCsv) {
+          await parseSpreadsheet(blob);
+        }
 
         if (blob.type.includes('text') || blob.type.includes('json') || fileName.match(/\.(txt|csv|log|json|md)$/i)) {
           const text = await blob.text().catch(() => '');
@@ -88,9 +130,6 @@ export default function UniversalFileViewerModal({
 
       setLoading(true);
       try {
-        // API paths need the authenticated fetch helper. Absolute URLs are
-        // usually public or signed attachments, so fetch them without sending
-        // the app's bearer token to another origin.
         const fetchedBlob = /^https?:\/\//i.test(fileUrl)
           ? await fetch(fileUrl).then((response) => {
               if (!response.ok) throw new Error(`Could not load file (${response.status})`);
@@ -102,6 +141,11 @@ export default function UniversalFileViewerModal({
         const url = URL.createObjectURL(fetchedBlob);
         currentUrl = url;
         setObjectUrl(url);
+
+        const isExcelOrCsv = fetchedBlob.type.includes('csv') || fetchedBlob.type.includes('spreadsheet') || fetchedBlob.type.includes('excel') || fileName.match(/\.(csv|xlsx|xls|tsv)$/i);
+        if (isExcelOrCsv) {
+          await parseSpreadsheet(fetchedBlob);
+        }
 
         if (
           fetchedBlob.type.includes('text') ||
@@ -137,10 +181,19 @@ export default function UniversalFileViewerModal({
   const isPdf = lowerName.endsWith('.pdf') || mime.includes('pdf');
   const isImage =
     /\.(png|jpe?g|gif|svg|webp|bmp)$/i.test(lowerName) || mime.startsWith('image/');
+  const isSpreadsheet =
+    /\.(csv|xlsx|xls|tsv)$/i.test(lowerName) ||
+    mime.includes('csv') ||
+    mime.includes('spreadsheet') ||
+    mime.includes('excel');
   const isText =
-    /\.(txt|csv|log|json|md|xml|html)$/i.test(lowerName) ||
-    mime.includes('text') ||
-    mime.includes('json');
+    !isSpreadsheet &&
+    (/\.(txt|log|json|md|xml|html)$/i.test(lowerName) ||
+      mime.includes('text') ||
+      mime.includes('json'));
+
+  const activeSheet = spreadsheetSheets[activeSheetIndex] || spreadsheetSheets[0];
+  const maxColumns = activeSheet?.rows?.reduce((max, row) => Math.max(max, row.length), 0) || 0;
 
   const handlePrint = () => {
     if (isPdf && iframeRef.current?.contentWindow) {
@@ -349,6 +402,92 @@ export default function UniversalFileViewerModal({
                 </div>
               )}
 
+              {/* CSV & Excel Tabular Spreadsheet Viewer */}
+              {isSpreadsheet && (
+                <div className="w-full h-full flex flex-col bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-lg">
+                  {/* Workbook Sheet Tabs Bar */}
+                  <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2 text-xs">
+                    <div className="flex items-center gap-2 overflow-x-auto py-0.5">
+                      <span className="font-bold text-slate-700 dark:text-slate-300 text-[11px] uppercase tracking-wider mr-2">
+                        Sheets:
+                      </span>
+                      {spreadsheetSheets.length > 0 ? (
+                        spreadsheetSheets.map((sheet, index) => (
+                          <button
+                            key={sheet.name}
+                            type="button"
+                            onClick={() => setActiveSheetIndex(index)}
+                            className={`px-3 py-1 rounded-lg font-semibold text-xs transition ${
+                              activeSheetIndex === index
+                                ? 'bg-orange-600 text-white shadow-xs font-bold'
+                                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'
+                            }`}
+                          >
+                            {sheet.name} ({sheet.rows.length} rows)
+                          </button>
+                        ))
+                      ) : (
+                        <span className="text-slate-500 italic">Reading data table...</span>
+                      )}
+                    </div>
+
+                    {activeSheet && (
+                      <span className="text-[11px] font-mono text-slate-500 shrink-0 ml-3">
+                        {activeSheet.rows.length} rows × {maxColumns} columns
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Interactive Table Grid */}
+                  <div className="flex-1 overflow-auto bg-white dark:bg-slate-900">
+                    {activeSheet && activeSheet.rows.length > 0 ? (
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
+                            <th className="px-3 py-2 text-[11px] font-bold text-slate-400 border-r border-slate-200 dark:border-slate-700 w-12 text-center bg-slate-100 dark:bg-slate-800">
+                              #
+                            </th>
+                            {Array.from({ length: maxColumns }).map((_, colIdx) => (
+                              <th
+                                key={colIdx}
+                                className="px-3.5 py-2 font-bold text-slate-800 dark:text-slate-200 border-r border-slate-200 dark:border-slate-700 whitespace-nowrap bg-slate-100 dark:bg-slate-800"
+                              >
+                                {activeSheet.rows[0]?.[colIdx] || `Col ${colIdx + 1}`}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                          {activeSheet.rows.slice(1).map((row, rowIdx) => (
+                            <tr
+                              key={rowIdx}
+                              className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+                            >
+                              <td className="px-3 py-2 text-[11px] font-mono font-semibold text-slate-400 border-r border-slate-200 dark:border-slate-800 text-center bg-slate-50/50 dark:bg-slate-950/50">
+                                {rowIdx + 2}
+                              </td>
+                              {Array.from({ length: maxColumns }).map((_, colIdx) => (
+                                <td
+                                  key={colIdx}
+                                  className="px-3.5 py-2 text-slate-700 dark:text-slate-300 border-r border-slate-200 dark:border-slate-800 whitespace-nowrap"
+                                >
+                                  {row[colIdx] !== undefined ? row[colIdx] : ''}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center p-8 text-slate-500 space-y-2">
+                        <FileText size={24} />
+                        <p className="text-xs font-bold">No tabular data rows found in this sheet.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Text / Code Viewer */}
               {isText && (
                 <div className="w-full h-full flex flex-col bg-slate-900 text-slate-100 rounded-xl overflow-hidden shadow-lg border border-slate-800">
@@ -362,8 +501,8 @@ export default function UniversalFileViewerModal({
                 </div>
               )}
 
-              {/* Fallback for binary / unsupported files (.docx, .xlsx, .zip) */}
-              {!isPdf && !isImage && !isText && (
+              {/* Fallback for binary / unsupported files (.zip, .pdf binary errors) */}
+              {!isPdf && !isImage && !isSpreadsheet && !isText && (
                 <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-2xl max-w-lg w-full text-center space-y-4 shadow-xl">
                   <div className="w-16 h-16 rounded-2xl bg-orange-100 dark:bg-orange-950/60 text-orange-600 flex items-center justify-center mx-auto">
                     <FileText size={32} />
@@ -371,7 +510,7 @@ export default function UniversalFileViewerModal({
                   <div>
                     <h4 className="font-bold text-base text-slate-900 dark:text-white">{fileName}</h4>
                     <p className="text-xs text-slate-500 mt-1">
-                      Direct in-app rendering for this binary file format is not supported inline.
+                      Direct in-app rendering for this file format is not supported inline.
                     </p>
                   </div>
                   <div className="flex flex-wrap justify-center gap-3 pt-2">

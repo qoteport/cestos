@@ -79,7 +79,12 @@ export default function EmployeeTimesheetsWorkspace({
       if (requestedPeriod) params.set('period', requestedPeriod);
       if (projectId) params.set('project_id', projectId);
       const query = params.size ? `?${params.toString()}` : '';
-      const result = await apiFetch<{ period?: string; items?: TimesheetRow[] }>(`/api/v1/employees/timesheets${query}`);
+      const result = await apiFetch<{ period?: string; items?: TimesheetRow[] }>(
+        `/api/v1/employees/timesheets${query}`,
+        {},
+        true,
+        { bypassMemoryRead: true },
+      );
       setRows(Array.isArray(result?.items) ? result.items : []);
       if (!requestedPeriod && result?.period) setPeriod(result.period);
       if (!requestedPeriod && !result?.period) setPeriod(currentMonth());
@@ -249,13 +254,12 @@ export default function EmployeeTimesheetsWorkspace({
             </div>
           </div>
           <button type="button" onClick={() => setRefreshKey((value) => value + 1)} disabled={loading} aria-label="Refresh time sheet" className="mb-0.5 rounded-lg border border-slate-300 p-2 text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><RefreshCw size={16} className={loading ? 'animate-spin' : ''} /></button>
-          <button type="button" onClick={() => setFullView(true)} aria-label="View time sheet in full screen" className="mb-0.5 inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><Maximize2 size={15} /> Full view</button>
           {canReport && <button type="button" onClick={openNew} className={`mb-0.5 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 ${colors.action}`}><Plus size={16} /> Report hours</button>}
         </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900"><p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Employee records</p><p className="mt-1 text-xl font-extrabold text-slate-900 dark:text-white">{activeRows}</p></div>
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900"><p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{projectId ? 'Employee records for selected project' : 'Employee records'}</p><p className="mt-1 text-xl font-extrabold text-slate-900 dark:text-white">{activeRows}</p></div>
         <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900"><p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Total reported hours</p><p className="mt-1 text-xl font-extrabold text-slate-900 dark:text-white">{allHours.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p></div>
       </div>
 
@@ -273,7 +277,7 @@ export default function EmployeeTimesheetsWorkspace({
                   {calendarDays.map(({ day, weekday, isoDate }) => <th key={day} className="sticky top-0 z-20 h-8 min-w-[48px] border-b border-r border-blue-800 bg-[#184877] px-2 text-center text-white" title={isoDate}>{weekday}</th>)}
                   <th className="sticky top-0 z-20 h-8 min-w-[88px] border-b border-l border-blue-800 bg-[#184877] px-3" />
                   <th className="sticky top-0 z-20 h-8 min-w-[85px] border-b border-l border-blue-800 bg-[#184877] px-3" />
-                  {canReport && <th className="sticky right-0 top-0 z-50 h-8 min-w-[78px] border-b border-l border-blue-800 bg-[#184877] px-3" />}
+                  <th className="sticky right-0 top-0 z-50 h-8 min-w-[78px] border-b border-l border-blue-800 bg-[#184877] px-3" />
                 </tr>
                 <tr className="h-10 bg-blue-50 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
                   <th className="sticky left-0 top-8 z-40 h-10 w-[210px] min-w-[210px] max-w-[210px] border-b border-r border-slate-200 bg-blue-50 px-3 dark:border-slate-700 dark:bg-slate-800">Name</th>
@@ -281,11 +285,11 @@ export default function EmployeeTimesheetsWorkspace({
                   {calendarDays.map(({ day, dayMonth, isoDate }) => <th key={day} className="sticky top-8 z-20 h-10 min-w-[48px] border-b border-r border-slate-200 bg-blue-50 px-2 text-center dark:border-slate-700 dark:bg-slate-800" title={isoDate}>{dayMonth}</th>)}
                   <th className="sticky top-8 z-20 h-10 min-w-[88px] border-b border-l border-slate-200 bg-blue-50 px-3 text-right dark:border-slate-700 dark:bg-slate-800">Hrs</th>
                   <th className="sticky top-8 z-20 h-10 min-w-[85px] border-b border-l border-slate-200 bg-blue-50 px-3 text-right dark:border-slate-700 dark:bg-slate-800">Total days</th>
-                  {canReport && <th className="sticky right-0 top-8 z-50 h-10 min-w-[78px] border-b border-l border-slate-200 bg-blue-50 px-3 text-center dark:border-slate-700 dark:bg-slate-800">Action</th>}
+                  <th className="sticky right-0 top-8 z-50 h-10 min-w-[78px] border-b border-l border-slate-200 bg-blue-50 px-2 text-center dark:border-slate-700 dark:bg-slate-800"><div className="flex items-center justify-center gap-1"><span>Action</span><button type="button" onClick={() => setFullView(true)} aria-label="View time sheet in full screen" title="Full view" className="rounded p-1 text-slate-600 hover:bg-white hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-700"><Maximize2 size={14} /></button></div></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {rows.length === 0 ? <tr><td colSpan={daysInPeriod + (canReport ? 5 : 4)} className="p-10 text-center text-sm text-slate-500">No time sheets have been reported for this month.</td></tr> : rows.map((row) => (
+                {rows.length === 0 ? <tr><td colSpan={daysInPeriod + 5} className="p-10 text-center text-sm text-slate-500">No time sheets have been reported for this month.</td></tr> : rows.map((row) => (
                   <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                     <td className="sticky left-0 z-20 w-[210px] min-w-[210px] max-w-[210px] border-r border-slate-100 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900"><span className="block truncate font-bold text-slate-900 dark:text-white">{row.employee_name}</span><span className="mt-0.5 block truncate font-mono text-[10px] text-slate-500">{row.employee_number || '—'}</span>{row.source_file && <button type="button" onClick={() => void viewSourceFile(row)} disabled={attachmentBusy === row.id} className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 hover:underline disabled:opacity-50 dark:text-blue-300"><Paperclip size={11} />{attachmentBusy === row.id ? 'Opening…' : 'Source CSV'}</button>}</td>
                     <td className="sticky left-[210px] z-20 w-[115px] min-w-[115px] max-w-[115px] border-r border-slate-100 bg-white px-3 py-2 text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"><span className="block truncate">{row.site_name || '—'}</span>{row.project_name && <span className="block truncate text-[10px] text-slate-400" title={row.project_name}>{row.project_name}</span>}</td>
@@ -295,7 +299,7 @@ export default function EmployeeTimesheetsWorkspace({
                     })}
                     <td className="border-l border-slate-100 px-3 py-2 text-right font-extrabold tabular-nums text-slate-900 dark:border-slate-800 dark:text-white">{Number(row.total_hours || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-slate-600 dark:text-slate-300">{row.days_worked}</td>
-                    {canReport && <td className="sticky right-0 border-l border-slate-100 bg-white px-2 py-2 text-center dark:border-slate-800 dark:bg-slate-900">{row.employee_id && <button type="button" onClick={() => openEdit(row)} className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-2 py-1.5 font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><Pencil size={12} /> Edit</button>}</td>}
+                    <td className="sticky right-0 border-l border-slate-100 bg-white px-2 py-2 text-center dark:border-slate-800 dark:bg-slate-900">{canReport && row.employee_id && <button type="button" onClick={() => openEdit(row)} className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-2 py-1.5 font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><Pencil size={12} /> Edit</button>}</td>
                   </tr>
                 ))}
               </tbody>
@@ -306,7 +310,7 @@ export default function EmployeeTimesheetsWorkspace({
                   {dailyHourTotals.map((hours, index) => <td key={index + 1} className="border-r border-slate-200 px-2 py-3 text-center tabular-nums dark:border-slate-700">{hours.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>)}
                   <td className="border-l border-slate-200 px-3 py-3 text-right tabular-nums dark:border-slate-700">{allHours.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
                   <td className="border-l border-slate-200 px-3 py-3 text-right tabular-nums dark:border-slate-700">{totalDaysWorked}</td>
-                  {canReport && <td className="sticky right-0 border-l border-slate-200 bg-slate-100 px-2 py-3 dark:border-slate-700 dark:bg-slate-800" />}
+                  <td className="sticky right-0 border-l border-slate-200 bg-slate-100 px-2 py-3 dark:border-slate-700 dark:bg-slate-800" />
                 </tr>
               </tfoot>
             </table>
