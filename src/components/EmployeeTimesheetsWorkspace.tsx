@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { AlertTriangle, CalendarDays, Check, Clock3, Maximize2, Minimize2, Paperclip, Pencil, Plus, X } from 'lucide-react';
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import { openUniversalFileViewer } from '@/lib/fileViewer';
@@ -33,11 +34,61 @@ type TimesheetRow = {
 type SiteOption = { id: string; name?: string; project_name?: string | null; is_active?: boolean };
 
 const accents = {
-  emerald: { active: 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300', action: 'bg-emerald-700 hover:bg-emerald-800 focus:ring-emerald-500', icon: 'text-emerald-700 dark:text-emerald-400' },
-  indigo: { active: 'border-indigo-600 bg-indigo-50 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300', action: 'bg-indigo-700 hover:bg-indigo-800 focus:ring-indigo-500', icon: 'text-indigo-700 dark:text-indigo-400' },
-  orange: { active: 'border-orange-600 bg-orange-50 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300', action: 'bg-orange-600 hover:bg-orange-700 focus:ring-orange-500', icon: 'text-orange-700 dark:text-orange-400' },
-  violet: { active: 'border-violet-600 bg-violet-50 text-violet-800 dark:bg-violet-950/60 dark:text-violet-300', action: 'bg-violet-700 hover:bg-violet-800 focus:ring-violet-500', icon: 'text-violet-700 dark:text-violet-400' },
-  amber: { active: 'border-amber-600 bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300', action: 'bg-amber-600 hover:bg-amber-700 focus:ring-amber-500', icon: 'text-amber-700 dark:text-amber-400' },
+  emerald: {
+    active: 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300',
+    action: 'bg-emerald-700 hover:bg-emerald-800 focus:ring-emerald-500',
+    icon: 'text-emerald-700 dark:text-emerald-400',
+    headerPrimary: 'bg-emerald-900 border-emerald-950 text-white dark:bg-emerald-950 dark:border-slate-700',
+    headerSecondary: 'bg-emerald-100 text-emerald-950 border-emerald-200 dark:bg-emerald-900/60 dark:text-emerald-100 dark:border-slate-700',
+    activeDay: 'bg-emerald-50/70 text-emerald-900 font-bold dark:bg-emerald-950/40 dark:text-emerald-200',
+    bulkSelectedCard: 'border-emerald-500 bg-emerald-50/80 shadow-xs ring-2 ring-emerald-200 dark:border-emerald-500 dark:bg-emerald-950/40 dark:ring-emerald-900',
+    bulkCheckbox: 'border-emerald-600 bg-emerald-600 text-white dark:border-emerald-400 dark:bg-emerald-400 dark:text-slate-950 focus-visible:ring-emerald-500',
+    bulkText: 'text-emerald-800 dark:text-emerald-200',
+  },
+  indigo: {
+    active: 'border-indigo-600 bg-indigo-50 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300',
+    action: 'bg-indigo-700 hover:bg-indigo-800 focus:ring-indigo-500',
+    icon: 'text-indigo-700 dark:text-indigo-400',
+    headerPrimary: 'bg-indigo-900 border-indigo-950 text-white dark:bg-indigo-950 dark:border-slate-700',
+    headerSecondary: 'bg-indigo-100 text-indigo-950 border-indigo-200 dark:bg-indigo-900/60 dark:text-indigo-100 dark:border-slate-700',
+    activeDay: 'bg-indigo-50/70 text-indigo-900 font-bold dark:bg-indigo-950/40 dark:text-indigo-200',
+    bulkSelectedCard: 'border-indigo-500 bg-indigo-50/80 shadow-xs ring-2 ring-indigo-200 dark:border-indigo-500 dark:bg-indigo-950/40 dark:ring-indigo-900',
+    bulkCheckbox: 'border-indigo-600 bg-indigo-600 text-white dark:border-indigo-400 dark:bg-indigo-400 dark:text-slate-950 focus-visible:ring-indigo-500',
+    bulkText: 'text-indigo-800 dark:text-indigo-200',
+  },
+  orange: {
+    active: 'border-orange-600 bg-orange-50 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300',
+    action: 'bg-orange-600 hover:bg-orange-700 focus:ring-orange-500',
+    icon: 'text-orange-700 dark:text-orange-400',
+    headerPrimary: 'bg-orange-800 border-orange-950 text-white dark:bg-orange-950 dark:border-slate-700',
+    headerSecondary: 'bg-orange-100 text-orange-950 border-orange-200 dark:bg-orange-900/60 dark:text-orange-100 dark:border-slate-700',
+    activeDay: 'bg-orange-50/70 text-orange-900 font-bold dark:bg-orange-950/40 dark:text-orange-200',
+    bulkSelectedCard: 'border-orange-500 bg-orange-50/80 shadow-xs ring-2 ring-orange-200 dark:border-orange-500 dark:bg-orange-950/40 dark:ring-orange-900',
+    bulkCheckbox: 'border-orange-600 bg-orange-600 text-white dark:border-orange-400 dark:bg-orange-400 dark:text-slate-950 focus-visible:ring-orange-500',
+    bulkText: 'text-orange-800 dark:text-orange-200',
+  },
+  violet: {
+    active: 'border-violet-600 bg-violet-50 text-violet-800 dark:bg-violet-950/60 dark:text-violet-300',
+    action: 'bg-violet-700 hover:bg-violet-800 focus:ring-violet-500',
+    icon: 'text-violet-700 dark:text-violet-400',
+    headerPrimary: 'bg-violet-900 border-violet-950 text-white dark:bg-violet-950 dark:border-slate-700',
+    headerSecondary: 'bg-violet-100 text-violet-950 border-violet-200 dark:bg-violet-900/60 dark:text-violet-100 dark:border-slate-700',
+    activeDay: 'bg-violet-50/70 text-violet-900 font-bold dark:bg-violet-950/40 dark:text-violet-200',
+    bulkSelectedCard: 'border-violet-500 bg-violet-50/80 shadow-xs ring-2 ring-violet-200 dark:border-violet-500 dark:bg-violet-950/40 dark:ring-violet-900',
+    bulkCheckbox: 'border-violet-600 bg-violet-600 text-white dark:border-violet-400 dark:bg-violet-400 dark:text-slate-950 focus-visible:ring-violet-500',
+    bulkText: 'text-violet-800 dark:text-violet-200',
+  },
+  amber: {
+    active: 'border-amber-600 bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
+    action: 'bg-amber-600 hover:bg-amber-700 focus:ring-amber-500',
+    icon: 'text-amber-700 dark:text-amber-400',
+    headerPrimary: 'bg-amber-800 border-amber-950 text-white dark:bg-amber-950 dark:border-slate-700',
+    headerSecondary: 'bg-amber-100 text-amber-950 border-amber-200 dark:bg-amber-900/60 dark:text-amber-100 dark:border-slate-700',
+    activeDay: 'bg-amber-50/70 text-amber-900 font-bold dark:bg-amber-950/40 dark:text-amber-200',
+    bulkSelectedCard: 'border-amber-500 bg-amber-50/80 shadow-xs ring-2 ring-amber-200 dark:border-amber-500 dark:bg-amber-950/40 dark:ring-amber-900',
+    bulkCheckbox: 'border-amber-600 bg-amber-600 text-white dark:border-amber-400 dark:bg-amber-400 dark:text-slate-950 focus-visible:ring-amber-500',
+    bulkText: 'text-amber-800 dark:text-amber-200',
+  },
 };
 
 function currentMonth() {
@@ -47,7 +98,7 @@ function currentMonth() {
 export default function EmployeeTimesheetsWorkspace({
   employees,
   canReport = false,
-  accent = 'emerald',
+  accent,
   projectId,
 }: {
   employees: EmployeeOption[];
@@ -55,7 +106,17 @@ export default function EmployeeTimesheetsWorkspace({
   accent?: keyof typeof accents;
   projectId?: string;
 }) {
-  const colors = accents[accent];
+  const pathname = usePathname() || '';
+  const effectiveAccent: keyof typeof accents = (
+    accent && accents[accent] ? accent : (
+      pathname.includes('/hr-portal') ? 'emerald' :
+      pathname.includes('/executive-portal') ? 'indigo' :
+      pathname.includes('/finance-portal') ? 'violet' :
+      pathname.includes('/field-admin-portal') ? 'orange' :
+      'emerald'
+    )
+  );
+  const colors = accents[effectiveAccent] || accents.emerald;
   const [period, setPeriod] = useState('');
   const [rows, setRows] = useState<TimesheetRow[]>([]);
   const [sites, setSites] = useState<SiteOption[]>([]);
@@ -311,22 +372,22 @@ export default function EmployeeTimesheetsWorkspace({
         {loading ? <div role="status" className="p-8 text-center text-sm text-slate-500">Loading time sheet…</div> : (
           <div className={`${fullView ? 'min-h-0 flex-1 overflow-auto' : 'max-h-[70vh] overflow-auto'}`}>
             <table className="min-w-max border-separate border-spacing-0 text-left text-xs">
-              <thead className="bg-slate-100 text-[10px] font-extrabold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+              <thead className="text-[10px] font-extrabold uppercase tracking-wide">
                 <tr className="h-8">
-                  <th className="md:sticky md:left-0 md:top-0 z-20 md:z-50 h-8 w-[210px] min-w-[210px] max-w-[210px] border-b-2 border-r border-blue-950 bg-[#184877] px-3 text-white shadow-[0_2px_3px_rgba(15,23,42,0.16)] dark:border-slate-700" />
-                  <th className="md:sticky md:left-[210px] md:top-0 z-20 md:z-50 h-8 w-[115px] min-w-[115px] max-w-[115px] border-b-2 border-r border-blue-950 bg-[#184877] px-3 text-white shadow-[0_2px_3px_rgba(15,23,42,0.16)] dark:border-slate-700" />
-                  {calendarDays.map(({ day, weekday, isoDate }) => <th key={day} className="md:sticky md:top-0 z-10 md:z-40 h-8 min-w-[48px] border-b-2 border-r border-blue-950 bg-[#184877] px-2 text-center text-white shadow-[0_2px_3px_rgba(15,23,42,0.16)]" title={isoDate}>{weekday}</th>)}
-                  <th className="md:sticky md:top-0 z-10 md:z-40 h-8 min-w-[88px] border-b-2 border-l border-blue-950 bg-[#184877] px-3 shadow-[0_2px_3px_rgba(15,23,42,0.16)]" />
-                  <th className="md:sticky md:top-0 z-10 md:z-40 h-8 min-w-[85px] border-b-2 border-l border-blue-950 bg-[#184877] px-3 shadow-[0_2px_3px_rgba(15,23,42,0.16)]" />
-                  <th className="md:sticky md:right-0 md:top-0 z-20 md:z-50 h-8 min-w-[78px] border-b-2 border-l border-blue-950 bg-[#184877] px-3 shadow-[0_2px_3px_rgba(15,23,42,0.16)]" />
+                  <th className={`md:sticky md:left-0 md:top-0 z-20 md:z-50 h-8 w-[210px] min-w-[210px] max-w-[210px] border-b-2 border-r px-3 text-white shadow-[0_2px_3px_rgba(15,23,42,0.16)] ${colors.headerPrimary}`} />
+                  <th className={`md:sticky md:left-[210px] md:top-0 z-20 md:z-50 h-8 w-[115px] min-w-[115px] max-w-[115px] border-b-2 border-r px-3 text-white shadow-[0_2px_3px_rgba(15,23,42,0.16)] ${colors.headerPrimary}`} />
+                  {calendarDays.map(({ day, weekday, isoDate }) => <th key={day} className={`md:sticky md:top-0 z-10 md:z-40 h-8 min-w-[48px] border-b-2 border-r px-2 text-center text-white shadow-[0_2px_3px_rgba(15,23,42,0.16)] ${colors.headerPrimary}`} title={isoDate}>{weekday}</th>)}
+                  <th className={`md:sticky md:top-0 z-10 md:z-40 h-8 min-w-[88px] border-b-2 border-l px-3 shadow-[0_2px_3px_rgba(15,23,42,0.16)] ${colors.headerPrimary}`} />
+                  <th className={`md:sticky md:top-0 z-10 md:z-40 h-8 min-w-[85px] border-b-2 border-l px-3 shadow-[0_2px_3px_rgba(15,23,42,0.16)] ${colors.headerPrimary}`} />
+                  <th className={`md:sticky md:right-0 md:top-0 z-20 md:z-50 h-8 min-w-[78px] border-b-2 border-l px-3 shadow-[0_2px_3px_rgba(15,23,42,0.16)] ${colors.headerPrimary}`} />
                 </tr>
-                <tr className="h-10 bg-blue-50 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                  <th className="md:sticky md:left-0 md:top-8 z-20 md:z-50 h-10 w-[210px] min-w-[210px] max-w-[210px] border-b-2 border-r border-blue-200 bg-blue-100 px-3 shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800">Name</th>
-                  <th className="md:sticky md:left-[210px] md:top-8 z-20 md:z-50 h-10 w-[115px] min-w-[115px] max-w-[115px] border-b-2 border-r border-blue-200 bg-blue-100 px-3 shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800">Site</th>
-                  {calendarDays.map(({ day, dayMonth, isoDate }) => <th key={day} className="md:sticky md:top-8 z-10 md:z-40 h-10 min-w-[48px] border-b-2 border-r border-blue-200 bg-blue-100 px-2 text-center shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800" title={isoDate}>{dayMonth}</th>)}
-                  <th className="md:sticky md:top-8 z-10 md:z-40 h-10 min-w-[88px] border-b-2 border-l border-blue-200 bg-blue-100 px-3 text-right shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800">Hrs</th>
-                  <th className="md:sticky md:top-8 z-10 md:z-40 h-10 min-w-[85px] border-b-2 border-l border-blue-200 bg-blue-100 px-3 text-right shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800">Total days</th>
-                  <th className="md:sticky md:right-0 md:top-8 z-20 md:z-50 h-10 min-w-[78px] border-b-2 border-l border-blue-200 bg-blue-100 px-2 text-center shadow-[0_2px_3px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-800"><div className="flex items-center justify-center gap-1"><span>Action</span><button type="button" onClick={() => setFullView(true)} aria-label="View time sheet in full screen" title="Full view" className="rounded p-1 text-slate-600 hover:bg-white hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-700"><Maximize2 size={14} /></button></div></th>
+                <tr className={`h-10 ${colors.headerSecondary}`}>
+                  <th className={`md:sticky md:left-0 md:top-8 z-20 md:z-50 h-10 w-[210px] min-w-[210px] max-w-[210px] border-b-2 border-r px-3 shadow-[0_2px_3px_rgba(15,23,42,0.12)] ${colors.headerSecondary}`}>Name</th>
+                  <th className={`md:sticky md:left-[210px] md:top-8 z-20 md:z-50 h-10 w-[115px] min-w-[115px] max-w-[115px] border-b-2 border-r px-3 shadow-[0_2px_3px_rgba(15,23,42,0.12)] ${colors.headerSecondary}`}>Site</th>
+                  {calendarDays.map(({ day, dayMonth, isoDate }) => <th key={day} className={`md:sticky md:top-8 z-10 md:z-40 h-10 min-w-[48px] border-b-2 border-r px-2 text-center shadow-[0_2px_3px_rgba(15,23,42,0.12)] ${colors.headerSecondary}`} title={isoDate}>{dayMonth}</th>)}
+                  <th className={`md:sticky md:top-8 z-10 md:z-40 h-10 min-w-[88px] border-b-2 border-l px-3 text-right shadow-[0_2px_3px_rgba(15,23,42,0.12)] ${colors.headerSecondary}`}>Hrs</th>
+                  <th className={`md:sticky md:top-8 z-10 md:z-40 h-10 min-w-[85px] border-b-2 border-l px-3 text-right shadow-[0_2px_3px_rgba(15,23,42,0.12)] ${colors.headerSecondary}`}>Total days</th>
+                  <th className={`md:sticky md:right-0 md:top-8 z-20 md:z-50 h-10 min-w-[78px] border-b-2 border-l px-2 text-center shadow-[0_2px_3px_rgba(15,23,42,0.12)] ${colors.headerSecondary}`}><div className="flex items-center justify-center gap-1"><span>Action</span><button type="button" onClick={() => setFullView(true)} aria-label="View time sheet in full screen" title="Full view" className="rounded p-1 text-slate-600 hover:bg-black/10 dark:text-slate-300"><Maximize2 size={14} /></button></div></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -336,7 +397,7 @@ export default function EmployeeTimesheetsWorkspace({
                     <td className="md:sticky md:left-[210px] z-20 w-[115px] min-w-[115px] max-w-[115px] border-r border-slate-100 bg-white px-3 py-2 text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"><span className="block truncate">{row.site_name || '—'}</span>{row.project_name && <span className="block truncate text-[10px] text-slate-400" title={row.project_name}>{row.project_name}</span>}</td>
                     {calendarDays.map(({ day }) => {
                       const value = row.daily_hours?.[day];
-                      return <td key={day} className={`px-2 py-2 text-center tabular-nums ${typeof value === 'number' && value > 0 ? 'font-semibold text-slate-800 dark:text-slate-200' : 'text-slate-400'}`}>{typeof value === 'number' ? value : '—'}</td>;
+                      return <td key={day} className={`px-2 py-2 text-center tabular-nums ${typeof value === 'number' && value > 0 ? `font-semibold ${colors.activeDay}` : 'text-slate-400'}`}>{typeof value === 'number' ? value : '—'}</td>;
                     })}
                     <td className="border-l border-slate-100 px-3 py-2 text-right font-extrabold tabular-nums text-slate-900 dark:border-slate-800 dark:text-white">{Number(row.total_hours || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-slate-600 dark:text-slate-300">{row.days_worked}</td>
@@ -344,14 +405,14 @@ export default function EmployeeTimesheetsWorkspace({
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="border-t-2 border-slate-400 bg-slate-100 font-extrabold text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white">
+              <tfoot className={`border-t-2 font-extrabold ${colors.headerSecondary}`}>
                 <tr>
-                  <td className="md:sticky md:left-0 z-20 w-[210px] min-w-[210px] max-w-[210px] border-r border-slate-200 bg-slate-100 px-3 py-3 dark:border-slate-700 dark:bg-slate-800" />
-                  <td className="md:sticky md:left-[210px] z-20 w-[115px] min-w-[115px] max-w-[115px] border-r border-slate-200 bg-slate-100 px-3 py-3 text-right dark:border-slate-700 dark:bg-slate-800">Hrs</td>
+                  <td className={`md:sticky md:left-0 z-20 w-[210px] min-w-[210px] max-w-[210px] border-r px-3 py-3 ${colors.headerSecondary}`} />
+                  <td className={`md:sticky md:left-[210px] z-20 w-[115px] min-w-[115px] max-w-[115px] border-r px-3 py-3 text-right ${colors.headerSecondary}`}>Hrs</td>
                   {dailyHourTotals.map((hours, index) => <td key={index + 1} className="border-r border-slate-200 px-2 py-3 text-center tabular-nums dark:border-slate-700">{hours.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>)}
                   <td className="border-l border-slate-200 px-3 py-3 text-right tabular-nums dark:border-slate-700">{allHours.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
                   <td className="border-l border-slate-200 px-3 py-3 text-right tabular-nums dark:border-slate-700">{totalDaysWorked}</td>
-                  <td className="md:sticky md:right-0 border-l border-slate-200 bg-slate-100 px-2 py-3 dark:border-slate-700 dark:bg-slate-800" />
+                  <td className={`md:sticky md:right-0 border-l px-2 py-3 ${colors.headerSecondary}`} />
                 </tr>
               </tfoot>
             </table>
@@ -403,14 +464,14 @@ export default function EmployeeTimesheetsWorkspace({
                       const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(new Date(formYear, formMonth - 1, day));
                       const selected = bulkDays.includes(day);
                       const inputId = `timesheet-hours-${day}`;
-                      return <div key={day} className={`overflow-hidden rounded-xl border transition-all ${selected ? 'border-blue-500 bg-blue-50/80 shadow-sm shadow-blue-100 ring-2 ring-blue-100 dark:border-blue-400 dark:bg-blue-950/40 dark:ring-blue-900' : 'border-slate-300 bg-white hover:border-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-500'}`}>
+                      return <div key={day} className={`overflow-hidden rounded-xl border transition-all ${selected ? colors.bulkSelectedCard : 'border-slate-300 bg-white hover:border-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-500'}`}>
                         <div className="flex items-center justify-between px-2.5 py-2">
-                          <label htmlFor={inputId} className={`cursor-pointer text-[10px] font-bold uppercase tracking-wide ${selected ? 'text-blue-800 dark:text-blue-200' : 'text-slate-500 dark:text-slate-400'}`}>Day {day} <span className="ml-1 normal-case opacity-75">· {weekday}</span></label>
-                          <button type="button" role="checkbox" aria-checked={selected} aria-label={`Select day ${day} for bulk hours`} onClick={() => setBulkDays((current) => selected ? current.filter((item) => item !== day) : [...current, day])} className={`flex h-6 w-6 items-center justify-center rounded-full border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${selected ? 'border-blue-600 bg-blue-600 text-white shadow-sm dark:border-blue-400 dark:bg-blue-400 dark:text-slate-950' : 'border-slate-300 bg-white text-transparent hover:border-blue-400 dark:border-slate-600 dark:bg-slate-900'}`}>
+                          <label htmlFor={inputId} className={`cursor-pointer text-[10px] font-bold uppercase tracking-wide ${selected ? colors.bulkText : 'text-slate-500 dark:text-slate-400'}`}>Day {day} <span className="ml-1 normal-case opacity-75">· {weekday}</span></label>
+                          <button type="button" role="checkbox" aria-checked={selected} aria-label={`Select day ${day} for bulk hours`} onClick={() => setBulkDays((current) => selected ? current.filter((item) => item !== day) : [...current, day])} className={`flex h-6 w-6 items-center justify-center rounded-full border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${selected ? colors.bulkCheckbox : 'border-slate-300 bg-white text-transparent hover:border-slate-400 dark:border-slate-600 dark:bg-slate-900'}`}>
                             <Check className="h-3.5 w-3.5" strokeWidth={3} />
                           </button>
                         </div>
-                        <div className={`border-none ${selected ? 'border-blue-200 dark:border-blue-900' : 'border-slate-200 dark:border-slate-700'}`}>
+                        <div className="border-none">
                           <input id={inputId} type="number" min="0" max="15" step="0.25" inputMode="decimal" value={dailyHours[day] ?? ''} onChange={(event) => setDailyHours((current) => ({ ...current, [day]: event.target.value }))} aria-label={`Hours for day ${day}`} className="block w-full border-0 bg-transparent px-2.5 py-2 text-sm font-semibold text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:ring-0 dark:text-white" />
                         </div>
                       </div>;
