@@ -27,6 +27,7 @@ import { useAuth } from './AuthProvider';
 import SearchableSelect from './SearchableSelect';
 import AppDateTimePicker from './ui/AppDateTimePicker';
 import { useOperationalDataSync } from '@/lib/operationalDataSync';
+import OperationalExpenseSubmissionModal from './OperationalExpenseSubmissionModal';
 
 type Row = Record<string, any>;
 const paidAmountFor = (row: Row) => Array.isArray(row.payments) && row.payments.length
@@ -97,7 +98,8 @@ export default function OperationalExpensesWorkspace({
   const [manualTotal, setManualTotal] = useState('');
   const [items, setItems] = useState<Row[]>([{ inventory_item_id: '', name: '', quantity: '1', unit_cost: '0' }]);
 
-  const [showForm, setShowForm] = useState(!finance);
+  const [showForm, setShowForm] = useState(false);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [viewingExpense, setViewingExpense] = useState<Row | null>(null);
 
   // Disbursement Modal State
@@ -247,10 +249,10 @@ export default function OperationalExpensesWorkspace({
         {!readOnly && (
           <button
             type="button"
-            onClick={() => setShowForm((prev) => !prev)}
+            onClick={() => setShowExpenseModal(true)}
             className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs shadow-sm transition flex items-center gap-1.5 shrink-0"
           >
-            <Plus size={15} /> {showForm ? 'Hide Claim Form' : 'Submit Operational Expense Claim'}
+            <Plus size={15} /> Submit Operational Expense Claim
           </button>
         )}
       </div>
@@ -943,6 +945,16 @@ export default function OperationalExpensesWorkspace({
         </div>
         );
       })()}
+
+      {showExpenseModal && (
+        <OperationalExpenseSubmissionModal
+          onClose={() => setShowExpenseModal(false)}
+          onSubmitted={() => {
+            setShowExpenseModal(false);
+            void reload();
+          }}
+        />
+      )}
     </div>
   );
 }
