@@ -2202,7 +2202,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                                   <Truck size={12} /> Equipment Register Batch
                                 </span>
                                 <span className="text-xs font-extrabold text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 px-2 py-0.5 rounded-full">
-                                  {groupItems.length} Equipment Card{groupItems.length === 1 ? '' : 's'}
+                                  {groupItems.length} Equipment
                                 </span>
                               </div>
 
@@ -2217,7 +2217,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                               </div>
 
                               <div className="border-t border-slate-200 dark:border-slate-800 pt-2.5 flex items-center justify-between text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-                                <span className="flex items-center gap-1"><Eye size={13} /> Open Group Dialogue</span>
+                                <span className="flex items-center gap-1"><Eye size={13} /> View Registry</span>
                                 <ChevronRight size={15} className="group-hover:translate-x-1 transition-transform" />
                               </div>
                             </div>
@@ -3612,7 +3612,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                 onClick={() => setMobileGroupTab('CARDS')}
                 className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition ${mobileGroupTab === 'CARDS' ? 'bg-white dark:bg-slate-900 text-indigo-600 shadow-xs' : 'text-slate-500'}`}
               >
-                Equipment Cards ({selectedEquipmentGroup.records.length})
+                Equipment ({selectedEquipmentGroup.records.length})
               </button>
               <button
                 type="button"
@@ -3628,7 +3628,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
               {/* Left Column: Equipment Cards as is */}
               <div className={`md:col-span-5 lg:col-span-4 flex flex-col h-full overflow-y-auto p-3 space-y-3 bg-slate-50/50 dark:bg-slate-900/40 ${mobileGroupTab === 'DETAILS' ? 'hidden md:flex' : 'flex'}`}>
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
-                  Select Equipment Card ({selectedEquipmentGroup.records.length})
+                  Select Equipment ({selectedEquipmentGroup.records.length})
                 </span>
                 {selectedEquipmentGroup.records.map((wo: any) => {
                   const isSelected = selectedGroupEquipmentItem?.id === wo.id;
