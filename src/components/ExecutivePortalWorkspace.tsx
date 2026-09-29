@@ -213,6 +213,9 @@ export default function ExecutivePortalWorkspace() {
   const handledRecordLink = useRef('');
   const [equipmentTab, setEquipmentTab] = useState<'ANALYTICS' | 'ASSETS' | 'MAINTENANCE'>('ANALYTICS');
   const [maintFilter, setMaintFilter] = useState<string>('ALL');
+  const [selectedEquipmentGroup, setSelectedEquipmentGroup] = useState<{ dateLabel: string; records: any[] } | null>(null);
+  const [selectedGroupEquipmentItem, setSelectedGroupEquipmentItem] = useState<any | null>(null);
+  const [mobileGroupTab, setMobileGroupTab] = useState<'CARDS' | 'DETAILS'>('CARDS');
   useEffect(() => {
     const tabParam = new URLSearchParams(window.location.search).get('tab') as ExecutiveTab;
     if (tabParam) {
@@ -2168,6 +2171,60 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                     );
                   }
 
+                  if (maintFilter === 'EQUIPMENT_REGISTER') {
+                    const groupedByDate: { [date: string]: any[] } = {};
+                    filteredRecords.forEach((rec: any) => {
+                      const rawDate = rec.created_at || rec.recorded_at || rec.date;
+                      const dateKey = rawDate
+                        ? new Date(rawDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                        : 'Date Unavailable';
+                      if (!groupedByDate[dateKey]) groupedByDate[dateKey] = [];
+                      groupedByDate[dateKey].push(rec);
+                    });
+
+                    return (
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {Object.entries(groupedByDate).map(([dateLabel, groupItems]) => {
+                          return (
+                            <div
+                              key={dateLabel}
+                              onClick={() => {
+                                setSelectedEquipmentGroup({ dateLabel, records: groupItems });
+                                setSelectedGroupEquipmentItem(groupItems[0]);
+                                setMobileGroupTab('CARDS');
+                              }}
+                              className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-3 cursor-pointer hover:border-indigo-500 hover:shadow-md transition group"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase bg-sky-100 text-sky-800 dark:bg-sky-950/50 dark:text-sky-300 flex items-center gap-1">
+                                  <Truck size={12} /> Equipment Register Batch
+                                </span>
+                                <span className="text-xs font-extrabold text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 px-2 py-0.5 rounded-full">
+                                  {groupItems.length} Equipment Card{groupItems.length === 1 ? '' : 's'}
+                                </span>
+                              </div>
+
+                              <div>
+                                <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5 group-hover:text-indigo-600 transition-colors">
+                                  <Calendar size={15} className="text-indigo-500 shrink-0" />
+                                  Created Date: {dateLabel}
+                                </h4>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 font-medium">
+                                  Units: {groupItems.map((item) => item.unit_number || item.equipment || item.display_title).filter(Boolean).join(', ')}
+                                </p>
+                              </div>
+
+                              <div className="border-t border-slate-200 dark:border-slate-800 pt-2.5 flex items-center justify-between text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                                <span className="flex items-center gap-1"><Eye size={13} /> Open Group Dialogue</span>
+                                <ChevronRight size={15} className="group-hover:translate-x-1 transition-transform" />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
+
                   return (
                     <>
                       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -3516,6 +3573,174 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
             setBanner({ type: 'success', message: 'User registered successfully.' });
           }}
         />
+      )}
+
+      {/* Grouped Equipment Register Dialogue Modal */}
+      {selectedEquipmentGroup && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-2 sm:p-4 backdrop-blur-xs overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-6xl w-full h-[90vh] max-h-[850px] flex flex-col shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-4 py-3 bg-slate-50 dark:bg-slate-950/50 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 flex items-center justify-center font-bold">
+                  <Truck size={18} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                    Equipment Register Batch — {selectedEquipmentGroup.dateLabel}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    {selectedEquipmentGroup.records.length} equipment entries registered on {selectedEquipmentGroup.dateLabel}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setSelectedEquipmentGroup(null); setSelectedGroupEquipmentItem(null); }}
+                className="p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Mobile View Switcher (< md) */}
+            <div className="flex md:hidden border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/40 p-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => setMobileGroupTab('CARDS')}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition ${mobileGroupTab === 'CARDS' ? 'bg-white dark:bg-slate-900 text-indigo-600 shadow-xs' : 'text-slate-500'}`}
+              >
+                Equipment Cards ({selectedEquipmentGroup.records.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileGroupTab('DETAILS')}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition ${mobileGroupTab === 'DETAILS' ? 'bg-white dark:bg-slate-900 text-indigo-600 shadow-xs' : 'text-slate-500'}`}
+              >
+                Card Details
+              </button>
+            </div>
+
+            {/* Main Split Body */}
+            <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-800">
+              {/* Left Column: Equipment Cards as is */}
+              <div className={`md:col-span-5 lg:col-span-4 flex flex-col h-full overflow-y-auto p-3 space-y-3 bg-slate-50/50 dark:bg-slate-900/40 ${mobileGroupTab === 'DETAILS' ? 'hidden md:flex' : 'flex'}`}>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
+                  Select Equipment Card ({selectedEquipmentGroup.records.length})
+                </span>
+                {selectedEquipmentGroup.records.map((wo: any) => {
+                  const isSelected = selectedGroupEquipmentItem?.id === wo.id;
+                  return (
+                    <div
+                      key={wo.id}
+                      onClick={() => {
+                        setSelectedGroupEquipmentItem(wo);
+                        setMobileGroupTab('DETAILS');
+                      }}
+                      className={`rounded-xl border p-4 space-y-2 cursor-pointer transition ${
+                        isSelected
+                          ? 'border-indigo-500 ring-2 ring-indigo-500/30 bg-white dark:bg-slate-800 shadow-sm'
+                          : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase bg-sky-100 text-sky-800 dark:bg-sky-950/50 dark:text-sky-300">
+                            {wo.record_kind || 'Equipment Register'}
+                          </span>
+                          <h4 className="font-bold text-sm text-slate-900 dark:text-white mt-1">
+                            {wo.display_title || wo.title || wo.equipment || wo.job_card_number}
+                          </h4>
+                        </div>
+                        {isSelected && (
+                          <span className="text-[10px] font-extrabold bg-indigo-600 text-white px-2 py-0.5 rounded-full shrink-0">
+                            SELECTED
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 font-medium">
+                        Unit: {wo.unit_number || '—'} · Type: {wo.equipment_type || '—'}
+                      </p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">
+                        {wo.open_defects ? `Defects: ${wo.open_defects}` : wo.description || wo.remarks || 'No notes provided.'}
+                      </p>
+                      <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800/80 pt-2 text-[11px] text-slate-500">
+                        <span>Open defects: {wo.open_defects || '—'}</span>
+                        <span className="font-bold text-indigo-600">{wo.priority || 'NORMAL'}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Right Column: Details View */}
+              <div className={`md:col-span-7 lg:col-span-8 flex flex-col h-full overflow-y-auto p-4 sm:p-6 bg-white dark:bg-slate-900 ${mobileGroupTab === 'CARDS' ? 'hidden md:flex' : 'flex'}`}>
+                {selectedGroupEquipmentItem ? (
+                  <div className="space-y-6">
+                    {/* Top Header Card */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900/60">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-400">
+                          Equipment Register Details
+                        </span>
+                        <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                          {selectedGroupEquipmentItem.equipment || selectedGroupEquipmentItem.display_title || selectedGroupEquipmentItem.title}
+                        </h3>
+                        <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300">
+                          <span>Unit No: <strong>{selectedGroupEquipmentItem.unit_number || '—'}</strong></span>
+                          <span>•</span>
+                          <span>Type: <strong>{selectedGroupEquipmentItem.equipment_type || '—'}</strong></span>
+                        </div>
+                      </div>
+                      <StatusBadge status={selectedGroupEquipmentItem.status || 'ACTIVE'} />
+                    </div>
+
+                    {/* Details Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1">
+                        <span className="text-[10px] font-bold uppercase text-slate-400">Equipment Name / Model</span>
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{selectedGroupEquipmentItem.equipment || '—'}</p>
+                      </div>
+                      <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1">
+                        <span className="text-[10px] font-bold uppercase text-slate-400">Unit Number</span>
+                        <p className="text-sm font-mono font-bold text-indigo-600">{selectedGroupEquipmentItem.unit_number || '—'}</p>
+                      </div>
+                      <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1">
+                        <span className="text-[10px] font-bold uppercase text-slate-400">Equipment Type</span>
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{selectedGroupEquipmentItem.equipment_type || '—'}</p>
+                      </div>
+                      <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1">
+                        <span className="text-[10px] font-bold uppercase text-slate-400">Priority Level</span>
+                        <p className="text-sm font-bold text-indigo-600">{selectedGroupEquipmentItem.priority || 'NORMAL'}</p>
+                      </div>
+                      <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1 sm:col-span-2">
+                        <span className="text-[10px] font-bold uppercase text-slate-400">Open Defects & Issues</span>
+                        <p className="text-xs text-slate-800 dark:text-slate-200 whitespace-pre-line font-medium">{selectedGroupEquipmentItem.open_defects || 'No open defects recorded.'}</p>
+                      </div>
+                      <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1 sm:col-span-2">
+                        <span className="text-[10px] font-bold uppercase text-slate-400">Action Required</span>
+                        <p className="text-xs text-slate-800 dark:text-slate-200 whitespace-pre-line font-medium">{selectedGroupEquipmentItem.action_required || 'No action required.'}</p>
+                      </div>
+                      <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1 sm:col-span-2">
+                        <span className="text-[10px] font-bold uppercase text-slate-400">Remarks / Operational Notes</span>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-line">{selectedGroupEquipmentItem.remarks || selectedGroupEquipmentItem.description || 'No additional remarks.'}</p>
+                      </div>
+                      <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1 sm:col-span-2">
+                        <span className="text-[10px] font-bold uppercase text-slate-400">Created / Recorded Timestamp</span>
+                        <p className="text-xs font-mono text-slate-600 dark:text-slate-400">{selectedGroupEquipmentItem.created_at ? new Date(selectedGroupEquipmentItem.created_at).toLocaleString() : '—'}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full py-12 text-center text-slate-400 space-y-2">
+                    <Truck size={32} className="text-slate-300 dark:text-slate-700" />
+                    <p className="text-sm font-medium">Select an equipment card from the left panel to view details.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
       </div>
     </div>
