@@ -604,7 +604,7 @@ export default function OperationalExpensesWorkspace({
                                 <button
                                   type="button"
                                   onClick={() => void handleOpenFile(`/api/v1/operational-expenses/${row.id}/files/invoice`, row.invoice_name || fileName)}
-                                  className="inline-flex items-center gap-1 text-violet-600 hover:text-violet-800 dark:text-violet-400 font-bold underline text-xs cursor-pointer"
+                                  className="inline-flex items-center gap-1 text-violet-600 hover:text-violet-800 dark:text-violet-400 font-bold no-underline hover:underline text-xs cursor-pointer"
                                 >
                                   <Paperclip size={13} /> {row.invoice_name || fileName}
                                 </button>
@@ -613,7 +613,7 @@ export default function OperationalExpensesWorkspace({
                                 <button
                                   type="button"
                                   onClick={() => void handleOpenFile(`/api/v1/operational-expenses/${row.id}/files/receipt`, row.receipt_name || row.receipt_file_name || 'Receipt')}
-                                  className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 font-bold underline text-xs cursor-pointer"
+                                  className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 font-bold no-underline hover:underline text-xs cursor-pointer"
                                 >
                                   <Paperclip size={13} /> {row.receipt_name || row.receipt_file_name}
                                 </button>
