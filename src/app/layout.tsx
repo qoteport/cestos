@@ -7,6 +7,7 @@ import '../styles/integration.css';
 import AppToaster from '@/components/AppToaster';
 import PwaRuntime from '@/components/PwaRuntime';
 import UniversalFileViewerHost from '@/components/UniversalFileViewerHost';
+import RefreshButtonFeedback from '@/components/RefreshButtonFeedback';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -47,6 +48,7 @@ export default function RootLayout({
         <AppToaster />
         <PwaRuntime />
         <UniversalFileViewerHost />
+        <RefreshButtonFeedback />
 
         </AuthProvider>
 

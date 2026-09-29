@@ -2070,8 +2070,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
         )}
 
         {/* ─── TAB: EQUIPMENTS ─────────────────────────────────────────────── */}
-        {activeTab === 'EQUIPMENTS' && (
-          <div className="space-y-6 fade-in">
+        <div className={`space-y-6 ${activeTab === 'EQUIPMENTS' ? 'fade-in' : 'hidden'}`}>
             {renderFilterBar()}
             <div className="border-b pb-4 border-slate-200 dark:border-slate-800">
               <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
@@ -2242,8 +2241,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                 />}
               </div>
             )}
-          </div>
-        )}
+        </div>
 
         {/* ─── TAB: PURCHASE_ORDERS ─────────────────────────────────────────── */}
         {activeTab === 'PURCHASE_ORDERS' && (() => {

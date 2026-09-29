@@ -945,7 +945,7 @@ export default function FinancePortalWorkspace() {
     const unitC = fuelUnitCost(delivery);
     const curr = fuelCostCurrency(delivery);
     const content = `===========================================================
-CESTOS SMART FINANCE PORTAL - FUEL DELIVERY RECEIPT DOCKET
+CESTOS SMART FINANCE PORTAL - FUEL DELIVERY QUOTATION / INVOICE
 ===========================================================
 Receipt Ref #:     ${delivery.reference_number || delivery.id}
 Date & Time:       ${delivery.recorded_at ? new Date(delivery.recorded_at).toLocaleString() : delivery.delivered_at || '—'}
@@ -1184,6 +1184,7 @@ Signed: Finance & Procurement Administration
       }
 
       setPurchaseOrders((prev) => prev.map((po) => (po.id === editingPo.id ? { ...po, ...updated } : po)));
+      setViewingPo((prev: any) => (prev && prev.id === editingPo.id ? { ...prev, ...updated } : prev));
       setEditingPo(null);
       setEditPoAttachmentFile(null);
       setBanner({ type: 'success', message: `Purchase Order ${editingPo.po_number || editingPo.id} updated successfully.` });
@@ -2285,7 +2286,7 @@ Signed: Finance & Procurement Administration
                   <Fuel className="h-6 w-6 text-violet-600" /> Fuel Operations &amp; Accounting
                 </h2>
                 <p className="text-xs text-muted-foreground">
-                  Bulk purchases, site allocations, receipt docket verification, and consumption analytics.
+                  Bulk purchases, site allocations, quotation / invoice verification, and consumption analytics.
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -2294,12 +2295,6 @@ Signed: Finance & Procurement Administration
                   className="px-3.5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1.5"
                 >
                   <Plus size={15} /> Log Fuel Delivery
-                </button>
-                <button
-                  onClick={() => setShowFuelAllocModal(true)}
-                  className="px-3.5 py-2 bg-card hover:bg-muted text-foreground border rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1.5"
-                >
-                  <Plus size={15} /> Allocate Fuel to Asset
                 </button>
               </div>
             </div>
@@ -2390,7 +2385,7 @@ Signed: Finance & Procurement Administration
                         <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Litres</th>
                         <th className="hidden md:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Unit Cost</th>
                         <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Total Cost</th>
-                        <th className="hidden lg:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Receipt Docket</th>
+                        <th className="hidden lg:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Quotation / Invoice</th>
                         <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
@@ -2418,7 +2413,7 @@ Signed: Finance & Procurement Administration
                                     type="button"
                                     onClick={() => setViewingReceiptDelivery(d)}
                                     className="inline-flex items-center gap-1 px-2 py-1 rounded bg-violet-50 dark:bg-violet-950/40 hover:bg-violet-100 dark:hover:bg-violet-900/60 border border-violet-200 dark:border-violet-800 text-[11px] font-mono font-semibold text-violet-800 dark:text-violet-300 transition"
-                                    title="View Receipt Docket details"
+                                    title="View Quotation / Invoice details"
                                   >
                                     <Paperclip size={12} className="text-violet-600 shrink-0" />
                                     <span className="truncate max-w-[110px]">{fileName}</span>
@@ -2427,7 +2422,7 @@ Signed: Finance & Procurement Administration
                                     type="button"
                                     onClick={() => setViewingReceiptDelivery(d)}
                                     className="p-1 text-muted-foreground hover:text-violet-600 hover:bg-muted rounded transition"
-                                    title="View Fuel Delivery Receipt & Docket"
+                                    title="View Fuel Delivery Quotation / Invoice"
                                   >
                                     <Download size={13} />
                                   </button>
@@ -2437,9 +2432,9 @@ Signed: Finance & Procurement Administration
                                   type="button"
                                   onClick={() => setViewingReceiptDelivery(d)}
                                   className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-violet-600 hover:bg-muted rounded transition"
-                                  title="View Fuel Delivery Docket"
+                                  title="View Fuel Delivery Quotation / Invoice"
                                 >
-                                  <FileText size={12} className="text-muted-foreground" /> View Docket
+                                  <FileText size={12} className="text-muted-foreground" /> View Quotation / Invoice
                                 </button>
                               )}
                             </td>
@@ -2842,7 +2837,7 @@ Signed: Finance & Procurement Administration
                         <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Ref # / Payee</th>
                         <th className="hidden sm:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Payment Method</th>
                         <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Total Amount</th>
-                        <th className="hidden lg:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Receipt Docket</th>
+                        <th className="hidden lg:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Quotation / Invoice</th>
                         <th className="hidden md:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Payments</th>
                         <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Status</th>
                         <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
@@ -2893,13 +2888,13 @@ Signed: Finance & Procurement Administration
                                     const fileUrl = `/api/v1/operational-expenses/${exp.id}/files/${kind}`;
                                     try {
                                       const blob = await apiFetchBlob(fileUrl);
-                                      openUniversalFileViewer({ blob, fileName, title: `Receipt Docket: ${fileName}` });
+                                      openUniversalFileViewer({ blob, fileName, title: `Quotation / Invoice: ${fileName}` });
                                     } catch (err: any) {
-                                      setBanner({ type: 'error', message: err?.message || 'Failed to open docket file.' });
+                                      setBanner({ type: 'error', message: err?.message || 'Failed to open file.' });
                                     }
                                   }}
                                   className="inline-flex items-center gap-1.5 text-violet-600 hover:text-violet-800 dark:text-violet-400 dark:hover:text-violet-300 font-bold text-xs cursor-pointer"
-                                  title={`Click to view docket file: ${fileName}`}
+                                  title={`Click to view file: ${fileName}`}
                                 >
                                   <Paperclip size={13} className="shrink-0" />
                                   <span className="max-w-[150px] truncate">{fileName}</span>
@@ -2907,7 +2902,7 @@ Signed: Finance & Procurement Administration
                               ) : hasInstallmentPayments ? (
                                 <button type="button" onClick={() => setViewingExpense(exp)} className="text-xs font-semibold text-violet-700 hover:text-violet-900 transition-colors">View {exp.payments.length} payment receipt{exp.payments.length === 1 ? '' : 's'}</button>
                               ) : (
-                                <span className="text-muted-foreground text-[11px]">No docket</span>
+                                <span className="text-muted-foreground text-[11px]">No attachment</span>
                               )}
                             </td>
                             <td className="hidden md:table-cell px-4 py-3"><div className="min-w-[205px] space-y-1.5"><div className="flex justify-between gap-2 rounded-md border border-violet-100 bg-violet-50 px-2 py-1.5 dark:border-violet-900 dark:bg-violet-950/30"><span className="text-muted-foreground">Paid to date</span><strong className="whitespace-nowrap">${Number(exp.paid_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div><div className="flex justify-between gap-2 px-1 text-[10px] text-muted-foreground"><span>Balance</span><span className="whitespace-nowrap">${Number(exp.balance_due ?? Math.max(0, cost - Number(exp.paid_amount || 0))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>{Array.isArray(exp.payments) && exp.payments.length ? exp.payments.map((payment: any, index: number) => <div key={payment.id} className="rounded-md border px-2 py-1.5"><div className="flex justify-between gap-2"><span className="text-[10px] font-semibold text-muted-foreground">Installment {index + 1}</span><strong className="whitespace-nowrap">${Number(payment.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div><div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-muted-foreground"><span>{payment.payment_date ? new Date(`${payment.payment_date}T00:00:00`).toLocaleDateString() : 'Date unavailable'}</span>{payment.reference && <span className="max-w-20 truncate" title={payment.reference}>Ref: {payment.reference}</span>}</div>{payment.receipt_name ? <div className="mt-1 flex items-center gap-2 border-t pt-1"><span className="max-w-20 truncate text-[10px] text-muted-foreground" title={payment.receipt_name}>{payment.receipt_name}</span><button type="button" onClick={() => handleOpenFile(`/api/v1/operational-expenses/${exp.id}/payments/${payment.id}/receipt`, payment.receipt_name || 'Payment receipt')} className="text-[10px] font-bold text-violet-700 hover:text-violet-900 transition-colors">View</button><button type="button" onClick={() => void downloadPurchaseOrderPaymentReceipt({ ...payment, expense_id: exp.id })} className="text-[10px] font-bold text-violet-700 hover:text-violet-900 transition-colors">Download</button></div> : <span className="mt-1 block text-[10px] text-muted-foreground">No receipt attached</span>}</div>) : <span className="text-[10px] text-muted-foreground">No payments recorded</span>}</div></td>
@@ -3586,7 +3581,7 @@ Signed: Finance & Procurement Administration
                   )}
                   <button
                     type="button"
-                    onClick={() => { const targetPo = viewingPo; setViewingPo(null); openEditPoModal(targetPo); }}
+                    onClick={() => openEditPoModal(viewingPo)}
                     className="px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center gap-1"
                   >
                     <Pencil size={13} /> Edit PO
@@ -3607,7 +3602,7 @@ Signed: Finance & Procurement Administration
 
       {/* Edit Purchase Order Modal */}
       {editingPo && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs overflow-y-auto">
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs overflow-y-auto">
           <div className="bg-card border rounded-2xl p-6 max-w-5xl w-full max-h-[92vh] overflow-y-auto space-y-5 shadow-2xl my-8">
             <div className="flex items-center justify-between border-b pb-3 border-border">
               <h3 className="font-bold text-base flex items-center gap-2 text-foreground">
@@ -3889,7 +3884,7 @@ Signed: Finance & Procurement Administration
           <div className="bg-card border rounded-2xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="font-bold text-base flex items-center gap-2">
-                <Paperclip className="h-5 w-5 text-violet-600" /> Fuel Receipt Docket
+                <Paperclip className="h-5 w-5 text-violet-600" /> Fuel Quotation / Invoice
               </h3>
               <button onClick={() => setViewingReceiptDelivery(null)} className="p-1 rounded-lg hover:bg-muted text-muted-foreground"><X size={18} /></button>
             </div>
@@ -3906,7 +3901,7 @@ Signed: Finance & Procurement Administration
                   onClick={() => openUniversalFileViewer({
                     fileUrl: `/api/v1/field-portal/fuel-deliveries/${viewingReceiptDelivery.id}/receipt`,
                     fileName: viewingReceiptDelivery.receipt_file_name,
-                    title: 'Fuel delivery receipt and docket',
+                    title: 'Fuel delivery receipt and quotation / invoice',
                   })}
                   className="px-4 py-2 border border-violet-200 text-violet-700 font-bold rounded-xl text-xs hover:bg-violet-50 flex items-center gap-1.5"
                 >
@@ -3918,7 +3913,7 @@ Signed: Finance & Procurement Administration
                 onClick={() => handleDownloadFuelReceipt(viewingReceiptDelivery)}
                 className="px-4 py-2 bg-violet-600 text-white font-bold rounded-xl text-xs hover:bg-violet-700 flex items-center gap-1.5"
               >
-                <Download size={14} /> Download Receipt Docket
+                <Download size={14} /> Download Quotation / Invoice
               </button>
             </div>
           </div>
@@ -4665,7 +4660,7 @@ Signed: Finance & Procurement Administration
                 </div>
                 <div>
                   <h3 className="font-bold text-base text-slate-900 dark:text-white">
-                    Fuel Delivery Receipt &amp; Docket
+                    Fuel Delivery Quotation / Invoice
                   </h3>
                   <p className="text-xs text-slate-500 font-mono">
                     Ref #: {viewingReceiptDelivery.reference_number || `REC-${String(viewingReceiptDelivery.id).slice(0, 8)}`}
@@ -4938,7 +4933,7 @@ Signed: Finance & Procurement Administration
                     />
                   </div>
                   <div>
-                    <label className="block font-bold mb-1">Receipt / Docket Attachment</label>
+                    <label className="block font-bold mb-1">Quotation / Invoice Attachment</label>
                     <input
                       type="file"
                       accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"

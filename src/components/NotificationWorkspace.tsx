@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Bell, CheckCircle2, Share2, Plus, RefreshCw, Search, Filter, Wrench, Package, Users, FolderKanban, Clock, Mail, ShieldAlert, Play, Trash2, Pencil, ExternalLink } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
+import { usePathname } from 'next/navigation';
 import { useAuth } from './AuthProvider';
 import useNotificationCount from './useNotificationCount';
 import useNotificationData from './useNotificationData';
@@ -48,7 +49,71 @@ const isImmediateFinanceRule = (rule: unknown) => [
   'FINANCE_PURCHASE_ORDER_GOODS_RECEIVED',
 ].includes(String(rule || ''));
 
-export default function NotificationWorkspace({ fieldPortal = false, hideSchedules = false }: { fieldPortal?: boolean; hideSchedules?: boolean }) {
+const themeStyles = {
+  emerald: {
+    icon: 'text-emerald-600 dark:text-emerald-400',
+    unreadBadge: 'p-2 bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 rounded-lg',
+    activeTab: 'border-emerald-600 text-emerald-700 dark:border-emerald-500 dark:text-emerald-400 font-bold',
+    activePill: 'bg-emerald-600 text-white font-bold',
+    unreadCard: 'bg-emerald-50/50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 shadow-xs',
+    button: 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold border-none',
+  },
+  indigo: {
+    icon: 'text-indigo-600 dark:text-indigo-400',
+    unreadBadge: 'p-2 bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 rounded-lg',
+    activeTab: 'border-indigo-600 text-indigo-700 dark:border-indigo-500 dark:text-indigo-400 font-bold',
+    activePill: 'bg-indigo-600 text-white font-bold',
+    unreadCard: 'bg-indigo-50/50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800 shadow-xs',
+    button: 'bg-indigo-600 hover:bg-indigo-700 text-white font-bold border-none',
+  },
+  violet: {
+    icon: 'text-violet-600 dark:text-violet-400',
+    unreadBadge: 'p-2 bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300 rounded-lg',
+    activeTab: 'border-violet-600 text-violet-700 dark:border-violet-500 dark:text-violet-400 font-bold',
+    activePill: 'bg-violet-600 text-white font-bold',
+    unreadCard: 'bg-violet-50/50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800 shadow-xs',
+    button: 'bg-violet-600 hover:bg-violet-700 text-white font-bold border-none',
+  },
+  orange: {
+    icon: 'text-orange-600 dark:text-orange-400',
+    unreadBadge: 'p-2 bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300 rounded-lg',
+    activeTab: 'border-orange-600 text-orange-700 dark:border-orange-500 dark:text-orange-400 font-bold',
+    activePill: 'bg-orange-600 text-white font-bold',
+    unreadCard: 'bg-orange-50/50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-900 shadow-xs',
+    button: 'bg-orange-600 hover:bg-orange-700 text-white font-bold border-none',
+  },
+  amber: {
+    icon: 'text-amber-600 dark:text-amber-400',
+    unreadBadge: 'p-2 bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 rounded-lg',
+    activeTab: 'border-amber-600 text-amber-700 dark:border-amber-500 dark:text-amber-400 font-bold',
+    activePill: 'bg-amber-600 text-white font-bold',
+    unreadCard: 'bg-amber-50/50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900 shadow-xs',
+    button: 'bg-amber-600 hover:bg-amber-700 text-white font-bold border-none',
+  },
+};
+
+export default function NotificationWorkspace({
+  fieldPortal = false,
+  hideSchedules = false,
+  colorScheme,
+  accent,
+}: {
+  fieldPortal?: boolean;
+  hideSchedules?: boolean;
+  colorScheme?: keyof typeof themeStyles;
+  accent?: keyof typeof themeStyles;
+}) {
+  const pathname = usePathname() || '';
+  const effectiveTheme: keyof typeof themeStyles = (
+    accent || colorScheme || (
+      pathname.includes('/hr-portal') ? 'emerald' :
+      pathname.includes('/executive-portal') ? 'indigo' :
+      pathname.includes('/finance-portal') ? 'violet' :
+      pathname.includes('/field-admin-portal') ? 'orange' :
+      fieldPortal ? 'orange' : 'violet'
+    )
+  );
+  const activeTheme = themeStyles[effectiveTheme] || themeStyles.violet;
   const auth = useAuth();
   const canManageSchedules = !fieldPortal && !hideSchedules && (!!auth.access?.is_superuser || auth.user?.portal_type === 'FINANCE' || ['employees.alerts.manage', 'inventory.manage', 'inventory.admin', 'inventory.write', 'assets.update', 'assets.manage', 'assets.write', 'projects.update', 'projects.manage', 'projects.write', 'finance.expenses.manage', 'operational_expenses.manage', 'hse.manage', 'hse.incidents.manage', 'hse.write'].some(code => auth.access?.permissions.includes(code)) || ['finance', 'accountant', 'accounts payable', 'hse', 'hse officer', 'hse manager', 'safety', 'safety officer'].some(role => auth.access?.roles.some(value => value.toLowerCase() === role)));
   const [page, setPage] = useState(1);
@@ -308,7 +373,7 @@ export default function NotificationWorkspace({ fieldPortal = false, hideSchedul
       <div className="flex flex-wrap justify-between items-end gap-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2.5">
-            <Bell className={fieldPortal ? "text-orange-600 dark:text-orange-400" : "text-primary"} size={26} />
+            <Bell className={activeTheme.icon} size={26} />
             {fieldPortal ? 'Field Notifications' : 'Notification Queue'}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -320,7 +385,7 @@ export default function NotificationWorkspace({ fieldPortal = false, hideSchedul
             <RefreshCw size={14} />
             Refresh
           </button>
-          {(!fieldPortal && !hideSchedules) && <button className="btn-primary text-xs" onClick={openCreateSchedule}>
+          {(!fieldPortal && !hideSchedules) && <button className={`text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 ${activeTheme.button}`} onClick={openCreateSchedule}>
             <Plus size={14} />
             New Schedule
           </button>}
@@ -332,7 +397,7 @@ export default function NotificationWorkspace({ fieldPortal = false, hideSchedul
         <div className="card p-4 border border-border">
           <div className="flex justify-between items-start">
             <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">Unread Alerts</span>
-            <span className={fieldPortal ? "p-2 bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300 rounded-lg" : "p-2 bg-blue-50 text-blue-600 rounded-lg"}><Bell size={16} /></span>
+            <span className={activeTheme.unreadBadge}><Bell size={16} /></span>
           </div>
           <p className="text-2xl font-bold text-foreground mt-2">{unreadCount}</p>
         </div>
@@ -358,9 +423,9 @@ export default function NotificationWorkspace({ fieldPortal = false, hideSchedul
         <div className="card p-4 border border-border">
           <div className="flex justify-between items-start">
             <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider">Total Feed Log</span>
-            <span className={fieldPortal ? "p-2 bg-orange-50 text-orange-600 dark:bg-orange-950 dark:text-orange-400 rounded-lg" : "p-2 bg-emerald-50 text-emerald-600 rounded-lg"}><CheckCircle2 size={16} /></span>
+            <span className={activeTheme.unreadBadge}><CheckCircle2 size={16} /></span>
           </div>
-          <p className={fieldPortal ? "text-2xl font-bold text-orange-700 dark:text-orange-400 mt-2" : "text-2xl font-bold text-emerald-700 mt-2"}>{totalNotifs}</p>
+          <p className="text-2xl font-bold text-foreground mt-2">{totalNotifs}</p>
         </div>
       </div>
 
@@ -369,7 +434,7 @@ export default function NotificationWorkspace({ fieldPortal = false, hideSchedul
         <button
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             tab === 'notifications'
-              ? (fieldPortal ? 'border-orange-600 text-orange-600 font-bold dark:border-orange-500 dark:text-orange-400' : 'border-primary text-primary') :'border-transparent text-muted-foreground hover:text-foreground'
+              ? activeTheme.activeTab : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
           onClick={() => setTab('notifications')}
         >
@@ -379,7 +444,7 @@ export default function NotificationWorkspace({ fieldPortal = false, hideSchedul
         {(!fieldPortal && !hideSchedules) && <>
         <button
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
-            tab === 'schedules' ?'border-primary text-primary' :'border-transparent text-muted-foreground hover:text-foreground'
+            tab === 'schedules' ? activeTheme.activeTab : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
           disabled={!canManageSchedules} onClick={() => setTab('schedules')}
         >
@@ -402,7 +467,7 @@ export default function NotificationWorkspace({ fieldPortal = false, hideSchedul
                   key={d}
                   className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${
                     domainFilter === d
-                      ? (fieldPortal ? 'bg-orange-600 text-white font-bold' : 'bg-primary text-primary-foreground')
+                      ? activeTheme.activePill
                       : 'bg-white text-muted-foreground hover:bg-muted border'
                   }`}
                   onClick={() => setDomainFilter(d)}
@@ -444,7 +509,7 @@ export default function NotificationWorkspace({ fieldPortal = false, hideSchedul
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <button className={`btn-secondary text-xs ${fieldPortal ? 'bg-orange-600 hover:bg-orange-700 text-white font-bold border-none' : ''}`}>
+            <button className={`btn-secondary text-xs ${activeTheme.button}`}>
               <Search size={14} /> Search
             </button>
           </form>
@@ -473,7 +538,7 @@ export default function NotificationWorkspace({ fieldPortal = false, hideSchedul
                         isResolved
                           ? 'bg-slate-50/60 border-slate-200 text-slate-600 opacity-80'
                           : isRead
-                            ? 'bg-white border-border' : fieldPortal ? 'bg-orange-50/40 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900 shadow-sm' : 'bg-blue-50/30 border-blue-200 shadow-sm'
+                            ? 'bg-white border-border' : activeTheme.unreadCard
                       }`}
                     >
                       <div className="flex flex-wrap justify-between items-start gap-3">

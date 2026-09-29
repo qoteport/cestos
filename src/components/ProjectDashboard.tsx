@@ -78,9 +78,11 @@ export function ProjectRegister({
   const params = new URLSearchParams({ page: String(page), page_size: '20', search });
   if (status) params.set('status', status);
   const data = useData('/api/v1/projects?' + params);
-  const list = [...rows(data.data)].sort((a, b) =>
-    String(a[sort] || '').localeCompare(String(b[sort] || ''))
-  );
+  const list = [...rows(data.data)].sort((a, b) => {
+    const activeOrder = Number(String(b.status || '').toUpperCase() === 'ACTIVE') - Number(String(a.status || '').toUpperCase() === 'ACTIVE');
+    if (activeOrder) return activeOrder;
+    return String(a[sort] || '').localeCompare(String(b[sort] || ''));
+  });
 
   function exportPage() {
     const fields = ['project_number', 'name', 'status', 'start_date', 'expected_end_date', 'target_metres'];
