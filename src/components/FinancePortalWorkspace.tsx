@@ -3568,7 +3568,7 @@ Signed: Finance & Procurement Administration
                       onClick={() => void viewPoAttachment(viewingPo)}
                       className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 transition"
                     >
-                      <Eye size={14} /> View Quotation / Supporting Document
+                      <Eye size={14} /> View Quotation / Purchase Order
                     </button>
                   ) : (
                     <button
@@ -3921,114 +3921,129 @@ Signed: Finance & Procurement Administration
       )}
 
       {/* View Operational Expense Voucher Modal */}
-      {viewingExpense && (() => {
-        const vName = viewingExpense.submitted_by_name || viewingExpense.submitted_by?.full_name || (viewingExpense.submitted_by?.first_name ? `${viewingExpense.submitted_by.first_name} ${viewingExpense.submitted_by.last_name || ''}`.trim() : null) || viewingExpense.created_by_name || (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'Operations Supervisor');
-        const vPos = viewingExpense.submitted_by_position || viewingExpense.submitted_by_title || viewingExpense.submitted_by?.job_title || viewingExpense.submitted_by?.role || (user?.is_superuser ? 'Operations Director' : user?.portal_type ? `${user.portal_type.replace('_', ' ')} Admin` : 'Field Administrator');
-        const vEmail = viewingExpense.submitted_by_email || viewingExpense.submitted_by?.email || viewingExpense.email || user?.email || 'operations@cestos.com';
+      {viewingExpense && createPortal(
+        (() => {
+          const vName = viewingExpense.submitted_by_name || viewingExpense.submitted_by?.full_name || (viewingExpense.submitted_by?.first_name ? `${viewingExpense.submitted_by.first_name} ${viewingExpense.submitted_by.last_name || ''}`.trim() : null) || viewingExpense.created_by_name || (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'Operations Supervisor');
+          const vPos = viewingExpense.submitted_by_position || viewingExpense.submitted_by_title || viewingExpense.submitted_by?.job_title || viewingExpense.submitted_by?.role || (user?.is_superuser ? 'Operations Director' : user?.portal_type ? `${user.portal_type.replace('_', ' ')} Admin` : 'Field Administrator');
+          const vEmail = viewingExpense.submitted_by_email || viewingExpense.submitted_by?.email || viewingExpense.email || user?.email || 'operations@cestos.com';
 
-        return (
-          <div className="fixed inset-0 bg-slate-950/75 z-[9999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
-            <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-4xl border-0 sm:border border-slate-200 dark:border-slate-800 rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
-              {/* Sticky Header */}
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-violet-50 dark:bg-violet-950/40 text-violet-600 flex items-center justify-center font-bold">
-                    <DollarSign size={18} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-base text-slate-900 dark:text-white">
-                      Operational Expense Voucher
-                    </h3>
-                    <p className="text-xs text-slate-500 font-mono">
-                      Ref #: {viewingExpense.expense_number || viewingExpense.reference_number || `EXP-${String(viewingExpense.id).slice(0, 8)}`}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setViewingExpense(null)}
-                  className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              {/* Content Body */}
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-white dark:bg-slate-900">
-                {/* Summary Header Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
-                  {/* Left Column */}
-                  <div className="space-y-4">
+          return (
+            <div className="fixed inset-0 bg-black/75 backdrop-blur-xs z-[100000] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
+              <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-4xl border-0 sm:border border-slate-200 dark:border-slate-800 rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+                {/* Sticky Header */}
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-violet-50 dark:bg-violet-950/40 text-violet-600 flex items-center justify-center font-bold">
+                      <DollarSign size={18} />
+                    </div>
                     <div>
-                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-violet-600">Official Expense Claim</span>
-                      <h4 className="text-lg font-black text-slate-900 dark:text-white mt-1">
-                        {viewingExpense.pay_to_name || 'Operational Vendor'}
-                      </h4>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Payment Method: {(viewingExpense.payment_method || 'MOBILE_MONEY').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                      <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                        Operational Expense Voucher
+                      </h3>
+                      <p className="text-xs text-slate-500 font-mono">
+                        Ref #: {viewingExpense.expense_number || viewingExpense.reference_number || `EXP-${String(viewingExpense.id).slice(0, 8)}`}
                       </p>
                     </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setViewingExpense(null)}
+                    className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
 
-                    <div className="flex items-center gap-3 pt-1">
-                      <StatusBadge status={viewingExpense.status || 'SUBMITTED'} />
-                      <span className="text-xs text-slate-400 font-mono">
-                        {viewingExpense.expense_date || '—'}
-                      </span>
-                    </div>
-
-                    <div className="p-3 rounded-xl border border-violet-100 dark:border-violet-900/40 bg-violet-50/50 dark:bg-violet-950/20 text-xs space-y-1">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-violet-600 dark:text-violet-400 block">Submitted By</span>
-                      <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5"><User size={13} className="text-violet-600 shrink-0" /> {vName}</p>
-                      <p className="text-[11px] text-slate-500 font-medium">{vPos}</p>
-                      <a href={`mailto:${vEmail}`} className="text-violet-600 dark:text-violet-400 hover:underline font-mono text-[11px] font-bold inline-flex items-center gap-1">
-                        <Mail size={11} /> {vEmail}
-                      </a>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+                {/* Content Body */}
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-white dark:bg-slate-900">
+                  {/* Summary Header Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+                    {/* Left Column */}
+                    <div className="space-y-4">
                       <div>
-                        <span className="block text-[10px] uppercase font-bold text-slate-400">Payable To</span>
-                        <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{viewingExpense.pay_to_name || '—'}</span>
+                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-violet-600">Official Expense Claim</span>
+                        <h4 className="text-lg font-black text-slate-900 dark:text-white mt-1">
+                          {viewingExpense.pay_to_name || 'Operational Vendor'}
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Payment Method: {(viewingExpense.payment_method || 'MOBILE_MONEY').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                        </p>
                       </div>
-                      <div className="text-right">
-                        <span className="block text-[10px] uppercase font-bold text-slate-400">Total Expenditure</span>
-                        <span className="text-lg font-black text-emerald-600">
-                          ${Number(viewingExpense.total_cost || viewingExpense.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+
+                      <div className="flex items-center gap-3 pt-1">
+                        <StatusBadge status={viewingExpense.status || 'SUBMITTED'} />
+                        <span className="text-xs text-slate-400 font-mono">
+                          {viewingExpense.expense_date || '—'}
                         </span>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Right Column */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm h-fit">
-                    <div>
-                      <span className="block text-[10px] uppercase font-bold text-slate-400">Payee phone</span>
-                      <span className="font-medium text-slate-700 dark:text-slate-200">{viewingExpense.pay_to_phone || '—'}</span>
+                      <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+                        <div>
+                          <span className="block text-[10px] uppercase font-bold text-slate-400">Payable To</span>
+                          <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{viewingExpense.pay_to_name || '—'}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="block text-[10px] uppercase font-bold text-slate-400">Total Expenditure</span>
+                          <span className="text-lg font-black text-emerald-600">
+                            ${Number(viewingExpense.total_cost || viewingExpense.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm">
+                        <div>
+                          <span className="block text-[10px] uppercase font-bold text-slate-400">Payee phone</span>
+                          <span className="font-medium text-slate-700 dark:text-slate-200">{viewingExpense.pay_to_phone || '—'}</span>
+                        </div>
+                        <div>
+                          <span className="block text-[10px] uppercase font-bold text-slate-400">Bank account details</span>
+                          <span className="font-medium text-slate-700 dark:text-slate-200 whitespace-pre-wrap">{viewingExpense.bank_account_details || '—'}</span>
+                        </div>
+                        <div>
+                          <span className="block text-[10px] uppercase font-bold text-slate-400">Paid to date</span>
+                          <span className="font-bold text-emerald-600">
+                            ${Number(viewingExpense.paid_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="block text-[10px] uppercase font-bold text-slate-400">Remaining Balance</span>
+                          <span className="font-bold text-amber-600">
+                            ${Number(viewingExpense.balance_due ?? Math.max(0, Number(viewingExpense.total_cost || viewingExpense.amount || 0) - Number(viewingExpense.paid_amount || 0))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="block text-[10px] uppercase font-bold text-slate-400">Payment method</span>
+                          <span className="font-medium text-slate-700 dark:text-slate-200">
+                            {(viewingExpense.payment_method || 'MOBILE_MONEY').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="block text-[10px] uppercase font-bold text-slate-400">Purchase order</span>
+                          <span className="font-medium text-slate-700 dark:text-slate-200">
+                            {viewingExpense.purchase_order_number || (viewingExpense.purchase_order_id ? String(viewingExpense.purchase_order_id).slice(0, 8) : 'Not linked')}
+                          </span>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <span className="block text-[10px] uppercase font-bold text-slate-400">Paid at</span>
+                          <span className="font-medium text-slate-700 dark:text-slate-200">
+                            {viewingExpense.paid_at ? new Date(viewingExpense.paid_at).toLocaleString() : 'Not paid'}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <span className="block text-[10px] uppercase font-bold text-slate-400">Bank account details</span>
-                      <span className="font-medium text-slate-700 dark:text-slate-200 whitespace-pre-wrap">{viewingExpense.bank_account_details || '—'}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[10px] uppercase font-bold text-slate-400">Payment method</span>
-                      <span className="font-medium text-slate-700 dark:text-slate-200">
-                        {(viewingExpense.payment_method || 'MOBILE_MONEY').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="block text-[10px] uppercase font-bold text-slate-400">Purchase order</span>
-                      <span className="font-medium text-slate-700 dark:text-slate-200">
-                        {viewingExpense.purchase_order_number || (viewingExpense.purchase_order_id ? String(viewingExpense.purchase_order_id).slice(0, 8) : 'Not linked')}
-                      </span>
-                    </div>
-                    <div className="sm:col-span-2">
-                      <span className="block text-[10px] uppercase font-bold text-slate-400">Paid at</span>
-                      <span className="font-medium text-slate-700 dark:text-slate-200">
-                        {viewingExpense.paid_at ? new Date(viewingExpense.paid_at).toLocaleString() : 'Not paid'}
-                      </span>
+
+                    {/* Right Column */}
+                    <div className="space-y-4 h-fit">
+                      <div className="p-4 rounded-xl border border-violet-100 dark:border-violet-900/40 bg-violet-50/50 dark:bg-violet-950/20 text-xs space-y-2">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-violet-600 dark:text-violet-400 block">Submitted By</span>
+                        <p className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-1.5"><User size={15} className="text-violet-600 shrink-0" /> {vName}</p>
+                        <p className="text-xs text-slate-500 font-medium">{vPos}</p>
+                        <a href={`mailto:${vEmail}`} className="text-violet-600 dark:text-violet-400 hover:underline font-mono text-xs font-bold inline-flex items-center gap-1">
+                          <Mail size={12} /> {vEmail}
+                        </a>
+                      </div>
                     </div>
                   </div>
-                </div>
 
                 {/* Items Purchased Section */}
                 {Array.isArray(viewingExpense.items) && viewingExpense.items.length > 0 && (
@@ -4144,7 +4159,9 @@ Signed: Finance & Procurement Administration
             </div>
           </div>
         );
-      })()}
+      })(),
+      document.body
+    )}
 
       {/* Process Payment Disbursement Modal in Finance Portal */}
       {payingExpense && (() => {

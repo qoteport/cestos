@@ -218,6 +218,15 @@ export default function ExecutivePortalWorkspace() {
   const [selectedEquipmentGroup, setSelectedEquipmentGroup] = useState<{ dateLabel: string; records: any[] } | null>(null);
   const [selectedGroupEquipmentItem, setSelectedGroupEquipmentItem] = useState<any | null>(null);
   const [mobileGroupTab, setMobileGroupTab] = useState<'CARDS' | 'DETAILS'>('CARDS');
+  const [selectedBatchCardIds, setSelectedBatchCardIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (selectedEquipmentGroup?.records) {
+      setSelectedBatchCardIds(selectedEquipmentGroup.records.map((r: any) => String(r.id)));
+    } else {
+      setSelectedBatchCardIds([]);
+    }
+  }, [selectedEquipmentGroup]);
   useEffect(() => {
     const tabParam = new URLSearchParams(window.location.search).get('tab') as ExecutiveTab;
     if (tabParam) {
@@ -2888,7 +2897,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                     onClick={() => void handleViewPOFile(selectedPO.id)}
                     className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 transition"
                   >
-                    <Eye size={14} /> View Quotation / Supporting Document
+                    <Eye size={14} /> View Quotation / Purchase Order
                   </button>
                 ) : (
                   <button

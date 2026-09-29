@@ -1760,7 +1760,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                     onClick={() => void handleViewPOFile(selectedPO.id)}
                     className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 transition"
                   >
-                    <Eye size={14} /> View Quotation / Supporting Document
+                    <Eye size={14} /> View Quotation / Purchase Order
                   </button>
                 ) : (
                   <button

@@ -760,7 +760,7 @@ export default function FieldPurchaseOrdersPanel({
                   onClick={() => void handleViewPOAttachment(viewDetailPO.id)}
                   className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 transition w-full sm:w-auto"
                 >
-                  <Eye size={14} /> View Quotation / Supporting Document
+                  <Eye size={14} /> View Quotation / Purchase Order
                 </button>
               ) : (
                 <button

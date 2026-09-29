@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import {
   HardHat, Bell, User, Wrench, ShieldCheck, Clock, Truck, RefreshCw, LogOut, Menu, X, Pencil, Printer,
-  AlertTriangle, Plus, CheckCircle2, DollarSign, Fuel, Users, FileText, Download, Eye,
+  AlertTriangle, Plus, CheckCircle2, DollarSign, Fuel, Users, FileText, Download, Eye, Mail,
   Building2, Calendar, FilePlus, ChevronRight, Check, Ban, AlertCircle, Sparkles, Filter,
   Activity, Paperclip, Upload, Package, Trash2, TrendingUp, File, ArrowLeft, BarChart2, ChevronDown, ChevronUp, Search,
   Zap, Droplet, ShieldAlert, UserCheck, ShoppingCart, MoreHorizontal
@@ -187,6 +187,15 @@ export default function FieldAdminPortalWorkspace() {
   const [selectedEquipmentGroup, setSelectedEquipmentGroup] = useState<{ dateLabel: string; records: any[] } | null>(null);
   const [selectedGroupEquipmentItem, setSelectedGroupEquipmentItem] = useState<any | null>(null);
   const [mobileGroupTab, setMobileGroupTab] = useState<'CARDS' | 'DETAILS'>('CARDS');
+  const [selectedBatchCardIds, setSelectedBatchCardIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (selectedEquipmentGroup?.records) {
+      setSelectedBatchCardIds(selectedEquipmentGroup.records.map((r: any) => String(r.id)));
+    } else {
+      setSelectedBatchCardIds([]);
+    }
+  }, [selectedEquipmentGroup]);
 
   // Equipment state
   const [showAddAssetModal, setShowAddAssetModal] = useState(false);
@@ -5325,100 +5334,116 @@ Signed: Field Operations Administration
       )}
 
       {/* View Operational Expense Voucher Modal */}
-      {viewingExpense && createPortal(
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
-          <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-4xl border-0 sm:border border-slate-200 dark:border-slate-800 rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
-            {/* Sticky Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-950/40 text-orange-600 flex items-center justify-center font-bold">
-                  <DollarSign size={18} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base text-slate-900 dark:text-white">
-                    Operational Expense Voucher
-                  </h3>
-                  <p className="text-xs text-slate-500 font-mono">
-                    Ref #: {viewingExpense.expense_number || `EXP-${String(viewingExpense.id).slice(0, 8)}`}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setViewingExpense(null)}
-                className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"
-              >
-                <X size={20} />
-              </button>
-            </div>
+      {viewingExpense && (() => {
+        const vName = viewingExpense.submitted_by_name || viewingExpense.submitted_by?.full_name || (viewingExpense.submitted_by?.first_name ? `${viewingExpense.submitted_by.first_name} ${viewingExpense.submitted_by.last_name || ''}`.trim() : null) || viewingExpense.created_by_name || (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'Operations Supervisor');
+        const vPos = viewingExpense.submitted_by_position || viewingExpense.submitted_by_title || viewingExpense.submitted_by?.job_title || viewingExpense.submitted_by?.role || (user?.is_superuser ? 'Operations Director' : user?.portal_type ? `${user.portal_type.replace('_', ' ')} Admin` : 'Field Administrator');
+        const vEmail = viewingExpense.submitted_by_email || viewingExpense.submitted_by?.email || viewingExpense.email || user?.email || 'operations@cestos.com';
 
-            {/* Content Body */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-white dark:bg-slate-900">
-              {/* Summary Header Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
-                {/* Left Column */}
-                <div className="space-y-4">
+        return createPortal(
+          <div className="fixed inset-0 bg-black/75 backdrop-blur-xs z-[100000] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
+            <div className="bg-white dark:bg-slate-900 w-full h-full sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-4xl border-0 sm:border border-slate-200 dark:border-slate-800 rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+              {/* Sticky Header */}
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-950/40 text-orange-600 flex items-center justify-center font-bold">
+                    <DollarSign size={18} />
+                  </div>
                   <div>
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-orange-600">Official Expense Claim</span>
-                    <h4 className="text-lg font-black text-slate-900 dark:text-white mt-1">
-                      {viewingExpense.pay_to_name || 'Operational Vendor'}
-                    </h4>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Payment Method: {(viewingExpense.payment_method || 'MOBILE_MONEY').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                    <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                      Operational Expense Voucher
+                    </h3>
+                    <p className="text-xs text-slate-500 font-mono">
+                      Ref #: {viewingExpense.expense_number || `EXP-${String(viewingExpense.id).slice(0, 8)}`}
                     </p>
                   </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setViewingExpense(null)}
+                  className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"
+                >
+                  <X size={20} />
+                </button>
+              </div>
 
-                  <div className="flex items-center gap-3 pt-1">
-                    <StatusBadge status={viewingExpense.status || 'SUBMITTED'} />
-                    <span className="text-xs text-slate-400 font-mono">
-                      {viewingExpense.expense_date || '—'}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+              {/* Content Body */}
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-white dark:bg-slate-900">
+                {/* Summary Header Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+                  {/* Left Column */}
+                  <div className="space-y-4">
                     <div>
-                      <span className="block text-[10px] uppercase font-bold text-slate-400">Payable To</span>
-                      <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{viewingExpense.pay_to_name || '—'}</span>
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-orange-600">Official Expense Claim</span>
+                      <h4 className="text-lg font-black text-slate-900 dark:text-white mt-1">
+                        {viewingExpense.pay_to_name || 'Operational Vendor'}
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Payment Method: {(viewingExpense.payment_method || 'MOBILE_MONEY').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                      </p>
                     </div>
-                    <div className="text-right">
-                      <span className="block text-[10px] uppercase font-bold text-slate-400">Total Expenditure</span>
-                      <span className="text-lg font-black text-emerald-600">
-                        ${Number(viewingExpense.total_cost || viewingExpense.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+
+                    <div className="flex items-center gap-3 pt-1">
+                      <StatusBadge status={viewingExpense.status || 'SUBMITTED'} />
+                      <span className="text-xs text-slate-400 font-mono">
+                        {viewingExpense.expense_date || '—'}
                       </span>
                     </div>
-                  </div>
-                </div>
 
-                {/* Right Column */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm h-fit">
-                  <div>
-                    <span className="block text-[10px] uppercase font-bold text-slate-400">Payee phone</span>
-                    <span className="font-medium text-slate-700 dark:text-slate-200">{viewingExpense.pay_to_phone || '—'}</span>
+                    <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+                      <div>
+                        <span className="block text-[10px] uppercase font-bold text-slate-400">Payable To</span>
+                        <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{viewingExpense.pay_to_name || '—'}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="block text-[10px] uppercase font-bold text-slate-400">Total Expenditure</span>
+                        <span className="text-lg font-black text-emerald-600">
+                          ${Number(viewingExpense.total_cost || viewingExpense.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm">
+                      <div>
+                        <span className="block text-[10px] uppercase font-bold text-slate-400">Payee phone</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-200">{viewingExpense.pay_to_phone || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] uppercase font-bold text-slate-400">Bank account details</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-200 whitespace-pre-wrap">{viewingExpense.bank_account_details || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] uppercase font-bold text-slate-400">Payment method</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-200">
+                          {(viewingExpense.payment_method || 'MOBILE_MONEY').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] uppercase font-bold text-slate-400">Purchase order</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-200">
+                          {viewingExpense.purchase_order_number || (viewingExpense.purchase_order_id ? String(viewingExpense.purchase_order_id).slice(0, 8) : 'Not linked')}
+                        </span>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <span className="block text-[10px] uppercase font-bold text-slate-400">Paid at</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-200">
+                          {viewingExpense.paid_at ? new Date(viewingExpense.paid_at).toLocaleString() : 'Not paid'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <span className="block text-[10px] uppercase font-bold text-slate-400">Bank account details</span>
-                    <span className="font-medium text-slate-700 dark:text-slate-200 whitespace-pre-wrap">{viewingExpense.bank_account_details || '—'}</span>
-                  </div>
-                  <div>
-                    <span className="block text-[10px] uppercase font-bold text-slate-400">Payment method</span>
-                    <span className="font-medium text-slate-700 dark:text-slate-200">
-                      {(viewingExpense.payment_method || 'MOBILE_MONEY').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="block text-[10px] uppercase font-bold text-slate-400">Purchase order</span>
-                    <span className="font-medium text-slate-700 dark:text-slate-200">
-                      {viewingExpense.purchase_order_number || (viewingExpense.purchase_order_id ? String(viewingExpense.purchase_order_id).slice(0, 8) : 'Not linked')}
-                    </span>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <span className="block text-[10px] uppercase font-bold text-slate-400">Paid at</span>
-                    <span className="font-medium text-slate-700 dark:text-slate-200">
-                      {viewingExpense.paid_at ? new Date(viewingExpense.paid_at).toLocaleString() : 'Not paid'}
-                    </span>
+
+                  {/* Right Column */}
+                  <div className="space-y-4 h-fit">
+                    <div className="p-4 rounded-xl border border-orange-100 dark:border-orange-900/40 bg-orange-50/50 dark:bg-orange-950/20 text-xs space-y-2">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-orange-600 dark:text-orange-400 block">Submitted By</span>
+                      <p className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-1.5"><User size={15} className="text-orange-600 shrink-0" /> {vName}</p>
+                      <p className="text-xs text-slate-500 font-medium">{vPos}</p>
+                      <a href={`mailto:${vEmail}`} className="text-orange-600 dark:text-orange-400 hover:underline font-mono text-xs font-bold inline-flex items-center gap-1">
+                        <Mail size={12} /> {vEmail}
+                      </a>
+                    </div>
                   </div>
                 </div>
-              </div>
 
               {/* Items Purchased Section */}
               {Array.isArray(viewingExpense.items) && viewingExpense.items.length > 0 && (
@@ -5499,7 +5524,7 @@ Signed: Field Operations Administration
                       })}
                       className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 transition"
                     >
-                      <Eye size={14} /> View File
+                      <Eye size={14} /> View Invoice
                     </button>
                   );
                 })()}
@@ -5515,7 +5540,8 @@ Signed: Field Operations Administration
           </div>
         </div>,
         document.body
-      )}
+      );
+    })()}
 
       {/* Edit Operational Expense Modal */}
       {showEditExpenseModal && editingExpense && createPortal(
@@ -5799,13 +5825,107 @@ Signed: Field Operations Administration
 
       {/* Universal File Viewer Modal */}
       {/* Grouped Equipment Register Dialogue Modal */}
-      {selectedEquipmentGroup && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-2 sm:p-4 backdrop-blur-xs overflow-hidden">
+      {selectedEquipmentGroup && (() => {
+        const handlePrintBatchSelected = (records: any[], dateLabel: string) => {
+          if (!records || records.length === 0) return;
+          const printWindow = window.open('', '_blank');
+          if (!printWindow) return;
+
+          const cardsHtml = records.map((record: any) => `
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 16px; page-break-inside: avoid; font-family: system-ui, sans-serif;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; margin-bottom: 12px;">
+                <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: #0f172a;">${record.equipment || record.display_title || 'Equipment Item'}</h3>
+                <span style="font-weight: 700; font-size: 12px; color: #ea580c; background: #fff7ed; padding: 2px 8px; border-radius: 4px;">Unit: ${record.unit_number || 'N/A'}</span>
+              </div>
+              <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b; font-weight: 600; width: 35%;">Equipment Type:</td>
+                  <td style="padding: 4px 0; font-weight: 700; color: #1e293b;">${record.equipment_type || '—'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b; font-weight: 600;">Status:</td>
+                  <td style="padding: 4px 0; font-weight: 700; color: #1e293b;">${record.status || '—'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b; font-weight: 600;">Open Defects & Issues:</td>
+                  <td style="padding: 4px 0; font-weight: 600; color: #0f172a;">${record.open_defects || 'None'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b; font-weight: 600;">Action Required:</td>
+                  <td style="padding: 4px 0; font-weight: 600; color: #0f172a;">${record.action_required || 'None'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b; font-weight: 600;">Priority Level:</td>
+                  <td style="padding: 4px 0; font-weight: 700; color: #1e293b;">${record.priority || 'NORMAL'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; color: #64748b; font-weight: 600;">Remarks / Notes:</td>
+                  <td style="padding: 4px 0; color: #334155;">${record.remarks || '—'}</td>
+                </tr>
+              </table>
+            </div>
+          `).join('');
+
+          printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <title>Equipment Register Batch — ${dateLabel}</title>
+                <style>
+                  body { font-family: system-ui, -apple-system, sans-serif; padding: 20px; color: #0f172a; }
+                  h1 { font-size: 20px; font-weight: 900; margin-bottom: 4px; }
+                  p { font-size: 12px; color: #64748b; margin-bottom: 24px; }
+                  @media print { body { padding: 0; } }
+                </style>
+              </head>
+              <body>
+                <h1>Equipment Register Batch — ${dateLabel}</h1>
+                <p>Printed ${records.length} equipment entries recorded on ${dateLabel}</p>
+                ${cardsHtml}
+                <script>window.onload = () => { window.print(); window.close(); };</script>
+              </body>
+            </html>
+          `);
+          printWindow.document.close();
+        };
+
+        const handleDownloadBatchExcel = (records: any[], dateLabel: string) => {
+          if (!records || records.length === 0) return;
+          const headers = ['Equipment Name / Model', 'Unit Number', 'Equipment Type', 'Status', 'Open Defects & Issues', 'Action Required', 'Priority Level', 'Remarks / Notes', 'Created Date'];
+          const csvRows = [headers.map(h => `"${h}"`).join(',')];
+
+          records.forEach((r: any) => {
+            const row = [
+              r.equipment || r.display_title || '',
+              r.unit_number || '',
+              r.equipment_type || '',
+              r.status || '',
+              (r.open_defects || '').replace(/"/g, '""'),
+              (r.action_required || '').replace(/"/g, '""'),
+              r.priority || '',
+              (r.remarks || '').replace(/"/g, '""'),
+              dateLabel
+            ];
+            csvRows.push(row.map(cell => `"${cell}"`).join(','));
+          });
+
+          const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + csvRows.join('\n');
+          const encodedUri = encodeURI(csvContent);
+          const link = document.createElement('a');
+          link.setAttribute('href', encodedUri);
+          link.setAttribute('download', `Equipment_Register_Batch_${dateLabel.replace(/[\s,]+/g, '_')}.csv`);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        };
+
+        return (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-2 sm:p-4 backdrop-blur-xs overflow-hidden">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-6xl w-full h-[90vh] max-h-[850px] flex flex-col shadow-2xl overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-4 py-3 bg-slate-50 dark:bg-slate-950/50 shrink-0">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 px-4 py-3 bg-slate-50 dark:bg-slate-950/50 shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-950/50 text-orange-600 flex items-center justify-center font-bold">
+                <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-950/50 text-orange-600 flex items-center justify-center font-bold shrink-0">
                   <Truck size={18} />
                 </div>
                 <div>
@@ -5817,13 +5937,42 @@ Signed: Field Operations Administration
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => { setSelectedEquipmentGroup(null); setSelectedGroupEquipmentItem(null); }}
-                className="p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"
-              >
-                <X size={20} />
-              </button>
+
+              <div className="flex items-center gap-2">
+                {selectedBatchCardIds.length > 0 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const selectedRecords = selectedEquipmentGroup.records.filter((r: any) => selectedBatchCardIds.includes(String(r.id)));
+                        handlePrintBatchSelected(selectedRecords, selectedEquipmentGroup.dateLabel);
+                      }}
+                      className="px-3 py-1.5 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-xs"
+                      title="Print selected equipment cards"
+                    >
+                      <Printer size={14} /> Print {selectedBatchCardIds.length === selectedEquipmentGroup.records.length ? 'All' : `Selected (${selectedBatchCardIds.length})`}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const selectedRecords = selectedEquipmentGroup.records.filter((r: any) => selectedBatchCardIds.includes(String(r.id)));
+                        handleDownloadBatchExcel(selectedRecords, selectedEquipmentGroup.dateLabel);
+                      }}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-xs"
+                      title="Export selected equipment items as Excel CSV file"
+                    >
+                      <Download size={14} /> Download Excel
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={() => { setSelectedEquipmentGroup(null); setSelectedGroupEquipmentItem(null); }}
+                  className="p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             {/* Mobile View Switcher (< md) */}
@@ -5846,13 +5995,40 @@ Signed: Field Operations Administration
 
             {/* Main Split Body */}
             <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-800">
-              {/* Left Column: Equipment Cards as is */}
+              {/* Left Column: Equipment Cards */}
               <div className={`md:col-span-5 lg:col-span-4 flex flex-col h-full overflow-y-auto p-3 space-y-3 bg-slate-50/50 dark:bg-slate-900/40 ${mobileGroupTab === 'DETAILS' ? 'hidden md:flex' : 'flex'}`}>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
-                  Select Equipment ({selectedEquipmentGroup.records.length})
-                </span>
+                {/* Select All Bar */}
+                <div className="flex items-center justify-between p-2 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedBatchCardIds.length === selectedEquipmentGroup.records.length) {
+                        setSelectedBatchCardIds([]);
+                      } else {
+                        setSelectedBatchCardIds(selectedEquipmentGroup.records.map((r: any) => String(r.id)));
+                      }
+                    }}
+                    className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-orange-600 dark:hover:text-orange-400 transition"
+                  >
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center transition ${
+                      selectedBatchCardIds.length === selectedEquipmentGroup.records.length && selectedEquipmentGroup.records.length > 0
+                        ? 'bg-orange-600 dark:bg-orange-500 text-white shadow-xs'
+                        : selectedBatchCardIds.length > 0
+                        ? 'bg-orange-200 dark:bg-orange-950 border-2 border-orange-500 text-orange-600'
+                        : 'border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'
+                    }`}>
+                      {selectedBatchCardIds.length > 0 && <Check size={12} strokeWidth={3} />}
+                    </div>
+                    <span>Select All ({selectedEquipmentGroup.records.length})</span>
+                  </button>
+                  <span className="text-[11px] font-extrabold text-orange-600 dark:text-orange-400 font-mono">
+                    {selectedBatchCardIds.length} / {selectedEquipmentGroup.records.length} Selected
+                  </span>
+                </div>
+
                 {selectedEquipmentGroup.records.map((wo: any) => {
                   const isSelected = selectedGroupEquipmentItem?.id === wo.id;
+                  const isChecked = selectedBatchCardIds.includes(String(wo.id));
                   return (
                     <div
                       key={wo.id}
@@ -5867,13 +6043,36 @@ Signed: Field Operations Administration
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase bg-sky-100 text-sky-800 dark:bg-sky-950/50 dark:text-sky-300">
-                            {wo.record_kind || 'Equipment Register'}
-                          </span>
-                          <h4 className="font-bold text-sm text-slate-900 dark:text-white mt-1">
-                            {wo.display_title || wo.title || wo.equipment || wo.job_card_number}
-                          </h4>
+                        <div className="flex items-center gap-2">
+                          {/* Circle Checkbox */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const cardIdStr = String(wo.id);
+                              setSelectedBatchCardIds((prev) =>
+                                prev.includes(cardIdStr) ? prev.filter((id) => id !== cardIdStr) : [...prev, cardIdStr]
+                              );
+                            }}
+                            className="p-0.5 rounded-full shrink-0 hover:scale-110 transition"
+                            title={isChecked ? 'Deselect item' : 'Select item'}
+                          >
+                            {isChecked ? (
+                              <div className="w-5 h-5 rounded-full bg-orange-600 dark:bg-orange-500 text-white flex items-center justify-center shadow-xs">
+                                <Check size={12} strokeWidth={3} />
+                              </div>
+                            ) : (
+                              <div className="w-5 h-5 rounded-full border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-orange-500 transition" />
+                            )}
+                          </button>
+                          <div>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase bg-sky-100 text-sky-800 dark:bg-sky-950/50 dark:text-sky-300">
+                              {wo.record_kind || 'Equipment Register'}
+                            </span>
+                            <h4 className="font-bold text-sm text-slate-900 dark:text-white mt-1">
+                              {wo.display_title || wo.title || wo.equipment || wo.job_card_number}
+                            </h4>
+                          </div>
                         </div>
                         {isSelected && (
                           <span className="text-[10px] font-extrabold bg-orange-600 text-white px-2 py-0.5 rounded-full shrink-0">
@@ -5974,7 +6173,8 @@ Signed: Field Operations Administration
             </div>
           </div>
         </div>
-      )}
+      );
+    })()}
       </div>
     </div>
   );
