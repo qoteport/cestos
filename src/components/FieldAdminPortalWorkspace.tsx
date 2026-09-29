@@ -2748,43 +2748,43 @@ Signed: Field Operations Administration
                     <div className="flex items-center gap-2 flex-wrap">
                       <button
                         onClick={() => setShowScheduleModal(true)}
-                        className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition shadow-xs"
+                        className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-xs"
                       >
                         <Calendar size={15} /> Create & Dispatch Maintenance Schedule
                       </button>
                       <button
                         onClick={() => setShowWOModal(true)}
-                        className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition shadow-xs"
+                        className="flex items-center gap-1.5 bg-white hover:bg-slate-50 dark:bg-slate-800/80 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-xs"
                       >
                         <Wrench size={15} /> 1. Breakdown / Daily Repair Job Card
                       </button>
                       <button
                         onClick={() => setShowPmModal(true)}
-                        className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition shadow-xs"
+                        className="flex items-center gap-1.5 bg-white hover:bg-slate-50 dark:bg-slate-800/80 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-xs"
                       >
                         <ShieldCheck size={15} /> 2. Preventive Maintenance Job Card
                       </button>
                       <button
                         onClick={() => setShowAssessmentModal(true)}
-                        className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition shadow-xs"
+                        className="flex items-center gap-1.5 bg-white hover:bg-slate-50 dark:bg-slate-800/80 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-xs"
                       >
                         <FileText size={15} /> New Maintenance Assessment Report
                       </button>
                       <button
                         onClick={() => setShowActionTracker(true)}
-                        className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition shadow-xs"
+                        className="flex items-center gap-1.5 bg-white hover:bg-slate-50 dark:bg-slate-800/80 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-xs"
                       >
                         <CheckCircle2 size={15} /> New Action Tracker
                       </button>
                       <button
                         onClick={() => setShowPmTracker(true)}
-                        className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition shadow-xs"
+                        className="flex items-center gap-1.5 bg-white hover:bg-slate-50 dark:bg-slate-800/80 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-xs"
                       >
                         <Calendar size={15} /> New PM Tracker
                       </button>
                       <button
                         onClick={() => setShowEquipmentRegister(true)}
-                        className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition shadow-xs"
+                        className="flex items-center gap-1.5 bg-white hover:bg-slate-50 dark:bg-slate-800/80 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-xs"
                       >
                         <Truck size={15} /> New Equipment Register
                       </button>
