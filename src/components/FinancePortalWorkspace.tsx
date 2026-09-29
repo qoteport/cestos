@@ -402,7 +402,12 @@ export default function FinancePortalWorkspace() {
       apiFetch<any>('/api/v1/projects?page_size=100').then((res) => { if (active) setProjects(Array.isArray(res) ? res : res?.items || []); }).catch(() => []),
       apiFetch<any>('/api/v1/field-portal/fuel-deliveries').then((res) => { if (active) setFuelDeliveries(Array.isArray(res) ? res : res?.items || []); }).catch(() => []),
       apiFetch<any>('/api/v1/field-portal/fuel-allocations').then((res) => { if (active) setFuelAllocations(Array.isArray(res) ? res : res?.items || []); }).catch(() => []),
-      apiFetch<any>('/api/v1/field-portal/sites').then((res) => { if (active) setProjectSites(Array.isArray(res) ? res : res?.items || []); }).catch(() => []),
+      apiFetch<any>('/api/v1/locations?page_size=100').then((res) => {
+        if (!active) return;
+        const items = Array.isArray(res) ? res : res?.items || [];
+        if (items.length > 0) setProjectSites(items);
+        else apiFetch<any>('/api/v1/field-portal/sites').then((res2) => { if (active) setProjectSites(Array.isArray(res2) ? res2 : res2?.items || []); }).catch(() => []);
+      }).catch(() => apiFetch<any>('/api/v1/field-portal/sites').then((res2) => { if (active) setProjectSites(Array.isArray(res2) ? res2 : res2?.items || []); }).catch(() => [])),
       apiFetch<any>('/api/v1/assets?page_size=100').then((res) => { if (active) setAssets(Array.isArray(res) ? res : res?.items || []); }).catch(() => []),
       apiFetch<any>('/api/v1/commercial/cost-entries').then((res) => { if (active) setExpenses(Array.isArray(res) ? res : res?.items || []); }).catch(() => []),
       apiFetch<any>('/api/v1/operational-expenses').then((res) => {
@@ -501,9 +506,35 @@ export default function FinancePortalWorkspace() {
         const pId = a.project_id || a.projectId || projectSites.find((s) => String(s.id) === String(a.site_location_id))?.project_id;
         if (String(pId || '').toLowerCase() !== String(selectedProjectId).toLowerCase()) return false;
       }
-      return isWithinDateFilter(a.allocated_at || a.recorded_at || a.created_at);
     });
   }, [fuelAllocations, selectedProjectId, datePreset, customStartDate, customEndDate, projectSites]);
+
+  const siteOptions = React.useMemo(() => {
+    const options: { value: string; label: string; project_id?: string }[] = [];
+    if (Array.isArray(projectSites) && projectSites.length > 0) {
+      projectSites.forEach((site) => {
+        if (site?.id) {
+          options.push({
+            value: String(site.id),
+            label: `${site.name || site.location_number || 'Site'}${site.project_name ? ` | ${site.project_name}` : ''}`,
+            project_id: site.project_id,
+          });
+        }
+      });
+    }
+    if (Array.isArray(projects) && projects.length > 0) {
+      projects.forEach((proj) => {
+        if (proj?.id && !options.some((opt) => opt.value === String(proj.id))) {
+          options.push({
+            value: String(proj.id),
+            label: `${proj.name || (proj as any).title || 'Project'} (Project Site)`,
+            project_id: proj.id,
+          });
+        }
+      });
+    }
+    return options;
+  }, [projectSites, projects]);
 
   const scopedOperationalExpenseRequests = React.useMemo(() => {
     return operationalExpenseRequests.filter((e) => {
@@ -3047,18 +3078,7 @@ Signed: Finance & Procurement Administration
               Register Bulk Fuel Delivery
             </span>
           </button>
-          <button
-            type="button"
-            onClick={() => setShowFuelAllocModal(true)}
-            className="relative group w-11 h-11 rounded-xl hover:bg-violet-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 shrink-0"
-            aria-label="Issue Fuel Dispense Ticket"
-          >
-            <Droplet size={18} />
-            <span className="absolute left-16 bg-slate-900 dark:bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[100000] border border-slate-700/80 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
-              Issue Fuel Dispense Ticket
-            </span>
-          </button>
+
           <button
             type="button"
             onClick={() => setActiveTab('VENDORS')}
@@ -4795,9 +4815,6 @@ Signed: Finance & Procurement Administration
               <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
                 {/* SECTION 1: SITE & FUEL TYPE */}
                 <div className="p-3.5 border rounded-xl border-violet-200 dark:border-violet-900 space-y-3">
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-violet-900 dark:text-violet-300 flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-1.5">
-                    <Fuel size={14} className="text-violet-600" /> Target Site &amp; Fuel Grade
-                  </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block font-bold mb-1">Project Site *</label>
@@ -4805,14 +4822,11 @@ Signed: Finance & Procurement Administration
                         required
                         value={fuelBoughtForm.site_location_id}
                         onChange={(val) => {
-                          const site = projectSites.find((row) => String(row.id) === val);
+                          const site = siteOptions.find((row) => String(row.value) === String(val));
                           setFuelBoughtForm({ ...fuelBoughtForm, site_location_id: val, project_id: site?.project_id || selectedProjectId });
                         }}
                         placeholder="-- Select Project Site --"
-                        options={projectSites.map((site) => ({
-                          value: site.id,
-                          label: `${site.name}${site.project_name ? ` | ${site.project_name}` : ''}`,
-                        }))}
+                        options={siteOptions}
                       />
                     </div>
                     <div>
@@ -4832,9 +4846,6 @@ Signed: Finance & Procurement Administration
 
                 {/* SECTION 2: VOLUME & COST */}
                 <div className="p-3.5 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-800/30 space-y-3">
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-1.5">
-                    <DollarSign size={14} className="text-emerald-600" /> Refueling Volume &amp; Cost Calculation
-                  </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="block font-bold mb-0.5">Refueled Quantity (Litres) *</label>
@@ -4852,7 +4863,7 @@ Signed: Finance & Procurement Administration
                           const calcTotal = qty && uCost ? (Number(qty) * Number(uCost)).toFixed(2) : fuelBoughtForm.total_cost;
                           setFuelBoughtForm({ ...fuelBoughtForm, quantity_litres: qty, total_cost: calcTotal });
                         }}
-                        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-white dark:bg-slate-950 font-mono font-bold text-sm"
+                        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-white dark:bg-slate-950"
                       />
                     </div>
                     <div>
@@ -4869,7 +4880,7 @@ Signed: Finance & Procurement Administration
                           const calcTotal = qty && uCost ? (Number(qty) * Number(uCost)).toFixed(2) : fuelBoughtForm.total_cost;
                           setFuelBoughtForm({ ...fuelBoughtForm, unit_cost: uCost, total_cost: calcTotal });
                         }}
-                        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-white dark:bg-slate-950 font-mono text-sm"
+                        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-white dark:bg-slate-950"
                       />
                     </div>
                     <div>
@@ -4886,7 +4897,7 @@ Signed: Finance & Procurement Administration
                           const calcUnit = qty && tot && Number(qty) > 0 ? (Number(tot) / Number(qty)).toFixed(4) : fuelBoughtForm.unit_cost;
                           setFuelBoughtForm({ ...fuelBoughtForm, total_cost: tot, unit_cost: calcUnit });
                         }}
-                        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-white dark:bg-slate-950 font-mono font-bold text-sm text-violet-600"
+                        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-white dark:bg-slate-950 text-violet-600 dark:text-violet-400 font-semibold"
                       />
                     </div>
                   </div>
@@ -4911,7 +4922,7 @@ Signed: Finance & Procurement Administration
                       placeholder="Waybill, invoice, or receipt #"
                       value={fuelBoughtForm.reference_number}
                       onChange={(e) => setFuelBoughtForm({ ...fuelBoughtForm, reference_number: e.target.value })}
-                      className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-white dark:bg-slate-950 font-mono"
+                      className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-white dark:bg-slate-950"
                     />
                   </div>
                 </div>

@@ -2748,7 +2748,7 @@ Signed: Field Operations Administration
                     <div className="flex items-center gap-2 flex-wrap">
                       <button
                         onClick={() => setShowScheduleModal(true)}
-                        className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-xs"
+                        className="flex items-center gap-1.5 bg-white hover:bg-slate-50 dark:bg-slate-800/80 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-xs"
                       >
                         <Calendar size={15} /> Create & Dispatch Maintenance Schedule
                       </button>
