@@ -4128,7 +4128,7 @@ Signed: Finance & Procurement Administration
                         }}
                         className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 transition"
                       >
-                        <Eye size={14} /> View File
+                        <Eye size={14} /> View Invoice
                       </button>
                     );
                   })()}

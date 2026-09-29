@@ -790,6 +790,28 @@ export default function OperationalExpensesWorkspace({
                       <DollarSign size={14} /> Record Payment
                     </button>
                   )}
+                  {(() => {
+                    const receiptFile = viewingExpense.invoice_name || (!viewingExpense.payments?.length ? viewingExpense.receipt_name || viewingExpense.receipt_file_name || viewingExpense.attachment : null) || null;
+                    if (!receiptFile) return null;
+                    const kind = viewingExpense.invoice_name || viewingExpense.invoice_path ? 'invoice' : 'receipt';
+                    return (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const fileUrl = `/api/v1/operational-expenses/${viewingExpense.id}/files/${kind}`;
+                          try {
+                            const blob = await apiFetchBlob(fileUrl);
+                            openUniversalFileViewer({ blob, fileName: receiptFile, title: `Quotation / Invoice: ${receiptFile}` });
+                          } catch (err: any) {
+                            setError(err?.message || 'Failed to open file.');
+                          }
+                        }}
+                        className={`px-4 py-2 ${accent === 'indigo' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-violet-600 hover:bg-violet-700'} text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition cursor-pointer`}
+                      >
+                        <Eye size={14} /> View Invoice
+                      </button>
+                    );
+                  })()}
                   <button
                     type="button"
                     onClick={() => setViewingExpense(null)}
