@@ -20,6 +20,7 @@ import {
   Check,
   Mail,
   Briefcase,
+  Eye,
 } from 'lucide-react';
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import { openUniversalFileViewer } from '@/lib/fileViewer';
@@ -79,6 +80,24 @@ export default function OperationalExpensesWorkspace({
     (auth.user?.portal_type === 'FINANCE' ||
     auth.access?.is_superuser ||
     auth.access?.roles?.some((r: string) => ['finance', 'accountant', 'accounts payable'].includes(r.toLowerCase())));
+
+  const textAccent =
+    accent === 'indigo'
+      ? 'text-indigo-600 dark:text-indigo-400'
+      : accent === 'emerald'
+      ? 'text-emerald-600 dark:text-emerald-400'
+      : accent === 'orange'
+      ? 'text-orange-600 dark:text-orange-400'
+      : 'text-violet-600 dark:text-violet-400';
+
+  const bgAccentLight =
+    accent === 'indigo'
+      ? 'bg-indigo-50 border-indigo-100 dark:bg-indigo-950/30 dark:border-indigo-900'
+      : accent === 'emerald'
+      ? 'bg-emerald-50 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900'
+      : accent === 'orange'
+      ? 'bg-orange-50 border-orange-100 dark:bg-orange-950/30 dark:border-orange-900'
+      : 'bg-violet-50 border-violet-100 dark:bg-violet-950/30 dark:border-violet-900';
 
   const [rows, setRows] = useState<Row[]>([]);
   const [focusedExpenseId] = useState(() => typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('expense_id') || '');
@@ -507,8 +526,8 @@ export default function OperationalExpensesWorkspace({
       <div className="bg-card border rounded-2xl shadow-sm overflow-hidden">
         <div className="border-b p-4 flex items-center justify-between bg-muted/30">
           <h2 className="font-bold text-sm text-foreground flex items-center gap-2">
-            <FileText size={16} className="text-violet-600" />
-            {finance ? 'Expense Claims Awaiting Finance Action' : 'My Submitted Expense Claims'}
+            <FileText size={16} className={textAccent} />
+            {finance ? 'Expense Claims Awaiting Finance Action' : 'Submitted Operational Expense Claims & Status'}
           </h2>
           <span className="text-xs font-bold text-muted-foreground">{rows.length} claims</span>
         </div>
@@ -517,9 +536,15 @@ export default function OperationalExpensesWorkspace({
           <table className="w-full text-xs">
             <thead className="bg-muted/50 border-b">
               <tr>
-                {['Expense #', 'Submitted By', 'Category', 'Payee Name', 'Date', 'Total Cost ($)', 'Paid / Balance', 'Status', 'Invoice / Receipt', finance ? 'Payment Action' : ''].filter(Boolean).map((h) => (
-                  <th key={h} className={`px-4 py-3 font-bold text-muted-foreground uppercase tracking-wider ${['Total Cost ($)', 'Paid / Balance', 'Payment Action'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
-                ))}
+                <th className="hidden sm:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Date</th>
+                <th className="hidden md:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Submitted By</th>
+                <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Ref # / Payee</th>
+                <th className="hidden sm:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Payment Method</th>
+                <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Total Amount</th>
+                <th className="hidden lg:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Quotation / Invoice</th>
+                <th className="hidden md:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Payments</th>
+                <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -534,22 +559,16 @@ export default function OperationalExpensesWorkspace({
                   const sName = row.submitted_by_name || row.submitted_by?.full_name || (row.submitted_by?.first_name ? `${row.submitted_by.first_name} ${row.submitted_by.last_name || ''}`.trim() : null) || row.created_by_name || (auth.user?.first_name ? `${auth.user.first_name} ${auth.user.last_name || ''}`.trim() : 'Operations Supervisor');
                   const sPos = row.submitted_by_position || row.submitted_by_title || row.submitted_by?.job_title || row.submitted_by?.role || (auth.user?.is_superuser ? 'Operations Director' : auth.user?.portal_type ? `${auth.user.portal_type.replace('_', ' ')} Admin` : 'Field Administrator');
                   const sEmail = row.submitted_by_email || row.submitted_by?.email || row.email || auth.user?.email || 'operations@cestos.com';
+                  const cost = Number(row.total_cost || row.amount || 0);
+                  const hasInstallmentPayments = Array.isArray(row.payments) && row.payments.length > 0;
+                  const fileName = row.invoice_name || (!hasInstallmentPayments ? row.receipt_name || row.receipt_file_name || row.attachment : null) || null;
 
                   return (
                     <tr id={`operational-expense-${row.id}`} key={row.id} className={`hover:bg-muted/30 transition ${String(row.id) === focusedExpenseId ? 'bg-amber-100 outline outline-2 outline-amber-500 dark:bg-amber-950/50' : ''}`}>
-                      <td className="px-4 py-3 font-mono font-bold text-foreground">
-                        <button
-                          type="button"
-                          onClick={() => setViewingExpense(row)}
-                          className="hover:underline text-violet-600 dark:text-violet-400 font-bold text-xs"
-                          title="Click to view Operational Expense Voucher"
-                        >
-                          {row.expense_number || row.id.slice(0, 8)}
-                        </button>
-                      </td>
-                      <td className="px-4 py-3 space-y-0.5">
+                      <td className="hidden sm:table-cell px-4 py-3 font-mono">{row.expense_date ? new Date(row.expense_date).toLocaleDateString() : '—'}</td>
+                      <td className="hidden md:table-cell px-4 py-3 space-y-0.5">
                         <div className="font-bold text-foreground flex items-center gap-1">
-                          <User size={12} className="text-violet-600 shrink-0" />
+                          <User size={12} className={`${textAccent} shrink-0`} />
                           <span>{sName}</span>
                         </div>
                         <div className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
@@ -560,7 +579,7 @@ export default function OperationalExpensesWorkspace({
                           <a
                             href={`mailto:${sEmail}`}
                             onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-1 text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-300 font-mono text-[11px] font-bold underline"
+                            className={`inline-flex items-center gap-1 ${textAccent} hover:underline font-mono text-[11px] font-bold`}
                             title={`Send email to ${sName}`}
                           >
                             <Mail size={11} className="shrink-0" />
@@ -568,82 +587,75 @@ export default function OperationalExpensesWorkspace({
                           </a>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-medium">
-                          {String(row.cost_category || row.expense_type || row.category || 'General').replaceAll('_', ' ')}
+                      <td className="px-4 py-3 font-bold text-foreground">
+                        <button
+                          type="button"
+                          onClick={() => setViewingExpense(row)}
+                          className={`hover:underline ${textAccent} font-bold text-xs block text-left`}
+                          title="Click to view Operational Expense Voucher"
+                        >
+                          {row.pay_to_name || row.reference_number || row.id.slice(0, 8)}
+                        </button>
+                        <span className="text-[10px] text-muted-foreground font-mono block">
+                          {row.expense_number || row.id.slice(0, 8)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 font-medium text-foreground">{row.pay_to_name}</td>
-                      <td className="px-4 py-3 font-mono text-muted-foreground">{row.expense_date}</td>
-                      <td className="px-4 py-3 text-right font-black text-emerald-600">
-                        ${Number(row.total_cost || row.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="whitespace-nowrap font-semibold text-blue-700 dark:text-blue-400">
-                          Paid: ${paidAmountFor(row).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </div>
-                        <div className="whitespace-nowrap text-[10px] text-slate-500">
-                          Balance: ${Number(row.balance_due ?? Math.max(0, Number(row.total_cost || row.amount || 0) - paidAmountFor(row))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </div>
-                        {Array.isArray(row.payments) && row.payments.length > 0 && (
-                          <div className="text-[10px] text-slate-500">
-                            {row.payments.length} installment{row.payments.length === 1 ? '' : 's'}
-                          </div>
+                      <td className="hidden sm:table-cell px-4 py-3 font-medium text-muted-foreground">{String(row.payment_method || 'BANK_TRANSFER').replaceAll('_', ' ')}</td>
+                      <td className="px-4 py-3 font-bold text-emerald-600 dark:text-emerald-400">${cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="hidden lg:table-cell px-4 py-3">
+                        {fileName ? (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const kind = row.invoice_name || row.invoice_path ? 'invoice' : 'receipt';
+                              const fileUrl = `/api/v1/operational-expenses/${row.id}/files/${kind}`;
+                              try {
+                                const blob = await apiFetchBlob(fileUrl);
+                                openUniversalFileViewer({ blob, fileName, title: `Quotation / Invoice: ${fileName}` });
+                              } catch (err: any) {
+                                setError(err?.message || 'Failed to open file.');
+                              }
+                            }}
+                            className={`inline-flex items-center gap-1.5 ${textAccent} hover:underline font-bold text-xs cursor-pointer`}
+                            title={`Click to view file: ${fileName}`}
+                          >
+                            <Paperclip size={13} className="shrink-0" />
+                            <span className="max-w-[150px] truncate">{fileName}</span>
+                          </button>
+                        ) : hasInstallmentPayments ? (
+                          <button type="button" onClick={() => setViewingExpense(row)} className={`text-xs font-semibold ${textAccent} hover:underline`}>View {row.payments.length} payment receipt{row.payments.length === 1 ? '' : 's'}</button>
+                        ) : (
+                          <span className="text-muted-foreground text-[11px]">No attachment</span>
                         )}
                       </td>
+                      <td className="hidden md:table-cell px-4 py-3"><div className="min-w-[205px] space-y-1.5"><div className={`flex justify-between gap-2 rounded-md border ${bgAccentLight} px-2 py-1.5`}><span className="text-muted-foreground">Paid to date</span><strong className="whitespace-nowrap">${paidAmountFor(row).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div><div className="flex justify-between gap-2 px-1 text-[10px] text-muted-foreground"><span>Balance</span><span className="whitespace-nowrap">${Number(row.balance_due ?? Math.max(0, cost - paidAmountFor(row))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>{Array.isArray(row.payments) && row.payments.length ? row.payments.map((payment: any, index: number) => <div key={payment.id || index} className="rounded-md border px-2 py-1.5 bg-background"><div className="flex justify-between gap-2"><span className="text-[10px] font-semibold text-muted-foreground">Installment {index + 1}</span><strong className="whitespace-nowrap">${Number(payment.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div><div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-muted-foreground"><span>{payment.payment_date ? new Date(payment.payment_date.includes('T') ? payment.payment_date : `${payment.payment_date}T00:00:00`).toLocaleDateString() : 'Date unavailable'}</span>{payment.reference && <span className="max-w-20 truncate" title={payment.reference}>Ref: {payment.reference}</span>}</div>{payment.receipt_name ? <div className="mt-1 flex items-center gap-2 border-t pt-1"><span className="max-w-20 truncate text-[10px] text-muted-foreground" title={payment.receipt_name}>{payment.receipt_name}</span><button type="button" onClick={() => void handleOpenFile(`/api/v1/operational-expenses/${row.id}/payments/${payment.id}/receipt`, payment.receipt_name || 'Payment receipt')} className={`text-[10px] font-bold ${textAccent} hover:underline`}>View</button></div> : <span className="mt-1 block text-[10px] text-muted-foreground">No receipt attached</span>}</div>) : <span className="text-[10px] text-muted-foreground block">No payments recorded</span>}</div></td>
+                      <td className="px-4 py-3"><StatusBadge status={row.status || 'SUBMITTED'} /></td>
                       <td className="px-4 py-3">
-                        <StatusBadge status={row.status || 'SUBMITTED'} />
-                      </td>
-                      <td className="px-4 py-3">
-                        {(() => {
-                          const fileName = row.invoice_name || row.receipt_name || row.receipt_file_name || row.attachment;
-                          if (!fileName) return <span className="text-muted-foreground text-[11px]">No docket</span>;
-                          return (
-                            <div className="flex flex-wrap items-center gap-2">
-                              {(row.invoice_name || row.invoice_path || (!row.receipt_name && !row.receipt_file_name)) && (
-                                <button
-                                  type="button"
-                                  onClick={() => void handleOpenFile(`/api/v1/operational-expenses/${row.id}/files/invoice`, row.invoice_name || fileName)}
-                                  className="inline-flex items-center gap-1 text-violet-600 hover:text-violet-800 dark:text-violet-400 font-bold no-underline hover:underline text-xs cursor-pointer"
-                                >
-                                  <Paperclip size={13} /> {row.invoice_name || fileName}
-                                </button>
-                              )}
-                              {(row.receipt_name || row.receipt_file_name) && (
-                                <button
-                                  type="button"
-                                  onClick={() => void handleOpenFile(`/api/v1/operational-expenses/${row.id}/files/receipt`, row.receipt_name || row.receipt_file_name || 'Receipt')}
-                                  className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 font-bold no-underline hover:underline text-xs cursor-pointer"
-                                >
-                                  <Paperclip size={13} /> {row.receipt_name || row.receipt_file_name}
-                                </button>
-                              )}
-                            </div>
-                          );
-                        })()}
-                      </td>
-                      {finance && (
-                        <td className="px-4 py-3">
-                          {Number(row.balance_due ?? (Number(row.total_cost || 0) - paidAmountFor(row))) > 0 ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setViewingExpense(row)}
+                            className="p-1.5 rounded-lg bg-muted hover:bg-violet-100 dark:hover:bg-violet-950 text-violet-700 dark:text-violet-300 transition"
+                            title="View Claim Details"
+                          >
+                            <Eye size={14} />
+                          </button>
+                          {finance && Number(row.balance_due ?? (cost - paidAmountFor(row))) > 0 && (
                             <button
                               type="button"
                               onClick={() => {
                                 setPayingRow(row);
                                 setPaymentReceiptFile(null);
-                                setPaymentAmount(String(Math.max(0, Number(row.total_cost || 0) - paidAmountFor(row)).toFixed(2)));
+                                setPaymentAmount(String(Math.max(0, cost - paidAmountFor(row)).toFixed(2)));
                                 setPaymentDate(new Date().toISOString().slice(0, 10));
                               }}
-                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition flex items-center gap-1.5 shadow-xs"
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition flex items-center gap-1.5 shadow-xs shrink-0"
                             >
                               <Upload size={13} /> {paidAmountFor(row) > 0 ? 'Record Payment' : 'Pay & Upload'}
                             </button>
-                          ) : (
-                            <span className="text-emerald-600 font-bold text-[11px] flex items-center gap-1">
-                              <CheckCircle2 size={13} /> Disbursement Paid
-                            </span>
                           )}
-                        </td>
-                      )}
+                        </div>
+                      </td>
                     </tr>
                   );
                 })
