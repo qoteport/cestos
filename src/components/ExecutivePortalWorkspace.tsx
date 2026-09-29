@@ -18,6 +18,7 @@ import { useApiDataRefresh } from '@/lib/apiDataRefresh';
 import OperationalExpenseSubmissionModal from './OperationalExpenseSubmissionModal';
 import { extractDocumentLineItems } from '@/lib/lineItemExtraction';
 import RegisterUserModal from './RegisterUserModal';
+import { printElement } from '@/lib/printElement';
 import {
   Zap,
   UserPlus,
@@ -51,6 +52,7 @@ import {
   Clock,
   CheckCircle2,
   Pencil,
+  Printer,
   Plus,
   BarChart2,
   ChevronDown,
@@ -2118,7 +2120,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                   {/* Filter Tabs */}
                   <div className="flex items-center gap-1 overflow-x-auto pb-0 border-b border-slate-200 dark:border-slate-800" role="tablist">
                     {[
-                      { id: 'ALL' as const, label: 'All Records', count: scopedMaintenanceRecords.length, icon: null },
+                      { id: 'ALL' as const, label: 'All Records', count: scopedMaintenanceRecords.filter((r) => r.record_category !== 'equipment_register').length, icon: null },
                       { id: 'SCHEDULES' as const, label: 'Schedules Only', count: scopedMaintenanceRecords.filter((r) => r.record_category === 'work_order').length, icon: Calendar },
                       { id: 'BREAKDOWN' as const, label: 'Breakdown Cards', count: scopedMaintenanceRecords.filter((r) => r.record_category === 'breakdown').length, icon: Wrench },
                       { id: 'PREVENTIVE' as const, label: 'Preventive Cards', count: scopedMaintenanceRecords.filter((r) => r.record_category === 'preventive').length, icon: ShieldCheck },
@@ -2158,7 +2160,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                     if (maintFilter === 'ACTIONS') return rec.record_category === 'action_tracker';
                     if (maintFilter === 'PM_TRACKER') return rec.record_category === 'pm_tracker';
                     if (maintFilter === 'EQUIPMENT_REGISTER') return rec.record_category === 'equipment_register';
-                    return true;
+                    return rec.record_category !== 'equipment_register';
                   });
 
                   if (filteredRecords.length === 0) {
@@ -3676,60 +3678,56 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
               {/* Right Column: Details View */}
               <div className={`md:col-span-7 lg:col-span-8 flex flex-col h-full overflow-y-auto p-4 sm:p-6 bg-white dark:bg-slate-900 ${mobileGroupTab === 'CARDS' ? 'hidden md:flex' : 'flex'}`}>
                 {selectedGroupEquipmentItem ? (
-                  <div className="space-y-6">
-                    {/* Top Header Card */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900/60">
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-400">
-                          Equipment Register Details
+                  <div className="space-y-4">
+                    {/* Top Action Bar */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                      <div className="flex items-center gap-2">
+                        <StatusBadge status={selectedGroupEquipmentItem.status || 'ACTIVE'} />
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                          {selectedGroupEquipmentItem.equipment || selectedGroupEquipmentItem.display_title || 'Equipment Register Entry'}
                         </span>
-                        <h3 className="text-lg font-black text-slate-900 dark:text-white">
-                          {selectedGroupEquipmentItem.equipment || selectedGroupEquipmentItem.display_title || selectedGroupEquipmentItem.title}
-                        </h3>
-                        <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300">
-                          <span>Unit No: <strong>{selectedGroupEquipmentItem.unit_number || '—'}</strong></span>
-                          <span>•</span>
-                          <span>Type: <strong>{selectedGroupEquipmentItem.equipment_type || '—'}</strong></span>
-                        </div>
                       </div>
-                      <StatusBadge status={selectedGroupEquipmentItem.status || 'ACTIVE'} />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const el = document.querySelector<HTMLElement>('[data-batch-equipment-details-exec]');
+                          if (el) printElement(el, 'Equipment register details');
+                        }}
+                        className="px-3 py-1.5 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-xs"
+                      >
+                        <Printer size={14} /> Print
+                      </button>
                     </div>
 
-                    {/* Details Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1">
-                        <span className="text-[10px] font-bold uppercase text-slate-400">Equipment Name / Model</span>
-                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{selectedGroupEquipmentItem.equipment || '—'}</p>
-                      </div>
-                      <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1">
-                        <span className="text-[10px] font-bold uppercase text-slate-400">Unit Number</span>
-                        <p className="text-sm font-mono font-bold text-indigo-600">{selectedGroupEquipmentItem.unit_number || '—'}</p>
-                      </div>
-                      <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1">
-                        <span className="text-[10px] font-bold uppercase text-slate-400">Equipment Type</span>
-                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{selectedGroupEquipmentItem.equipment_type || '—'}</p>
-                      </div>
-                      <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1">
-                        <span className="text-[10px] font-bold uppercase text-slate-400">Priority Level</span>
-                        <p className="text-sm font-bold text-indigo-600">{selectedGroupEquipmentItem.priority || 'NORMAL'}</p>
-                      </div>
-                      <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1 sm:col-span-2">
-                        <span className="text-[10px] font-bold uppercase text-slate-400">Open Defects & Issues</span>
-                        <p className="text-xs text-slate-800 dark:text-slate-200 whitespace-pre-line font-medium">{selectedGroupEquipmentItem.open_defects || 'No open defects recorded.'}</p>
-                      </div>
-                      <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1 sm:col-span-2">
-                        <span className="text-[10px] font-bold uppercase text-slate-400">Action Required</span>
-                        <p className="text-xs text-slate-800 dark:text-slate-200 whitespace-pre-line font-medium">{selectedGroupEquipmentItem.action_required || 'No action required.'}</p>
-                      </div>
-                      <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1 sm:col-span-2">
-                        <span className="text-[10px] font-bold uppercase text-slate-400">Remarks / Operational Notes</span>
-                        <p className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-line">{selectedGroupEquipmentItem.remarks || selectedGroupEquipmentItem.description || 'No additional remarks.'}</p>
-                      </div>
-                      <div className="p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 space-y-1 sm:col-span-2">
-                        <span className="text-[10px] font-bold uppercase text-slate-400">Created / Recorded Timestamp</span>
-                        <p className="text-xs font-mono text-slate-600 dark:text-slate-400">{selectedGroupEquipmentItem.created_at ? new Date(selectedGroupEquipmentItem.created_at).toLocaleString() : '—'}</p>
-                      </div>
-                    </div>
+                    {/* Standard Tracker Details Section */}
+                    <article data-batch-equipment-details-exec className="space-y-5 text-sm print:text-black">
+                      <section className="overflow-hidden border border-slate-900 rounded-none print:rounded-none bg-white dark:bg-slate-950">
+                        <h3 className="bg-[#184877] px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-white">
+                          Record details
+                        </h3>
+                        <div className="grid grid-cols-1 border-l border-t border-slate-900 sm:grid-cols-2">
+                          {[
+                            ['Equipment', selectedGroupEquipmentItem.equipment],
+                            ['Unit no.', selectedGroupEquipmentItem.unit_number],
+                            ['Type', selectedGroupEquipmentItem.equipment_type],
+                            ['Status', selectedGroupEquipmentItem.status],
+                            ['Open defects', selectedGroupEquipmentItem.open_defects],
+                            ['Action required', selectedGroupEquipmentItem.action_required],
+                            ['Priority', selectedGroupEquipmentItem.priority],
+                            ['Remarks', selectedGroupEquipmentItem.remarks || selectedGroupEquipmentItem.description],
+                          ].map(([label, value]) => (
+                            <div key={label} className="min-w-0 border-b border-r border-slate-900 bg-white dark:bg-slate-950">
+                              <div className="bg-[#dbe7f4] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-800">
+                                {label}
+                              </div>
+                              <div className="min-h-12 whitespace-pre-wrap break-words px-3 py-2 text-sm font-medium text-slate-900 dark:text-white">
+                                {value == null || value === '' ? '—' : String(value)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    </article>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full py-12 text-center text-slate-400 space-y-2">
