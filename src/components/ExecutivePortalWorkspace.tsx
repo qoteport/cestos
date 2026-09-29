@@ -2927,7 +2927,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
 
       {editingPO && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-6xl w-full max-h-[92vh] overflow-y-auto space-y-5 shadow-2xl">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-3xl w-full max-h-[92vh] overflow-y-auto space-y-5 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2"><Pencil size={17} className="text-indigo-600" />Edit Purchase Order: {editingPO.po_number}</h3>
               <button type="button" onClick={() => setEditingPO(null)} className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"><X size={18} /></button>

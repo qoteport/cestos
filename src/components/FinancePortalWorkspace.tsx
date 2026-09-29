@@ -3603,7 +3603,7 @@ Signed: Finance & Procurement Administration
       {/* Edit Purchase Order Modal */}
       {editingPo && (
         <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-card border rounded-2xl p-6 max-w-5xl w-full max-h-[92vh] overflow-y-auto space-y-5 shadow-2xl my-8">
+          <div className="bg-card border rounded-2xl p-6 max-w-3xl w-full max-h-[92vh] overflow-y-auto space-y-5 shadow-2xl my-8">
             <div className="flex items-center justify-between border-b pb-3 border-border">
               <h3 className="font-bold text-base flex items-center gap-2 text-foreground">
                 <Pencil className="h-5 w-5 text-violet-600" /> Edit Purchase Order: {editingPo.po_number || editingPo.id}
@@ -3956,7 +3956,7 @@ Signed: Finance & Procurement Administration
               {/* Content Body */}
               <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-white dark:bg-slate-900">
                 {/* Summary Header Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
                   {/* Left Column */}
                   <div className="space-y-4">
                     <div>
@@ -4000,7 +4000,7 @@ Signed: Finance & Procurement Administration
                   </div>
 
                   {/* Right Column */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm h-fit">
                     <div>
                       <span className="block text-[10px] uppercase font-bold text-slate-400">Payee phone</span>
                       <span className="font-medium text-slate-700 dark:text-slate-200">{viewingExpense.pay_to_phone || '—'}</span>

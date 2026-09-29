@@ -694,7 +694,7 @@ export default function OperationalExpensesWorkspace({
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 rounded-xl border bg-muted/20">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start p-5 rounded-xl border bg-muted/20">
                   <div className="space-y-4">
                     <div>
                       <span className="text-[10px] font-extrabold uppercase tracking-widest text-violet-600">Official Expense Claim</span>
@@ -730,7 +730,7 @@ export default function OperationalExpensesWorkspace({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-4 rounded-xl border bg-background text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-4 rounded-xl border bg-background text-sm h-fit">
                     <div>
                       <span className="block text-[10px] uppercase font-bold text-muted-foreground">Payee phone</span>
                       <span className="font-medium text-foreground">{viewingExpense.pay_to_phone || '—'}</span>
