@@ -696,7 +696,7 @@ export default function OperationalExpensesWorkspace({
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start p-5 rounded-xl border bg-muted/20">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end p-5 rounded-xl border bg-muted/20">
                     {/* Left Column */}
                     <div className="space-y-4">
                       <div>
@@ -744,7 +744,7 @@ export default function OperationalExpensesWorkspace({
                     </div>
 
                     {/* Right Column */}
-                    <div className="space-y-4 h-fit">
+                    <div className="space-y-4 flex flex-col justify-end">
                       <div className="p-4 rounded-xl border bg-violet-50/50 dark:bg-violet-950/20 text-xs space-y-2">
                         <span className="text-[10px] font-extrabold uppercase tracking-wider text-violet-600 dark:text-violet-400 block">Submitted By</span>
                         <p className="font-bold text-foreground text-sm flex items-center gap-1.5"><User size={15} className="text-violet-600 shrink-0" /> {vName}</p>

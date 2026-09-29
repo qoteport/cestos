@@ -5369,7 +5369,7 @@ Signed: Field Operations Administration
               {/* Content Body */}
               <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-white dark:bg-slate-900">
                 {/* Summary Header Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end p-5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
                   {/* Left Column */}
                   <div className="space-y-4">
                     <div>
@@ -5433,7 +5433,7 @@ Signed: Field Operations Administration
                   </div>
 
                   {/* Right Column */}
-                  <div className="space-y-4 h-fit">
+                  <div className="space-y-4 flex flex-col justify-end">
                     <div className="p-4 rounded-xl border border-orange-100 dark:border-orange-900/40 bg-orange-50/50 dark:bg-orange-950/20 text-xs space-y-2">
                       <span className="text-[10px] font-extrabold uppercase tracking-wider text-orange-600 dark:text-orange-400 block">Submitted By</span>
                       <p className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-1.5"><User size={15} className="text-orange-600 shrink-0" /> {vName}</p>
