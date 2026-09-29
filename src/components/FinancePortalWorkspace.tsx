@@ -3602,8 +3602,8 @@ Signed: Finance & Procurement Administration
 
       {/* Edit Purchase Order Modal */}
       {editingPo && (
-        <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-card border rounded-2xl p-6 max-w-3xl w-full max-h-[92vh] overflow-y-auto space-y-5 shadow-2xl my-8">
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs overflow-y-auto scrollbar-none [&::-webkit-scrollbar]:hidden">
+          <div className="bg-card border rounded-2xl p-6 max-w-3xl w-full max-h-[92vh] overflow-y-auto scrollbar-none [&::-webkit-scrollbar]:hidden space-y-5 shadow-2xl my-8">
             <div className="flex items-center justify-between border-b pb-3 border-border">
               <h3 className="font-bold text-base flex items-center gap-2 text-foreground">
                 <Pencil className="h-5 w-5 text-violet-600" /> Edit Purchase Order: {editingPo.po_number || editingPo.id}
