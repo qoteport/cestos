@@ -112,8 +112,14 @@ interface VendorLedgerEntry {
 
 interface VendorAccount {
   key: string;
+  vendorId?: string;
   name: string;
   currency: string;
+  supplierNumber?: string;
+  bankAccountType?: string;
+  paymentMethod?: string;
+  bankAccountDetails?: string;
+  phone?: string;
   amountOwed: number;
   amountPaid: number;
   balance: number;
@@ -202,6 +208,11 @@ export default function FinancePortalWorkspace() {
   const [activeTab, setActiveTab] = useState<FinanceTab>('EXPENSES');
   const handledRecordLink = useRef('');
   const [selectedVendorKey, setSelectedVendorKey] = useState('');
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [vendorModalOpen, setVendorModalOpen] = useState(false);
+  const [editingVendor, setEditingVendor] = useState<any | null>(null);
+  const [vendorBusy, setVendorBusy] = useState(false);
+  const [vendorForm, setVendorForm] = useState({ name: '', supplier_number: '', bank_account_type: '', payment_method: '', bank_account_details: '' });
   const [vendorSearch, setVendorSearch] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
@@ -399,6 +410,7 @@ export default function FinancePortalWorkspace() {
     if (!financeDataLoaded.current) setLoading(true);
 
     const fetches: Promise<any>[] = [
+      apiFetch<any>('/api/v1/finance/vendors').then((res) => { if (active) setVendors(Array.isArray(res) ? res : res?.items || []); }).catch(() => []),
       apiFetch<any>('/api/v1/projects?page_size=100').then((res) => { if (active) setProjects(Array.isArray(res) ? res : res?.items || []); }).catch(() => []),
       apiFetch<any>('/api/v1/field-portal/fuel-deliveries').then((res) => { if (active) setFuelDeliveries(Array.isArray(res) ? res : res?.items || []); }).catch(() => []),
       apiFetch<any>('/api/v1/field-portal/fuel-allocations').then((res) => { if (active) setFuelAllocations(Array.isArray(res) ? res : res?.items || []); }).catch(() => []),
@@ -559,17 +571,20 @@ export default function FinancePortalWorkspace() {
 
   const vendorAccounts = useMemo<VendorAccount[]>(() => {
     const accounts = new Map<string, VendorAccount>();
+    const masterByName = new Map(vendors.map((vendor) => [String(vendor.name || '').trim().toLocaleLowerCase(), vendor]));
     const getAccount = (rawName: unknown, rawCurrency: unknown = 'USD') => {
       const name = String(rawName || 'Unspecified vendor').trim() || 'Unspecified vendor';
       const currency = String(rawCurrency || 'USD').toUpperCase();
       const key = `${name.toLocaleLowerCase()}|${currency}`;
       let account = accounts.get(key);
       if (!account) {
-        account = { key, name, currency, amountOwed: 0, amountPaid: 0, balance: 0, entries: [] };
+        const master = masterByName.get(name.toLocaleLowerCase());
+        account = { key, name: master?.name || name, currency, vendorId: master?.id, supplierNumber: master?.supplier_number, bankAccountType: master?.bank_account_type, paymentMethod: master?.payment_method, bankAccountDetails: master?.bank_account_details, phone: master?.phone, amountOwed: 0, amountPaid: 0, balance: 0, entries: [] };
         accounts.set(key, account);
       }
       return account;
     };
+    for (const vendor of vendors) getAccount(vendor.name, 'USD');
     const orderById = new Map(purchaseOrders.map((po) => [String(po.id), po]));
     const eligibleOrders = purchaseOrders.filter((po) => ['APPROVED', 'SENT_TO_SUPPLIER', 'PARTIALLY_RECEIVED', 'RECEIVED', 'CLOSED'].includes(String(po.status || '').toUpperCase()));
     const paidForExpense = (expense: any) => {
@@ -683,7 +698,7 @@ export default function FinancePortalWorkspace() {
         return String(b.date || '').localeCompare(String(a.date || ''));
       }),
     })).sort((a, b) => a.name.localeCompare(b.name));
-  }, [purchaseOrders, operationalExpenseRequests]);
+  }, [purchaseOrders, operationalExpenseRequests, vendors]);
 
   const filteredVendorAccounts = React.useMemo(() => {
     if (!vendorSearch.trim()) return vendorAccounts;
@@ -705,6 +720,40 @@ export default function FinancePortalWorkspace() {
     }
     if (!vendorAccounts.some((account) => account.key === selectedVendorKey)) setSelectedVendorKey(vendorAccounts[0].key);
   }, [vendorAccounts, selectedVendorKey]);
+
+  const openVendorEditor = (vendor?: any | null) => {
+    const existing = vendor || null;
+    setEditingVendor(existing);
+    setVendorForm({
+      name: existing?.name || selectedVendor?.name || '',
+      supplier_number: existing?.supplier_number || selectedVendor?.supplierNumber || '',
+      bank_account_type: existing?.bank_account_type || selectedVendor?.bankAccountType || '',
+      payment_method: existing?.payment_method || selectedVendor?.paymentMethod || '',
+      bank_account_details: existing?.bank_account_details || selectedVendor?.bankAccountDetails || '',
+    });
+    setVendorModalOpen(true);
+  };
+
+  const saveVendor = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setVendorBusy(true);
+    try {
+      const payload = { ...vendorForm, name: vendorForm.name.trim(), supplier_number: vendorForm.supplier_number.trim() || null };
+      const saved = await apiFetch<any>(editingVendor?.id ? `/api/v1/finance/vendors/${editingVendor.id}` : '/api/v1/finance/vendors', {
+        method: editingVendor?.id ? 'PATCH' : 'POST',
+        body: JSON.stringify(payload),
+      });
+      setVendors((current) => current.some((item) => item.id === saved.id) ? current.map((item) => item.id === saved.id ? saved : item) : [...current, saved]);
+      setSelectedVendorKey(`${String(saved.name).toLocaleLowerCase()}|${selectedVendor?.currency || 'USD'}`);
+      setVendorModalOpen(false);
+      setBanner({ type: 'success', message: `${saved.name} saved as a shared vendor for purchase orders and expense payees.` });
+      reload();
+    } catch (error: any) {
+      setBanner({ type: 'error', message: error?.message || 'Could not save vendor.' });
+    } finally {
+      setVendorBusy(false);
+    }
+  };
 
   // Fuel Cost Calculation Helpers
   const fuelDeliveryCost = (delivery: any) => {
@@ -1688,7 +1737,7 @@ Signed: Finance & Procurement Administration
             {renderFilterBar()}
 
             {/* Header & Description */}
-            <div className="hidden flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h2 className="flex items-center gap-2 text-xl font-bold text-foreground">
                   <Building2 className="h-6 w-6 text-violet-600 dark:text-violet-400" /> Vendor Accounts
@@ -1697,8 +1746,17 @@ Signed: Finance & Procurement Administration
                   Purchase order liabilities and expense payments across your vendor accounts.
                 </p>
               </div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-800 text-[11px] font-medium text-violet-900 dark:text-violet-300 shrink-0">
-                <span>Balance = approved purchase orders and standalone expenses less recorded payments.</span>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
+                <div className="hidden lg:inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-800 text-[11px] font-medium text-violet-900 dark:text-violet-300">
+                  <span>Balance = approved purchase orders and standalone expenses less recorded payments.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openVendorEditor(null)}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-violet-700 w-full sm:w-auto"
+                >
+                  <Plus size={15} /> New Vendor
+                </button>
               </div>
             </div>
 
@@ -1822,7 +1880,13 @@ Signed: Finance & Procurement Administration
                           <p className="mt-1 text-xs text-muted-foreground font-medium">
                             {selectedVendor.entries.length} purchase and invoice records · {selectedVendor.currency}
                           </p>
+                          {selectedVendor.supplierNumber && <p className="mt-1 text-[11px] font-semibold text-violet-700 dark:text-violet-300">Supplier no. {selectedVendor.supplierNumber}</p>}
+                          {(selectedVendor.bankAccountType || selectedVendor.paymentMethod) && <p className="mt-1 text-[11px] text-muted-foreground">{selectedVendor.bankAccountType && <>Vendor type: {selectedVendor.bankAccountType.replaceAll('_', ' ')}</>}{selectedVendor.bankAccountType && selectedVendor.paymentMethod ? ' · ' : ''}{selectedVendor.paymentMethod && <>Payment method: {selectedVendor.paymentMethod.replaceAll('_', ' ')}</>}</p>}
                         </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <button type="button" onClick={() => openVendorEditor(vendors.find((vendor) => vendor.id === selectedVendor.vendorId) || null)} className="inline-flex items-center gap-1.5 rounded-lg border border-violet-300 bg-white px-3 py-2 text-xs font-bold text-violet-800 transition hover:bg-violet-50 dark:border-violet-800 dark:bg-slate-900 dark:text-violet-300">
+                            {selectedVendor.vendorId ? <Pencil size={13} /> : <Plus size={13} />}{selectedVendor.vendorId ? 'Edit Vendor' : 'Add Vendor Details'}
+                          </button>
                         <div className="grid grid-cols-2 gap-4 sm:gap-6 bg-card p-3 rounded-xl border">
                           <div>
                             <span className="block text-[10px] font-bold uppercase text-muted-foreground">Total Paid</span>
@@ -1836,6 +1900,7 @@ Signed: Finance & Procurement Administration
                               {selectedVendor.currency} {selectedVendor.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </strong>
                           </div>
+                        </div>
                         </div>
                       </div>
 
@@ -1938,6 +2003,34 @@ Signed: Finance & Procurement Administration
                       <p className="text-xs text-muted-foreground">Select a vendor from the list to view their ledger account.</p>
                     </div>
                   )}
+                </section>
+              </div>
+            )}
+            {vendorModalOpen && (
+              <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-0 sm:p-4 backdrop-blur-xs overflow-hidden" onMouseDown={(event) => { if (event.target === event.currentTarget && !vendorBusy) setVendorModalOpen(false); }}>
+                <section role="dialog" aria-modal="true" aria-labelledby="finance-vendor-title" className="bg-card border rounded-none sm:rounded-2xl max-w-xl w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+                  <header className="flex items-center justify-between border-b px-4 py-3.5 sm:px-6 sm:py-4 border-border shrink-0 bg-card/95 backdrop-blur-md sticky top-0 z-10">
+                    <h3 id="finance-vendor-title" className="font-bold text-base flex items-center gap-2 text-foreground">
+                      <Building2 className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                      {editingVendor ? 'Edit Vendor' : 'New Vendor'}
+                    </h3>
+                    <button type="button" aria-label="Close vendor form" disabled={vendorBusy} onClick={() => setVendorModalOpen(false)} className="p-1 rounded-full hover:bg-muted text-muted-foreground transition disabled:opacity-50"><X size={18} /></button>
+                  </header>
+                  <form onSubmit={saveVendor} className="flex flex-col flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <label className="space-y-1.5 text-xs font-bold text-foreground"><span className="block">Business Name *</span><input required maxLength={200} value={vendorForm.name} onChange={(event) => setVendorForm({ ...vendorForm, name: event.target.value })} className="input-field w-full" placeholder="Registered business name" /></label>
+                        <label className="space-y-1.5 text-xs font-bold text-foreground"><span className="block">Supplier Number</span><input maxLength={50} value={vendorForm.supplier_number} onChange={(event) => setVendorForm({ ...vendorForm, supplier_number: event.target.value })} className="input-field w-full" placeholder="Leave blank to generate" /></label>
+                        <label className="space-y-1.5 text-xs font-bold text-foreground"><span className="block">Vendor type</span><SearchableSelect value={vendorForm.bank_account_type} onChange={(value) => setVendorForm({ ...vendorForm, bank_account_type: value })} options={[{ value: '', label: 'Select vendor type' }, { value: 'SPARE_PART', label: 'Spare part' }, { value: 'FUEL', label: 'Fuel' }, { value: 'FOREIGN_PURCHASE', label: 'Foreign purchase' }]} searchable={false} /></label>
+                        <label className="space-y-1.5 text-xs font-bold text-foreground"><span className="block">Payment Method</span><SearchableSelect value={vendorForm.payment_method} onChange={(value) => setVendorForm({ ...vendorForm, payment_method: value })} options={[{ value: '', label: 'Select payment method' }, { value: 'BANK_TRANSFER', label: 'Bank transfer' }, { value: 'MOBILE_MONEY', label: 'Mobile money' }, { value: 'CASH', label: 'Cash' }]} searchable={false} /></label>
+                      </div>
+                      <label className="block space-y-1.5 text-xs font-bold text-foreground"><span className="block">Bank Account Details</span><textarea rows={3} maxLength={1000} value={vendorForm.bank_account_details} onChange={(event) => setVendorForm({ ...vendorForm, bank_account_details: event.target.value })} className="input-field min-h-24 w-full resize-y" placeholder="Account name, bank, account number or payment details" /></label>
+                    </div>
+                    <footer className="sticky bottom-0 bg-card/95 backdrop-blur-md border-t border-border p-3.5 sm:px-6 sm:py-4 shrink-0 flex items-center justify-end gap-2 sm:gap-3 z-10">
+                      <button type="button" disabled={vendorBusy} onClick={() => setVendorModalOpen(false)} className="rounded-xl border border-border px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted transition disabled:opacity-50 w-full sm:w-auto">Cancel</button>
+                      <button type="submit" disabled={vendorBusy} className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-2 text-xs font-bold text-white hover:bg-violet-700 disabled:opacity-50 transition shadow-xs w-full sm:w-auto">{vendorBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check size={14} />}{editingVendor ? 'Save Vendor' : 'Create Vendor'}</button>
+                    </footer>
+                  </form>
                 </section>
               </div>
             )}
