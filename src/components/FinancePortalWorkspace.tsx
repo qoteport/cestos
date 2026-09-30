@@ -1746,18 +1746,13 @@ Signed: Finance & Procurement Administration
                   Purchase order liabilities and expense payments across your vendor accounts.
                 </p>
               </div>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
-                <div className="hidden lg:inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-800 text-[11px] font-medium text-violet-900 dark:text-violet-300">
-                  <span>Balance = approved purchase orders and standalone expenses less recorded payments.</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => openVendorEditor(null)}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-violet-700 w-full sm:w-auto"
-                >
-                  <Plus size={15} /> New Vendor
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => openVendorEditor(null)}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-violet-700 w-full sm:w-auto shrink-0"
+              >
+                <Plus size={15} /> New Vendor
+              </button>
             </div>
 
             {/* Vendor Summary KPI Cards */}
