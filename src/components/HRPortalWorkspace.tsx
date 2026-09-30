@@ -10,7 +10,7 @@ import AppLogo from './ui/AppLogo';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApiDataRefresh } from '@/lib/apiDataRefresh';
-import { getEmployeeDisplayLocation } from '@/lib/employeeLocation';
+import { getEmployeeDisplayLocation, getEmployeeDisplayLocationDetails } from '@/lib/employeeLocation';
 import {
   Users,
   DollarSign,
@@ -1206,7 +1206,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                         const lName = emp.last_name || '';
                         const nameStr = `${fName} ${lName}`.trim() || 'Employee Record';
                         const initial = fName ? fName[0].toUpperCase() : 'E';
-                        const locName = getEmployeeDisplayLocation(emp, projects, locations);
+                        const locInfo = getEmployeeDisplayLocationDetails(emp, projects, locations);
 
                         return (
                           <tr key={emp.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
@@ -1232,10 +1232,26 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                               <StatusBadge status={emp.employment_status || (emp.is_active ? 'ACTIVE / AVAILABLE' : 'ARCHIVED')} />
                             </td>
                             <td className="hidden sm:table-cell px-5 py-3.5">
-                              <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1">
-                                <MapPin size={13} className="text-emerald-600" />
-                                {locName}
-                              </span>
+                              {locInfo.isProject ? (
+                                <div className="space-y-0.5">
+                                  <span className="font-bold text-slate-900 dark:text-white block text-xs">{locInfo.projectName}</span>
+                                  {locInfo.siteName ? (
+                                    <span className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                                      <MapPin size={11} className="text-emerald-600 shrink-0" />
+                                      {locInfo.siteName}
+                                    </span>
+                                  ) : (
+                                    <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-semibold">
+                                      <CheckCircle size={10} className="shrink-0" /> Active Project
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1 text-xs">
+                                  <MapPin size={13} className="text-slate-400 shrink-0" />
+                                  {locInfo.displayLocation}
+                                </span>
+                              )}
                             </td>
                             <td className="hidden md:table-cell px-5 py-3.5 space-y-0.5">
                               <span className="text-xs font-bold text-slate-800 dark:text-slate-200">

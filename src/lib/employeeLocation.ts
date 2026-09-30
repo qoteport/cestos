@@ -1,9 +1,23 @@
-export function getEmployeeDisplayLocation(
+export interface EmployeeLocationDetails {
+  projectName: string | null;
+  siteName: string | null;
+  displayLocation: string;
+  isProject: boolean;
+}
+
+export function getEmployeeDisplayLocationDetails(
   emp: any,
   projects?: any[],
   locations?: any[]
-): string {
-  if (!emp) return 'Headquarters';
+): EmployeeLocationDetails {
+  if (!emp) {
+    return {
+      projectName: null,
+      siteName: null,
+      displayLocation: 'Headquarters',
+      isProject: false,
+    };
+  }
 
   // 1. Determine active project name
   const projName =
@@ -31,16 +45,7 @@ export function getEmployeeDisplayLocation(
       ? locations.find((l: any) => String(l.id) === String(emp.current_location_id || emp.assigned_location_id || emp.site_id || emp.location_id))?.name
       : null);
 
-  // If active project exists, format as "Project Name — Site Name" or "Project Name"
-  if (projName && String(projName).trim()) {
-    const pStr = String(projName).trim();
-    const sStr = siteName && String(siteName).trim() && String(siteName).trim().toLowerCase() !== pStr.toLowerCase()
-      ? String(siteName).trim()
-      : null;
-    return sStr ? `${pStr} — ${sStr}` : pStr;
-  }
-
-  // Fallback: Default to what is currently showing
+  // Fallback: Default to what is currently showing (home location / work location / headquarters)
   const defaultLoc =
     (Array.isArray(locations) && emp.home_location_id
       ? locations.find((l: any) => String(l.id) === String(emp.home_location_id))?.name
@@ -52,5 +57,32 @@ export function getEmployeeDisplayLocation(
     emp.location?.name ||
     'Headquarters';
 
-  return defaultLoc;
+  if (projName && String(projName).trim()) {
+    const pStr = String(projName).trim();
+    const sStr = siteName && String(siteName).trim() && String(siteName).trim().toLowerCase() !== pStr.toLowerCase()
+      ? String(siteName).trim()
+      : null;
+
+    return {
+      projectName: pStr,
+      siteName: sStr,
+      displayLocation: sStr ? `${pStr} — ${sStr}` : pStr,
+      isProject: true,
+    };
+  }
+
+  return {
+    projectName: null,
+    siteName: null,
+    displayLocation: defaultLoc,
+    isProject: false,
+  };
+}
+
+export function getEmployeeDisplayLocation(
+  emp: any,
+  projects?: any[],
+  locations?: any[]
+): string {
+  return getEmployeeDisplayLocationDetails(emp, projects, locations).displayLocation;
 }

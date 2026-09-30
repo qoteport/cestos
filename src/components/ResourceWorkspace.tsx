@@ -8,7 +8,7 @@ import { apiFetch, apiFetchBlob } from '@/lib/api';
 import { useAuth } from './AuthProvider';
 import { Row, title, rows, display, useData, State, Table, Facts, Modal } from './DataUI';
 import RecordForm from './RecordForm';
-import { getEmployeeDisplayLocation } from '@/lib/employeeLocation';
+import { getEmployeeDisplayLocation, getEmployeeDisplayLocationDetails } from '@/lib/employeeLocation';
 import SearchableSelect from './SearchableSelect';
 import AssetDetailView from './AssetDetailView';
 import AssetThumbnail from './AssetThumbnail';
@@ -636,11 +636,33 @@ function ResourceList({ resource, readOnly }: { resource: string; readOnly?: boo
                                 )}
                               </td>
 
-                              <td className="p-3 text-muted-foreground">
-                                <span className="flex items-center gap-1 text-xs text-foreground font-medium">
-                                  <MapPin size={12} className="text-muted-foreground shrink-0" />
-                                  {getEmployeeDisplayLocation(emp)}
-                                </span>
+                              <td className="p-3">
+                                {(() => {
+                                  const locInfo = getEmployeeDisplayLocationDetails(emp);
+                                  if (locInfo.isProject) {
+                                    return (
+                                      <div className="space-y-0.5">
+                                        <span className="font-bold text-foreground block text-xs">{locInfo.projectName}</span>
+                                        {locInfo.siteName ? (
+                                          <span className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium">
+                                            <MapPin size={11} className="text-primary shrink-0" />
+                                            {locInfo.siteName}
+                                          </span>
+                                        ) : (
+                                          <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-semibold">
+                                            <CheckCircle size={10} className="shrink-0" /> Active Project
+                                          </span>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+                                  return (
+                                    <span className="flex items-center gap-1 text-xs text-muted-foreground font-medium">
+                                      <MapPin size={12} className="text-muted-foreground/70 shrink-0" />
+                                      {locInfo.displayLocation}
+                                    </span>
+                                  );
+                                })()}
                               </td>
 
                               <td className="p-3 text-muted-foreground">
