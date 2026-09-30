@@ -234,6 +234,20 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
               <label className="block space-y-1 font-semibold"><span className="block">Date *</span><AppDateTimePicker mode="date" required value={date} onChange={(val) => setDate(val)} /></label>
               <label className="block space-y-1 font-semibold"><span className="block">Pay by *</span><SearchableSelect value={method} onChange={(val) => setMethod(val)} options={[['MOBILE_MONEY','Phone / mobile money'],['BANK_TRANSFER','Bank transfer'],['CASH','Cash'],['CARD','Card'],['OTHER','Other']].map(([value,label]) => ({ value, label }))} placeholder="Select payment method..." required /></label>
             </section>
+            <section className="grid gap-3 rounded-xl border p-3 sm:grid-cols-2">
+              <label className="block space-y-1 font-semibold sm:col-span-2">
+                <span className="block">Invoice upload *</span>
+                <input
+                  type="file"
+                  required
+                  accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,.docx,.xls,.xlsx,.txt,.csv,.rtf"
+                  className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 dark:file:bg-orange-950/60 dark:file:text-orange-300 cursor-pointer transition"
+                  onChange={(event) => void handleInvoiceChange(event.target.files?.[0] || null)}
+                />
+                {invoice && <span className="block truncate text-[11px] font-normal text-slate-500">{invoice.name}</span>}
+                {(extracting || extractionMessage) && <span role="status" className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium ${extracting ? 'bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-200' : 'bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{extracting ? <><Loader2 size={14} className="animate-spin" />Reading invoice and identifying line items…</> : <><Sparkles size={14} />{extractionMessage}</>}</span>}
+              </label>
+            </section>
             <section className="space-y-3 rounded-xl border p-3">
               <div className="flex items-center justify-between"><h3 className="font-bold text-slate-800 dark:text-slate-100">Items purchased</h3><button type="button" onClick={() => setItems((rows) => [...rows, blankItem()])} className="font-bold text-orange-700 dark:text-orange-400">+ Add item</button></div>
               {items.length === 0 && <p className="rounded-lg border border-dashed p-3 text-slate-500">No purchased items added. You can submit an expense with a manually entered total.</p>}
@@ -284,18 +298,6 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
                 Enter total manually
               </label>
               <label className="block space-y-1 font-semibold sm:col-span-2"><span className="block">Total cost {manualTotal ? '*' : '(calculated)'}</span><input type="number" min="0" step="0.01" required={manualTotal} readOnly={!manualTotal} className={inputClass} value={manualTotal ? manualAmount : calculatedTotal.toFixed(2)} onChange={(event) => setManualAmount(event.target.value)} /></label>
-              <label className="block space-y-1 font-semibold sm:col-span-2">
-                <span className="block">Invoice upload *</span>
-                <input
-                  type="file"
-                  required
-                  accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,.docx,.xls,.xlsx,.txt,.csv,.rtf"
-                  className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 dark:file:bg-orange-950/60 dark:file:text-orange-300 cursor-pointer transition"
-                  onChange={(event) => void handleInvoiceChange(event.target.files?.[0] || null)}
-                />
-                {invoice && <span className="block truncate text-[11px] font-normal text-slate-500">{invoice.name}</span>}
-                {(extracting || extractionMessage) && <span role="status" className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium ${extracting ? 'bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-200' : 'bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{extracting ? <><Loader2 size={14} className="animate-spin" />Reading invoice and identifying line items…</> : <><Sparkles size={14} />{extractionMessage}</>}</span>}
-              </label>
               <p className="sm:col-span-2 text-slate-500">After submission, the expense status is <strong>Submitted</strong> and Finance is notified. Finance uploads the payment receipt when marking it complete.</p>
             </section>
           </div>
