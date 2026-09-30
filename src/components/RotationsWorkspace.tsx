@@ -7,6 +7,7 @@ import { apiFetch } from '@/lib/api';
 import { Row, display, Modal } from './DataUI';
 import SearchableSelect from './SearchableSelect';
 import AppDateTimePicker from './ui/AppDateTimePicker';
+import { getEmployeeDisplayLocation } from '@/lib/employeeLocation';
 
 
 export default function RotationsWorkspace() {
@@ -205,7 +206,7 @@ export default function RotationsWorkspace() {
               <tbody className="divide-y">
                 {filteredList.map((item: Row, idx: number) => {
                   const empName = item.employee_name || item.employee?.first_name ? `${item.employee?.first_name} ${item.employee?.last_name}` : item.employee_id || 'Employee';
-                  const projName = item.project_name || item.project?.name || item.project_id || 'General Operations';
+                  const projName = getEmployeeDisplayLocation(item, projects);
                   const statusBadge =
                     item.status === 'ON_SITE' || item.status === 'ACTIVE' ?'bg-emerald-100 text-emerald-800 border-emerald-300'
                       : item.status === 'OFF_SITE'|| item.status === 'ON_REST' ?'bg-amber-100 text-amber-800 border-amber-300' :'bg-blue-100 text-blue-800 border-blue-300';

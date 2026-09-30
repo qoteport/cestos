@@ -15,6 +15,7 @@ import useNotificationCount from './useNotificationCount';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApiDataRefresh } from '@/lib/apiDataRefresh';
+import { getEmployeeDisplayLocation } from '@/lib/employeeLocation';
 import OperationalExpenseSubmissionModal from './OperationalExpenseSubmissionModal';
 import { extractDocumentLineItems } from '@/lib/lineItemExtraction';
 import RegisterUserModal from './RegisterUserModal';
@@ -1549,10 +1550,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                         const lName = emp.last_name || '';
                         const nameStr = `${fName} ${lName}`.trim() || 'Employee Record';
                         const initial = fName ? fName[0].toUpperCase() : 'E';
-                        const locName =
-                          locations.find((l) => String(l.id) === String(emp.home_location_id))?.name ||
-                          emp.home_location_name ||
-                          'Headquarters';
+                        const locName = getEmployeeDisplayLocation(emp, projects, locations);
 
                         return (
                           <tr key={emp.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">

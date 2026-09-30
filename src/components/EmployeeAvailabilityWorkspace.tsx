@@ -6,6 +6,7 @@ import { Users, Calendar, Clock, Briefcase, Filter, Search, RefreshCw, CheckCirc
 import { apiFetch } from '@/lib/api';
 import { Row, display, Modal } from './DataUI';
 import RecordForm from './RecordForm';
+import { getEmployeeDisplayLocation } from '@/lib/employeeLocation';
 import SearchableSelect from './SearchableSelect';
 
 function getEmployeeFullName(emp: Row): string {
@@ -374,9 +375,9 @@ export default function EmployeeAvailabilityWorkspace() {
                         </td>
 
                         <td className="p-3 text-muted-foreground">
-                          <span className="flex items-center gap-1 text-xs text-foreground">
-                            <MapPin size={12} className="text-muted-foreground" />
-                            {display(emp.work_location || emp.home_location || 'Headquarters')}
+                          <span className="flex items-center gap-1 text-xs text-foreground font-medium">
+                            <MapPin size={12} className="text-muted-foreground shrink-0" />
+                            {getEmployeeDisplayLocation(emp)}
                           </span>
                         </td>
 
