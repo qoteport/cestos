@@ -1242,7 +1242,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                                     </span>
                                   ) : (
                                     <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-semibold">
-                                      <CheckCircle size={10} className="shrink-0" /> Active Project
+                                      <MapPin size={10} className="shrink-0" /> Active Project
                                     </span>
                                   )}
                                 </div>
