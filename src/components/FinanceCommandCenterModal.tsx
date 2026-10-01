@@ -135,9 +135,9 @@ export default function FinanceCommandCenterModal({ onClose, onDraftReady }: { o
         aria-labelledby="finance-command-title"
         className="flex h-[min(92dvh,880px)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-card shadow-2xl dark:border-slate-800"
       >
-        {/* Sleek Gradient Header */}
-        <header className="flex shrink-0 items-center justify-between bg-gradient-to-r from-violet-700 via-indigo-700 to-violet-800 px-5 py-4 text-white sm:px-7 border-b border-violet-600/30">
-          <div className="flex items-center gap-3.5">
+        {/* Plain Clean Popup Header */}
+        <header className="flex shrink-0 items-center justify-between border-b border-border bg-card px-4 py-3.5 sm:px-6 sm:py-4 sticky top-0 z-10">
+          <div className="flex items-center gap-3">
             {kind && (
               <button
                 type="button"
@@ -150,18 +150,17 @@ export default function FinanceCommandCenterModal({ onClose, onDraftReady }: { o
                 }}
                 disabled={busy}
                 aria-label="Back to actions"
-                className="rounded-xl p-2 text-white/80 hover:text-white hover:bg-white/15 transition disabled:opacity-50"
+                className="rounded-lg p-1.5 hover:bg-muted text-muted-foreground transition disabled:opacity-50"
               >
                 <ArrowLeft size={18} />
               </button>
             )}
-            <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center text-amber-300 shadow-inner shrink-0 border border-white/20">
-              <Zap size={22} className="fill-amber-300 text-amber-300 drop-shadow-sm" />
+            <div className="w-9 h-9 rounded-xl bg-violet-100 dark:bg-violet-950/60 text-violet-600 dark:text-violet-400 flex items-center justify-center shrink-0">
+              <Zap size={20} className="fill-amber-500 text-amber-500" />
             </div>
             <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-violet-200">Finance Portal</p>
-              <h2 id="finance-command-title" className="mt-0.5 text-lg font-black sm:text-xl flex items-center gap-2 tracking-tight">
-                Command Center
+              <h2 id="finance-command-title" className="font-bold text-base sm:text-lg text-foreground flex items-center gap-2">
+                Finance Command Center
               </h2>
             </div>
           </div>
@@ -170,9 +169,9 @@ export default function FinanceCommandCenterModal({ onClose, onDraftReady }: { o
             onClick={onClose}
             disabled={busy}
             aria-label="Close command center"
-            className="rounded-full p-2 text-white/80 hover:text-white hover:bg-white/15 transition disabled:opacity-50"
+            className="rounded-full p-1.5 hover:bg-muted text-muted-foreground transition disabled:opacity-50"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </header>
 
