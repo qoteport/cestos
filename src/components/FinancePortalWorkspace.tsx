@@ -3280,11 +3280,12 @@ Signed: Finance & Procurement Administration
             <button
               type="button"
               onClick={() => setCommandCenterOpen(true)}
-              className="p-2 text-slate-500 hover:text-violet-700 dark:hover:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-950/40 rounded-lg transition"
-              title="Open Command Center"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-700 text-white hover:from-violet-700 hover:to-indigo-800 text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all border border-violet-500/30"
+              title="Open Finance Command Center"
               aria-label="Open Finance Command Center"
             >
-              <Command className="h-4 w-4" />
+              <Zap className="h-3.5 w-3.5 fill-amber-300 text-amber-300" />
+              <span className="hidden sm:inline">Command Center</span>
             </button>
 
             <button
