@@ -49,6 +49,23 @@ const isImmediateFinanceRule = (rule: unknown) => [
   'FINANCE_PURCHASE_ORDER_GOODS_RECEIVED',
 ].includes(String(rule || ''));
 
+export function formatFinanceNotificationMessage(message: string): string {
+  if (!message) return '';
+  return message
+    .replace(/(\bfor\s+)(?!\$|[A-Z]{3}\s)(\d+(?:\.\d+)?)\b/gi, (_, prefix, val) => {
+      const num = parseFloat(val);
+      return `${prefix}$${isNaN(num) ? val : num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+    })
+    .replace(/(\bpaid\s+)(?!\$|[A-Z]{3}\s)(\d+(?:\.\d+)?)\b/gi, (_, prefix, val) => {
+      const num = parseFloat(val);
+      return `${prefix}$${isNaN(num) ? val : num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+    })
+    .replace(/(\bbalance:\s*)(?!\$|[A-Z]{3}\s)(\d+(?:\.\d+)?)\b/gi, (_, prefix, val) => {
+      const num = parseFloat(val);
+      return `${prefix}$${isNaN(num) ? val : num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+    });
+}
+
 const themeStyles = {
   emerald: {
     icon: 'text-emerald-600 dark:text-emerald-400',
@@ -590,7 +607,7 @@ export default function NotificationWorkspace({
 
                           {/* Message Content */}
                           <p className="text-sm font-medium text-foreground leading-relaxed mt-1">
-                            {n.message}
+                            {formatFinanceNotificationMessage(n.message)}
                           </p>
 
                           {/* Forwarded Metadata */}

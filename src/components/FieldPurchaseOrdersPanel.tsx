@@ -3,13 +3,12 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { apiFetch, apiFetchBlob, downloadBlob, receivePurchaseOrderGoods } from '@/lib/api';
-import { Eye, Download, FileText, Paperclip, X, Plus, CheckCircle2, ShoppingCart, Truck, PackageCheck, RefreshCw, Trash, Loader2, Sparkles } from 'lucide-react';
+import { Eye, Download, FileText, Paperclip, X, Plus, CheckCircle2, ShoppingCart, Truck, PackageCheck, RefreshCw, Trash } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
 import OperationalExpenseSubmissionModal from './OperationalExpenseSubmissionModal';
 import UniversalFileViewerModal from './UniversalFileViewerModal';
 import { PurchaseOrderCategoryField, purchaseOrderCategoryLabel } from './PurchaseOrderCategoryField';
 import { useOperationalDataSync } from '@/lib/operationalDataSync';
-import { extractDocumentLineItems } from '@/lib/lineItemExtraction';
 
 type Row = Record<string, any>;
 type Line = { item_name: string; description: string; quantity_ordered: string; unit_price: string };
@@ -59,8 +58,6 @@ export default function FieldPurchaseOrdersPanel({
   const [lines, setLines] = useState<Line[]>([]);
   const [manualTotal, setManualTotal] = useState('0');
   const [quotation, setQuotation] = useState<File | null>(null);
-  const [extractingQuotation, setExtractingQuotation] = useState(false);
-  const [extractionMessage, setExtractionMessage] = useState('');
   const [existingQuotation, setExistingQuotation] = useState('');
   const [expensePO, setExpensePO] = useState<Row | null>(null);
   const [raisedPurchaseOrderIds, setRaisedPurchaseOrderIds] = useState<Set<string>>(new Set());
@@ -187,26 +184,11 @@ export default function FieldPurchaseOrdersPanel({
   const canReceive = (po: Row) => ['APPROVED', 'SENT_TO_SUPPLIER', 'PARTIALLY_RECEIVED'].includes(String(po.status || '').toUpperCase()) && (po.items || []).some((item: Row) => Number(item.quantity_received || 0) < Number(item.quantity_ordered || 0));
   const lineTotal = lines.reduce((sum, row) => sum + (Number(row.quantity_ordered) || 0) * (Number(row.unit_price) || 0), 0);
   const total = lineTotal > 0 ? lineTotal : (Number(manualTotal) || 0);
-  async function handleQuotationChange(file: File | null) {
+  function handleQuotationChange(file: File | null) {
     setQuotation(file);
-    setExtractionMessage('');
-    if (!file) return;
-    setExtractingQuotation(true);
-    try {
-      const result = await extractDocumentLineItems(file, 'purchase_order');
-      const parsed = result.items.map((line) => ({ item_name: line.item_name, description: line.description, quantity_ordered: String(line.quantity || 0), unit_price: String(line.unit_price || 0) }));
-      setLines(parsed);
-      const parsedTotal = parsed.reduce((sum, line) => sum + Number(line.quantity_ordered) * Number(line.unit_price), 0);
-      setManualTotal(parsedTotal > 0 ? '0' : String(result.total_amount || 0));
-      if (!supplier.trim() && result.supplier_name) setSupplier(result.supplier_name);
-      if (result.currency && ['USD', 'EUR', 'GBP', 'ZAR'].includes(result.currency)) setCurrency(result.currency);
-      setExtractionMessage(`${parsed.length} line item${parsed.length === 1 ? '' : 's'} extracted. Review and correct before saving.`);
-    } catch (error) {
-      setExtractionMessage(`${error instanceof Error ? error.message : 'Could not parse this file.'} You can still enter the items manually.`);
-    } finally { setExtractingQuotation(false); }
   }
   const openCreate = () => {
-    setEditing(null); setOrderProjectId(projectId); setFormStep('EDIT'); setSupplier(''); setCurrency('USD'); setCategory(''); setNotes(''); setLines([]); setManualTotal('0'); setQuotation(null); setExtractingQuotation(false); setExtractionMessage(''); setExistingQuotation(''); setShowForm(true);
+    setEditing(null); setOrderProjectId(projectId); setFormStep('EDIT'); setSupplier(''); setCurrency('USD'); setCategory(''); setNotes(''); setLines([]); setManualTotal('0'); setQuotation(null); setExistingQuotation(''); setShowForm(true);
   };
   const lastHandledCreateSignal = useRef(openCreateSignal);
   useEffect(() => {
@@ -220,7 +202,7 @@ export default function FieldPurchaseOrdersPanel({
     const existingLines = (po.items || []).map((row: Row) => ({ item_name: row.item_name || '', description: row.description || '', quantity_ordered: String(row.quantity_ordered || 1), unit_price: String(row.unit_price || 0) }));
     setLines(existingLines);
     setManualTotal(String(existingLines.reduce((sum: number, row: Line) => sum + (Number(row.quantity_ordered) || 0) * (Number(row.unit_price) || 0), 0) > 0 ? 0 : Number(po.total_amount || 0)));
-    setQuotation(null); setExtractingQuotation(false); setExtractionMessage(''); setExistingQuotation(po.attachment_file_name || ''); setShowForm(true);
+    setQuotation(null); setExistingQuotation(po.attachment_file_name || ''); setShowForm(true);
   };
   async function upload(poId: string) {
     if (!quotation) return;
@@ -405,7 +387,7 @@ export default function FieldPurchaseOrdersPanel({
                       <input type="file" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,.docx,.xls,.xlsx,.txt,.csv,.rtf" className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 dark:file:bg-orange-950/60 dark:file:text-orange-300 cursor-pointer transition" onChange={(e) => void handleQuotationChange(e.target.files?.[0] || null)} />
                       {existingQuotation && <span className="block text-slate-500">Current file: {existingQuotation}</span>}
                       {quotation && <span className="block truncate text-[11px] text-slate-500">{quotation.name}</span>}
-                      {(extractingQuotation || extractionMessage) && <span role="status" className={`flex items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${extractingQuotation ? 'bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-200' : 'bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{extractingQuotation ? <><Loader2 size={13} className="animate-spin" />Reading quotation and identifying line items…</> : <><Sparkles size={13} />{extractionMessage}</>}</span>}
+                      <span className="block text-[11px] font-normal text-slate-500">Uploaded for reference. Enter purchase order line items manually.</span>
                     </label>
                     <label className="space-y-1 text-xs font-semibold sm:col-span-2">
                       <span className="block">Notes / specifications</span>
@@ -511,12 +493,12 @@ export default function FieldPurchaseOrdersPanel({
                       Cancel
                     </button>
                     {(!editing || editing.status === 'DRAFT') && (
-                      <button type="button" disabled={busy || extractingQuotation} onClick={() => void saveOrder(true)} className="rounded-full border border-orange-300 px-4 py-2 text-xs font-bold text-orange-800 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/30 disabled:opacity-50 transition w-full sm:w-auto">
-                        {extractingQuotation ? 'Reading file…' : busy ? 'Saving…' : 'Save as draft'}
+                      <button type="button" disabled={busy} onClick={() => void saveOrder(true)} className="rounded-full border border-orange-300 px-4 py-2 text-xs font-bold text-orange-800 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/30 disabled:opacity-50 transition w-full sm:w-auto">
+                        {busy ? 'Saving…' : 'Save as draft'}
                       </button>
                     )}
-                    <button type="submit" disabled={busy || extractingQuotation} className="rounded-full bg-orange-600 px-4 py-2 text-xs font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto">
-                      {extractingQuotation ? 'Reading file…' : 'Preview Purchase Order'}
+                    <button type="submit" disabled={busy} className="rounded-full bg-orange-600 px-4 py-2 text-xs font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto">
+                      Preview Purchase Order
                     </button>
                   </>
                 ) : (

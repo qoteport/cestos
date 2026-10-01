@@ -2,9 +2,8 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Plus, Loader2, Sparkles, Trash2, Paperclip } from 'lucide-react';
+import { X, Plus, Loader2, Trash2, Paperclip } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
-import { extractDocumentLineItems } from '@/lib/lineItemExtraction';
 import SearchableSelect from './SearchableSelect';
 import AppDateTimePicker from './AppDateTimePicker';
 
@@ -25,8 +24,6 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [method, setMethod] = useState('MOBILE_MONEY');
   const [invoice, setInvoice] = useState<File | null>(null);
-  const [extracting, setExtracting] = useState(false);
-  const [extractionMessage, setExtractionMessage] = useState('');
   const [manualTotal, setManualTotal] = useState(false);
   const [manualAmount, setManualAmount] = useState('');
   const [items, setItems] = useState<ExpenseItem[]>([]);
@@ -55,6 +52,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
       setPayName(savedPayee.name || supplierName);
       setPhone(savedPayee.phone || '');
       setBank(savedPayee.bank_account_details || '');
+      if (savedPayee.payment_method) setMethod(savedPayee.payment_method);
     } else {
       setPayeeId('__NEW__');
       setPayName(supplierName);
@@ -93,39 +91,8 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
   ], [payees]);
   const calculatedTotal = items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unit_cost) || 0), 0);
 
-  async function handleInvoiceChange(file: File | null) {
+  function handleInvoiceChange(file: File | null) {
     setInvoice(file);
-    setExtractionMessage('');
-    if (!file) return;
-    setExtracting(true);
-    try {
-      const result = await extractDocumentLineItems(file, 'expense');
-      const extractedItems = result.items.map((line) => ({
-        inventory_item_id: '',
-        name: line.item_name || line.description,
-        description: line.description,
-        quantity: String(line.quantity || 1),
-        unit_cost: String(line.unit_price || 0),
-        custom_item: true,
-      }));
-      setItems(extractedItems);
-      const extractedTotal = extractedItems.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_cost || 0), 0);
-      if (result.total_amount != null && Math.abs(Number(result.total_amount) - extractedTotal) > 0.01) {
-        setManualTotal(true);
-        setManualAmount(String(result.total_amount));
-      } else if (extractedItems.length) {
-        setManualTotal(false);
-        setManualAmount('');
-      } else if (result.total_amount != null) {
-        setManualTotal(true);
-        setManualAmount(String(result.total_amount));
-      }
-      setExtractionMessage(`${result.items.length} line item${result.items.length === 1 ? '' : 's'} extracted. Review the values before submitting.`);
-    } catch (exception) {
-      setExtractionMessage(exception instanceof Error ? `${exception.message} Manual entry is still available.` : 'Could not parse the file. Manual entry is still available.');
-    } finally {
-      setExtracting(false);
-    }
   }
 
   const updateItem = (index: number, updates: Partial<ExpenseItem>) => setItems((rows) => rows.map((row, i) => i === index ? { ...row, ...updates } : row));
@@ -222,7 +189,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
                       if (value === '__NEW__') { setPayeeId('__NEW__'); setPayName(''); setPhone(''); setBank(''); return; }
                       setPayeeId(value);
                       const payee = payees.find((row) => String(row.id) === value);
-                      if (payee) { setPayName(payee.name || ''); setPhone(payee.phone || ''); setBank(payee.bank_account_details || ''); }
+                      if (payee) { setPayName(payee.name || ''); setPhone(payee.phone || ''); setBank(payee.bank_account_details || ''); if (payee.payment_method) setMethod(payee.payment_method); }
                     }}
                     options={payeeOptions}
                     placeholder="Choose a saved payee or add a new one..."
@@ -245,7 +212,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
                   onChange={(event) => void handleInvoiceChange(event.target.files?.[0] || null)}
                 />
                 {invoice && <span className="block truncate text-[11px] font-normal text-slate-500">{invoice.name}</span>}
-                {(extracting || extractionMessage) && <span role="status" className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium ${extracting ? 'bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-200' : 'bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{extracting ? <><Loader2 size={14} className="animate-spin" />Reading invoice and identifying line items…</> : <><Sparkles size={14} />{extractionMessage}</>}</span>}
+                <span className="block text-[11px] font-normal text-slate-500">Uploaded for reference. Enter purchased items and amounts manually.</span>
               </label>
             </section>
             <section className="space-y-3 rounded-xl border p-3">
@@ -304,7 +271,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
           {/* Sticky Footer */}
           <div className="sticky bottom-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 p-3.5 sm:px-6 sm:py-4 shrink-0 flex flex-row items-center justify-end gap-2 sm:gap-3 z-10">
             <button type="button" onClick={onClose} className="rounded-xl border px-4 py-2 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition w-full sm:w-auto">Cancel</button>
-            <button type="submit" disabled={busy || extracting} className="rounded-xl bg-orange-600 px-5 py-2 font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto shadow-xs">{extracting ? 'Reading document…' : busy ? 'Submitting…' : 'Submit expense to Finance'}</button>
+            <button type="submit" disabled={busy} className="rounded-xl bg-orange-600 px-5 py-2 font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto shadow-xs">{busy ? 'Submitting…' : 'Submit expense to Finance'}</button>
           </div>
         </form>
       </section>

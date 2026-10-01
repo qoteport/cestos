@@ -210,9 +210,16 @@ export default function PwaRuntime() {
         try { known = JSON.parse(localStorage.getItem(knownKey) || '[]'); } catch {}
         const newlyAdded = items.filter((item: any) => !known.includes(String(item.id)));
         if (newlyAdded.length && document.visibilityState === 'hidden' && serviceWorkerReady) {
-          void navigator.serviceWorker.ready.then((registration) => Promise.all(newlyAdded.slice(0, 3).map((item: any) => registration.showNotification('Cestos Operations', {
-            body: String(item.message || 'You have a new notification').slice(0, 240), icon: '/assets/pwa/icon-192.png', badge: '/assets/pwa/icon-192.png', tag: `cestos-${item.id}`, data: { url: notificationUrl },
-          })))).catch(() => {});
+          void navigator.serviceWorker.ready.then((registration) => Promise.all(newlyAdded.slice(0, 3).map((item: any) => {
+            const rawBody = String(item.message || 'You have a new notification');
+            const formattedBody = rawBody
+              .replace(/(\bfor\s+)(?!\$|[A-Z]{3}\s)(\d+(?:\.\d+)?)\b/gi, (_, prefix, val) => `${prefix}$${parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`)
+              .replace(/(\bpaid\s+)(?!\$|[A-Z]{3}\s)(\d+(?:\.\d+)?)\b/gi, (_, prefix, val) => `${prefix}$${parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`)
+              .replace(/(\bbalance:\s*)(?!\$|[A-Z]{3}\s)(\d+(?:\.\d+)?)\b/gi, (_, prefix, val) => `${prefix}$${parseFloat(val).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`);
+            return registration.showNotification('Cestos Operations', {
+              body: formattedBody.slice(0, 240), icon: '/assets/pwa/icon-192.png', badge: '/assets/pwa/icon-192.png', tag: `cestos-${item.id}`, data: { url: notificationUrl },
+            });
+          }))).catch(() => {});
         }
         try { localStorage.setItem(knownKey, JSON.stringify([...ids, ...known].slice(0, 200))); } catch {}
       } catch { /* Leave notification delivery independent of the main UI. */ }

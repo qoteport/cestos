@@ -312,6 +312,7 @@ export default function OperationalExpensesWorkspace({
                     setPayName(p.name);
                     setPhone(p.phone || '');
                     setBank(p.bank_account_details || '');
+                    if (p.payment_method) setMethod(p.payment_method);
                   }
                 }}
                 options={payeeOptions}

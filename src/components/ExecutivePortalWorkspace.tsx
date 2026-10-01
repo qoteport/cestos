@@ -17,7 +17,6 @@ import { useRouter } from 'next/navigation';
 import { useApiDataRefresh } from '@/lib/apiDataRefresh';
 import { getEmployeeDisplayLocation, getEmployeeDisplayLocationDetails } from '@/lib/employeeLocation';
 import OperationalExpenseSubmissionModal from './OperationalExpenseSubmissionModal';
-import { extractDocumentLineItems } from '@/lib/lineItemExtraction';
 import RegisterUserModal from './RegisterUserModal';
 import { printElement } from '@/lib/printElement';
 import {
@@ -294,30 +293,11 @@ export default function ExecutivePortalWorkspace() {
 //   const [selectedReceiptItemIds, setSelectedReceiptItemIds] = useState<string[]>([]);
   const [poSubmitBusy, setPoSubmitBusy] = useState(false);
   const [poAttachmentFile, setPoAttachmentFile] = useState<File | null>(null);
-  const [extractingPoDocument, setExtractingPoDocument] = useState(false);
-  const [poExtractionMessage, setPoExtractionMessage] = useState('');
-  const handlePoDocumentChange = async (file: File | null) => {
+  const handlePoDocumentChange = (file: File | null) => {
     setPoAttachmentFile(file);
-    setPoExtractionMessage('');
-    if (!file) return;
-    setExtractingPoDocument(true);
-    try {
-      const result = await extractDocumentLineItems(file, 'purchase_order');
-      const items = result.items.map((line) => ({ item_name: line.item_name, description: line.description, quantity_ordered: line.quantity, unit_price: line.unit_price }));
-      setNewPoForm((current) => ({
-        ...current,
-        supplier_name: current.supplier_name || result.supplier_name || '',
-        currency: result.currency && ['USD', 'EUR', 'GBP', 'ZAR'].includes(result.currency) ? result.currency : current.currency,
-        items,
-      }));
-      setPoExtractionMessage(`${items.length} line item${items.length === 1 ? '' : 's'} extracted. Review and correct before saving.`);
-    } catch (error) {
-      setPoExtractionMessage(`${error instanceof Error ? error.message : 'Could not parse this file.'} You can still enter the items manually.`);
-    } finally { setExtractingPoDocument(false); }
   };
   const handleCreatePo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (extractingPoDocument) return;
     if (!newPoForm.supplier_name.trim()) {
       setBanner({ type: 'error', message: 'Please enter a vendor / supplier name.' });
       return;
@@ -3197,7 +3177,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                       <Paperclip size={12} /> {poAttachmentFile.name} ({(poAttachmentFile.size / 1024).toFixed(1)} KB)
                     </p>
                   )}
-                  {(extractingPoDocument || poExtractionMessage) && <p role="status" className={`mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-[11px] ${extractingPoDocument ? 'bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-200' : 'bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{extractingPoDocument ? <><Loader2 size={13} className="animate-spin" />Reading quotation and identifying line items…</> : <><Sparkles size={13} />{poExtractionMessage}</>}</p>}
+                  <p className="mt-2 text-[11px] text-muted-foreground">Uploaded for reference. Enter purchase order line items manually.</p>
                 </div>
 
                 {/* Line Items List */}
@@ -3283,11 +3263,11 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                 </button>
                 <button
                   type="submit"
-                  disabled={poSubmitBusy || extractingPoDocument}
+                  disabled={poSubmitBusy}
                   className="px-5 py-2 bg-indigo-600 text-white font-bold rounded-full text-xs hover:bg-indigo-700 flex items-center gap-1.5 transition shadow-xs disabled:opacity-50"
                 >
-                  {poSubmitBusy || extractingPoDocument ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 size={15} />}
-                  {extractingPoDocument ? 'Reading document…' : 'Issue Purchase Order'}
+                  {poSubmitBusy ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle2 size={15} />}
+                  Issue Purchase Order
                 </button>
               </div>
             </form>
