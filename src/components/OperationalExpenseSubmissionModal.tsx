@@ -12,7 +12,7 @@ type ExpenseItem = { inventory_item_id: string; name: string; description?: stri
 const blankItem = (): ExpenseItem => ({ inventory_item_id: '', name: '', quantity: '1', unit_cost: '0', custom_item: false });
 const inputClass = 'w-full rounded-lg border bg-background p-2.5';
 
-export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted, projectId, initialPurchaseOrder }: { onClose: () => void; onSubmitted: (expense: Row) => void; projectId?: string; initialPurchaseOrder?: Row }) {
+export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted, projectId, initialPurchaseOrder, initialDocumentDraft }: { onClose: () => void; onSubmitted: (expense: Row) => void; projectId?: string; initialPurchaseOrder?: Row; initialDocumentDraft?: { file: File; data: Row } | null }) {
   const [payees, setPayees] = useState<Row[]>([]);
   const [inventory, setInventory] = useState<Row[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<Row[]>([]);
@@ -80,6 +80,28 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
     }).catch((exception) => { if (active) setError(exception instanceof Error ? exception.message : 'Could not load expense options.'); });
     return () => { active = false; };
   }, [projectId, initialPurchaseOrder?.id]);
+
+  useEffect(() => {
+    if (!initialDocumentDraft) return;
+    const data = initialDocumentDraft.data || {};
+    setInvoice(initialDocumentDraft.file);
+    setPayName(String(data.pay_to_name || data.supplier_name || '').trim());
+    setPayeeId(data.pay_to_name || data.supplier_name ? '__NEW__' : '');
+    setPhone(String(data.pay_to_phone || ''));
+    setBank(String(data.bank_account_details || ''));
+    if (data.expense_date && /^\d{4}-\d{2}-\d{2}$/.test(String(data.expense_date))) setDate(String(data.expense_date));
+    const methodValue = String(data.payment_method || '').toUpperCase().replace(/[ -]+/g, '_');
+    if (['MOBILE_MONEY', 'BANK_TRANSFER', 'CASH', 'CARD', 'OTHER'].includes(methodValue)) setMethod(methodValue);
+    const parsedItems = Array.isArray(data.items) ? data.items.map((item: Row) => ({
+      inventory_item_id: '', name: String(item.name || item.item_name || '').trim(),
+      description: String(item.description || ''), quantity: String(item.quantity ?? 1),
+      unit_cost: String(item.unit_cost ?? item.unit_price ?? 0), custom_item: true,
+    })) : [];
+    setItems(parsedItems);
+    const total = Number(data.total_cost);
+    if (!parsedItems.length && Number.isFinite(total) && total >= 0) { setManualTotal(true); setManualAmount(String(total)); }
+    else { setManualTotal(false); setManualAmount(''); }
+  }, [initialDocumentDraft]);
 
   const itemOptions = useMemo(() => [
     { value: '__CUSTOM__', label: 'Create a new item…' },
@@ -206,7 +228,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
                 <span className="block">Invoice upload *</span>
                 <input
                   type="file"
-                  required
+                  required={!invoice}
                   accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,.docx,.xls,.xlsx,.txt,.csv,.rtf"
                   className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 dark:file:bg-orange-950/60 dark:file:text-orange-300 cursor-pointer transition"
                   onChange={(event) => void handleInvoiceChange(event.target.files?.[0] || null)}

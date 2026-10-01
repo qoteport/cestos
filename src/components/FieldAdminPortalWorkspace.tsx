@@ -5336,7 +5336,7 @@ Signed: Field Operations Administration
       {/* View Operational Expense Voucher Modal */}
       {viewingExpense && (() => {
         const vName = viewingExpense.submitted_by_name || viewingExpense.submitted_by?.full_name || (viewingExpense.submitted_by?.first_name ? `${viewingExpense.submitted_by.first_name} ${viewingExpense.submitted_by.last_name || ''}`.trim() : null) || viewingExpense.created_by_name || (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'Operations Supervisor');
-        const vPos = viewingExpense.submitted_by_position || viewingExpense.submitted_by_title || viewingExpense.submitted_by?.job_title || viewingExpense.submitted_by?.role || (user?.is_superuser ? 'Operations Director' : user?.portal_type ? `${user.portal_type.replace('_', ' ')} Admin` : 'Field Administrator');
+        const vPos = viewingExpense.submitted_by_job_title || viewingExpense.submitted_by?.job_title || viewingExpense.submitted_by_position || viewingExpense.submitted_by_title || viewingExpense.submitted_by?.position || viewingExpense.submitted_by?.title || viewingExpense.submitted_by_department || viewingExpense.submitted_by?.department || viewingExpense.submitted_by?.dept || viewingExpense.department || viewingExpense.submitted_by?.role || (user as any)?.job_title || (user as any)?.department || (user?.is_superuser ? 'Operations Director' : user?.portal_type ? `${user.portal_type.replace('_', ' ')} Admin` : 'Field Administrator');
         const vEmail = viewingExpense.submitted_by_email || viewingExpense.submitted_by?.email || viewingExpense.email || user?.email || 'operations@cestos.com';
 
         return createPortal(

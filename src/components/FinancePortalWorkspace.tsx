@@ -48,7 +48,7 @@ import {
   Upload,
   Check,
   Loader2,
-  Sparkles,
+  Command,
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react';
@@ -69,6 +69,7 @@ import { apiFetch, apiFetchBlob, downloadBlob, receivePurchaseOrderGoods } from 
 import { openUniversalFileViewer } from '@/lib/fileViewer';
 import OperationalExpensesWorkspace from './OperationalExpensesWorkspace';
 import OperationalExpenseSubmissionModal from './OperationalExpenseSubmissionModal';
+import FinanceCommandCenterModal from './FinanceCommandCenterModal';
 import NotificationWorkspace from './NotificationWorkspace';
 import useNotificationCount from './useNotificationCount';
 import UniversalFileViewerModal from './UniversalFileViewerModal';
@@ -303,6 +304,8 @@ export default function FinancePortalWorkspace() {
 
   // Modals state for Expenses
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [commandCenterOpen, setCommandCenterOpen] = useState(false);
+  const [expenseCommandDraft, setExpenseCommandDraft] = useState<{ file: File; data: Record<string, any> } | null>(null);
   const [viewingExpense, setViewingExpense] = useState<any | null>(null);
   const [payingExpense, setPayingExpense] = useState<any | null>(null);
   const [expensePaymentReceiptFile, setExpensePaymentReceiptFile] = useState<File | null>(null);
@@ -737,6 +740,52 @@ export default function FinancePortalWorkspace() {
     } finally {
       setVendorBusy(false);
     }
+  };
+
+  const handleFinanceCommandDraft = (kind: 'expense' | 'purchase_order' | 'vendor', file: File, data: Record<string, any>, warning?: string | null) => {
+    setCommandCenterOpen(false);
+    if (warning) setBanner({ type: 'info', message: `Document extraction completed with a note: ${warning}` });
+    if (kind === 'expense') {
+      setExpenseCommandDraft({ file, data });
+      setShowExpenseModal(true);
+      return;
+    }
+    if (kind === 'purchase_order') {
+      const categoryRaw = String(data.category || '').trim();
+      const categoryKey = categoryRaw.toUpperCase().replace(/[ &/-]+/g, '_');
+      const category = ({ MAINTENANCE_AND_PARTS: 'MAINTENANCE_PARTS', MAINTENANCE_PARTS: 'MAINTENANCE_PARTS' } as Record<string, string>)[categoryKey] || categoryKey;
+      const currency = String(data.currency || 'USD').trim().toUpperCase();
+      setEditingPo(null);
+      setNewPoForm({
+        supplier_name: String(data.supplier_name || '').trim(),
+        project_id: selectedProjectId || '',
+        category,
+        currency: /^[A-Z]{3}$/.test(currency) ? currency : 'USD',
+        notes: String(data.notes || ''),
+        items: Array.isArray(data.items) ? data.items.map((item: Record<string, any>) => ({
+          item_name: String(item.item_name || '').trim(),
+          description: String(item.description || item.item_name || '').trim(),
+          quantity_ordered: Number(item.quantity_ordered) || 0,
+          unit_price: Number(item.unit_price) || 0,
+        })) : [],
+      });
+      setPoAttachmentFile(file);
+      setShowAddPoModal(true);
+      return;
+    }
+    const typeRaw = String(data.bank_account_type || '').toUpperCase().replace(/[ -]+/g, '_');
+    const methodRaw = String(data.payment_method || '').toUpperCase().replace(/[ -]+/g, '_');
+    const vendorType = ['SPARE_PART', 'FUEL', 'FOREIGN_PURCHASE', 'SERVICE_RENDERED', 'TRANSPORTATION'].includes(typeRaw) ? typeRaw : '';
+    const paymentMethod = ['BANK_TRANSFER', 'MOBILE_MONEY', 'CASH'].includes(methodRaw) ? methodRaw : '';
+    setEditingVendor(null);
+    setVendorForm({
+      name: String(data.name || data.business_name || '').trim(),
+      supplier_number: String(data.supplier_number || '').trim(),
+      bank_account_type: vendorType,
+      payment_method: paymentMethod,
+      bank_account_details: String(data.bank_account_details || ''),
+    });
+    setVendorModalOpen(true);
   };
 
   // Fuel Cost Calculation Helpers
@@ -2065,7 +2114,7 @@ Signed: Finance & Procurement Administration
               </div>
               <button
                 type="button"
-                onClick={() => setShowAddPoModal(true)}
+                onClick={() => { setPoAttachmentFile(null); setShowAddPoModal(true); }}
                 className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1.5 shrink-0"
               >
                 <Plus size={15} /> Create Purchase Order
@@ -2948,7 +2997,7 @@ Signed: Finance & Procurement Administration
                         const hasInstallmentPayments = Array.isArray(exp.payments) && exp.payments.length > 0;
                         const fileName = exp.invoice_name || (!hasInstallmentPayments ? exp.receipt_name || exp.receipt_file_name || exp.attachment : null) || null;
                         const sName = exp.submitted_by_name || exp.submitted_by?.full_name || (exp.submitted_by?.first_name ? `${exp.submitted_by.first_name} ${exp.submitted_by.last_name || ''}`.trim() : null) || exp.created_by_name || (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'Operations Supervisor');
-                        const sPos = exp.submitted_by_position || exp.submitted_by_title || exp.submitted_by?.job_title || exp.submitted_by?.role || (user?.is_superuser ? 'Operations Director' : user?.portal_type ? `${user.portal_type.replace('_', ' ')} Admin` : 'Field Administrator');
+                        const sPos = exp.submitted_by_job_title || exp.submitted_by?.job_title || exp.submitted_by_position || exp.submitted_by_title || exp.submitted_by?.position || exp.submitted_by?.title || exp.submitted_by_department || exp.submitted_by?.department || exp.submitted_by?.dept || exp.department || exp.submitted_by?.role || (user as any)?.job_title || (user as any)?.department || (user?.is_superuser ? 'Operations Director' : user?.portal_type ? `${user.portal_type.replace('_', ' ')} Admin` : 'Field Administrator');
                         const sEmail = exp.submitted_by_email || exp.submitted_by?.email || exp.email || user?.email || 'operations@cestos.com';
 
                         return (
@@ -3138,7 +3187,7 @@ Signed: Finance & Procurement Administration
         <div className="flex flex-col items-center justify-center space-y-2.5 flex-1 overflow-y-auto overflow-x-hidden scrollbar-none w-full py-1">
           <button
             type="button"
-            onClick={() => setShowAddPoModal(true)}
+            onClick={() => { setPoAttachmentFile(null); setShowAddPoModal(true); }}
             className="relative group w-11 h-11 rounded-xl hover:bg-violet-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 shrink-0"
             aria-label="Issue Purchase Order Form"
           >
@@ -3228,6 +3277,15 @@ Signed: Finance & Procurement Administration
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin text-violet-600' : ''}`} />
             </button>
 
+            <button
+              type="button"
+              onClick={() => setCommandCenterOpen(true)}
+              className="p-2 text-slate-500 hover:text-violet-700 dark:hover:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-950/40 rounded-lg transition"
+              title="Open Command Center"
+              aria-label="Open Finance Command Center"
+            >
+              <Command className="h-4 w-4" />
+            </button>
 
             <button
               onClick={() => setActiveTab('NOTIFICATIONS')}
@@ -3324,8 +3382,17 @@ Signed: Finance & Procurement Administration
       {/* MODALS */}
       {showExpenseModal && (
         <OperationalExpenseSubmissionModal
-          onClose={() => setShowExpenseModal(false)}
-          onSubmitted={() => { setShowExpenseModal(false); reload(); setBanner({ type: 'success', message: 'Operational Expense claim submitted successfully.' }); }}
+          projectId={selectedProjectId || undefined}
+          initialDocumentDraft={expenseCommandDraft}
+          onClose={() => { setShowExpenseModal(false); setExpenseCommandDraft(null); }}
+          onSubmitted={() => { setShowExpenseModal(false); setExpenseCommandDraft(null); reload(); setBanner({ type: 'success', message: 'Operational Expense claim submitted successfully.' }); }}
+        />
+      )}
+
+      {commandCenterOpen && (
+        <FinanceCommandCenterModal
+          onClose={() => setCommandCenterOpen(false)}
+          onDraftReady={handleFinanceCommandDraft}
         />
       )}
 
@@ -3338,7 +3405,7 @@ Signed: Finance & Procurement Administration
               <h3 className="font-bold text-base flex items-center gap-2 text-foreground">
                 <ShoppingBag className="h-5 w-5 text-violet-600" /> Create Purchase Order
               </h3>
-              <button type="button" onClick={() => setShowAddPoModal(false)} className="p-1 rounded-full hover:bg-muted text-muted-foreground"><X size={18} /></button>
+              <button type="button" onClick={() => { setShowAddPoModal(false); setPoAttachmentFile(null); }} className="p-1 rounded-full hover:bg-muted text-muted-foreground"><X size={18} /></button>
             </div>
 
             <form onSubmit={handleCreatePo} className="flex flex-col flex-1 overflow-hidden">
@@ -4023,7 +4090,7 @@ Signed: Finance & Procurement Administration
       {viewingExpense && createPortal(
         (() => {
           const vName = viewingExpense.submitted_by_name || viewingExpense.submitted_by?.full_name || (viewingExpense.submitted_by?.first_name ? `${viewingExpense.submitted_by.first_name} ${viewingExpense.submitted_by.last_name || ''}`.trim() : null) || viewingExpense.created_by_name || (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'Operations Supervisor');
-          const vPos = viewingExpense.submitted_by_position || viewingExpense.submitted_by_title || viewingExpense.submitted_by?.job_title || viewingExpense.submitted_by?.role || (user?.is_superuser ? 'Operations Director' : user?.portal_type ? `${user.portal_type.replace('_', ' ')} Admin` : 'Field Administrator');
+          const vPos = viewingExpense.submitted_by_job_title || viewingExpense.submitted_by?.job_title || viewingExpense.submitted_by_position || viewingExpense.submitted_by_title || viewingExpense.submitted_by?.position || viewingExpense.submitted_by?.title || viewingExpense.submitted_by_department || viewingExpense.submitted_by?.department || viewingExpense.submitted_by?.dept || viewingExpense.department || viewingExpense.submitted_by?.role || (user as any)?.job_title || (user as any)?.department || (user?.is_superuser ? 'Operations Director' : user?.portal_type ? `${user.portal_type.replace('_', ' ')} Admin` : 'Field Administrator');
           const vEmail = viewingExpense.submitted_by_email || viewingExpense.submitted_by?.email || viewingExpense.email || user?.email || 'operations@cestos.com';
 
           return (
@@ -4265,7 +4332,7 @@ Signed: Finance & Procurement Administration
       {/* Process Payment Disbursement Modal in Finance Portal */}
       {payingExpense && (() => {
         const pName = payingExpense.submitted_by_name || payingExpense.submitted_by?.full_name || (payingExpense.submitted_by?.first_name ? `${payingExpense.submitted_by.first_name} ${payingExpense.submitted_by.last_name || ''}`.trim() : null) || payingExpense.created_by_name || (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'Operations Supervisor');
-        const pPos = payingExpense.submitted_by_position || payingExpense.submitted_by_title || payingExpense.submitted_by?.job_title || payingExpense.submitted_by?.role || (user?.is_superuser ? 'Operations Director' : user?.portal_type ? `${user.portal_type.replace('_', ' ')} Admin` : 'Field Administrator');
+        const pPos = payingExpense.submitted_by_job_title || payingExpense.submitted_by?.job_title || payingExpense.submitted_by_position || payingExpense.submitted_by_title || payingExpense.submitted_by?.position || payingExpense.submitted_by?.title || payingExpense.submitted_by_department || payingExpense.submitted_by?.department || payingExpense.submitted_by?.dept || payingExpense.department || payingExpense.submitted_by?.role || (user as any)?.job_title || (user as any)?.department || (user?.is_superuser ? 'Operations Director' : user?.portal_type ? `${user.portal_type.replace('_', ' ')} Admin` : 'Field Administrator');
         const pEmail = payingExpense.submitted_by_email || payingExpense.submitted_by?.email || payingExpense.email || user?.email || 'operations@cestos.com';
         const pPhone = payingExpense.pay_to_phone || payingExpense.phone || payingExpense.phone_number || payingExpense.payee_phone || payingExpense.payee?.phone || payingExpense.contact_phone;
         const pBank = payingExpense.bank_account_details || payingExpense.bank_details || payingExpense.account_number || payingExpense.bank_account || payingExpense.payee?.bank_account_details || payingExpense.account_details;
