@@ -77,6 +77,37 @@ import { PurchaseOrderCategoryField, purchaseOrderCategoryLabel } from './Purcha
 import PurchaseOrderCategoryChart from './PurchaseOrderCategoryChart';
 import { useOperationalDataSync } from '@/lib/operationalDataSync';
 
+// ─── Vendor Types ─────────────────────────────────────────────────────────────
+
+const VENDOR_TYPE_OPTIONS = [
+  { value: '', label: 'Select vendor type' },
+  { value: 'SPARE_PART', label: 'Spare part' },
+  { value: 'FUEL', label: 'Fuel' },
+  { value: 'FOREIGN_PURCHASE', label: 'Foreign purchase' },
+  { value: 'SERVICE_RENDERED', label: 'Service rendered' },
+  { value: 'TRANSPORTATION', label: 'Transportation' },
+  { value: 'TELEPHONY_EXPENSES', label: 'Telephony Expenses' },
+  { value: 'INTERNET_EXPENSES', label: 'Internet Expenses' },
+  { value: 'CAR_RENTAL_EXPENSES', label: 'Car Rental Expenses' },
+  { value: 'EQUIPMENT_RENTAL_EXPENSES', label: 'Equipment Rental Expenses' },
+  { value: 'FUEL_OIL', label: 'Fuel & Oil' },
+  { value: 'REPAIRS_AND_MAINTENANCE', label: 'Repairs & Maintenance' },
+  { value: 'PROFESSIONAL_FEES', label: 'Professional Fees' },
+  { value: 'LEGAL_SERVICES', label: 'Legal Services' },
+  { value: 'ADMINISTRATION_SERVICES', label: 'Administration Services' },
+  { value: 'RENT_EXPENSE', label: 'Rent Expense' },
+  { value: 'DRILL_CONSUMABLES', label: 'Drill Consumables' },
+  { value: 'BUILDING_SUPPLIES', label: 'Building Supplies' },
+  { value: 'GENERATOR_MAINTENANCE', label: 'Generator Maintenance' },
+  { value: 'PLUMBING', label: 'Plumbing' },
+  { value: 'ELECTRICAL', label: 'Electrical' },
+  { value: 'UTILITIES', label: 'Utilities' },
+  { value: 'GENERATOR', label: 'Generator' },
+  { value: 'COMMUNITY_DEVELOPMENT', label: 'Community Development' },
+];
+
+const ALLOWED_VENDOR_TYPES = new Set(VENDOR_TYPE_OPTIONS.map((o) => o.value).filter(Boolean));
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type FinanceTab = 'EXPENSES' | 'OPERATIONAL_EXPENSES' | 'INVOICES' | 'PURCHASE_ORDERS' | 'VENDORS' | 'FUEL' | 'PROJECTS' | 'NOTIFICATIONS';
@@ -775,7 +806,7 @@ export default function FinancePortalWorkspace() {
     }
     const typeRaw = String(data.bank_account_type || '').toUpperCase().replace(/[ -]+/g, '_');
     const methodRaw = String(data.payment_method || '').toUpperCase().replace(/[ -]+/g, '_');
-    const vendorType = ['SPARE_PART', 'FUEL', 'FOREIGN_PURCHASE', 'SERVICE_RENDERED', 'TRANSPORTATION'].includes(typeRaw) ? typeRaw : '';
+    const vendorType = ALLOWED_VENDOR_TYPES.has(typeRaw) ? typeRaw : '';
     const paymentMethod = ['BANK_TRANSFER', 'MOBILE_MONEY', 'CASH'].includes(methodRaw) ? methodRaw : '';
     setEditingVendor(null);
     setVendorForm({
@@ -2076,7 +2107,7 @@ Signed: Finance & Procurement Administration
                       <div className="grid gap-4 sm:grid-cols-2">
                         <label className="space-y-1.5 text-xs font-bold text-foreground"><span className="block">Business Name *</span><input required maxLength={200} value={vendorForm.name} onChange={(event) => setVendorForm({ ...vendorForm, name: event.target.value })} className="input-field w-full" placeholder="Registered business name" /></label>
                         <label className="space-y-1.5 text-xs font-bold text-foreground"><span className="block">Supplier Number</span><input maxLength={50} value={vendorForm.supplier_number} onChange={(event) => setVendorForm({ ...vendorForm, supplier_number: event.target.value })} className="input-field w-full" placeholder="Leave blank to generate" /></label>
-                        <label className="space-y-1.5 text-xs font-bold text-foreground"><span className="block">Vendor type</span><SearchableSelect value={vendorForm.bank_account_type} onChange={(value) => setVendorForm({ ...vendorForm, bank_account_type: value })} options={[{ value: '', label: 'Select vendor type' }, { value: 'SPARE_PART', label: 'Spare part' }, { value: 'FUEL', label: 'Fuel' }, { value: 'FOREIGN_PURCHASE', label: 'Foreign purchase' }, { value: 'SERVICE_RENDERED', label: 'Service rendered' }, { value: 'TRANSPORTATION', label: 'Transportation' }]} searchable={false} /></label>
+                        <label className="space-y-1.5 text-xs font-bold text-foreground"><span className="block">Vendor type</span><SearchableSelect value={vendorForm.bank_account_type} onChange={(value) => setVendorForm({ ...vendorForm, bank_account_type: value })} options={VENDOR_TYPE_OPTIONS} searchable={true} /></label>
                         <label className="space-y-1.5 text-xs font-bold text-foreground"><span className="block">Payment Method</span><SearchableSelect value={vendorForm.payment_method} onChange={(value) => setVendorForm({ ...vendorForm, payment_method: value })} options={[{ value: '', label: 'Select payment method' }, { value: 'BANK_TRANSFER', label: 'Bank transfer' }, { value: 'MOBILE_MONEY', label: 'Mobile money' }, { value: 'CASH', label: 'Cash' }]} searchable={false} /></label>
                       </div>
                       <label className="block space-y-1.5 text-xs font-bold text-foreground"><span className="block">Bank Account Details</span><textarea rows={3} maxLength={1000} value={vendorForm.bank_account_details} onChange={(event) => setVendorForm({ ...vendorForm, bank_account_details: event.target.value })} className="input-field min-h-24 w-full resize-y" placeholder="Account name, bank, account number or payment details" /></label>
