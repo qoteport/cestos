@@ -49,6 +49,8 @@ import {
   Check,
   Loader2,
   Sparkles,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -213,6 +215,7 @@ export default function FinancePortalWorkspace() {
   const [vendorBusy, setVendorBusy] = useState(false);
   const [vendorForm, setVendorForm] = useState({ name: '', supplier_number: '', bank_account_type: '', payment_method: '', bank_account_details: '' });
   const [vendorSearch, setVendorSearch] = useState('');
+  const [vendorSidebarOpen, setVendorSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [banner, setBanner] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
@@ -1761,88 +1764,108 @@ Signed: Finance & Procurement Administration
             {vendorAccounts.length === 0 ? (
               <EmptyState message="No vendors found in purchase orders or operational expenses." />
             ) : (
-              <div className="grid h-[calc(100vh-270px)] min-h-[500px] max-h-[850px] overflow-hidden rounded-2xl border bg-card shadow-xs lg:grid-cols-[340px_minmax(0,1fr)]">
+              <div className={`grid h-[calc(100vh-270px)] min-h-[500px] max-h-[850px] overflow-hidden rounded-2xl border bg-card shadow-xs transition-all duration-300 ${vendorSidebarOpen ? 'lg:grid-cols-[290px_minmax(0,1fr)]' : 'grid-cols-1'}`}>
                 {/* Vendor Accounts List Sidebar */}
-                <aside className="border-b lg:border-b-0 lg:border-r bg-muted/30 p-3.5 flex flex-col h-[280px] lg:h-full overflow-hidden min-h-0">
-                  <div className="border-b pb-3 space-y-2 border-border shrink-0">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                        <Building2 size={15} className="text-violet-600" /> Vendors List
-                      </h3>
-                      <span className="text-[11px] font-semibold text-muted-foreground">{filteredVendorAccounts.length} accounts</span>
+                {vendorSidebarOpen && (
+                  <aside className="border-b lg:border-b-0 lg:border-r bg-muted/20 p-3 flex flex-col h-[280px] lg:h-full overflow-hidden min-h-0">
+                    <div className="border-b pb-3 space-y-2 border-border/60 shrink-0">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                          <Building2 size={14} className="text-violet-600 dark:text-violet-400" /> Vendors ({filteredVendorAccounts.length})
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={() => setVendorSidebarOpen(false)}
+                          className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition"
+                          title="Hide Vendors Sidebar"
+                        >
+                          <PanelLeftClose size={15} />
+                        </button>
+                      </div>
+
+                      {/* Search Input */}
+                      <div className="relative">
+                        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <input
+                          type="text"
+                          value={vendorSearch}
+                          onChange={(e) => setVendorSearch(e.target.value)}
+                          placeholder="Search vendor name or currency..."
+                          className="w-full pl-8 pr-7 py-1.5 bg-background border border-border/80 rounded-xl text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-violet-500"
+                        />
+                        {vendorSearch && (
+                          <button onClick={() => setVendorSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Search Input */}
-                    <div className="relative">
-                      <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                      <input
-                        type="text"
-                        value={vendorSearch}
-                        onChange={(e) => setVendorSearch(e.target.value)}
-                        placeholder="Search vendor name or currency..."
-                        className="w-full pl-8 pr-7 py-1.5 bg-background border rounded-xl text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-violet-500"
-                      />
-                      {vendorSearch && (
-                        <button onClick={() => setVendorSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                          <X size={12} />
-                        </button>
+                    <div className="flex-1 min-h-0 space-y-1.5 overflow-y-auto p-1 pt-2.5">
+                      {filteredVendorAccounts.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-6">No vendors match your search.</p>
+                      ) : (
+                        filteredVendorAccounts.map((account) => {
+                          const isSelected = selectedVendor?.key === account.key;
+                          return (
+                            <button
+                              key={account.key}
+                              type="button"
+                              onClick={() => setSelectedVendorKey(account.key)}
+                              className={`w-full rounded-xl border p-2.5 text-left transition-all ${
+                                isSelected
+                                  ? 'border-violet-600 bg-violet-600 text-white shadow-xs font-semibold'
+                                  : 'border-border/60 bg-card hover:bg-muted/50 text-foreground'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="truncate text-xs font-bold">{account.name}</span>
+                                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold shrink-0 ${
+                                  isSelected ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground'
+                                }`}>
+                                  {account.currency}
+                                </span>
+                              </div>
+
+                              <div className="mt-2 flex items-center justify-between text-[10px] border-t pt-1.5 border-current/15">
+                                <span className={isSelected ? 'text-violet-100' : 'text-muted-foreground'}>
+                                  Paid: <strong className={isSelected ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}>{account.currency} {account.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                                </span>
+                                <span className={isSelected ? 'text-violet-100' : 'text-muted-foreground'}>
+                                  Owed: <strong className={isSelected ? 'text-white' : account.balance > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}>{account.currency} {account.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })
                       )}
                     </div>
-                  </div>
-
-                  <div className="flex-1 min-h-0 space-y-2 overflow-y-auto p-1.5 pt-3">
-                    {filteredVendorAccounts.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-6">No vendors match your search.</p>
-                    ) : (
-                      filteredVendorAccounts.map((account) => {
-                        const isSelected = selectedVendor?.key === account.key;
-                        return (
-                          <button
-                            key={account.key}
-                            type="button"
-                            onClick={() => setSelectedVendorKey(account.key)}
-                            className={`w-full rounded-xl border p-3 text-left transition-all ${
-                              isSelected
-                                ? 'border-violet-500 bg-violet-500 text-white shadow-md'
-                                : 'border-border bg-card hover:bg-muted/60 text-foreground'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="truncate text-xs font-bold">{account.name}</span>
-                              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold shrink-0 ${
-                                isSelected ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground'
-                              }`}>
-                                {account.currency}
-                              </span>
-                            </div>
-
-                            <div className="mt-2.5 grid grid-cols-2 gap-2 text-[10px] border-t pt-2 border-current/15">
-                              <div>
-                                <span className={`block font-medium ${isSelected ? 'text-violet-100' : 'text-muted-foreground'}`}>
-                                  BALANCE OWED
-                                </span>
-                                <strong className={`text-xs ${isSelected ? 'text-white' : account.balance > 0 ? 'text-amber-600 dark:text-amber-400 font-bold' : 'text-muted-foreground'}`}>
-                                  {account.currency} {account.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </strong>
-                              </div>
-                              <div>
-                                <span className={`block font-medium ${isSelected ? 'text-violet-100' : 'text-muted-foreground'}`}>
-                                  TOTAL PAID
-                                </span>
-                                <strong className={`text-xs ${isSelected ? 'text-emerald-200' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                                  {account.currency} {account.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </strong>
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
-                </aside>
+                  </aside>
+                )}
 
                 {/* Selected Vendor Detail Ledger Panel */}
                 <section className="min-w-0 p-4 sm:p-6 bg-background space-y-5 flex-1 lg:h-full overflow-y-auto min-h-0">
+                  {!vendorSidebarOpen && (
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-violet-50/60 dark:bg-violet-950/20 rounded-xl border border-violet-200/60 dark:border-violet-900/40">
+                      <button
+                        type="button"
+                        onClick={() => setVendorSidebarOpen(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-violet-300 bg-white text-violet-800 text-xs font-bold hover:bg-violet-50 dark:bg-slate-900 dark:border-violet-800 dark:text-violet-300 transition shadow-2xs shrink-0"
+                        title="Show Vendors Sidebar"
+                      >
+                        <PanelLeftOpen size={14} /> Show Vendors ({filteredVendorAccounts.length})
+                      </button>
+                      <div className="w-full sm:w-72">
+                        <SearchableSelect
+                          value={selectedVendorKey || ''}
+                          onChange={(val) => setSelectedVendorKey(val)}
+                          options={filteredVendorAccounts.map((acc) => ({ value: acc.key, label: `${acc.name} (${acc.currency})` }))}
+                          placeholder="Quick switch vendor..."
+                          searchable={true}
+                        />
+                      </div>
+                    </div>
+                  )}
                   {selectedVendor ? (
                     <>
                       {/* Vendor Header Summary Card */}
