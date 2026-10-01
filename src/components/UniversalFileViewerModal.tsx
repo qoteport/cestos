@@ -249,103 +249,109 @@ export default function UniversalFileViewerModal({
     <div className={`fixed inset-0 z-[2147483647] flex items-center justify-center bg-slate-950/80 p-2 sm:p-4 backdrop-blur-xs ${closing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`}>
       <div className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-6xl h-[92vh] flex flex-col overflow-hidden ${closing ? 'animate-modal-content-out' : 'animate-modal-content-in'}`}>
         {/* Header Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 flex items-center justify-center font-bold shrink-0">
-              <Eye size={20} />
-            </div>
-            <div className="min-w-0">
-              <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white truncate">
-                {title}
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate flex items-center gap-1.5 mt-0.5">
-                <Paperclip size={12} className="text-orange-600 shrink-0" />
-                <span className="truncate">{fileName}</span>
-                {activeBlob?.size && (
-                  <span className="text-[11px] text-slate-400">
-                    ({(activeBlob.size / 1024).toFixed(1)} KB)
-                  </span>
-                )}
-              </p>
-            </div>
-          </div>
+        <div className="relative border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3.5 sm:px-6 shrink-0">
+          {/* Pinned Top-Right Close Button */}
+          <button
+            type="button"
+            onClick={handleClose}
+            className="absolute right-3 sm:right-4 top-3 sm:top-3.5 z-20 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"
+            title="Close File Viewer"
+            aria-label="Close File Viewer"
+          >
+            <X size={20} />
+          </button>
 
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Image controls */}
-            {isImage && (
-              <div className="hidden sm:flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl mr-2">
-                <button
-                  type="button"
-                  onClick={() => setZoomLevel((z) => Math.max(50, z - 25))}
-                  className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition"
-                  title="Zoom Out"
-                >
-                  <ZoomOut size={15} />
-                </button>
-                <span className="text-xs font-mono font-bold px-1.5 text-slate-700 dark:text-slate-200">
-                  {zoomLevel}%
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setZoomLevel((z) => Math.min(300, z + 25))}
-                  className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition"
-                  title="Zoom In"
-                >
-                  <ZoomIn size={15} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRotation((r) => (r + 90) % 360)}
-                  className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition border-l ml-1 pl-2"
-                  title="Rotate 90°"
-                >
-                  <RotateCw size={15} />
-                </button>
+          {/* Main Header Content Container */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pr-10">
+            {/* Title & File Info */}
+            <div className="flex items-center gap-3 min-w-0 flex-1 max-w-full sm:max-w-xl">
+              <div className="w-9 h-9 rounded-xl bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 flex items-center justify-center font-bold shrink-0">
+                <Eye size={20} />
               </div>
-            )}
+              <div className="min-w-0 flex-1">
+                <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white truncate">
+                  {title}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate flex items-center gap-1.5 mt-0.5">
+                  <Paperclip size={12} className="text-orange-600 shrink-0" />
+                  <span className="truncate">{fileName}</span>
+                  {activeBlob?.size && (
+                    <span className="text-[11px] text-slate-400 shrink-0">
+                      ({(activeBlob.size / 1024).toFixed(1)} KB)
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
 
-            {/* Print Button */}
-            <button
-              type="button"
-              onClick={handlePrint}
-              disabled={loading || !!error}
-              className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-40"
-              title="Print Document"
-            >
-              <Printer size={14} /> <span className="hidden sm:inline">Print</span>
-            </button>
+            {/* Action Controls (Print, External, Download, Zoom) */}
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {/* Image controls */}
+              {isImage && (
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl mr-1 sm:mr-2">
+                  <button
+                    type="button"
+                    onClick={() => setZoomLevel((z) => Math.max(50, z - 25))}
+                    className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition"
+                    title="Zoom Out"
+                  >
+                    <ZoomOut size={15} />
+                  </button>
+                  <span className="text-xs font-mono font-bold px-1.5 text-slate-700 dark:text-slate-200">
+                    {zoomLevel}%
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setZoomLevel((z) => Math.min(300, z + 25))}
+                    className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition"
+                    title="Zoom In"
+                  >
+                    <ZoomIn size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRotation((r) => (r + 90) % 360)}
+                    className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition border-l ml-1 pl-2"
+                    title="Rotate 90°"
+                  >
+                    <RotateCw size={15} />
+                  </button>
+                </div>
+              )}
 
-            {/* Open External Button */}
-            <button
-              type="button"
-              onClick={handleOpenExternal}
-              disabled={loading || !!error}
-              className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-40"
-              title="Open file in external browser tab"
-            >
-              <ExternalLink size={14} /> <span className="hidden sm:inline">View External</span>
-            </button>
+              {/* Print Button */}
+              <button
+                type="button"
+                onClick={handlePrint}
+                disabled={loading || !!error}
+                className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-40"
+                title="Print Document"
+              >
+                <Printer size={14} /> <span className="hidden sm:inline">Print</span>
+              </button>
 
-            {/* Download Button */}
-            <button
-              type="button"
-              onClick={handleDownload}
-              disabled={loading || !!error}
-              className="px-3.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5 disabled:opacity-40"
-              title="Download File"
-            >
-              <Download size={14} /> <span className="hidden sm:inline">Download</span>
-            </button>
+              {/* Open External Button */}
+              <button
+                type="button"
+                onClick={handleOpenExternal}
+                disabled={loading || !!error}
+                className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-40"
+                title="Open file in external browser tab"
+              >
+                <ExternalLink size={14} /> <span className="hidden sm:inline">View External</span>
+              </button>
 
-            {/* Close Modal Button */}
-            <button
-              type="button"
-              onClick={handleClose}
-              className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition ml-1"
-              title="Close File Viewer"
-            >
-              <X size={20} />
-            </button>
+              {/* Download Button */}
+              <button
+                type="button"
+                onClick={handleDownload}
+                disabled={loading || !!error}
+                className="px-3.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5 disabled:opacity-40"
+                title="Download File"
+              >
+                <Download size={14} /> <span className="hidden sm:inline">Download</span>
+              </button>
+            </div>
           </div>
         </div>
 
