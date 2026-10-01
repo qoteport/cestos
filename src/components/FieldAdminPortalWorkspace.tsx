@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import {
-  HardHat, Bell, User, Wrench, ShieldCheck, Clock, Truck, RefreshCw, LogOut, Menu, X, Pencil, Printer,
+  HardHat, Bell, User, Wrench, ShieldCheck, Clock, Truck, RefreshCw, LogOut, Menu, X, Pencil, Printer, Command,
   AlertTriangle, Plus, CheckCircle2, DollarSign, Fuel, Users, FileText, Download, Eye, Mail,
   Building2, Calendar, FilePlus, ChevronRight, Check, Ban, AlertCircle, Sparkles, Filter,
   Activity, Paperclip, Upload, Package, Trash2, TrendingUp, File, ArrowLeft, BarChart2, ChevronDown, ChevronUp, Search,
@@ -44,6 +44,10 @@ import EmployeeDetailView from './EmployeeDetailView';
 import EmployeeTimesheetsWorkspace from './EmployeeTimesheetsWorkspace';
 import RecordForm from './RecordForm';
 import { operation } from './ResourceWorkspace';
+import FieldAdminCommandCenterModal, { FieldAdminCommand } from './FieldAdminCommandCenterModal';
+import FinanceCommandCenterModal from './FinanceCommandCenterModal';
+import CommandCenterMaintenanceCsvModal from './CommandCenterMaintenanceCsvModal';
+import CommandCenterTimesheetCsvModal from './CommandCenterTimesheetCsvModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -160,6 +164,15 @@ export default function FieldAdminPortalWorkspace() {
 
   // Modals state
   const [poFormSignal, setPoFormSignal] = useState(0);
+  const [fieldAdminCommandOpen, setFieldAdminCommandOpen] = useState(false);
+  const [showTimesheetCsvImport, setShowTimesheetCsvImport] = useState(false);
+  const [showMaintenanceCsvImport, setShowMaintenanceCsvImport] = useState(false);
+  const [maintenanceCsvKind, setMaintenanceCsvKind] = useState<'breakdown' | 'preventive' | 'assessment' | 'action' | 'pm' | 'equipment'>('preventive');
+  const [showFinanceCommand, setShowFinanceCommand] = useState(false);
+  const [financeCommandKind, setFinanceCommandKind] = useState<'expense' | 'purchase_order'>('expense');
+  const [expenseCommandDraft, setExpenseCommandDraft] = useState<{ file: File; data: Record<string, any> } | null>(null);
+  const [fieldAdminPoDraft, setFieldAdminPoDraft] = useState<{ key: number; file: File; data: Record<string, any> } | null>(null);
+  const [fieldAdminPoDraftKey, setFieldAdminPoDraftKey] = useState(0);
   const [showFuelBoughtModal, setShowFuelBoughtModal] = useState(false);
   const [showFuelAllocModal, setShowFuelAllocModal] = useState(false);
   const [showWOModal, setShowWOModal] = useState(false);
@@ -1666,6 +1679,34 @@ Signed: Field Operations Administration
     }
   };
 
+  const handleFieldAdminCommandSelect = (command: FieldAdminCommand) => {
+    setFieldAdminCommandOpen(false);
+    if (command === 'timesheet') {
+      setShowTimesheetCsvImport(true);
+      return;
+    }
+    if (['breakdown', 'preventive', 'assessment', 'action', 'pm', 'equipment'].includes(command)) {
+      setMaintenanceCsvKind(command as typeof maintenanceCsvKind);
+      setShowMaintenanceCsvImport(true);
+      return;
+    }
+    setFinanceCommandKind(command as 'expense' | 'purchase_order');
+    setShowFinanceCommand(true);
+  };
+
+  const handleFieldFinanceDraft = (kind: 'expense' | 'purchase_order' | 'vendor', file: File, data: Record<string, any>) => {
+    setShowFinanceCommand(false);
+    if (kind === 'expense') {
+      setExpenseCommandDraft({ file, data });
+      setShowExpenseModal(true);
+    } else if (kind === 'purchase_order') {
+      const key = fieldAdminPoDraftKey + 1;
+      setFieldAdminPoDraftKey(key);
+      setFieldAdminPoDraft({ key, file, data });
+      setActiveTab('PURCHASE_ORDERS');
+    }
+  };
+
   // ─── Tabs Array ──────────────────────────────────────────────────────────────
 
   const tabs: { id: AdminTab; label: string; mobileLabel?: string; icon: React.ReactNode; badge?: number }[] = [
@@ -1821,6 +1862,17 @@ Signed: Field Operations Administration
               title="Refresh Data"
             >
               <RefreshCw size={16} className={loading ? 'animate-spin text-orange-600 dark:text-orange-400' : ''} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setFieldAdminCommandOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-orange-600 via-amber-600 to-orange-700 text-white hover:from-orange-700 hover:to-amber-700 text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all border border-orange-500/30"
+              title="Open Field Admin Command Center"
+              aria-label="Open Field Admin Command Center"
+            >
+              <Zap size={14} className="fill-amber-300 text-amber-300" />
+              <span className="hidden sm:inline">Command Center</span>
             </button>
 
             <button
@@ -3154,6 +3206,7 @@ Signed: Field Operations Administration
                 customStartDate={customStartDate}
                 customEndDate={customEndDate}
                 openCreateSignal={poFormSignal}
+                initialDocumentDraft={fieldAdminPoDraft}
               />
             )}
             {activeTab === 'EXPENSES' && (
@@ -4406,7 +4459,12 @@ Signed: Field Operations Administration
         />
       )}
 
-      {showExpenseModal && <OperationalExpenseSubmissionModal projectId={selectedProjectId} onClose={() => setShowExpenseModal(false)} onSubmitted={(expense) => { setShowExpenseModal(false); setOperationalExpenseRequests((rows) => [expense, ...rows.filter((row) => row.id !== expense.id)]); setBanner({ type: 'success', message: `${expense.expense_number || 'Operational expense'} submitted to Finance for payment.` }); }} />}
+      {showExpenseModal && <OperationalExpenseSubmissionModal projectId={selectedProjectId} initialDocumentDraft={expenseCommandDraft} onClose={() => { setShowExpenseModal(false); setExpenseCommandDraft(null); }} onSubmitted={(expense) => { setShowExpenseModal(false); setExpenseCommandDraft(null); setOperationalExpenseRequests((rows) => [expense, ...rows.filter((row) => row.id !== expense.id)]); setBanner({ type: 'success', message: `${expense.expense_number || 'Operational expense'} submitted to Finance for payment.` }); }} />}
+
+      {fieldAdminCommandOpen && <FieldAdminCommandCenterModal onClose={() => setFieldAdminCommandOpen(false)} onSelect={handleFieldAdminCommandSelect} />}
+      {showTimesheetCsvImport && <CommandCenterTimesheetCsvModal onClose={() => setShowTimesheetCsvImport(false)} />}
+      {showMaintenanceCsvImport && <CommandCenterMaintenanceCsvModal initialKind={maintenanceCsvKind} initialProjectId={selectedProjectId} onClose={() => setShowMaintenanceCsvImport(false)} />}
+      {showFinanceCommand && <FinanceCommandCenterModal allowedKinds={[financeCommandKind]} onClose={() => setShowFinanceCommand(false)} onDraftReady={handleFieldFinanceDraft} />}
 
       {showScheduleModal && (
         <EquipmentMaintenanceScheduleModal

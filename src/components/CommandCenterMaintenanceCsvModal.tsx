@@ -258,11 +258,11 @@ function pmTrackerCsvRecords(matrix: string[][], fallbackProjectId: string): Csv
   }).map((row, index) => ({ ...row, sourceLine: headerIndex + index + 2 }));
 }
 
-export default function CommandCenterMaintenanceCsvModal({ onClose, initialKind = 'breakdown' }: { onClose: () => void; initialKind?: Kind }) {
+export default function CommandCenterMaintenanceCsvModal({ onClose, initialKind = 'breakdown', initialProjectId = '' }: { onClose: () => void; initialKind?: Kind; initialProjectId?: string }) {
   const [kind, setKind] = useState<Kind>(initialKind);
   const [rows, setRows] = useState<CsvRow[]>([]);
   const [selected, setSelected] = useState(0);
-  const [projectId, setProjectId] = useState('');
+  const [projectId, setProjectId] = useState(initialProjectId);
   const [projects, setProjects] = useState<any[]>([]);
   const [assets, setAssets] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);

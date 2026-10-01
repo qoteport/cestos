@@ -35,6 +35,7 @@ export default function FieldPurchaseOrdersPanel({
   customStartDate,
   customEndDate,
   openCreateSignal = 0,
+  initialDocumentDraft,
 }: {
   projectId: string;
   projectName?: string;
@@ -42,6 +43,7 @@ export default function FieldPurchaseOrdersPanel({
   customStartDate?: string;
   customEndDate?: string;
   openCreateSignal?: number;
+  initialDocumentDraft?: { key: number; file: File; data: Row } | null;
 }) {
   const [orders, setOrders] = useState<Row[]>([]);
   const [suppliers, setSuppliers] = useState<Row[]>([]);
@@ -197,6 +199,31 @@ export default function FieldPurchaseOrdersPanel({
       openCreate();
     }
   }, [openCreateSignal]);
+  const lastHandledDocumentDraft = useRef(0);
+  useEffect(() => {
+    if (!initialDocumentDraft || initialDocumentDraft.key <= lastHandledDocumentDraft.current) return;
+    lastHandledDocumentDraft.current = initialDocumentDraft.key;
+    const data = initialDocumentDraft.data || {};
+    const draftLines = Array.isArray(data.items) ? data.items.map((item: Row) => ({
+      item_name: String(item.item_name || item.name || '').trim(),
+      description: String(item.description || item.item_name || item.name || '').trim(),
+      quantity_ordered: String(item.quantity_ordered ?? item.quantity ?? 0),
+      unit_price: String(item.unit_price ?? 0),
+    })) : [];
+    const hasPricedLines = draftLines.some((line: Line) => Number(line.quantity_ordered) * Number(line.unit_price) > 0);
+    setEditing(null);
+    setOrderProjectId(String(data.project_id || projectId || ''));
+    setFormStep('EDIT');
+    setSupplier(String(data.supplier_name || '').trim());
+    setCurrency(String(data.currency || 'USD').toUpperCase());
+    setCategory(String(data.category || ''));
+    setNotes(String(data.notes || ''));
+    setLines(draftLines);
+    setManualTotal(hasPricedLines ? '0' : String(data.total_amount ?? 0));
+    setQuotation(initialDocumentDraft.file);
+    setExistingQuotation('');
+    setShowForm(true);
+  }, [initialDocumentDraft, projectId]);
   const openEdit = (po: Row) => {
     setEditing(po); setOrderProjectId(String(po.project_id || projectId)); setFormStep('EDIT'); setSupplier(po.supplier_name || ''); setCurrency(po.currency || 'USD'); setCategory(po.category || ''); setNotes(po.notes || '');
     const existingLines = (po.items || []).map((row: Row) => ({ item_name: row.item_name || '', description: row.description || '', quantity_ordered: String(row.quantity_ordered || 1), unit_price: String(row.unit_price || 0) }));

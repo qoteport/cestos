@@ -366,6 +366,7 @@ export default function FinancePortalWorkspace() {
     category: '',
     currency: 'USD',
     notes: '',
+    total_amount: '',
     items: [] as PurchaseOrderItem[],
   });
 
@@ -793,6 +794,7 @@ export default function FinancePortalWorkspace() {
         category,
         currency: /^[A-Z]{3}$/.test(currency) ? currency : 'USD',
         notes: String(data.notes || ''),
+        total_amount: String(data.total_amount ?? ''),
         items: Array.isArray(data.items) ? data.items.map((item: Record<string, any>) => ({
           item_name: String(item.item_name || '').trim(),
           description: String(item.description || item.item_name || '').trim(),
@@ -1160,12 +1162,14 @@ Signed: Finance & Procurement Administration
 
     setPoSubmitBusy(true);
     try {
+      const itemsTotal = newPoForm.items.reduce((sum, item) => sum + (Number(item.quantity_ordered) || 0) * (Number(item.unit_price) || 0), 0);
       const payload = {
         supplier_name: newPoForm.supplier_name,
         project_id: newPoForm.project_id === MULTI_PROJECT_SCOPE ? null : newPoForm.project_id || selectedProjectId || projects[0]?.id || undefined,
         currency: newPoForm.currency || 'USD',
         category: newPoForm.category.trim() || null,
         notes: newPoForm.notes || undefined,
+        total_amount: itemsTotal > 0 ? itemsTotal : Number(newPoForm.total_amount) || 0,
         items: newPoForm.items
           .filter((it) => (it.item_name || '').trim() || (it.description || '').trim() || Number(it.quantity_ordered) > 0 || Number(it.unit_price) > 0)
           .map((it) => ({
@@ -1205,6 +1209,7 @@ Signed: Finance & Procurement Administration
         category: '',
         currency: 'USD',
         notes: '',
+        total_amount: '',
         items: [],
       });
       reload();
@@ -3583,6 +3588,21 @@ Signed: Finance & Procurement Administration
                       <Plus size={14} /> Add Item
                     </button>
                   </div>
+                </div>
+
+                <div className="rounded-xl border bg-slate-50 p-3 dark:bg-slate-800/40">
+                  <label className="block max-w-sm space-y-1.5 text-xs font-bold text-foreground">
+                    <span>Purchase order total {newPoForm.items.reduce((sum, item) => sum + (Number(item.quantity_ordered) || 0) * (Number(item.unit_price) || 0), 0) > 0 ? '(calculated from line items)' : '(manual)'}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={newPoForm.items.reduce((sum, item) => sum + (Number(item.quantity_ordered) || 0) * (Number(item.unit_price) || 0), 0) > 0 ? newPoForm.items.reduce((sum, item) => sum + (Number(item.quantity_ordered) || 0) * (Number(item.unit_price) || 0), 0).toFixed(2) : newPoForm.total_amount}
+                      readOnly={newPoForm.items.reduce((sum, item) => sum + (Number(item.quantity_ordered) || 0) * (Number(item.unit_price) || 0), 0) > 0}
+                      onChange={(event) => setNewPoForm({ ...newPoForm, total_amount: event.target.value })}
+                      className="w-full rounded-xl border bg-background p-2.5 font-mono text-sm"
+                    />
+                  </label>
                 </div>
               </div>
 

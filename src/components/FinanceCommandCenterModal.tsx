@@ -43,6 +43,7 @@ const schemas: Record<ActionKind, Record<string, any>> = {
       currency: { type: 'string' },
       category: { type: 'string' },
       notes: { type: 'string' },
+      total_amount: { type: 'number', description: 'Document total payable when shown.' },
       items: {
         type: 'array',
         items: {
@@ -58,7 +59,7 @@ const schemas: Record<ActionKind, Record<string, any>> = {
         },
       },
     },
-    required: ['supplier_name', 'currency', 'category', 'notes', 'items'],
+    required: ['supplier_name', 'currency', 'category', 'notes', 'total_amount', 'items'],
   },
   vendor: {
     type: 'object',
@@ -98,7 +99,7 @@ const actions: { kind: ActionKind; title: string; description: string; icon: typ
   },
 ];
 
-export default function FinanceCommandCenterModal({ onClose, onDraftReady }: { onClose: () => void; onDraftReady: DraftReady }) {
+export default function FinanceCommandCenterModal({ onClose, onDraftReady, allowedKinds }: { onClose: () => void; onDraftReady: DraftReady; allowedKinds?: ActionKind[] }) {
   const [kind, setKind] = useState<ActionKind | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
@@ -121,6 +122,8 @@ export default function FinanceCommandCenterModal({ onClose, onDraftReady }: { o
       setBusy(false);
     }
   }
+
+  const visibleActions = allowedKinds ? actions.filter((action) => allowedKinds.includes(action.kind)) : actions;
 
   return (
     <div
@@ -191,7 +194,7 @@ export default function FinanceCommandCenterModal({ onClose, onDraftReady }: { o
 
               {/* 3 Action Cards */}
               <div className="mt-6 grid gap-5 md:grid-cols-3">
-                {actions.map(({ kind: actionKind, title, description, icon: Icon, badge }) => (
+                {visibleActions.map(({ kind: actionKind, title, description, icon: Icon, badge }) => (
                   <button
                     key={actionKind}
                     type="button"
