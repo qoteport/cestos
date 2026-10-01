@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Users, KeyRound, CalendarCheck, FileText, Plus, RefreshCw, Search, CheckCircle2, XCircle, Clock, UserCheck, UserX, Mail, UserPlus, ShieldAlert, Filter, BookOpen,  } from 'lucide-react';
+import { ShieldCheck, Users, KeyRound, CalendarCheck, FileText, Plus, RefreshCw, Search, CheckCircle2, XCircle, Clock, UserCheck, UserX, Mail, UserPlus, ShieldAlert, Filter, BookOpen, Loader2 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { useAuth, canAccessAdministration } from './AuthProvider';
 import { useData, State, Row, rows, Modal, title } from './DataUI';
@@ -44,6 +44,7 @@ function AdminWorkspaceContent({
   const [editIsFieldPortalOnly, setEditIsFieldPortalOnly] = useState<boolean>(false);
   const [editPortalType, setEditPortalType] = useState<string>('FULL');
   const [updateUserBusy, setUpdateUserBusy] = useState<boolean>(false);
+  const [resetSendingUserId, setResetSendingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     if (editUser) {
@@ -189,6 +190,35 @@ function AdminWorkspaceContent({
       setActionError(err.message || 'Failed to update user access');
     } finally {
       setUpdateUserBusy(false);
+    }
+  };
+
+  const handleSendPasswordReset = async (user: Row) => {
+    const targetEmail = String(user.email || '').trim();
+    if (!targetEmail) {
+      setActionError('This user does not have an email address configured.');
+      return;
+    }
+    setResetSendingUserId(String(user.id));
+    setActionError('');
+    setActionSuccess('');
+    try {
+      const empId = user.employee_id || user.employee?.id;
+      if (empId) {
+        await apiFetch(`/api/v1/hr/employees/${empId}/account/reset`, {
+          method: 'POST',
+        });
+      } else {
+        await apiFetch(`/api/v1/hr/password-reset-request`, {
+          method: 'POST',
+          body: JSON.stringify({ email: targetEmail }),
+        });
+      }
+      setActionSuccess(`Password reset email sent to ${targetEmail}.`);
+    } catch (err: any) {
+      setActionError(err?.message || `Failed to send password reset email to ${targetEmail}.`);
+    } finally {
+      setResetSendingUserId(null);
     }
   };
 
@@ -413,12 +443,28 @@ function AdminWorkspaceContent({
                           {u.last_login_at ? new Date(String(u.last_login_at)).toLocaleString() : 'Never'}
                         </td>
                         <td className="p-3 text-right">
-                          <button
-                            onClick={() => setEditUser(u)}
-                            className="px-3 py-1.5 text-xs font-medium border rounded-md hover:bg-muted transition"
-                          >
-                            Manage Access
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleSendPasswordReset(u)}
+                              disabled={resetSendingUserId === String(u.id)}
+                              className="px-2.5 py-1.5 text-xs font-semibold border rounded-lg hover:bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-300 transition flex items-center gap-1 disabled:opacity-50"
+                              title="Send password reset email to user"
+                            >
+                              {resetSendingUserId === String(u.id) ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Mail className="w-3.5 h-3.5" />
+                              )}
+                              Reset Password
+                            </button>
+                            <button
+                              onClick={() => setEditUser(u)}
+                              className="px-3 py-1.5 text-xs font-medium border rounded-lg hover:bg-muted transition"
+                            >
+                              Manage Access
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1013,21 +1059,36 @@ function AdminWorkspaceContent({
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t">
               <button
                 type="button"
-                onClick={() => setEditUser(null)}
-                className="px-4 py-2 text-xs font-medium border rounded-lg hover:bg-muted"
+                disabled={resetSendingUserId === String(editUser?.id)}
+                onClick={() => editUser && handleSendPasswordReset(editUser)}
+                className="px-3.5 py-2 text-xs font-semibold border border-indigo-300 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300 rounded-lg hover:bg-indigo-100 transition flex items-center gap-1.5 disabled:opacity-50"
               >
-                Cancel
+                {resetSendingUserId === String(editUser?.id) ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Mail className="w-3.5 h-3.5" />
+                )}
+                Send Password Reset Email
               </button>
-              <button
-                type="submit"
-                disabled={updateUserBusy}
-                className="px-4 py-2 text-xs bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50"
-              >
-                {updateUserBusy ? 'Saving Changes...' : 'Save Access Changes'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditUser(null)}
+                  className="px-4 py-2 text-xs font-medium border rounded-lg hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updateUserBusy}
+                  className="px-4 py-2 text-xs bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {updateUserBusy ? 'Saving Changes...' : 'Save Access Changes'}
+                </button>
+              </div>
             </div>
           </form>
         </Modal>
