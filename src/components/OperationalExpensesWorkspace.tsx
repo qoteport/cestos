@@ -155,6 +155,28 @@ export default function OperationalExpensesWorkspace({
     document.getElementById(`operational-expense-${focusedExpenseId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [focusedExpenseId, rows]);
 
+  const sortedRows = useMemo(() => {
+    return [...rows].sort((a, b) => {
+      const getTime = (r: Row) => {
+        if (r.created_at) {
+          const t = new Date(r.created_at).getTime();
+          if (!isNaN(t) && t > 0) return t;
+        }
+        if (r.expense_date) {
+          const t = new Date(r.expense_date).getTime();
+          if (!isNaN(t) && t > 0) return t;
+        }
+        return 0;
+      };
+      const timeA = getTime(a);
+      const timeB = getTime(b);
+      if (timeA !== timeB) return timeB - timeA;
+      const numA = String(a.expense_number || a.id || '');
+      const numB = String(b.expense_number || b.id || '');
+      return numB.localeCompare(numA, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  }, [rows]);
+
   const handleOpenFile = async (path: string, fileName: string) => {
     try {
       const blob = await apiFetchBlob(path);
@@ -557,7 +579,7 @@ export default function OperationalExpensesWorkspace({
                   </td>
                 </tr>
               ) : (
-                rows.map((row) => {
+                sortedRows.map((row) => {
                   const sName = row.submitted_by_name || row.submitted_by?.full_name || (row.submitted_by?.first_name ? `${row.submitted_by.first_name} ${row.submitted_by.last_name || ''}`.trim() : null) || row.created_by_name || (auth.user?.first_name ? `${auth.user.first_name} ${auth.user.last_name || ''}`.trim() : 'Operations Supervisor');
                   const sPos = row.submitted_by_job_title || row.submitted_by?.job_title || row.submitted_by_position || row.submitted_by_title || row.submitted_by?.position || row.submitted_by?.title || row.submitted_by_department || row.submitted_by?.department || row.submitted_by?.dept || row.department || row.submitted_by?.role || (auth.user as any)?.job_title || (auth.user as any)?.department || (auth.user?.is_superuser ? 'Operations Director' : auth.user?.portal_type ? `${auth.user.portal_type.replace('_', ' ')} Admin` : 'Field Administrator');
                   const sEmail = row.submitted_by_email || row.submitted_by?.email || row.email || auth.user?.email || 'operations@cestos.com';

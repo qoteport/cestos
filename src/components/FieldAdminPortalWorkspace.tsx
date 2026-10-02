@@ -1,6 +1,6 @@
 'use client';
 import IncidentDetailModal from './IncidentDetailModal';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
@@ -743,9 +743,29 @@ export default function FieldAdminPortalWorkspace() {
   const filteredExpenses = filterByProj(expenses).filter((c) =>
     isWithinDateFilter(c.posted_at || c.entry_date || c.created_at)
   );
-  const filteredOperationalExpenseRequests = operationalExpenseRequests.filter((e) =>
-    isWithinDateFilter(e.expense_date || e.created_at)
-  );
+  const filteredOperationalExpenseRequests = useMemo(() => {
+    return [...operationalExpenseRequests]
+      .filter((e) => isWithinDateFilter(e.expense_date || e.created_at))
+      .sort((a, b) => {
+        const getTime = (r: any) => {
+          if (r.created_at) {
+            const t = new Date(r.created_at).getTime();
+            if (!isNaN(t) && t > 0) return t;
+          }
+          if (r.expense_date) {
+            const t = new Date(r.expense_date).getTime();
+            if (!isNaN(t) && t > 0) return t;
+          }
+          return 0;
+        };
+        const timeA = getTime(a);
+        const timeB = getTime(b);
+        if (timeA !== timeB) return timeB - timeA;
+        const numA = String(a.expense_number || a.id || '');
+        const numB = String(b.expense_number || b.id || '');
+        return numB.localeCompare(numA, undefined, { numeric: true, sensitivity: 'base' });
+      });
+  }, [operationalExpenseRequests, datePreset, customStartDate, customEndDate]);
   const fuelDeliveryCost = (delivery: any) => {
     if (delivery.total_cost != null && Number.isFinite(Number(delivery.total_cost))) return Number(delivery.total_cost);
     const match = String(delivery.notes || '').match(/Total Cost:\s*([\d,]+(?:\.\d+)?)/i);
