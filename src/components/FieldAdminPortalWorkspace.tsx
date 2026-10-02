@@ -1,5 +1,6 @@
 'use client';
 import IncidentDetailModal from './IncidentDetailModal';
+import FieldWorkbookDialog from './FieldWorkbookDialog';
 import dynamic from 'next/dynamic';
 const FieldWorkbookWorkspace = dynamic(() => import('./FieldWorkbookWorkspace'), { ssr: false, loading: () => <p className="p-6 text-sm text-slate-500">Opening workbooks…</p> });
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -53,7 +54,7 @@ import CommandCenterTimesheetCsvModal from './CommandCenterTimesheetCsvModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type AdminTab = 'WORKBOOKS' | 'PROJECTS' | 'EQUIPMENT' | 'FUEL' | 'MAINTENANCE' | 'PEOPLE' | 'EXPENSES' | 'PURCHASE_ORDERS' | 'HSE' | 'NOTIFICATIONS';
+type AdminTab = 'PROJECTS' | 'EQUIPMENT' | 'FUEL' | 'MAINTENANCE' | 'PEOPLE' | 'EXPENSES' | 'PURCHASE_ORDERS' | 'HSE' | 'NOTIFICATIONS';
 
 interface ProjectOption {
   id: string;
@@ -128,6 +129,7 @@ export default function FieldAdminPortalWorkspace() {
   const [filteredFuelDeliveriesPage, setFilteredFuelDeliveriesPage] = React.useState(1);
   const [filteredLeaveRequestsPage, setFilteredLeaveRequestsPage] = React.useState(1);
   const [showPurchasingCharts, setShowPurchasingCharts] = React.useState(false);
+  const [workbooksOpen, setWorkbooksOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<AdminTab>('PROJECTS');
   const [peopleSubTab, setPeopleSubTab] = useState<'EMPLOYEES' | 'TIMESHEETS'>('EMPLOYEES');
   const handledRecordLink = useRef('');
@@ -1727,7 +1729,6 @@ Signed: Field Operations Administration
     { id: 'EXPENSES', label: 'Expenses', mobileLabel: 'Expenses', icon: <DollarSign size={16} /> },
     { id: 'FUEL', label: 'Fuel', mobileLabel: 'Fuel', icon: <Fuel size={16} /> },
     { id: 'EQUIPMENT', label: 'Equipment', mobileLabel: 'Fleet', icon: <Truck size={16} /> },
-    { id: 'WORKBOOKS', label: 'Workbooks', mobileLabel: 'Sheets', icon: <FileText size={16} /> },
     { id: 'MAINTENANCE', label: 'Maintenance', mobileLabel: 'Repairs', icon: <Wrench size={16} /> },
     { id: 'HSE', label: 'HSE', mobileLabel: 'HSE', icon: <ShieldCheck size={16} /> },
     { id: 'PEOPLE', label: 'Employees', mobileLabel: 'Workers', icon: <Users size={16} /> },
@@ -1883,13 +1884,13 @@ Signed: Field Operations Administration
 
             <button
               type="button"
-              onClick={() => setFieldAdminCommandOpen(true)}
+              onClick={() => setWorkbooksOpen(true)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-orange-600 via-amber-600 to-orange-700 text-white hover:from-orange-700 hover:to-amber-700 text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all border border-orange-500/30"
-              title="Open Field Admin Command Center"
-              aria-label="Open Field Admin Command Center"
+              title="Open workbooks"
+              aria-label="Open workbooks"
             >
-              <Zap size={14} className="fill-amber-300 text-amber-300" />
-              <span className="hidden sm:inline">Command Center</span>
+              <FileText size={16} />
+              <span className="hidden sm:inline">Workbooks</span>
             </button>
 
             <button
@@ -1992,7 +1993,7 @@ Signed: Field Operations Administration
       {/* Main Content Area */}
       <main className="flex-1 px-4 py-6 max-w-7xl mx-auto w-full space-y-6 pb-24 md:pb-6">
         {/* Date Range & Time Preset Filter Toolbar (Hidden on PROJECTS, PEOPLE, MY_PROFILE, NOTIFICATIONS) */}
-        {!['PROJECTS', 'PEOPLE', 'NOTIFICATIONS', 'WORKBOOKS'].includes(activeTab) && (
+        {!['PROJECTS', 'PEOPLE', 'NOTIFICATIONS'].includes(activeTab) && (
           <div className="relative bg-white dark:bg-slate-900 border rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-sm z-30">
             <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
               <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 mr-1 w-full sm:w-auto">
@@ -2824,7 +2825,6 @@ Signed: Field Operations Administration
             )}
 
             {/* MAINTENANCE TAB */}
-            {activeTab === 'WORKBOOKS' && <FieldWorkbookWorkspace projects={projects} assets={assets} employees={employees} sites={projectSites} storageScope={String(user?.id || '')} />}
 
             {activeTab === 'MAINTENANCE' && (
               <div className="space-y-6">
@@ -4485,6 +4485,7 @@ Signed: Field Operations Administration
 
       {showExpenseModal && <OperationalExpenseSubmissionModal projectId={selectedProjectId} initialDocumentDraft={expenseCommandDraft} onClose={() => { setShowExpenseModal(false); setExpenseCommandDraft(null); }} onSubmitted={(expense) => { setShowExpenseModal(false); setExpenseCommandDraft(null); setOperationalExpenseRequests((rows) => [expense, ...rows.filter((row) => row.id !== expense.id)]); setBanner({ type: 'success', message: `${expense.expense_number || 'Operational expense'} submitted to Finance for payment.` }); }} />}
 
+      <FieldWorkbookDialog open={workbooksOpen} onClose={() => setWorkbooksOpen(false)}><FieldWorkbookWorkspace projects={projects} assets={assets} employees={employees} sites={projectSites} storageScope={String(user?.id || '')} /></FieldWorkbookDialog>
       {fieldAdminCommandOpen && <FieldAdminCommandCenterModal onClose={() => setFieldAdminCommandOpen(false)} onSelect={handleFieldAdminCommandSelect} />}
       {showTimesheetCsvImport && <CommandCenterTimesheetCsvModal heading="Field admin portal" theme="orange" onClose={() => setShowTimesheetCsvImport(false)} />}
       {showMaintenanceCsvImport && <CommandCenterMaintenanceCsvModal initialKind={maintenanceCsvKind} initialProjectId={selectedProjectId} onClose={() => setShowMaintenanceCsvImport(false)} />}

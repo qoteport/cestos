@@ -81,6 +81,7 @@ const GridCell = memo(function GridCell({
 }) {
   return (
     <td
+      data-grid-cell={`${r}:${c}`}
       rowSpan={merge ? merge.er - merge.r + 1 : 1}
       colSpan={merge ? merge.ec - merge.c + 1 : 1}
       className={`relative border border-slate-200 p-0 dark:border-slate-700 ${selected ? 'bg-emerald-50 dark:bg-emerald-950' : header ? 'bg-slate-100 dark:bg-slate-800' : 'bg-white dark:bg-slate-900'} ${active ? 'outline outline-2 -outline-offset-2 outline-emerald-600' : ''}`}
@@ -141,6 +142,7 @@ export default function FieldWorkbookWorkspace({
 }) {
   const [book, setBook] = useState<FieldWorkbook | null>(null);
   const [sheetIndex, setSheetIndex] = useState(0);
+  const dragSelection = useRef<{ kind: 'cell' | 'row' | 'column'; start: Point } | null>(null);
   const [anchor, setAnchor] = useState<Point>({ r: 0, c: 0 });
   const [end, setEnd] = useState<Point>({ r: 0, c: 0 });
   const [dirty, setDirty] = useState(false);
@@ -290,7 +292,77 @@ export default function FieldWorkbookWorkspace({
       ),
     [changeSheet]
   );
+  function beginSelection(event: React.PointerEvent) {
+    if (event.button !== 0 || event.pointerType === 'touch') return;
+    const target = event.target as HTMLElement;
+    const cell = target.closest<HTMLElement>('[data-grid-cell]');
+    const row = target.closest<HTMLElement>('[data-grid-row]');
+    const column = target.closest<HTMLElement>('[data-grid-column]');
+    if (!cell && !row && !column) return;
+    const current = bookRef.current?.sheets[sheetRef.current];
+    if (!current) return;
+    const kind = row ? 'row' : column ? 'column' : 'cell';
+    const point = row
+      ? { r: Number(row.dataset.gridRow), c: 0 }
+      : column
+        ? { r: 0, c: Number(column.dataset.gridColumn) }
+        : (() => {
+            const [r, c] = cell!.dataset.gridCell!.split(':').map(Number);
+            return { r, c };
+          })();
+    selectionCleanup.current();
+    const base = event.shiftKey ? anchor : point;
+    const start =
+      kind === 'row' ? { r: base.r, c: 0 } : kind === 'column' ? { r: 0, c: base.c } : base;
+    dragSelection.current = { kind, start };
+    if (event.shiftKey || kind !== 'cell') event.preventDefault();
+    setAnchor(start);
+    setEnd(
+      kind === 'row'
+        ? { r: point.r, c: current.widths.length - 1 }
+        : kind === 'column'
+          ? { r: current.cells.length - 1, c: point.c }
+          : point
+    );
+    const move = (e: PointerEvent) => {
+      const hit = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+      const hitCell = hit?.closest<HTMLElement>('[data-grid-cell]');
+      const hitRow = hit?.closest<HTMLElement>('[data-grid-row]');
+      const hitColumn = hit?.closest<HTMLElement>('[data-grid-column]');
+      let next: Point | undefined;
+      if (hitCell) {
+        const [r, c] = hitCell.dataset.gridCell!.split(':').map(Number);
+        next = { r, c };
+      } else if (hitRow) next = { r: Number(hitRow.dataset.gridRow), c: 0 };
+      else if (hitColumn) next = { r: 0, c: Number(hitColumn.dataset.gridColumn) };
+      if (!next) return;
+      if (next.r !== point.r || next.c !== point.c) {
+        e.preventDefault();
+        window.getSelection()?.removeAllRanges();
+      }
+      setEnd(
+        kind === 'row'
+          ? { r: next.r, c: current.widths.length - 1 }
+          : kind === 'column'
+            ? { r: current.cells.length - 1, c: next.c }
+            : next
+      );
+    };
+    const finish = () => {
+      dragSelection.current = null;
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', finish);
+      window.removeEventListener('pointercancel', finish);
+    };
+    selectionCleanup.current = finish;
+    window.addEventListener('pointermove', move, { passive: false });
+    window.addEventListener('pointerup', finish);
+    window.addEventListener('pointercancel', finish);
+  }
+  const selectionCleanup = useRef<() => void>(() => {});
+  useEffect(() => () => selectionCleanup.current(), []);
   const onSelect = useCallback((r: number, c: number, extend: boolean) => {
+    if (dragSelection.current) return;
     if (!extend) setAnchor({ r, c });
     setEnd({ r, c });
   }, []);
@@ -533,9 +605,17 @@ export default function FieldWorkbookWorkspace({
     lastEdit.current = '';
   }
   function dimension(axis: 'row' | 'column', remove: boolean, after = false) {
-    changeSheet((s) =>
-      changeDimension(s, axis, (axis === 'row' ? anchor.r : anchor.c) + (after ? 1 : 0), remove)
-    );
+    changeSheet((s) => {
+      const start = axis === 'row' ? selection.r : selection.c;
+      const end = axis === 'row' ? selection.er : selection.ec;
+      if (!remove) return changeDimension(s, axis, after ? end + 1 : start, false);
+      if (end - start + 1 >= (axis === 'row' ? s.cells.length : s.widths.length))
+        throw new Error('Keep at least one row and one column.');
+      let next = s;
+      for (let index = end; index >= start; index--)
+        next = changeDimension(next, axis, index, true);
+      return next;
+    });
     setAnchor({ r: 0, c: 0 });
     setEnd({ r: 0, c: 0 });
   }
@@ -812,7 +892,7 @@ export default function FieldWorkbookWorkspace({
             aria-label="Delete row"
             className={iconButton}
             onClick={() => {
-              if (window.confirm('Delete the selected row and its contents?'))
+              if (window.confirm('Delete the selected rows and their contents?'))
                 dimension('row', true);
             }}
           >
@@ -831,7 +911,7 @@ export default function FieldWorkbookWorkspace({
             aria-label="Delete column"
             className={iconButton}
             onClick={() => {
-              if (window.confirm('Delete the selected column and its contents?'))
+              if (window.confirm('Delete the selected columns and their contents?'))
                 dimension('column', true);
             }}
           >
@@ -1028,8 +1108,8 @@ export default function FieldWorkbookWorkspace({
             />
           </label>
           <p className="text-slate-500">
-            Shift-click to select a range · Tab / Enter to move · Alt + arrows to navigate · Paste
-            tables from Excel
+            Drag across cells or row/column headings to select · Shift-click to extend · Tab / Enter
+            to move · Alt + arrows to navigate · Paste tables from Excel
           </p>
         </div>
         <div className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2 dark:bg-slate-900">
@@ -1045,6 +1125,7 @@ export default function FieldWorkbookWorkspace({
         </div>
         <div
           ref={gridRef}
+          onPointerDown={beginSelection}
           style={{ scrollPaddingLeft: 48, scrollPaddingTop: 36 }}
           onCopy={(event) => {
             if (selection.r !== selection.er || selection.c !== selection.ec) {
@@ -1077,8 +1158,10 @@ export default function FieldWorkbookWorkspace({
                   >
                     <button
                       className="w-full py-2"
-                      onClick={() => {
-                        setAnchor({ r: 0, c });
+                      data-grid-column={c}
+                      onClick={(event) => {
+                        if (event.detail !== 0) return;
+                        if (!event.shiftKey) setAnchor({ r: 0, c });
                         setEnd({ r: sheet.cells.length - 1, c });
                       }}
                       aria-label={`Select column ${columnName(c)}`}
@@ -1101,8 +1184,10 @@ export default function FieldWorkbookWorkspace({
                     <button
                       className="h-full w-full py-2"
                       aria-label={`Select row ${r + 1}`}
-                      onClick={() => {
-                        setAnchor({ r, c: 0 });
+                      data-grid-row={r}
+                      onClick={(event) => {
+                        if (event.detail !== 0) return;
+                        if (!event.shiftKey) setAnchor({ r, c: 0 });
                         setEnd({ r, c: sheet.widths.length - 1 });
                       }}
                     >
