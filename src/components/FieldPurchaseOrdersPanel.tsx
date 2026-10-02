@@ -53,6 +53,7 @@ export default function FieldPurchaseOrdersPanel({
   const [formStep, setFormStep] = useState<FormStep>('EDIT');
   const [editing, setEditing] = useState<Row | null>(null);
   const [orderProjectId, setOrderProjectId] = useState('');
+  const [projectList, setProjectList] = useState<Row[]>([]);
   const [supplier, setSupplier] = useState('');
   const [currency, setCurrency] = useState('USD');
   const [category, setCategory] = useState('');
@@ -114,11 +115,13 @@ export default function FieldPurchaseOrdersPanel({
   }
 
   async function reload() {
-    const [poRows, supplierRows] = await Promise.all([
+    const [poRows, supplierRows, projRows] = await Promise.all([
       apiFetch<Row[]>('/api/v1/procurement/purchase-orders'),
       apiFetch<Row[]>('/api/v1/fuel-suppliers').catch(() => []),
+      apiFetch<any>('/api/v1/projects?page_size=100').catch(() => []),
     ]);
     setOrders(Array.isArray(poRows) ? poRows : []);
+    setProjectList(Array.isArray(projRows) ? projRows : projRows?.items || []);
     const orderList = Array.isArray(poRows) ? poRows : [];
     const requestedId = new URLSearchParams(window.location.search).get('purchase_order_id');
     const linkedOrder = requestedId ? orderList.find((row) => String(row.id) === requestedId) : null;
@@ -190,7 +193,7 @@ export default function FieldPurchaseOrdersPanel({
     setQuotation(file);
   }
   const openCreate = () => {
-    setEditing(null); setOrderProjectId(projectId); setFormStep('EDIT'); setSupplier(''); setCurrency('USD'); setCategory(''); setNotes(''); setLines([]); setManualTotal('0'); setQuotation(null); setExistingQuotation(''); setShowForm(true);
+    setEditing(null); setOrderProjectId(projectId || '__GENERAL__'); setFormStep('EDIT'); setSupplier(''); setCurrency('USD'); setCategory(''); setNotes(''); setLines([]); setManualTotal('0'); setQuotation(null); setExistingQuotation(''); setShowForm(true);
   };
   const lastHandledCreateSignal = useRef(openCreateSignal);
   useEffect(() => {
@@ -212,7 +215,7 @@ export default function FieldPurchaseOrdersPanel({
     })) : [];
     const hasPricedLines = draftLines.some((line: Line) => Number(line.quantity_ordered) * Number(line.unit_price) > 0);
     setEditing(null);
-    setOrderProjectId(String(data.project_id || projectId || ''));
+    setOrderProjectId(String(data.project_id || projectId || '__GENERAL__'));
     setFormStep('EDIT');
     setSupplier(String(data.supplier_name || '').trim());
     setCurrency(String(data.currency || 'USD').toUpperCase());
@@ -225,7 +228,7 @@ export default function FieldPurchaseOrdersPanel({
     setShowForm(true);
   }, [initialDocumentDraft, projectId]);
   const openEdit = (po: Row) => {
-    setEditing(po); setOrderProjectId(String(po.project_id || projectId)); setFormStep('EDIT'); setSupplier(po.supplier_name || ''); setCurrency(po.currency || 'USD'); setCategory(po.category || ''); setNotes(po.notes || '');
+    setEditing(po); setOrderProjectId(String(po.project_id || '__GENERAL__')); setFormStep('EDIT'); setSupplier(po.supplier_name || ''); setCurrency(po.currency || 'USD'); setCategory(po.category || ''); setNotes(po.notes || '');
     const existingLines = (po.items || []).map((row: Row) => ({ item_name: row.item_name || '', description: row.description || '', quantity_ordered: String(row.quantity_ordered || 1), unit_price: String(row.unit_price || 0) }));
     setLines(existingLines);
     setManualTotal(String(existingLines.reduce((sum: number, row: Line) => sum + (Number(row.quantity_ordered) || 0) * (Number(row.unit_price) || 0), 0) > 0 ? 0 : Number(po.total_amount || 0)));
@@ -257,7 +260,7 @@ export default function FieldPurchaseOrdersPanel({
           unit_price: line.unit_price === '' ? 0 : Number(line.unit_price) || 0,
         }));
       const payload = {
-        supplier_name: supplier.trim(), project_id: orderProjectId || undefined, currency, category: category.trim() || null, notes: notes.trim() || undefined,
+        supplier_name: supplier.trim(), project_id: orderProjectId && orderProjectId !== '__GENERAL__' ? orderProjectId : undefined, currency, category: category.trim() || null, notes: notes.trim() || undefined,
         total_amount: lineTotal > 0 ? lineTotal : Number(manualTotal) || 0,
         items: validItems,
         ...(!editing ? { save_as_draft: saveAsDraft } : {}),
@@ -388,8 +391,19 @@ export default function FieldPurchaseOrdersPanel({
                       <input className={input} value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Or type a new supplier name" />
                     </label>
                     <label className="space-y-1 text-xs font-semibold">
-                      <span className="block">Project</span>
-                      <input readOnly className={`${input} bg-slate-100 dark:bg-slate-800`} value={editing && editing.project_id !== projectId ? (editing.project_name || 'Original assigned project') : (projectName || 'Selected project')} />
+                      <span className="block">Project Scope / Assigned Site</span>
+                      <SearchableSelect
+                        value={orderProjectId || '__GENERAL__'}
+                        onChange={(val) => setOrderProjectId(val)}
+                        options={[
+                          { value: '__GENERAL__', label: 'General / Organization-Wide (Not for a specific project)' },
+                          ...projectList.map((p) => ({
+                            value: String(p.id),
+                            label: `${p.name} (${p.code || 'Site'})`,
+                          })),
+                        ]}
+                        placeholder="Select project scope or General..."
+                      />
                     </label>
                     <label className="space-y-1 text-xs font-semibold">
                       <span className="block">Category (optional)</span>
