@@ -234,7 +234,7 @@ function MaintenanceAssessmentReportWizardForm({ saveImportFiles,
             void handleSpreadsheetAutoFill(f);
           }
         });
-      }} className="block w-full rounded-lg border bg-background p-2" /></label>
+      }} className="block w-full rounded-xl border border-slate-200 bg-background p-2 text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#184877] file:text-white hover:file:bg-[#113456] cursor-pointer transition shadow-sm" /></label>
       {parseNotice && (
         <div className="flex items-center justify-between p-2 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs">
           <span className="flex items-center gap-1.5"><FileSpreadsheet size={14} /> {parseNotice}</span>

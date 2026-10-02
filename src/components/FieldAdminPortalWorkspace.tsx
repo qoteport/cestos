@@ -1,5 +1,7 @@
 'use client';
 import IncidentDetailModal from './IncidentDetailModal';
+import dynamic from 'next/dynamic';
+const FieldWorkbookWorkspace = dynamic(() => import('./FieldWorkbookWorkspace'), { ssr: false, loading: () => <p className="p-6 text-sm text-slate-500">Opening workbooks…</p> });
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
@@ -51,7 +53,7 @@ import CommandCenterTimesheetCsvModal from './CommandCenterTimesheetCsvModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type AdminTab = 'PROJECTS' | 'EQUIPMENT' | 'FUEL' | 'MAINTENANCE' | 'PEOPLE' | 'EXPENSES' | 'PURCHASE_ORDERS' | 'HSE' | 'NOTIFICATIONS';
+type AdminTab = 'WORKBOOKS' | 'PROJECTS' | 'EQUIPMENT' | 'FUEL' | 'MAINTENANCE' | 'PEOPLE' | 'EXPENSES' | 'PURCHASE_ORDERS' | 'HSE' | 'NOTIFICATIONS';
 
 interface ProjectOption {
   id: string;
@@ -1725,6 +1727,7 @@ Signed: Field Operations Administration
     { id: 'EXPENSES', label: 'Expenses', mobileLabel: 'Expenses', icon: <DollarSign size={16} /> },
     { id: 'FUEL', label: 'Fuel', mobileLabel: 'Fuel', icon: <Fuel size={16} /> },
     { id: 'EQUIPMENT', label: 'Equipment', mobileLabel: 'Fleet', icon: <Truck size={16} /> },
+    { id: 'WORKBOOKS', label: 'Workbooks', mobileLabel: 'Sheets', icon: <FileText size={16} /> },
     { id: 'MAINTENANCE', label: 'Maintenance', mobileLabel: 'Repairs', icon: <Wrench size={16} /> },
     { id: 'HSE', label: 'HSE', mobileLabel: 'HSE', icon: <ShieldCheck size={16} /> },
     { id: 'PEOPLE', label: 'Employees', mobileLabel: 'Workers', icon: <Users size={16} /> },
@@ -1989,7 +1992,7 @@ Signed: Field Operations Administration
       {/* Main Content Area */}
       <main className="flex-1 px-4 py-6 max-w-7xl mx-auto w-full space-y-6 pb-24 md:pb-6">
         {/* Date Range & Time Preset Filter Toolbar (Hidden on PROJECTS, PEOPLE, MY_PROFILE, NOTIFICATIONS) */}
-        {!['PROJECTS', 'PEOPLE', 'NOTIFICATIONS'].includes(activeTab) && (
+        {!['PROJECTS', 'PEOPLE', 'NOTIFICATIONS', 'WORKBOOKS'].includes(activeTab) && (
           <div className="relative bg-white dark:bg-slate-900 border rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-sm z-30">
             <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
               <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 mr-1 w-full sm:w-auto">
@@ -2821,6 +2824,8 @@ Signed: Field Operations Administration
             )}
 
             {/* MAINTENANCE TAB */}
+            {activeTab === 'WORKBOOKS' && <FieldWorkbookWorkspace projects={projects} assets={assets} employees={employees} sites={projectSites} storageScope={String(user?.id || '')} />}
+
             {activeTab === 'MAINTENANCE' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between flex-wrap gap-3">

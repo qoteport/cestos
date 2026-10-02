@@ -4,6 +4,7 @@ import { useRef, useState, type ReactNode } from 'react';
 import { apiFetch } from '@/lib/api';
 import { maintenanceDefinitions, maintenanceSourceFiles, normalizeImportLabel, readMaintenanceImport, type MaintenanceImportKind, type MaintenanceImportSheet } from '@/lib/maintenanceImport';
 import { Modal } from './DataUI';
+import { UploadCloud, FileSpreadsheet } from 'lucide-react';
 
 const sourceTypes: Record<MaintenanceImportKind, string> = { preventive: 'pm_job_card', assessment: 'maintenance_assessment', action: 'action_tracker_import', pm: 'pm_tracker_import', equipment: 'equipment_register_import' };
 export type SaveImportFiles = (recordId: string) => Promise<void>;
@@ -65,7 +66,14 @@ export default function MaintenanceImportGate({ kind, record, assets = [], emplo
   return <Modal title={maintenanceDefinitions[kind].title} onClose={onClose} footer={<div className="flex w-full items-center justify-between gap-3"><span className="text-xs text-muted-foreground">{selected ? 'Review the prefilled fields next.' : 'No file? Continue to enter the details manually.'}</span><button type="button" className="btn-primary rounded-xl" disabled={busy} onClick={proceed}>Continue</button></div>}>
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">Upload a CSV or Excel file to prefill this form, or continue without a file. For Excel, we scan the worksheets and select the strongest match.</p>
-      <label className="block rounded-xl border-2 border-dashed p-5"><span className="mb-3 block text-sm font-semibold">Optional CSV or Excel file</span><input type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={busy} onChange={(event) => { const source = event.target.files?.[0]; event.target.value = ''; if (source) void upload(source); }} /></label>
+      <label className="group block rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/70 p-6 text-center transition-all hover:border-[#184877] hover:bg-blue-50/50 cursor-pointer">
+        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100/80 text-[#184877] transition-transform group-hover:scale-110">
+          <UploadCloud className="h-6 w-6" />
+        </div>
+        <span className="mb-1 block text-sm font-bold text-slate-800">Optional CSV or Excel file</span>
+        <span className="mb-4 block text-xs text-slate-500">Supports .csv, .xlsx, .xls spreadsheets</span>
+        <input type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={busy} onChange={(event) => { const source = event.target.files?.[0]; event.target.value = ''; if (source) void upload(source); }} className="block w-full max-w-md mx-auto text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#184877] file:text-white hover:file:bg-[#113456] file:cursor-pointer transition-colors shadow-sm" />
+      </label>
       {busy && <p role="status">Reading file and checking worksheetsâ€¦</p>}
       {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
       {selected && <section className="space-y-3 rounded-xl border bg-muted/30 p-4">

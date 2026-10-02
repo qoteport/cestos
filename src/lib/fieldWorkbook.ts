@@ -21,6 +21,9 @@ export const workbookTemplates: { name: string; description: string; sheets: [st
   { name: 'Maintenance Assessment Report', description: 'Fleet condition, actions and maintenance KPIs.', sheets: [
     ['Report', ['Report Number', 'Report Date', 'Project', 'Site', 'Prepared By', 'Period Start', 'Period End', 'Executive Summary', 'Manpower Requirements', 'Conclusion']],
     ['Fleet assessment', ['Equipment', 'Unit Number', 'Quantity', 'Maintenance Focus', 'Current Approach', 'Observation / Failure', 'Action Taken / Response', 'Current Status']],
+    ['Preventive improvements', ['Equipment', 'Improvement', 'Action Required', 'Responsible', 'Target Date', 'Status']],
+    ['Spare parts', ['Part / Material', 'Equipment', 'Quantity', 'Action Required', 'Priority', 'Remarks']],
+    ['Control documents', ['Document', 'Purpose', 'Status', 'Responsible', 'Remarks']],
     ['Action plan', ['Action', 'Priority', 'Responsible', 'Target Date', 'Status', 'Remarks']],
     ['KPIs', ['KPI', 'Target', 'Actual', 'Remarks']],
   ] },
@@ -58,7 +61,7 @@ export function changeDimension(sheet: FieldSheet, axis: 'row'|'column', index: 
   else { next.cells.forEach(row => row.splice(index,remove?1:0,...(remove?[]:['']))); next.widths.splice(index,remove?1:0,...(remove?[]:[160])); }
   const start = axis === 'row' ? 'r' : 'c', end = axis === 'row' ? 'er' : 'ec';
   next.merges = next.merges.flatMap(m => {
-    if(remove && m[start] === index) next.cells[axis==='row'?index:m.r]?.splice(axis==='row'?m.c:index,1,sheet.cells[m.r][m.c]);
+    if(remove && m[start] === index && m[end] > m[start]) next.cells[axis==='row'?index:m.r]?.splice(axis==='row'?m.c:index,1,sheet.cells[m.r][m.c]);
     if(remove) { if(index < m[start]) { m[start]--; m[end]--; } else if(index <= m[end]) m[end]--; }
     else { if(index <= m[start]) { m[start]++; m[end]++; } else if(index <= m[end]) m[end]++; }
     return m[start] > m[end] || (m.r===m.er && m.c===m.ec) ? [] : [m];
@@ -106,7 +109,7 @@ export async function importWorkbook(file: File): Promise<FieldWorkbook> {
   if(!/\.(csv|xlsx|xls)$/i.test(file.name)) throw new Error('Choose a CSV, XLSX or XLS file.');
   if(file.size>15*1024*1024) throw new Error('Choose a file smaller than 15 MB.');
   const XLSX=await import('xlsx');
-  const source=XLSX.read(await file.arrayBuffer(),{type:'array',cellStyles:true});
+  const source=XLSX.read(await file.arrayBuffer(),{type:'array',cellStyles:true,raw:true});
   if(source.SheetNames.length>30) throw new Error('This editor supports up to 30 sheets per workbook.');
   const book=newWorkbook(); book.name=file.name.replace(/\.[^.]+$/,'');
   book.sheets=source.SheetNames.map(name=>{
