@@ -121,7 +121,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
     const catName = (selectedPayee && (selectedPayee.bank_account_type || selectedPayee.category)) || category || (payName.trim() ? payName.trim() : '');
     if (!catName) return;
 
-    const displayName = catName.replace(/_/g, ' ');
+    const displayName = `${catName.replace(/_/g, ' ')} (S)`;
 
     setItems((currentItems) => {
       if (currentItems.length === 0) {
@@ -239,7 +239,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
           </button>
         </header>
         <form onSubmit={submit} className="flex flex-col h-full overflow-hidden">
-          <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6 text-xs">
+          <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6 text-xs" style={{ overflowAnchor: 'none' }}>
             {error && <p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3 text-red-800">{error}</p>}
             <section className="grid gap-3 rounded-xl border p-3 sm:grid-cols-2">
               <label className="block space-y-1 font-semibold sm:col-span-2">
