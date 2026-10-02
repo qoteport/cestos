@@ -315,7 +315,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
                     <span className="block">Inventory item / item name *</span>
                     {item.custom_item ? (
                       <>
-                        <input autoFocus required className={inputClass} value={item.name} onChange={(event) => updateItem(index, { name: event.target.value })} placeholder="Enter a new item name" />
+                        <input required className={inputClass} value={item.name} onChange={(event) => updateItem(index, { name: event.target.value })} placeholder="Enter a new item name" />
                         <button type="button" className="mt-1 text-orange-700 underline" onClick={() => updateItem(index, { custom_item: false, name: '' })}>Choose an inventory item</button>
                       </>
                     ) : (

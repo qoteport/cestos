@@ -328,7 +328,7 @@ export default function HRPortalWorkspace() {
         if (pId && String(pId) !== String(selectedProjectId)) return false;
       }
       return isWithinDateFilter(e.expense_date || e.created_at || e.entry_date);
-    });
+    }).sort((a, b) => new Date(b.updated_at || b.created_at || b.expense_date || 0).getTime() - new Date(a.updated_at || a.created_at || a.expense_date || 0).getTime());
   }, [expenses, selectedProjectId, datePreset, customStartDate, customEndDate]);
 
   // Compute expense time series using scopedExpenses
@@ -437,7 +437,7 @@ export default function HRPortalWorkspace() {
     return purchaseOrders.filter((po) => {
       if (selectedProjectId && po.project_id && String(po.project_id) !== String(selectedProjectId)) return false;
       return isWithinDateFilter(po.order_date || po.created_at);
-    });
+    }).sort((a, b) => new Date(b.updated_at || b.created_at || b.order_date || 0).getTime() - new Date(a.updated_at || a.created_at || a.order_date || 0).getTime());
   }, [purchaseOrders, selectedProjectId, datePreset, customStartDate, customEndDate]);
 
   const scopedFuelDeliveries = useMemo(() => {
@@ -447,7 +447,7 @@ export default function HRPortalWorkspace() {
         if (pId && String(pId) !== String(selectedProjectId)) return false;
       }
       return isWithinDateFilter(d.recorded_at || d.delivered_at || d.created_at);
-    });
+    }).sort((a, b) => new Date(b.recorded_at || b.delivered_at || b.created_at || 0).getTime() - new Date(a.recorded_at || a.delivered_at || a.created_at || 0).getTime());
   }, [fuelDeliveries, selectedProjectId, datePreset, customStartDate, customEndDate]);
 
   const scopedFuelAllocations = useMemo(() => {
@@ -457,7 +457,7 @@ export default function HRPortalWorkspace() {
         if (pId && String(pId) !== String(selectedProjectId)) return false;
       }
       return isWithinDateFilter(a.allocated_at || a.recorded_at || a.created_at);
-    });
+    }).sort((a, b) => new Date(b.allocated_at || b.recorded_at || b.created_at || 0).getTime() - new Date(a.allocated_at || a.recorded_at || a.created_at || 0).getTime());
   }, [fuelAllocations, selectedProjectId, datePreset, customStartDate, customEndDate]);
 
   const fuelDeliveryCost = (d: any): number => {
