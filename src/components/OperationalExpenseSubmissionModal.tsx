@@ -9,8 +9,8 @@ import AppDateTimePicker from './AppDateTimePicker';
 import { PurchaseOrderCategoryField } from './PurchaseOrderCategoryField';
 
 type Row = Record<string, any>;
-type ExpenseItem = { inventory_item_id: string; name: string; description?: string; quantity: string; unit_cost: string; custom_item?: boolean };
-const blankItem = (): ExpenseItem => ({ inventory_item_id: '', name: '', quantity: '1', unit_cost: '0', custom_item: false });
+type ExpenseItem = { inventory_item_id: string; name: string; description?: string; quantity: string; unit_cost: string; custom_item?: boolean; is_auto_generated?: boolean };
+const blankItem = (): ExpenseItem => ({ inventory_item_id: '', name: '', quantity: '1', unit_cost: '0', custom_item: false, is_auto_generated: false });
 const inputClass = 'w-full rounded-lg border bg-background p-2.5';
 
 export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted, projectId, initialPurchaseOrder, initialDocumentDraft }: { onClose: () => void; onSubmitted: (expense: Row) => void; projectId?: string; initialPurchaseOrder?: Row; initialDocumentDraft?: { file: File; data: Row } | null }) {
@@ -42,6 +42,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
       quantity: String(line.quantity_ordered || 1),
       unit_cost: String(line.unit_price || 0),
       custom_item: !line.inventory_item_id,
+      is_auto_generated: false,
     }));
     setItems(orderItems);
     setManualTotal(orderItems.length === 0);
@@ -99,7 +100,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
     const parsedItems = Array.isArray(data.items) ? data.items.map((item: Row) => ({
       inventory_item_id: '', name: String(item.name || item.item_name || '').trim(),
       description: String(item.description || ''), quantity: String(item.quantity ?? 1),
-      unit_cost: String(item.unit_cost ?? item.unit_price ?? 0), custom_item: true,
+      unit_cost: String(item.unit_cost ?? item.unit_price ?? 0), custom_item: true, is_auto_generated: false,
     })) : [];
     setItems(parsedItems);
     const total = Number(data.total_cost);
@@ -115,6 +116,37 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
     }
   }, [payName, payees]);
 
+  useEffect(() => {
+    const selectedPayee = payees.find((p) => String(p.id) === payeeId || String(p.name || '').trim().toLowerCase() === payName.trim().toLowerCase());
+    const catName = (selectedPayee && (selectedPayee.bank_account_type || selectedPayee.category)) || category || (payName.trim() ? payName.trim() : '');
+    if (!catName) return;
+
+    const displayName = catName.replace(/_/g, ' ');
+
+    setItems((currentItems) => {
+      if (currentItems.length === 0) {
+        return [{
+          inventory_item_id: '',
+          name: displayName,
+          description: displayName,
+          quantity: '1',
+          unit_cost: manualAmount || '0',
+          custom_item: true,
+          is_auto_generated: true,
+        }];
+      }
+      if (currentItems.length === 1 && currentItems[0].is_auto_generated) {
+        return [{
+          ...currentItems[0],
+          name: displayName,
+          description: displayName,
+          unit_cost: manualAmount || currentItems[0].unit_cost,
+        }];
+      }
+      return currentItems;
+    });
+  }, [category, payName, payeeId, payees, manualAmount]);
+
   const itemOptions = useMemo(() => [
     { value: '__CUSTOM__', label: 'Create a new item…' },
     ...inventory.map((item) => ({ value: String(item.id), label: `${item.name || item.item_name || 'Inventory item'}${item.code ? ` · ${item.code}` : ''}`, sublabel: `Unit: ${item.unit_of_measure || item.unit || 'PCS'}` })),
@@ -129,7 +161,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
     setInvoice(file);
   }
 
-  const updateItem = (index: number, updates: Partial<ExpenseItem>) => setItems((rows) => rows.map((row, i) => i === index ? { ...row, ...updates } : row));
+  const updateItem = (index: number, updates: Partial<ExpenseItem>) => setItems((rows) => rows.map((row, i) => i === index ? { ...row, ...updates, is_auto_generated: false } : row));
   const chooseInventoryItem = (index: number, id: string) => {
     if (id === '__CUSTOM__') { updateItem(index, { inventory_item_id: '', name: '', custom_item: true }); return; }
     const item = inventory.find((row) => String(row.id) === id);
