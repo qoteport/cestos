@@ -107,6 +107,14 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
     else { setManualTotal(false); setManualAmount(''); }
   }, [initialDocumentDraft]);
 
+  useEffect(() => {
+    if (!payName) return;
+    const matched = payees.find((p) => String(p.name || '').trim().toLowerCase() === payName.trim().toLowerCase());
+    if (matched && (matched.bank_account_type || matched.category)) {
+      setCategory(matched.bank_account_type || matched.category);
+    }
+  }, [payName, payees]);
+
   const itemOptions = useMemo(() => [
     { value: '__CUSTOM__', label: 'Create a new item…' },
     ...inventory.map((item) => ({ value: String(item.id), label: `${item.name || item.item_name || 'Inventory item'}${item.code ? ` · ${item.code}` : ''}`, sublabel: `Unit: ${item.unit_of_measure || item.unit || 'PCS'}` })),
@@ -139,7 +147,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
     try {
       let finalItems = items;
       if (finalItems.length === 0) {
-        const selectedPayee = payees.find((p) => String(p.id) === payeeId);
+        const selectedPayee = payees.find((p) => String(p.id) === payeeId || String(p.name || '').trim().toLowerCase() === payName.trim().toLowerCase());
         const catName = (selectedPayee && (selectedPayee.bank_account_type || selectedPayee.category)) || category || 'Operational Expense';
         const displayName = catName.replace(/_/g, ' ');
         const totalVal = manualTotal ? Number(manualAmount) : 0;
@@ -216,7 +224,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
                 />
                 {purchaseOrderId && <p className="mt-1 font-normal text-slate-500">Purchase order items are prefilled. Update quantities, descriptions, and unit costs from the invoice; the linked purchase order will sync when you submit.</p>}
               </label>
-              <label className="block space-y-1 font-semibold sm:col-span-2">
+              <label className="block space-y-1 font-semibold sm:col-span-1">
                 <span className="block">Pay to name *</span>
                 {payeeId === '__NEW__' ? (
                   <>
@@ -235,7 +243,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
                         setPhone(payee.phone || '');
                         setBank(payee.bank_account_details || '');
                         if (payee.payment_method) setMethod(payee.payment_method);
-                        if (payee.bank_account_type) setCategory(payee.bank_account_type);
+                        if (payee.bank_account_type || payee.category) setCategory(payee.bank_account_type || payee.category);
                       }
                     }}
                     options={payeeOptions}
@@ -243,7 +251,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
                   />
                 )}
               </label>
-              <label className="block space-y-1 font-semibold sm:col-span-2">
+              <label className="block space-y-1 font-semibold sm:col-span-1">
                 <span className="block">Category</span>
                 <PurchaseOrderCategoryField value={category} onChange={(val) => setCategory(val)} />
               </label>
