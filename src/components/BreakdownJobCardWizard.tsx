@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import { maintenanceSourceFiles } from '@/lib/maintenanceImport';
+import { readJobCardFile, jobCardLabel, type JobCardSheet } from '@/lib/jobCardImport';
 import { Modal } from './DataUI';
 import SearchableSelect from './SearchableSelect';
 import AppDateTimePicker from './AppDateTimePicker';
@@ -63,14 +65,14 @@ async function makeBreakdownPdf(data: { control: any; failure: string; action: s
     ctx.fillStyle = label ? '#dbe7f4' : '#fff'; ctx.fillRect(x, top, w, h); ctx.strokeStyle = '#000'; ctx.lineWidth = 0.6; ctx.strokeRect(x, top, w, h);
     ctx.fillStyle = '#111'; ctx.font = `${label ? 'bold ' : ''}8px Arial`; ctx.textAlign = 'left';
     const value = asText(text); const max = Math.max(3, Math.floor((w - 8) / 4.1));
-    ctx.fillText(value.length > max ? `${value.slice(0, max - 1)}…` : value, x + 4, top + Math.min(h - 3, 14));
+    ctx.fillText(value.length > max ? `${value.slice(0, max - 1)}â€¦` : value, x + 4, top + Math.min(h - 3, 14));
   };
   const fieldGrid = (fields: [string, any][], rowHeight = 24) => {
     const columns = 4; const cw = width / columns; const pairW = cw / 2;
     fields.forEach(([label, value], i) => { const row = Math.floor(i / columns); const x = left + (i % columns) * cw; const top = y + row * rowHeight; cell(x, top, pairW, rowHeight, label, true); cell(x + pairW, top, pairW, rowHeight, value); });
     y += Math.ceil(fields.length / columns) * rowHeight;
   };
-  const box = (name: string, value: string, h: number) => { section(name); ctx.strokeStyle = '#000'; ctx.strokeRect(left, y, width, h); ctx.fillStyle = '#111'; ctx.font = '9px Arial'; ctx.textAlign = 'left'; const words = (value || '—').split(/\s+/); let line = ''; let top = y + 14; for (const word of words) { const next = line ? `${line} ${word}` : word; if (ctx.measureText(next).width > width - 14) { ctx.fillText(line, left + 7, top); line = word; top += 12; if (top > y + h - 6) break; } else line = next; } if (line && top <= y + h - 6) ctx.fillText(line, left + 7, top); y += h; };
+  const box = (name: string, value: string, h: number) => { section(name); ctx.strokeStyle = '#000'; ctx.strokeRect(left, y, width, h); ctx.fillStyle = '#111'; ctx.font = '9px Arial'; ctx.textAlign = 'left'; const words = (value || 'â€”').split(/\s+/); let line = ''; let top = y + 14; for (const word of words) { const next = line ? `${line} ${word}` : word; if (ctx.measureText(next).width > width - 14) { ctx.fillText(line, left + 7, top); line = word; top += 12; if (top > y + h - 6) break; } else line = next; } if (line && top <= y + h - 6) ctx.fillText(line, left + 7, top); y += h; };
   section('Job control & machine identification');
   fieldGrid([['Job card no.', data.number], ['Date', data.control.date], ['Equipment', data.control.equipment], ['Fleet / unit ID', data.control.fleet_unit_id], ['Location', data.control.location], ['Hour / KM', data.control.hour_km], ['Operator / Driver', data.control.operator_driver], ['Department', data.control.department], ['Time reported', data.control.time_reported], ['Time attended', data.control.time_attended]]);
   box('Reported failure / request', data.failure, 56);
@@ -103,9 +105,18 @@ async function makeBreakdownPdf(data: { control: any; failure: string; action: s
   return canvasPdf(canvas);
 }
 
-export default function BreakdownJobCardWizard({ assets, projectId, onClose, onSaved, record, initialView = 'ASSISTED' }: { assets: any[]; projectId: string; onClose: () => void; onSaved?: (recordId?: string) => void; record?: any; initialView?: 'ASSISTED' | 'FREE_FLOW' }) {
+export default function BreakdownJobCardWizard({ assets, projectId, onClose, onSaved, record, initialView = 'FREE_FLOW' }: { assets: any[]; projectId: string; onClose: () => void; onSaved?: (recordId?: string) => void; record?: any; initialView?: 'ASSISTED' | 'FREE_FLOW' }) {
   const initialControl = record?.job_control || {};
   const [step, setStep] = useState(0);
+  const [formReady, setFormReady] = useState(Boolean(record));
+  const uploadedSources = useRef(new Set<File>());
+  const [importAttachments, setImportAttachments] = useState<File[]>([]);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState('');
+  const [importSheets, setImportSheets] = useState<JobCardSheet[]>([]);
+  const [importSheetIndex, setImportSheetIndex] = useState(0);
+  const [importRowIndex, setImportRowIndex] = useState(0);
+  const [importSourceFile, setImportSourceFile] = useState<File | null>(null);
   const [view, setView] = useState<'ASSISTED' | 'FREE_FLOW'>(initialView);
   const [assetId, setAssetId] = useState(record?.asset_id || '');
   const [saving, setSaving] = useState(false);
@@ -186,18 +197,67 @@ export default function BreakdownJobCardWizard({ assets, projectId, onClose, onS
   const employeeOptions = useMemo(() => employees.map((employee) => ({
     value: String(employee.id),
     label: employeeName(employee) || employee.employee_number || employee.email || 'Employee',
-    sublabel: [employee.employee_number, employee.position_name || employee.job_title, employee.department_name || employee.department?.name || employee.department].filter(Boolean).join(' · '),
+    sublabel: [employee.employee_number, employee.position_name || employee.job_title, employee.department_name || employee.department?.name || employee.department].filter(Boolean).join(' Â· '),
   })), [employees]);
   const departmentOptions = useMemo(() => {
     const values = Array.from(new Set(employees.map((employee) => employee.department_name || employee.department?.name || employee.department).filter((value): value is string => typeof value === 'string' && Boolean(value.trim())).map((value) => value.trim())));
-    return [...values.map((value) => ({ value, label: value })), { value: '__CUSTOM__', label: 'Enter a custom department…' }];
+    return [...values.map((value) => ({ value, label: value })), { value: '__CUSTOM__', label: 'Enter a custom departmentâ€¦' }];
   }, [employees]);
   const siteOptions = [
     ...sites.map((site) => ({ value: String(site.id), label: site.name || site.site_name || site.code })),
-    { value: '__CUSTOM__', label: 'Enter a custom location…' },
+    { value: '__CUSTOM__', label: 'Enter a custom locationâ€¦' },
   ];
   const selectedEmployee = (id: string) => employees.find((employee) => String(employee.id) === String(id));
   const update = (setter: any, index: number, key: string, value: string) => setter((rows: any[]) => rows.map((row, i) => i === index ? { ...row, [key]: value } : row));
+
+  async function importJobCard(source: File) {
+    setImporting(true); setImportError(''); setImportSheets([]); setImportSourceFile(null);
+    try {
+      const sheets = await readJobCardFile(source);
+      setImportSheets(sheets); setImportSheetIndex(0); setImportRowIndex(0); setImportSourceFile(source);
+    } catch (error: any) {
+      setImportError(error?.message || 'Could not read this file. Choose a valid CSV or unencrypted Excel workbook.');
+    } finally { setImporting(false); }
+  }
+
+  function continueImport() {
+    const draft = importSheets[importSheetIndex]?.records[importRowIndex];
+    if (!draft) { setFormReady(true); return; }
+    if (importSourceFile) setImportAttachments(maintenanceSourceFiles(importSourceFile, importSheets[importSheetIndex]));
+    const unique = (rows: any[], values: string[], keys: string[]) => {
+      const names = values.map(jobCardLabel).filter(Boolean);
+      const matches = rows.filter((row) => keys.some((key) => names.includes(jobCardLabel(row[key]))));
+      return matches.length === 1 ? matches[0] : undefined;
+    };
+    const asset = draft.control.asset_id || draft.control.fleet_unit_id
+      ? unique(equipmentList, [draft.control.asset_id || '', draft.control.fleet_unit_id || ''], ['id', 'asset_number', 'fleet_number'])
+      : unique(equipmentList, [draft.control.equipment || ''], ['name', 'asset_name', 'description']);
+    const site = unique(sites, [draft.control.location || ''], ['name', 'site_name', 'code']);
+    const people = employees.map((person) => ({ ...person, full_name: employeeName(person) }));
+    const operator = unique(people, [draft.control.operator_driver || ''], ['full_name', 'employee_number']);
+    const department = departmentOptions.find((option) => jobCardLabel(option.label) === jobCardLabel(draft.control.department));
+    setAssetId(asset ? String(asset.id) : '');
+    setControl({ ...draft.control,
+      date: draft.control.date || '',
+      location_site_id: site ? String(site.id) : '',
+      location: site ? site.name || site.site_name || site.code : draft.control.location ? '__CUSTOM__' : '',
+      custom_location: site ? '' : draft.control.location || '',
+      operator_employee_id: operator ? String(operator.id) : draft.control.operator_driver ? '__CUSTOM__' : '',
+      department: department ? department.value : draft.control.department ? '__CUSTOM__' : '',
+      custom_department: department ? '' : draft.control.department || '',
+    });
+    setFailure(draft.failure); setAction(draft.action);
+    setParts(draft.parts.length ? draft.parts.map((part) => ({ ...emptyPart, ...part })) : [{ ...emptyPart }]);
+    const importedLabour = draft.labour.length ? draft.labour : [{}];
+    setLabour(importedLabour.map((row) => {
+      const technician = unique(people, [row.technician || ''], ['full_name', 'employee_number']);
+      return { technician: '', start: '', finish: '', labour_hours: '', machine_down_hours: '', work_hours: '', remarks: '', ...row,
+        technician_employee_id: technician ? String(technician.id) : row.technician ? '__CUSTOM__' : '' };
+    }));
+    setRelease({ 'Test, release & remarks': draft.release });
+    setSignatures(Object.fromEntries(['technician', 'supervisor', 'operator'].map((role) => [role, { signer_name: draft.signatures[role] || '' }])));
+    setStep(0); setFormReady(true);
+  }
 
   async function addSignature(role: string, sourceFile: File) {
     if (!sourceFile.type.startsWith('image/')) { setSaveError('Choose an image file for a signature.'); return; }
@@ -239,15 +299,17 @@ export default function BreakdownJobCardWizard({ assets, projectId, onClose, onS
       const asset = equipmentList.find((row) => String(row.id) === String(assetId));
       const payloadControl = { ...control, equipment: asset?.name || asset?.asset_name || asset?.description || asset?.asset_number || control.equipment || '', fleet_unit_id: control.fleet_unit_id || asset?.asset_number || asset?.fleet_number || '', location: control.location === '__CUSTOM__' ? control.custom_location || '' : control.location, department: control.department === '__CUSTOM__' ? control.custom_department || '' : control.department };
       const payload = { asset_id: assetId, project_id: projectId || record?.project_id || null, site_location_id: control.location_site_id || null, status: record?.status || createdRecord?.status || 'DRAFT', job_control: payloadControl, reported_failure: failure, corrective_action: action, parts_materials: parts, labour_downtime: labour, test_release: release, signatures };
-      const existing = record || createdRecord;
+      const existing = record?.id ? record : createdRecord;
       const saved = await apiFetch<any>(existing ? `/api/v1/pm-job-cards/breakdown/${existing.id}` : '/api/v1/pm-job-cards/breakdown', {
         method: existing ? 'PATCH' : 'POST',
         body: JSON.stringify(payload),
       });
       setCreatedRecord(saved);
-      if (file) {
-        const form = new FormData(); form.append('file', file); form.append('title', `Breakdown Job Card ${saved.job_card_number}`); form.append('category', 'Equipment'); form.append('source_type', 'breakdown_job_card'); form.append('source_id', saved.id); form.append('visibility', 'PUBLIC');
+      for (const attachment of [...importAttachments, file].filter((value): value is File => Boolean(value))) {
+        if (uploadedSources.current.has(attachment)) continue;
+        const form = new FormData(); form.append('file', attachment); form.append('title', `Breakdown Job Card ${saved.job_card_number}`); form.append('category', 'Equipment'); form.append('source_type', 'breakdown_job_card'); form.append('source_id', saved.id); form.append('visibility', 'PUBLIC');
         await apiFetch('/api/v1/documents', { method: 'POST', body: form });
+        uploadedSources.current.add(attachment);
       }
       if (view === 'FREE_FLOW') {
         const pdf = await makeBreakdownPdf({ control: payloadControl, failure, action, parts, labour, release, signatures, number: saved.job_card_number });
@@ -269,7 +331,7 @@ export default function BreakdownJobCardWizard({ assets, projectId, onClose, onS
   const input = (label: string, key: string) => <label className="block space-y-1 font-medium"><span className="block">{label}</span><input className="w-full border rounded-lg p-2 bg-background" value={control[key] || ''} onChange={(event) => setControl({ ...control, [key]: event.target.value })} /></label>;
   const sentenceCase = (value: string) => value.replaceAll('_', ' ').toLowerCase().replace(/^\w/, (char) => char.toUpperCase());
   const steps = ['Job control', 'Failure & repair', 'Parts & labour', 'Test & release'];
-  const inventoryOptions = items.map((item) => ({ value: String(item.id), label: `${item.name || item.item_name || 'Item'}${item.part_number ? ` | ${item.part_number}` : ''} · ${item.quantity_available ?? 0} available` }));
+  const inventoryOptions = items.map((item) => ({ value: String(item.id), label: `${item.name || item.item_name || 'Item'}${item.part_number ? ` | ${item.part_number}` : ''} Â· ${item.quantity_available ?? 0} available` }));
 
   const signatureField = (role: 'technician' | 'supervisor' | 'operator', label: string, allowSaved = true) => (
     <div className="space-y-2 p-2 border-b border-black">
@@ -284,13 +346,34 @@ export default function BreakdownJobCardWizard({ assets, projectId, onClose, onS
             if (chosen) setSignatures((current: any) => ({ ...current, [role]: { signer_name: chosen.name, image_data: chosen.image_data } }));
           }}
           options={savedSignatures.map((item) => ({ value: item.id, label: item.name }))}
-          placeholder="Choose a saved signature…"
+          placeholder="Choose a saved signatureâ€¦"
         />
       )}
       <label className="block cursor-pointer border border-dashed p-1.5 text-center text-[10px] font-medium hover:bg-slate-50">Upload signature<input className="hidden" type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => { const image = event.target.files?.[0]; if (image) void addSignature(role, image).catch((error: any) => setSaveError(error?.message || 'Could not add signature.')); event.currentTarget.value = ''; }} /></label>
       {signatures[role]?.image_data && <img src={signatures[role].image_data} alt={`${label} preview`} className="h-10 max-w-full object-contain" />}
     </div>
   );
+
+  const importedDraft = importSheets[importSheetIndex]?.records[importRowIndex];
+  if (!formReady) return <Modal title="Create daily maintenance / breakdown repair job card" onClose={onClose}
+    footer={<div className="flex w-full justify-end"><button type="button" className="btn-primary rounded-xl" disabled={importing} onClick={continueImport}>Continue</button></div>}>
+    <div className="space-y-4">
+      <div><h3 className="font-bold">Upload the job card</h3><p className="mt-1 text-sm text-muted-foreground">Choose a CSV or Excel file, or continue without one to enter details manually. We scan the Excel worksheets for matching job-card fields, then prefill the Assisted and Free flow forms for your review.</p></div>
+      <label className="block rounded-xl border-2 border-dashed p-6"><span className="mb-3 block text-sm font-semibold">CSV or Excel file (.csv, .xlsx, .xls)</span><input type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={importing} onChange={(event) => { const source = event.target.files?.[0]; event.target.value = ''; if (source) void importJobCard(source); }} /></label>
+      {importing && <p role="status" className="text-sm">Reading file and checking worksheetsâ€¦</p>}
+      {importError && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{importError}</p>}
+      {importedDraft && <div className="space-y-3 rounded-xl border bg-muted/30 p-4">
+        <p className="text-sm font-semibold">Extracted from {importSourceFile?.name}</p>
+        <label className="block text-sm">Matched worksheet<select className="mt-1 block w-full rounded-lg border bg-background p-2" value={importSheetIndex} onChange={(event) => { setImportSheetIndex(Number(event.target.value)); setImportRowIndex(0); }}>{importSheets.map((sheet, index) => <option key={sheet.name} value={index}>{sheet.name}</option>)}</select></label>
+        {importSheets.length > 1 && <p className="text-xs text-muted-foreground">Several worksheets match. The strongest match is selected; check it before continuing.</p>}
+        {importSheets[importSheetIndex].records.length > 1 && <label className="block text-sm">Job card to open<select className="mt-1 block w-full rounded-lg border bg-background p-2" value={importRowIndex} onChange={(event) => setImportRowIndex(Number(event.target.value))}>{importSheets[importSheetIndex].records.map((draft, index) => <option key={index} value={index}>{index + 1}. {draft.control.equipment || draft.control.fleet_unit_id || 'Job card'} â€” {draft.control.date || 'No date'}</option>)}</select><span className="mt-1 block text-xs text-muted-foreground">Continue opens only the selected job card.</span></label>}
+        <dl className="grid gap-3 text-sm sm:grid-cols-2">{[['Equipment', importedDraft.control.equipment], ['Fleet / unit ID', importedDraft.control.fleet_unit_id], ['Date', importedDraft.control.date], ['Location', importedDraft.control.location], ['Reported failure', importedDraft.failure], ['Corrective action', importedDraft.action]].map(([label, value]) => <div key={label}><dt className="font-semibold">{label}</dt><dd className="whitespace-pre-wrap break-words text-muted-foreground">{value || 'Not found â€” complete in the form'}</dd></div>)}</dl>
+        <button type="button" className="text-xs underline" onClick={() => { setImportSourceFile(null); setImportSheets([]); setImportError(''); }}>Remove file and enter manually</button>
+        <p className="text-sm">{importedDraft.parts.length} parts / material rows Â· {importedDraft.labour.length} labour rows</p>
+        <p className="text-xs text-muted-foreground">Review the extracted values after Continue. On save, the unchanged original and a CSV copy of the selected Excel worksheet are attached to the job card.</p>
+      </div>}
+    </div>
+  </Modal>;
 
   return <Modal
     title={`${record ? 'Edit' : 'Create'} daily maintenance / breakdown repair job card`}
@@ -303,14 +386,15 @@ export default function BreakdownJobCardWizard({ assets, projectId, onClose, onS
         ) : <div />}
         <div className="flex flex-row items-center gap-2 w-full sm:w-auto sm:ml-auto justify-end">
           {view === 'ASSISTED' && step < 3 && <button type="button" className="btn-primary rounded-xl flex-1 sm:flex-initial text-xs" disabled={step === 0 && !assetId} onClick={() => setStep(step + 1)}>Next</button>}
-          {(view === 'FREE_FLOW' || step === 3) && <button type="button" className="btn-primary rounded-xl flex-1 sm:flex-initial text-xs" disabled={saving || !assetId} onClick={save}>{saving ? 'Saving…' : record || createdRecord ? 'Save changes' : view === 'FREE_FLOW' ? 'Save job card' : 'Save job card'}</button>}
+          {(view === 'FREE_FLOW' || step === 3) && <button type="button" className="btn-primary rounded-xl flex-1 sm:flex-initial text-xs" disabled={saving || !assetId} onClick={save}>{saving ? 'Savingâ€¦' : record || createdRecord ? 'Save changes' : view === 'FREE_FLOW' ? 'Save job card' : 'Save job card'}</button>}
         </div>
       </div>
     }
   >
     <div className="space-y-4 text-xs">
+      {importSourceFile && <div className="rounded-lg border bg-muted/30 p-3">Prefilled from {importSourceFile.name} Â· {importSheets[importSheetIndex]?.name}. Review all fields before saving.{!assetId && <p className="mt-1 text-amber-700">Select the registered equipment in Assisted mode; the imported equipment did not have a unique match.</p>}</div>}
       <div className="flex border-b" role="tablist" aria-label="Breakdown job card entry mode">
-        {(['ASSISTED', 'FREE_FLOW'] as const).map((mode) => <button type="button" key={mode} role="tab" aria-selected={view === mode} onClick={() => setView(mode)} className={`border-b-2 px-4 py-2 font-bold transition ${view === mode ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>{mode === 'ASSISTED' ? 'Assisted' : 'Free flow'}</button>)}
+        {(['FREE_FLOW', 'ASSISTED'] as const).map((mode) => <button type="button" key={mode} role="tab" aria-selected={view === mode} onClick={() => setView(mode)} className={`border-b-2 px-4 py-2 font-bold transition ${view === mode ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>{mode === 'ASSISTED' ? 'Assisted' : 'Free flow'}</button>)}
       </div>
       {view === 'FREE_FLOW' ? <div className="space-y-3 overflow-auto bg-slate-100 p-2 sm:p-4">
         <div className="freeflow-job-card mx-auto max-w-[1400px] space-y-2 bg-white p-3 shadow sm:p-6 [&_input]:!rounded-none [&_textarea]:!rounded-none [&_select]:!rounded-none [&_button]:!rounded-none [&_div]:!rounded-none [&_label]:!rounded-none">
@@ -336,11 +420,12 @@ export default function BreakdownJobCardWizard({ assets, projectId, onClose, onS
       </div> : <div className="space-y-4 text-xs">
       <div className="grid grid-cols-4 gap-1">{steps.map((title, index) => <button type="button" key={title} onClick={() => setStep(index)} className={`rounded-lg p-2 font-bold ${step === index ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>Step {index + 1}<span className="block text-[10px]">{title}</span></button>)}</div>
       {step === 0 && <div className="grid grid-cols-2 gap-3">
-        <label className="block space-y-1 font-medium col-span-2"><span className="block">Equipment *</span><SearchableSelect value={assetId} onChange={(value) => { setAssetId(value); const asset = equipmentList.find((row) => String(row.id) === value); if (asset) setControl((old: any) => ({ ...old, fleet_unit_id: old.fleet_unit_id || asset.asset_number || asset.fleet_number || '' })); }} options={equipmentList.map((asset) => ({ value: String(asset.id), label: asset.name || asset.asset_number || asset.id, sublabel: [asset.asset_number, asset.make, asset.model].filter(Boolean).join(' · ') }))} placeholder="Search project equipment..." required /></label>
+        <label className="block space-y-1 font-medium col-span-2"><span className="block">Equipment *</span><SearchableSelect value={assetId} onChange={(value) => { setAssetId(value); const asset = equipmentList.find((row) => String(row.id) === value); if (asset) setControl((old: any) => ({ ...old, fleet_unit_id: old.fleet_unit_id || asset.asset_number || asset.fleet_number || '' })); }} options={equipmentList.map((asset) => ({ value: String(asset.id), label: asset.name || asset.asset_number || asset.id, sublabel: [asset.asset_number, asset.make, asset.model].filter(Boolean).join(' Â· ') }))} placeholder="Search project equipment..." required /></label>
+        <label className="block space-y-1 font-medium"><span>Date</span><AppDateTimePicker value={control.date || ''} onChange={(value) => setControl({ ...control, date: value })} /></label>
         {input('Fleet / unit ID', 'fleet_unit_id')}
         <div className="block space-y-1 font-medium"><span className="block">Location</span>{control.location === '__CUSTOM__' ? <input autoFocus className="w-full border rounded-lg p-2 bg-background" placeholder="Enter location" value={control.custom_location || ''} onChange={(event) => setControl({ ...control, custom_location: event.target.value })} /> : <SearchableSelect value={control.location_site_id || ''} onChange={(value) => { if (value === '__CUSTOM__') { setControl({ ...control, location_site_id: '', location: '__CUSTOM__', custom_location: '' }); return; } const site = sites.find((row) => String(row.id) === value); setControl({ ...control, location_site_id: value, location: site?.name || '' }); }} options={siteOptions} placeholder="Search project sites..." />}{control.location === '__CUSTOM__' && <button type="button" className="text-primary underline" onClick={() => setControl({ ...control, location: '', custom_location: '' })}>Choose a project site</button>}</div>
         {input('Hour / km', 'hour_km')}
-        <div className="block space-y-1 font-medium"><span className="block">Operator / Driver</span>{control.operator_employee_id === '__CUSTOM__' ? <><input autoFocus className="w-full border rounded-lg p-2 bg-background" placeholder="Enter operator / driver" value={control.operator_driver || ''} onChange={(event) => setControl({ ...control, operator_driver: event.target.value })} /><button type="button" className="text-primary underline" onClick={() => setControl({ ...control, operator_employee_id: '', operator_driver: '' })}>Choose an employee</button></> : <SearchableSelect value={control.operator_employee_id || ''} onChange={(value) => { if (value === '__CUSTOM__') { setControl({ ...control, operator_employee_id: value, operator_driver: '' }); return; } const employee = selectedEmployee(value); setControl({ ...control, operator_employee_id: value, operator_driver: employeeName(employee), department: employee?.department_name || employee?.department?.name || employee?.department || control.department || '' }); }} options={[{ value: '__CUSTOM__', label: 'Enter a custom operator / driver…' }, ...employeeOptions]} placeholder="Search employees..." />}</div>
+        <div className="block space-y-1 font-medium"><span className="block">Operator / Driver</span>{control.operator_employee_id === '__CUSTOM__' ? <><input autoFocus className="w-full border rounded-lg p-2 bg-background" placeholder="Enter operator / driver" value={control.operator_driver || ''} onChange={(event) => setControl({ ...control, operator_driver: event.target.value })} /><button type="button" className="text-primary underline" onClick={() => setControl({ ...control, operator_employee_id: '', operator_driver: '' })}>Choose an employee</button></> : <SearchableSelect value={control.operator_employee_id || ''} onChange={(value) => { if (value === '__CUSTOM__') { setControl({ ...control, operator_employee_id: value, operator_driver: '' }); return; } const employee = selectedEmployee(value); setControl({ ...control, operator_employee_id: value, operator_driver: employeeName(employee), department: employee?.department_name || employee?.department?.name || employee?.department || control.department || '' }); }} options={[{ value: '__CUSTOM__', label: 'Enter a custom operator / driverâ€¦' }, ...employeeOptions]} placeholder="Search employees..." />}</div>
         <label className="block space-y-1 font-medium"><span className="block">Department</span>{control.department === '__CUSTOM__' ? <><input autoFocus className="w-full border rounded-lg p-2 bg-background" value={control.custom_department || ''} onChange={(event) => setControl({ ...control, custom_department: event.target.value })} placeholder="Enter department" /><button type="button" className="text-primary underline" onClick={() => setControl({ ...control, department: '', custom_department: '' })}>Choose a department</button></> : <SearchableSelect value={control.department || ''} onChange={(value) => { if (value === '__CUSTOM__') { setControl({ ...control, department: '__CUSTOM__', custom_department: '' }); return; } setControl({ ...control, department: value }); }} options={departmentOptions} placeholder="Search departments..." />}</label>
         {input('Time reported', 'time_reported')}{input('Time attended', 'time_attended')}
         <label className="block space-y-1 font-medium col-span-2"><span className="block">Supporting file</span><input type="file" accept="image/*,.pdf,.doc,.docx" onChange={(event) => setFile(event.target.files?.[0] || null)} className="w-full border rounded-lg p-2 bg-background" /></label>
@@ -349,7 +434,7 @@ export default function BreakdownJobCardWizard({ assets, projectId, onClose, onS
       {step === 2 && <div className="space-y-3 max-h-[55vh] overflow-y-auto"><h4 className="font-bold">Parts, consumables & materials</h4><div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><label className="block space-y-1 font-medium"><span className="block">Store</span><SearchableSelect value={storeId} onChange={(val) => setStoreId(val)} options={stores.map((store) => ({ value: String(store.id), label: store.name || store.code || store.id }))} placeholder="Select store first" /></label><label className="block space-y-1 font-medium"><span className="block">Inventory item</span><SearchableSelect disabled={!storeId} value="" onChange={(value) => { const item = items.find((row) => String(row.id) === value); if (item) setParts((rows) => rows.map((row, index) => index === rows.length - 1 ? { ...row, description: item.name || item.item_name || '', part_no: item.part_number || item.sku || '', unit: item.unit || item.unit_of_measure || '', source: stores.find((store) => String(store.id) === String(storeId))?.name || '' } : row)); }} options={inventoryOptions} placeholder={storeId ? 'Search stock at selected store...' : 'Select a store first...'} /></label></div>
         {parts.map((part, index) => <div key={index} className="grid grid-cols-2 gap-2 border rounded-lg p-3">{Object.keys(emptyPart).map((key) => <label className="block space-y-1 font-medium" key={key}><span className="block">{sentenceCase(key)}</span><input className="w-full border rounded-lg p-2 bg-background" value={part[key]} onChange={(event) => update(setParts, index, key, event.target.value)} /></label>)}</div>)}
         <button type="button" className="btn-secondary rounded-xl" onClick={() => setParts([...parts, { ...emptyPart }])}>+ Add part</button><h4 className="font-bold pt-3">Labour & downtime</h4>
-        {labour.map((row, index) => <div key={index} className="grid grid-cols-2 gap-2 border rounded-lg p-3"><label className="block space-y-1 font-medium col-span-2"><span className="block">Technician</span>{row.technician_employee_id === '__CUSTOM__' ? <><input autoFocus className="w-full border rounded-lg p-2 bg-background" value={row.technician || ''} onChange={(event) => update(setLabour, index, 'technician', event.target.value)} placeholder="Enter technician name" /><button type="button" className="text-primary underline" onClick={() => setLabour((rows) => rows.map((item, i) => i === index ? { ...item, technician_employee_id: '', technician: '' } : item))}>Choose an employee</button></> : <SearchableSelect value={row.technician_employee_id || ''} onChange={(value) => { if (value === '__CUSTOM__') { setLabour((rows) => rows.map((item, i) => i === index ? { ...item, technician_employee_id: value, technician: '' } : item)); return; } const employee = selectedEmployee(value); setLabour((rows) => rows.map((item, i) => i === index ? { ...item, technician_employee_id: value, technician: employeeName(employee) } : item)); }} options={[{ value: '__CUSTOM__', label: 'Enter a custom technician…' }, ...employeeOptions]} placeholder="Search employees..." />}</label>{Object.keys(row).filter((key) => key !== 'technician' && key !== 'technician_employee_id').map((key) => <label className="block space-y-1 font-medium" key={key}><span className="block">{sentenceCase(key)}</span><input className="w-full border rounded-lg p-2 bg-background" value={row[key]} onChange={(event) => update(setLabour, index, key, event.target.value)} /></label>)}</div>)}
+        {labour.map((row, index) => <div key={index} className="grid grid-cols-2 gap-2 border rounded-lg p-3"><label className="block space-y-1 font-medium col-span-2"><span className="block">Technician</span>{row.technician_employee_id === '__CUSTOM__' ? <><input autoFocus className="w-full border rounded-lg p-2 bg-background" value={row.technician || ''} onChange={(event) => update(setLabour, index, 'technician', event.target.value)} placeholder="Enter technician name" /><button type="button" className="text-primary underline" onClick={() => setLabour((rows) => rows.map((item, i) => i === index ? { ...item, technician_employee_id: '', technician: '' } : item))}>Choose an employee</button></> : <SearchableSelect value={row.technician_employee_id || ''} onChange={(value) => { if (value === '__CUSTOM__') { setLabour((rows) => rows.map((item, i) => i === index ? { ...item, technician_employee_id: value, technician: '' } : item)); return; } const employee = selectedEmployee(value); setLabour((rows) => rows.map((item, i) => i === index ? { ...item, technician_employee_id: value, technician: employeeName(employee) } : item)); }} options={[{ value: '__CUSTOM__', label: 'Enter a custom technicianâ€¦' }, ...employeeOptions]} placeholder="Search employees..." />}</label>{Object.keys(row).filter((key) => key !== 'technician' && key !== 'technician_employee_id').map((key) => <label className="block space-y-1 font-medium" key={key}><span className="block">{sentenceCase(key)}</span><input className="w-full border rounded-lg p-2 bg-background" value={row[key]} onChange={(event) => update(setLabour, index, key, event.target.value)} /></label>)}</div>)}
         <button type="button" className="btn-secondary rounded-xl" onClick={() => setLabour([...labour, { technician: '', technician_employee_id: '', start: '', finish: '', labour_hours: '', machine_down_hours: '', work_hours: '', remarks: '' }])}>+ Add technician</button>
       </div>}
       {step === 3 && <div className="space-y-3"><label className="block space-y-1 font-medium"><span className="block">Test, release & remarks</span><textarea className="w-full border rounded-lg p-2 bg-background min-h-24" value={release['Test, release & remarks'] || ''} onChange={(event) => setRelease({ ...release, 'Test, release & remarks': event.target.value })} /></label><div className="grid gap-2 sm:grid-cols-3">{signatureField('technician', 'Technician Sign')}{signatureField('supervisor', 'Supervisor Sign')}{signatureField('operator', 'Operator Sign')}</div></div>}

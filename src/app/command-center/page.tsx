@@ -143,14 +143,14 @@ const COMMAND_REGISTRY: CommandDef[] = [
   },
   {
     id: 'import-timesheet-csv',
-    title: 'Import Employee Time Sheet from CSV',
+    title: 'Import Employee Time Sheet from CSV or Excel',
     description: 'Upload a monthly time sheet, review its original rows, match employees and project sites, and save the reported hours.',
     category: 'WORKFORCE',
     categoryName: 'Workforce & HR',
     permission: 'employees.time_log.create',
     icon: ClipboardList,
     customModalType: 'timesheet-csv-import',
-    tags: ['timesheet', 'time sheet', 'csv', 'import hours', 'monthly hours', 'employee attendance', 'site matching'],
+    tags: ['timesheet', 'time sheet', 'csv', 'excel', 'xlsx', 'xls', 'import hours', 'monthly hours', 'employee attendance', 'site matching'],
   },
   {
     id: 'request-leave',

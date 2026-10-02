@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import type { ComponentProps } from 'react';
+import MaintenanceImportGate, { type SaveImportFiles } from './MaintenanceImportGate';
 import { Modal, Row } from './DataUI';
 import SearchableSelect from './SearchableSelect';
 import AppDateTimePicker from './AppDateTimePicker';
@@ -92,9 +94,10 @@ function makeInitial(record: Row | undefined, projectId: string): ReportData {
   return initial;
 }
 
-export default function MaintenanceAssessmentReportWizard({
-  assets, employees, projects = [], projectId, record, onClose, onSaved, initialMode = 'ASSISTED',
+function MaintenanceAssessmentReportWizardForm({ saveImportFiles,
+  assets, employees, projects = [], projectId, record, onClose, onSaved, initialMode = 'FREE_FLOW',
 }: {
+  saveImportFiles?: SaveImportFiles;
   assets: Row[]; employees: Row[]; projects?: Row[]; projectId: string; record?: Row;
   onClose: () => void; onSaved: (recordId?: string) => void;
   initialMode?: 'ASSISTED' | 'FREE_FLOW';
@@ -112,15 +115,15 @@ export default function MaintenanceAssessmentReportWizard({
   const assetOptions = useMemo(() => assets.map((asset) => ({
     value: String(asset.id),
     label: asset.name || asset.asset_name || asset.asset_number || 'Equipment',
-    sublabel: [asset.asset_number, asset.make, asset.model].filter(Boolean).join(' · '),
+    sublabel: [asset.asset_number, asset.make, asset.model].filter(Boolean).join(' Â· '),
   })), [assets]);
   const employeeOptions = employees.map((employee) => ({
     value: String(employee.id),
     label: [employee.first_name, employee.last_name].filter(Boolean).join(' ') || employee.name || 'Employee',
     sublabel: employee.position_name || employee.job_title || employee.employee_number || '',
   }));
-  const projectOptions = [{ value: '__CUSTOM__', label: 'Enter a custom project name…' }, ...projects.map((project) => ({ value: String(project.id), label: project.name || project.project_name || project.project_number }))];
-  const preparerOptions = [{ value: '__CUSTOM__', label: 'Enter a custom preparer…' }, ...employeeOptions];
+  const projectOptions = [{ value: '__CUSTOM__', label: 'Enter a custom project nameâ€¦' }, ...projects.map((project) => ({ value: String(project.id), label: project.name || project.project_name || project.project_number }))];
+  const preparerOptions = [{ value: '__CUSTOM__', label: 'Enter a custom preparerâ€¦' }, ...employeeOptions];
   const sectionHeadingClass = mode === 'FREE_FLOW'
     ? 'bg-[#184877] px-2 py-1 text-center text-[11px] font-bold text-white'
     : 'border-b pb-2 text-sm font-bold';
@@ -280,7 +283,7 @@ export default function MaintenanceAssessmentReportWizard({
                     <button type="button" className="text-primary underline" onClick={() => { patchRow(sectionKey, index, 'asset_id', ''); patchRow(sectionKey, index, column.key, ''); }}>Choose registered equipment</button>
                   </div> : <SearchableSelect
                     className={mode === 'FREE_FLOW' ? 'rounded-none' : ''}
-                    options={[{ value: '__CUSTOM__', label: `Enter custom ${column.label.toLowerCase()}…` }, ...assetOptions]}
+                    options={[{ value: '__CUSTOM__', label: `Enter custom ${column.label.toLowerCase()}â€¦` }, ...assetOptions]}
                     value={row.asset_id || ''}
                     onChange={(value) => {
                       if (value === '__CUSTOM__') { patchRow(sectionKey, index, 'asset_id', '__CUSTOM__'); patchRow(sectionKey, index, column.key, ''); return; }
@@ -385,6 +388,7 @@ export default function MaintenanceAssessmentReportWizard({
         await apiFetch('/api/v1/documents', { method: 'POST', body: form });
         setPendingFiles((files) => files.filter((pending) => pending !== file));
       }
+      await saveImportFiles?.(reportId);
       onSaved(reportId); onClose();
     } catch (err: any) { setError(`${err?.message || 'Could not save maintenance assessment report.'}${reportWasSaved ? ' The report was saved; retry to upload any remaining attachments.' : ''}`); }
     finally { setSaving(false); }
@@ -392,17 +396,21 @@ export default function MaintenanceAssessmentReportWizard({
 
   const footer = <div className="flex w-full items-center justify-between gap-2">
     {mode === 'ASSISTED' && step > 0 ? <button type="button" className="btn-secondary rounded-xl text-xs" onClick={() => setStep(step - 1)}>Back</button> : <span />}
-    <div className="flex items-center gap-2">{mode === 'ASSISTED' && step < steps.length - 1 && <button type="button" className="btn-primary rounded-xl text-xs" onClick={() => setStep(step + 1)}>Next</button>}<button type="button" className="btn-primary rounded-xl text-xs" onClick={() => void save()} disabled={saving}>{saving ? 'Saving…' : record ? 'Save changes' : 'Save assessment'}</button></div>
+    <div className="flex items-center gap-2">{mode === 'ASSISTED' && step < steps.length - 1 && <button type="button" className="btn-primary rounded-xl text-xs" onClick={() => setStep(step + 1)}>Next</button>}<button type="button" className="btn-primary rounded-xl text-xs" onClick={() => void save()} disabled={saving}>{saving ? 'Savingâ€¦' : record?.id ? 'Save changes' : 'Save assessment'}</button></div>
   </div>;
 
-  return <Modal title={`${record ? 'Edit' : 'New'} Maintenance Assessment Report`} onClose={onClose} className="sm:!h-[90vh] sm:!max-h-[90vh] sm:!max-w-6xl" footer={footer}>
+  return <Modal title={`${record?.id ? 'Edit' : 'New'} Maintenance Assessment Report`} onClose={onClose} className="sm:!h-[90vh] sm:!max-h-[90vh] sm:!max-w-6xl" footer={footer}>
     <div className="space-y-4 text-xs">
       <div className="flex border-b" role="tablist" aria-label="Maintenance assessment form mode">
-        {(['ASSISTED', 'FREE_FLOW'] as const).map((view) => <button type="button" key={view} role="tab" aria-selected={mode === view} onClick={() => setMode(view)} className={`border-b-2 px-4 py-2 font-bold ${mode === view ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}>{view === 'ASSISTED' ? 'Assisted' : 'Free flow'}</button>)}
+        {(['FREE_FLOW', 'ASSISTED'] as const).map((view) => <button type="button" key={view} role="tab" aria-selected={mode === view} onClick={() => setMode(view)} className={`border-b-2 px-4 py-2 font-bold ${mode === view ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}>{view === 'ASSISTED' ? 'Assisted' : 'Free flow'}</button>)}
       </div>
       {error && <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-red-800">{error}</div>}
       {mode === 'ASSISTED' && <div className="flex flex-wrap gap-1.5">{steps.map((item, index) => <button key={item.title} type="button" onClick={() => setStep(index)} className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${step === index ? 'border-blue-800 bg-blue-800 text-white' : 'text-muted-foreground'}`}>{index + 1}. {item.title}</button>)}</div>}
       <div className={`max-h-[64vh] space-y-6 overflow-y-auto p-1 ${mode === 'FREE_FLOW' ? 'bg-slate-100 p-2 sm:p-4' : ''}`}>{mode === 'ASSISTED' ? steps[step].body : steps.map((item) => <section key={item.title} className="space-y-4 bg-white p-3 text-slate-900 shadow sm:p-4 rounded-none [&_input]:rounded-none [&_textarea]:rounded-none [&_div]:rounded-none [&_button]:rounded-none"><h2 className={sectionHeadingClass}>{item.title}</h2>{item.body}</section>)}</div>
     </div>
   </Modal>;
+}
+
+export default function MaintenanceAssessmentReportWizard(props: Omit<ComponentProps<typeof MaintenanceAssessmentReportWizardForm>, 'saveImportFiles'>) {
+  return <MaintenanceImportGate kind="assessment" record={props.record} assets={props.assets} employees={props.employees} onClose={props.onClose}>{(draft, saveImportFiles) => <MaintenanceAssessmentReportWizardForm {...props} record={draft} saveImportFiles={saveImportFiles} />}</MaintenanceImportGate>;
 }

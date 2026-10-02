@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import type { ComponentProps } from 'react';
+import MaintenanceImportGate, { type SaveImportFiles } from './MaintenanceImportGate';
 import { Modal } from './DataUI';
 import SearchableSelect from './SearchableSelect';
 import AppDateTimePicker from './AppDateTimePicker';
@@ -51,29 +53,30 @@ function pdfBlob(canvas: HTMLCanvasElement) {
 async function createPmPdf(data: any) {
   const canvas = document.createElement('canvas'); canvas.width = 1275; canvas.height = 1800; const ctx = canvas.getContext('2d'); if (!ctx) throw new Error('Could not prepare the PM job card PDF.');
   ctx.scale(1.5, 1.5); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 850, 1200); const left = 34; const width = 782; let y = 26;
-  const text = (value: any) => value == null || value === '' ? '—' : Array.isArray(value) ? value.join(', ') : String(value);
+  const text = (value: any) => value == null || value === '' ? 'â€”' : Array.isArray(value) ? value.join(', ') : String(value);
   const section = (title: string) => { ctx.fillStyle = '#184877'; ctx.fillRect(left, y, width, 20); ctx.fillStyle = '#fff'; ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center'; ctx.fillText(title, left + width / 2, y + 14); y += 20; };
-  const line = (label: string, value: any, height = 20) => { ctx.fillStyle = '#dbe7f4'; ctx.fillRect(left, y, 190, height); ctx.strokeStyle = '#777'; ctx.strokeRect(left, y, 190, height); ctx.fillStyle = '#111'; ctx.font = 'bold 8px Arial'; ctx.textAlign = 'left'; ctx.fillText(label, left + 4, y + 13); ctx.fillStyle = '#fff'; ctx.fillRect(left + 190, y, width - 190, height); ctx.strokeRect(left + 190, y, width - 190, height); ctx.font = '8px Arial'; const v = text(value); ctx.fillText(v.length > 115 ? `${v.slice(0, 112)}…` : v, left + 194, y + 13); y += height; };
+  const line = (label: string, value: any, height = 20) => { ctx.fillStyle = '#dbe7f4'; ctx.fillRect(left, y, 190, height); ctx.strokeStyle = '#777'; ctx.strokeRect(left, y, 190, height); ctx.fillStyle = '#111'; ctx.font = 'bold 8px Arial'; ctx.textAlign = 'left'; ctx.fillText(label, left + 4, y + 13); ctx.fillStyle = '#fff'; ctx.fillRect(left + 190, y, width - 190, height); ctx.strokeRect(left + 190, y, width - 190, height); ctx.font = '8px Arial'; const v = text(value); ctx.fillText(v.length > 115 ? `${v.slice(0, 112)}â€¦` : v, left + 194, y + 13); y += height; };
   const box = (label: string, value: any, height = 42) => { line(label, '', 18); ctx.strokeRect(left, y, width, height); ctx.font = '8px Arial'; ctx.fillStyle = '#111'; const words = text(value).split(/\s+/); let current = ''; let top = y + 12; for (const word of words) { const next = current ? `${current} ${word}` : word; if (ctx.measureText(next).width > width - 12) { ctx.fillText(current, left + 5, top); current = word; top += 11; if (top > y + height - 3) break; } else current = next; } if (current && top <= y + height - 3) ctx.fillText(current, left + 5, top); y += height; };
-  ctx.fillStyle = '#111'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center'; ctx.fillText('MAINTENANCE CONTROL — PREVENTIVE MAINTENANCE JOB CARD', 425, y); y += 22;
-  ctx.font = 'italic 8px Arial'; ctx.fillText('Controlled PM record • Inspect → Service → Measure → Verify → Release', 425, y); y += 12;
+  ctx.fillStyle = '#111'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center'; ctx.fillText('MAINTENANCE CONTROL â€” PREVENTIVE MAINTENANCE JOB CARD', 425, y); y += 22;
+  ctx.font = 'italic 8px Arial'; ctx.fillText('Controlled PM record â€¢ Inspect â†’ Service â†’ Measure â†’ Verify â†’ Release', 425, y); y += 12;
   section('A. PM CONTROL'); for (const [k, v] of [['PM Job Card No.', data.control.job_card_number], ['Date', data.control.date], ['PM Interval', data.control.pm_interval], ['Status', data.control.status], ['Equipment', data.control.equipment], ['Fleet / Unit ID', data.control.fleet_unit_id], ['Location', data.control.location], ['Hour Meter / KM', data.control.hour_meter_km], ['Technician / Team', data.control.technician_team], ['Work Order No.', data.control.work_order_no], ['Start Time', data.control.start_time], ['Finish Time', data.control.finish_time]]) line(k, v);
   section('B. PM CHECKLIST & MEASUREMENTS');
-  const rows = data.items || []; rows.forEach((item: any) => { if (y > 1080) return; line(item.system_component, [item.service_tasks, item.condition, item.condition_reading, item.action_taken, item.parts_text || item.parts_used, item.technician_initial, item.supervisor_check, item.remarks].map(text).filter((v: string) => v !== '—').join(' | '), 30); });
+  const rows = data.items || []; rows.forEach((item: any) => { if (y > 1080) return; line(item.system_component, [item.service_tasks, item.condition, item.condition_reading, item.action_taken, item.parts_text || item.parts_used, item.technician_initial, item.supervisor_check, item.remarks].map(text).filter((v: string) => v !== 'â€”').join(' | '), 30); });
   section('C. SERVICE INTERVAL & PM COMPLETION'); for (const [k, v] of Object.entries(data.service || {})) line(k.replaceAll('_', ' '), v); box('Defects / recommendations', data.service?.defects_recommendations, 36);
   section('D. RELEASE & SIGN-OFF'); line('Machine Status', data.release.machine_status); box('Supervisor comments / inspection focus', data.release.comments, 34);
   for (const role of ['technician', 'supervisor', 'operator']) { const sig = data.signatures[role] || {}; line(`${role} sign-off`, sig.signer_name || (typeof sig === 'string' ? sig : '')); if (sig.image_data && y < 1150) { const image = await new Promise<HTMLImageElement | null>((resolve) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = () => resolve(null); img.src = sig.image_data; }); if (image) { ctx.drawImage(image, left + 195, y - 18, 130, 30); } } }
   return pdfBlob(canvas);
 }
 
-export default function PreventiveMaintenanceWizard({
+function PreventiveMaintenanceWizardForm({ saveImportFiles,
   assets,
   projectId,
   onClose,
   onSaved,
   record,
-  initialView = 'ASSISTED',
+  initialView = 'FREE_FLOW',
 }: {
+  saveImportFiles?: SaveImportFiles;
   assets: any[];
   projectId: string;
   onClose: () => void;
@@ -95,10 +98,10 @@ export default function PreventiveMaintenanceWizard({
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [workOrders, setWorkOrders] = useState<any[]>([]);
   const [error, setError] = useState('');
-  const [customLocation, setCustomLocation] = useState('');
-  const [customTechnician, setCustomTechnician] = useState('');
-  const [customWorkOrder, setCustomWorkOrder] = useState('');
-  const [customInterval, setCustomInterval] = useState('');
+  const [customLocation, setCustomLocation] = useState(record?.pm_control?.location || '');
+  const [customTechnician, setCustomTechnician] = useState(record?.pm_control?.technician_team || '');
+  const [customWorkOrder, setCustomWorkOrder] = useState(record?.pm_control?.work_order_no || '');
+  const [customInterval, setCustomInterval] = useState(record?.pm_control?.pm_interval || '');
   const [showCreateWorkOrder, setShowCreateWorkOrder] = useState(false);
   const [creatingWorkOrder, setCreatingWorkOrder] = useState(false);
   const [workOrderError, setWorkOrderError] = useState('');
@@ -109,16 +112,16 @@ export default function PreventiveMaintenanceWizard({
   const [woFile, setWoFile] = useState<File | null>(null);
   const [control, setControl] = useState<any>({
     ...(record?.pm_control || {}),
-    pm_interval: record?.pm_control?.pm_interval || '250 Hours',
+    pm_interval: record?.pm_control?.pm_interval && !intervals.includes(record.pm_control.pm_interval) ? 'Other' : record?.pm_control?.pm_interval || '250 Hours',
     date: record?.pm_control?.date || new Date().toISOString().slice(0, 10),
     start_time: record?.pm_control?.start_time || '',
     finish_time: record?.pm_control?.finish_time || '',
     hour_meter_km: record?.pm_control?.hour_meter_km || '',
-    technician_team: record?.pm_control?.technician_team || '',
+    technician_team: record?.pm_control?.technician_team && !record?.pm_control?.technician_employee_id ? '__CUSTOM__' : record?.pm_control?.technician_team || '',
     technician_employee_id: record?.pm_control?.technician_employee_id || '',
-    location: record?.pm_control?.location || '',
+    location: record?.pm_control?.location && !record?.site_location_id && !record?.pm_control?.site_location_id ? '__CUSTOM__' : record?.pm_control?.location || '',
     site_location_id: record?.site_location_id || record?.pm_control?.site_location_id || '',
-    work_order_no: record?.pm_control?.work_order_no || '',
+    work_order_no: record?.pm_control?.work_order_no && !record?.pm_control?.work_order_id ? '__CUSTOM__' : record?.pm_control?.work_order_no || '',
     status: record?.status || 'DRAFT',
     job_card_number: record?.job_card_number || record?.pm_control?.job_card_number || '',
   });
@@ -217,7 +220,7 @@ export default function PreventiveMaintenanceWizard({
   }).map((employee) => ({
     value: String(employee.id),
     label: nameOf(employee),
-    sublabel: [employee.employee_number, employee.position_name || employee.job_title].filter(Boolean).join(' · '),
+    sublabel: [employee.employee_number, employee.position_name || employee.job_title].filter(Boolean).join(' Â· '),
   })), [employees]);
 
   const updateItem = (index: number, key: string, value: any) => setItems((rows) => rows.map((row, i) => i === index ? { ...row, [key]: value } : row));
@@ -236,7 +239,7 @@ export default function PreventiveMaintenanceWizard({
     setSaving(true);
     setError('');
     try {
-      const existing = record || savedRecord;
+      const existing = record?.id ? record : savedRecord;
       const payload = {
           status: control.status || 'DRAFT',
           job_card_number: String(control.job_card_number).trim(),
@@ -246,6 +249,7 @@ export default function PreventiveMaintenanceWizard({
           work_order_id: control.work_order_id || (existing ? null : undefined),
           pm_control: {
             ...control,
+            technician_team: control.technician_team === '__CUSTOM__' ? customTechnician : control.technician_team,
             pm_interval: control.pm_interval === 'Other' ? customInterval : control.pm_interval,
             equipment: customEquipment.trim() || selected?.name || selected?.asset_number || '',
             fleet_unit_id: control.fleet_unit_id || selected?.asset_number || selected?.fleet_number || '',
@@ -257,7 +261,7 @@ export default function PreventiveMaintenanceWizard({
           machine_release: release,
           signatures,
           supervisor_comments: release.comments || null,
-          technicians: control.technician_team ? [{ employee_id: control.technician_employee_id || null, name: control.technician_team }] : [],
+          technicians: control.technician_team ? [{ employee_id: control.technician_employee_id || null, name: control.technician_team === '__CUSTOM__' ? customTechnician : control.technician_team }] : [],
         };
       let created: any;
       if (existing) {
@@ -283,6 +287,7 @@ export default function PreventiveMaintenanceWizard({
         const form = new FormData(); form.append('file', pdf, `${created.job_card_number || 'preventive-maintenance-job-card'}.pdf`); form.append('title', `PM Job Card ${created.job_card_number}`); form.append('category', 'Equipment'); form.append('source_type', 'pm_job_card'); form.append('source_id', created.id); form.append('visibility', 'PUBLIC');
         await apiFetch('/api/v1/documents', { method: 'POST', body: form });
       }
+      await saveImportFiles?.(created.id);
       onSaved?.(created.id);
       onClose();
     } catch (err) {
@@ -296,15 +301,15 @@ export default function PreventiveMaintenanceWizard({
   const assetOptions = [...equipmentList.map((asset) => ({
     value: String(asset.id),
     label: asset.name || asset.asset_number || asset.id,
-    sublabel: [asset.asset_number, asset.make, asset.model].filter(Boolean).join(' · '),
-  })), { value: '__CUSTOM__', label: 'Enter custom equipment…', sublabel: '' }];
+    sublabel: [asset.asset_number, asset.make, asset.model].filter(Boolean).join(' Â· '),
+  })), { value: '__CUSTOM__', label: 'Enter custom equipmentâ€¦', sublabel: '' }];
   const siteOptions = [
     ...sites.map((site) => ({ value: String(site.id), label: site.name || site.site_name || site.code })),
-    { value: '__CUSTOM__', label: 'Enter a custom location…' },
+    { value: '__CUSTOM__', label: 'Enter a custom locationâ€¦' },
   ];
   const workOrderOptions = [
-    ...workOrders.map((order) => ({ value: String(order.id), label: `${order.wo_number || order.title || 'Work order'}${order.status ? ` · ${String(order.status).replaceAll('_', ' ')}` : ''}` })),
-    { value: '__CUSTOM__', label: 'Enter a work order number…' },
+    ...workOrders.map((order) => ({ value: String(order.id), label: `${order.wo_number || order.title || 'Work order'}${order.status ? ` Â· ${String(order.status).replaceAll('_', ' ')}` : ''}` })),
+    { value: '__CUSTOM__', label: 'Enter a work order numberâ€¦' },
   ];
   const workOrderItemOptions = inventoryItems.map((item) => ({ value: String(item.id), label: `${item.name} [Code: ${item.code || 'ITEM'}]`, sublabel: `Unit: ${item.unit_of_measure || 'PCS'}` }));
   async function createWorkOrder() {
@@ -361,7 +366,7 @@ export default function PreventiveMaintenanceWizard({
   const signatureField = (role: 'technician' | 'supervisor' | 'operator', label: string) => <div className={`space-y-2 border p-3 ${view === 'FREE_FLOW' ? 'rounded-none' : 'rounded-lg'}`}><div className="font-semibold">{label}</div><input className={`w-full border p-2 bg-background ${view === 'FREE_FLOW' ? 'rounded-none' : 'rounded-lg'}`} placeholder="Signer name" value={signatures[role]?.signer_name || ''} onChange={(event) => setSignatures({ ...signatures, [role]: { ...signatures[role], signer_name: event.target.value } })} /><label className={`block cursor-pointer border border-dashed p-2 text-center text-xs ${view === 'FREE_FLOW' ? 'rounded-none' : ''}`}>Upload signature<input className="hidden" type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => { const file = event.target.files?.[0]; if (file) void addSignature(role, file).catch((err: any) => setError(err?.message || 'Could not add signature.')); event.currentTarget.value = ''; }} /></label>{signatures[role]?.image_data && <img src={signatures[role].image_data} alt={`${label} preview`} className="h-10 max-w-full object-contain" />}</div>;
 
   return <Modal
-    title={`${record ? 'Edit' : 'Preventive'} Maintenance Job Card`}
+    title={`${record?.id ? 'Edit' : 'Preventive'} Maintenance Job Card`}
     onClose={onClose}
     className="sm:!h-[90vh] sm:!max-h-[90vh] sm:!max-w-4xl"
     footer={
@@ -387,7 +392,7 @@ export default function PreventiveMaintenanceWizard({
               disabled={saving || (!assetId && !(isCustomEquipment && customEquipment.trim()))}
               onClick={save}
             >
-              {saving ? 'Saving…' : 'Save Job Card'}
+              {saving ? 'Savingâ€¦' : 'Save Job Card'}
             </button>
           )}
         </div>
@@ -395,9 +400,9 @@ export default function PreventiveMaintenanceWizard({
     }
   >
     <div className="space-y-4 text-xs">
-      <div className="flex border-b" role="tablist" aria-label="Preventive maintenance entry mode">{(['ASSISTED', 'FREE_FLOW'] as const).map((mode) => <button type="button" key={mode} role="tab" aria-selected={view === mode} onClick={() => setView(mode)} className={`border-b-2 px-4 py-2 font-bold ${view === mode ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}>{mode === 'ASSISTED' ? 'Assisted' : 'Free flow'}</button>)}</div>
+      <div className="flex border-b" role="tablist" aria-label="Preventive maintenance entry mode">{(['FREE_FLOW', 'ASSISTED'] as const).map((mode) => <button type="button" key={mode} role="tab" aria-selected={view === mode} onClick={() => setView(mode)} className={`border-b-2 px-4 py-2 font-bold ${view === mode ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}>{mode === 'ASSISTED' ? 'Assisted' : 'Free flow'}</button>)}</div>
       {view === 'FREE_FLOW' && <div className="max-h-[72vh] overflow-y-auto bg-slate-100 p-2 sm:p-4"><div className="freeflow-job-card mx-auto max-w-[1400px] space-y-3 bg-white p-3 shadow sm:p-6 text-slate-900 [&_input]:!rounded-none [&_textarea]:!rounded-none [&_select]:!rounded-none [&_button]:!rounded-none [&_div]:!rounded-none [&_section]:!rounded-none [&_label]:!rounded-none">
-        <header className="border-b-2 border-slate-800 pb-3 text-center"><h2 className="text-base font-black tracking-wide">MAINTENANCE CONTROL — PREVENTIVE MAINTENANCE JOB CARD</h2><p className="mt-1 text-[10px] italic">Controlled PM record • Inspect → Service → Measure → Verify → Release</p></header>
+        <header className="border-b-2 border-slate-800 pb-3 text-center"><h2 className="text-base font-black tracking-wide">MAINTENANCE CONTROL â€” PREVENTIVE MAINTENANCE JOB CARD</h2><p className="mt-1 text-[10px] italic">Controlled PM record â€¢ Inspect â†’ Service â†’ Measure â†’ Verify â†’ Release</p></header>
         <section className="space-y-3 rounded-none"><h3 className="border-b bg-slate-100 p-2 font-black rounded-none">A. PM CONTROL</h3><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="space-y-1 font-semibold">PM Job Card No.<input className="w-full border p-2 rounded-none" value={control.job_card_number} onChange={(e) => setControl({ ...control, job_card_number: e.target.value })} /></label>
           <label className="space-y-1 font-semibold">Date<AppDateTimePicker className="!rounded-none" value={control.date || ''} onChange={(val) => setControl({ ...control, date: val })} /></label>
@@ -412,7 +417,7 @@ export default function PreventiveMaintenanceWizard({
           <label className="space-y-1 font-semibold">Start Time<AppDateTimePicker className="!rounded-none" mode="time" value={control.start_time || ''} onChange={(val) => setControl({ ...control, start_time: val })} /></label>
           <label className="space-y-1 font-semibold">Finish Time<AppDateTimePicker className="!rounded-none" mode="time" value={control.finish_time || ''} onChange={(val) => setControl({ ...control, finish_time: val })} /></label>
         </div></section>
-        <section className="space-y-3 rounded-none"><h3 className="border-b bg-slate-100 p-2 font-black rounded-none">B. PM CHECKLIST & MEASUREMENTS</h3><div className="space-y-3">{items.map((item, index) => <div key={index} className="rounded-none border p-3"><div className="mb-2 font-bold">{item.system_component}</div><div className="grid gap-2 sm:grid-cols-2"><label className="space-y-1">Inspection / Service Task<textarea className="w-full border p-2 rounded-none" value={Array.isArray(item.service_tasks) ? item.service_tasks.join(', ') : item.service_tasks || ''} onChange={(e) => updateItem(index, 'service_tasks', e.target.value)} /></label><label className="space-y-1">Condition / Reading<input className="w-full border p-2 rounded-none" value={[item.condition, item.condition_reading].filter(Boolean).join(' — ')} onChange={(e) => { const [condition, ...reading] = e.target.value.split(' — '); updateItem(index, 'condition', condition); updateItem(index, 'condition_reading', reading.join(' — ')); }} /></label><label className="space-y-1">Action Taken<textarea className="w-full border p-2 rounded-none" value={item.action_taken || ''} onChange={(e) => updateItem(index, 'action_taken', e.target.value)} /></label><label className="space-y-1">Parts / Qty<textarea className="w-full border p-2 rounded-none" value={item.parts_text || ''} onChange={(e) => updateItem(index, 'parts_text', e.target.value)} /></label><label className="space-y-1">Technician Initial<input className="w-full border p-2 rounded-none" value={item.technician_initial || ''} onChange={(e) => updateItem(index, 'technician_initial', e.target.value)} /></label><label className="space-y-1">Supervisor Check<input className="w-full border p-2 rounded-none" value={item.supervisor_check || ''} onChange={(e) => updateItem(index, 'supervisor_check', e.target.value)} /></label><label className="space-y-1 sm:col-span-2">Remarks<textarea className="w-full border p-2 rounded-none" value={item.remarks || ''} onChange={(e) => updateItem(index, 'remarks', e.target.value)} /></label></div></div>)}</div></section>
+        <section className="space-y-3 rounded-none"><h3 className="border-b bg-slate-100 p-2 font-black rounded-none">B. PM CHECKLIST & MEASUREMENTS</h3><div className="space-y-3">{items.map((item, index) => <div key={index} className="rounded-none border p-3"><div className="mb-2 font-bold">{item.system_component}</div><div className="grid gap-2 sm:grid-cols-2"><label className="space-y-1">Inspection / Service Task<textarea className="w-full border p-2 rounded-none" value={Array.isArray(item.service_tasks) ? item.service_tasks.join(', ') : item.service_tasks || ''} onChange={(e) => updateItem(index, 'service_tasks', e.target.value)} /></label><label className="space-y-1">Condition / Reading<input className="w-full border p-2 rounded-none" value={[item.condition, item.condition_reading].filter(Boolean).join(' â€” ')} onChange={(e) => { const [condition, ...reading] = e.target.value.split(' â€” '); updateItem(index, 'condition', condition); updateItem(index, 'condition_reading', reading.join(' â€” ')); }} /></label><label className="space-y-1">Action Taken<textarea className="w-full border p-2 rounded-none" value={item.action_taken || ''} onChange={(e) => updateItem(index, 'action_taken', e.target.value)} /></label><label className="space-y-1">Parts / Qty<textarea className="w-full border p-2 rounded-none" value={item.parts_text || ''} onChange={(e) => updateItem(index, 'parts_text', e.target.value)} /></label><label className="space-y-1">Technician Initial<input className="w-full border p-2 rounded-none" value={item.technician_initial || ''} onChange={(e) => updateItem(index, 'technician_initial', e.target.value)} /></label><label className="space-y-1">Supervisor Check<input className="w-full border p-2 rounded-none" value={item.supervisor_check || ''} onChange={(e) => updateItem(index, 'supervisor_check', e.target.value)} /></label><label className="space-y-1 sm:col-span-2">Remarks<textarea className="w-full border p-2 rounded-none" value={item.remarks || ''} onChange={(e) => updateItem(index, 'remarks', e.target.value)} /></label></div></div>)}</div></section>
         <section className="space-y-3 rounded-none"><h3 className="border-b bg-slate-100 p-2 font-black rounded-none">C. SERVICE INTERVAL & PM COMPLETION</h3><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[['pm_level','PM Level'],['next_pm_due','Next Due'],['total_labour_hours','Total Labour Hrs'],['machine_down_hours','Machine Down Hrs']].map(([key,label]) => <label key={key} className="space-y-1 font-semibold">{label}{key === 'next_pm_due' ? <AppDateTimePicker className="!rounded-none" value={service[key] || ''} onChange={(val) => setService({ ...service, [key]: val })} /> : <input type="text" className="w-full border p-2 rounded-none" value={service[key] || ''} onChange={(e) => setService({ ...service, [key]: e.target.value })} />}</label>)}</div><label className="block space-y-1 font-semibold">Defects found / corrective actions required / parts to order / recommendations<textarea className="w-full border p-2 rounded-none" rows={3} value={service.defects_recommendations || ''} onChange={(e) => setService({ ...service, defects_recommendations: e.target.value })} /></label><label className="block space-y-1 font-semibold">PM Result<input className="w-full border p-2 rounded-none" value={service.pm_result || ''} onChange={(e) => setService({ ...service, pm_result: e.target.value })} /></label></section>
         <section className="space-y-3 rounded-none"><h3 className="border-b bg-slate-100 p-2 font-black rounded-none">D. RELEASE & SIGN-OFF</h3><label className="block space-y-1 font-semibold">Machine Status<input className="w-full border p-2 rounded-none" value={release.machine_status || ''} onChange={(e) => setRelease({ ...release, machine_status: e.target.value })} /></label><label className="block space-y-1 font-semibold">Supervisor comments / outstanding defects / next inspection focus<textarea className="w-full border p-2 rounded-none" rows={3} value={release.comments || ''} onChange={(e) => setRelease({ ...release, comments: e.target.value })} /></label><div className="grid gap-3 sm:grid-cols-3">{signatureField('technician', 'Technician Sign')}{signatureField('supervisor', 'Supervisor Sign')}{signatureField('operator', 'Operator Sign')}</div></section>
         <p className="text-[10px] text-slate-500">Saving creates a PDF copy linked to this card. Existing attachments are kept.</p>
@@ -434,14 +439,14 @@ export default function PreventiveMaintenanceWizard({
           <div className="space-y-1"><label className="block font-medium">Location</label>{control.location === '__CUSTOM__' ? <><input autoFocus value={customLocation} onChange={(event) => setCustomLocation(event.target.value)} placeholder="Enter location" className="w-full border rounded-lg p-2 bg-background" /><button type="button" className="text-primary underline" onClick={() => { setCustomLocation(''); setControl({ ...control, location: '', site_location_id: '' }); }}>Choose a project location</button></> : <SearchableSelect value={control.site_location_id} onChange={(value) => { if (value === '__CUSTOM__') { setCustomLocation(''); setControl({ ...control, site_location_id: '', location: '__CUSTOM__' }); return; } setControl({ ...control, site_location_id: value, location: '' }); }} options={siteOptions} placeholder="Search project locations..." />}</div>
           {controlInput('hour_meter_km', 'Hour Meter / KM')}
 
-          <div className="space-y-1"><label className="block font-medium">Technician / Team</label>{control.technician_team === '__CUSTOM__' ? <><input autoFocus value={customTechnician} onChange={(event) => setCustomTechnician(event.target.value)} placeholder="Enter technician or team" className="w-full border rounded-lg p-2 bg-background" /><button type="button" className="text-primary underline" onClick={() => { setCustomTechnician(''); setControl({ ...control, technician_team: '', technician_employee_id: '' }); }}>Choose an employee</button></> : <SearchableSelect value={control.technician_employee_id} onChange={(value) => { if (value === '__CUSTOM__') { setCustomTechnician(''); setControl({ ...control, technician_employee_id: '', technician_team: '__CUSTOM__' }); return; } const employee = employees.find((row) => String(row.id) === value); setControl({ ...control, technician_employee_id: value, technician_team: nameOf(employee || {}) }); }} options={[{ value: '__CUSTOM__', label: 'Enter a custom technician…' }, ...technicianOptions]} placeholder="Search Operations mechanics and electricians..." />}</div>
-          <div className="space-y-1"><label className="block font-medium">Work Order No.</label>{control.work_order_no === '__CUSTOM__' ? <><input autoFocus value={customWorkOrder} onChange={(event) => setCustomWorkOrder(event.target.value)} placeholder="Enter a custom work order number" className="w-full border rounded-lg p-2 bg-background" /><button type="button" className="text-primary underline" onClick={() => { setCustomWorkOrder(''); setControl({ ...control, work_order_id: '', work_order_no: '' }); }}>Choose an existing work order</button></> : <SearchableSelect value={control.work_order_id || ''} onChange={(value) => { if (value === '__CUSTOM__') { setCustomWorkOrder(''); setControl({ ...control, work_order_id: '', work_order_no: '__CUSTOM__' }); return; } const order = workOrders.find((row) => String(row.id) === value); setCustomWorkOrder(''); setControl({ ...control, work_order_id: value, work_order_no: order?.wo_number || order?.title || '' }); }} options={assetId ? workOrderOptions : [{ value: '__CUSTOM__', label: 'Enter a custom work order number…' }]} placeholder={assetId ? 'Search work orders for this equipment...' : 'Select or enter a work order number...'} />}{assetId && <button type="button" onClick={() => { setWorkOrderError(''); setShowCreateWorkOrder(true); }} className="btn-secondary w-full">Create Work Order</button>}{!assetId && <small className="text-muted-foreground">Select equipment to choose an existing order or create a linked one.</small>}{assetId && <small className="text-muted-foreground">You can enter a custom number or create a linked work order.</small>}</div>
+          <div className="space-y-1"><label className="block font-medium">Technician / Team</label>{control.technician_team === '__CUSTOM__' ? <><input autoFocus value={customTechnician} onChange={(event) => setCustomTechnician(event.target.value)} placeholder="Enter technician or team" className="w-full border rounded-lg p-2 bg-background" /><button type="button" className="text-primary underline" onClick={() => { setCustomTechnician(''); setControl({ ...control, technician_team: '', technician_employee_id: '' }); }}>Choose an employee</button></> : <SearchableSelect value={control.technician_employee_id} onChange={(value) => { if (value === '__CUSTOM__') { setCustomTechnician(''); setControl({ ...control, technician_employee_id: '', technician_team: '__CUSTOM__' }); return; } const employee = employees.find((row) => String(row.id) === value); setControl({ ...control, technician_employee_id: value, technician_team: nameOf(employee || {}) }); }} options={[{ value: '__CUSTOM__', label: 'Enter a custom technicianâ€¦' }, ...technicianOptions]} placeholder="Search Operations mechanics and electricians..." />}</div>
+          <div className="space-y-1"><label className="block font-medium">Work Order No.</label>{control.work_order_no === '__CUSTOM__' ? <><input autoFocus value={customWorkOrder} onChange={(event) => setCustomWorkOrder(event.target.value)} placeholder="Enter a custom work order number" className="w-full border rounded-lg p-2 bg-background" /><button type="button" className="text-primary underline" onClick={() => { setCustomWorkOrder(''); setControl({ ...control, work_order_id: '', work_order_no: '' }); }}>Choose an existing work order</button></> : <SearchableSelect value={control.work_order_id || ''} onChange={(value) => { if (value === '__CUSTOM__') { setCustomWorkOrder(''); setControl({ ...control, work_order_id: '', work_order_no: '__CUSTOM__' }); return; } const order = workOrders.find((row) => String(row.id) === value); setCustomWorkOrder(''); setControl({ ...control, work_order_id: value, work_order_no: order?.wo_number || order?.title || '' }); }} options={assetId ? workOrderOptions : [{ value: '__CUSTOM__', label: 'Enter a custom work order numberâ€¦' }]} placeholder={assetId ? 'Search work orders for this equipment...' : 'Select or enter a work order number...'} />}{assetId && <button type="button" onClick={() => { setWorkOrderError(''); setShowCreateWorkOrder(true); }} className="btn-secondary w-full">Create Work Order</button>}{!assetId && <small className="text-muted-foreground">Select equipment to choose an existing order or create a linked one.</small>}{assetId && <small className="text-muted-foreground">You can enter a custom number or create a linked work order.</small>}</div>
           {controlInput('start_time', 'Start Time', 'time')}
           {controlInput('finish_time', 'Finish Time', 'time')}
         </div>
         <label className="block space-y-1 font-medium"><span className="block">Maintenance file / delivery receipt / inspection photo</span><input type="file" accept="image/*,.pdf,.doc,.docx" onChange={(event) => setAttachment(event.target.files?.[0] || null)} className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-950/60 dark:file:text-blue-300 cursor-pointer transition" /><small className="text-muted-foreground">The file is linked to this job card after saving.</small></label>
       </div>}
-      {step === 1 && <div className="space-y-3 max-h-[55vh] overflow-y-auto">{items.map((item, index) => <div key={item.system_component} className="rounded-xl border p-3 space-y-3"><div><strong>{item.system_component}</strong><p className="text-muted-foreground">{item.service_tasks}</p></div><div className="grid grid-cols-2 gap-2"><label className="block space-y-1 font-medium"><span className="block">Condition / Reading</span><SearchableSelect value={item.condition} onChange={(value) => updateItem(index, 'condition', value)} options={['GOOD', 'SATISFACTORY', 'MONITOR', 'NEEDS_ATTENTION', 'DEFECTIVE', 'NOT_APPLICABLE'].map((value) => ({ value, label: value.replaceAll('_', ' ') }))} placeholder="Select condition..." /></label><label className="block space-y-1 font-medium"><span className="block">Technician Initial</span><input value={item.technician_initial} onChange={(event) => updateItem(index, 'technician_initial', event.target.value)} className="w-full border rounded-lg p-2 bg-background" /></label></div><label className="block space-y-1 font-medium"><span className="block">Action Taken</span><textarea value={item.action_taken} onChange={(event) => updateItem(index, 'action_taken', event.target.value)} className="w-full border rounded-lg p-2 bg-background" /></label><label className="block space-y-1 font-medium"><span className="block">Parts / Qty</span><textarea value={item.parts_text || ''} onChange={(event) => updateItem(index, 'parts_text', event.target.value)} className="w-full border rounded-lg p-2 bg-background" placeholder="Part number × quantity" /></label><label className="block space-y-1 font-medium"><span className="block">Remarks</span><textarea value={item.remarks} onChange={(event) => updateItem(index, 'remarks', event.target.value)} className="w-full border rounded-lg p-2 bg-background" /></label></div>)}</div>}
+      {step === 1 && <div className="space-y-3 max-h-[55vh] overflow-y-auto">{items.map((item, index) => <div key={item.system_component} className="rounded-xl border p-3 space-y-3"><div><strong>{item.system_component}</strong><p className="text-muted-foreground">{item.service_tasks}</p></div><div className="grid grid-cols-2 gap-2"><label className="block space-y-1 font-medium"><span className="block">Condition / Reading</span><SearchableSelect value={item.condition} onChange={(value) => updateItem(index, 'condition', value)} options={['GOOD', 'SATISFACTORY', 'MONITOR', 'NEEDS_ATTENTION', 'DEFECTIVE', 'NOT_APPLICABLE'].map((value) => ({ value, label: value.replaceAll('_', ' ') }))} placeholder="Select condition..." /></label><label className="block space-y-1 font-medium"><span className="block">Technician Initial</span><input value={item.technician_initial} onChange={(event) => updateItem(index, 'technician_initial', event.target.value)} className="w-full border rounded-lg p-2 bg-background" /></label></div><label className="block space-y-1 font-medium"><span className="block">Action Taken</span><textarea value={item.action_taken} onChange={(event) => updateItem(index, 'action_taken', event.target.value)} className="w-full border rounded-lg p-2 bg-background" /></label><label className="block space-y-1 font-medium"><span className="block">Parts / Qty</span><textarea value={item.parts_text || ''} onChange={(event) => updateItem(index, 'parts_text', event.target.value)} className="w-full border rounded-lg p-2 bg-background" placeholder="Part number Ã— quantity" /></label><label className="block space-y-1 font-medium"><span className="block">Remarks</span><textarea value={item.remarks} onChange={(event) => updateItem(index, 'remarks', event.target.value)} className="w-full border rounded-lg p-2 bg-background" /></label></div>)}</div>}
       {step === 2 && <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="block space-y-1 font-medium"><span className="block">PM Level</span><input value={service.pm_level} onChange={(event) => setService({ ...service, pm_level: event.target.value })} className="w-full border rounded-lg p-2 bg-background" /></label>
         <label className="block space-y-1 font-medium"><span className="block">Next Due</span><AppDateTimePicker mode="date" value={service.next_pm_due} onChange={(val) => setService({ ...service, next_pm_due: val })} /></label>
@@ -473,7 +478,7 @@ export default function PreventiveMaintenanceWizard({
               disabled={creatingWorkOrder}
               onClick={createWorkOrder}
             >
-              {creatingWorkOrder ? 'Dispatching Work Order…' : 'Create & Dispatch Work Order'}
+              {creatingWorkOrder ? 'Dispatching Work Orderâ€¦' : 'Create & Dispatch Work Order'}
             </button>
           </div>
         }
@@ -499,19 +504,19 @@ export default function PreventiveMaintenanceWizard({
               <label className="space-y-1">Estimated Duration (Hours)<input type="number" min="0.5" step="0.5" value={woForm.estimated_hours} onChange={(e) => setWoForm({ ...woForm, estimated_hours: Number(e.target.value) })} className="w-full border rounded-lg p-2 bg-background" /></label>
             </div>
             <label className="block space-y-1">Assign Technician / Specialist<SearchableSelect options={technicianOptions} value="" onChange={(value) => value && !woForm.assigned_to_ids.includes(value) && setWoForm({ ...woForm, assigned_to_ids: [...woForm.assigned_to_ids, value] })} placeholder="Search technicians..." /></label>
-            <div className="flex flex-wrap gap-1">{woForm.assigned_to_ids.map((id: string) => <button type="button" key={id} onClick={() => setWoForm({ ...woForm, assigned_to_ids: woForm.assigned_to_ids.filter((v: string) => v !== id) })} className="rounded bg-primary/10 px-2 py-1">{nameOf(employees.find((e) => String(e.id) === id) || {})} ×</button>)}</div>
+            <div className="flex flex-wrap gap-1">{woForm.assigned_to_ids.map((id: string) => <button type="button" key={id} onClick={() => setWoForm({ ...woForm, assigned_to_ids: woForm.assigned_to_ids.filter((v: string) => v !== id) })} className="rounded bg-primary/10 px-2 py-1">{nameOf(employees.find((e) => String(e.id) === id) || {})} Ã—</button>)}</div>
           </section>
           <section className="p-3 border rounded-xl space-y-2">
             <label className="block space-y-1">Scope of Work Instructions<textarea rows={3} value={woForm.description} onChange={(e) => setWoForm({ ...woForm, description: e.target.value })} className="w-full border rounded-lg p-2 bg-background" /></label>
           </section>
           <section className="p-3 border rounded-xl space-y-3">
             <h4 className="font-bold uppercase tracking-wide">Work Order Maintenance Checklist</h4>
-            {woChecklist.map((task, index) => <div key={index} className="flex gap-2"><span>{index + 1}.</span><input value={task} onChange={(e) => setWoChecklist(woChecklist.map((v, i) => i === index ? e.target.value : v))} className="flex-1 border rounded p-1 bg-background" /><button type="button" onClick={() => setWoChecklist(woChecklist.filter((_, i) => i !== index))}>×</button></div>)}
+            {woChecklist.map((task, index) => <div key={index} className="flex gap-2"><span>{index + 1}.</span><input value={task} onChange={(e) => setWoChecklist(woChecklist.map((v, i) => i === index ? e.target.value : v))} className="flex-1 border rounded p-1 bg-background" /><button type="button" onClick={() => setWoChecklist(woChecklist.filter((_, i) => i !== index))}>Ã—</button></div>)}
             <div className="flex gap-2"><input value={woNewTask} onChange={(e) => setWoNewTask(e.target.value)} placeholder="+ Add checklist task" className="flex-1 border rounded p-1 bg-background" /><button type="button" onClick={() => { if (woNewTask.trim()) setWoChecklist([...woChecklist, woNewTask.trim()]); setWoNewTask(''); }}>Add</button></div>
           </section>
           <section className="p-3 border rounded-xl space-y-3">
             <h4 className="font-bold uppercase tracking-wide">Spare Parts & Consumables Required</h4>
-            {woParts.map((part, index) => <div className="grid grid-cols-12 gap-2" key={index}><div className="col-span-6"><SearchableSelect options={workOrderItemOptions} value={part.item_id} onChange={(value) => setWoParts(woParts.map((v, i) => i === index ? { ...v, item_id: value } : v))} placeholder="Select spare part / component..." /></div><input type="number" min="1" value={part.quantity} onChange={(e) => setWoParts(woParts.map((v, i) => i === index ? { ...v, quantity: Number(e.target.value) } : v))} className="col-span-3 border rounded p-1 bg-background" /><input value={part.unit} onChange={(e) => setWoParts(woParts.map((v, i) => i === index ? { ...v, unit: e.target.value } : v))} className="col-span-2 border rounded p-1 bg-background" /><button type="button" onClick={() => setWoParts(woParts.filter((_, i) => i !== index))}>×</button></div>)}
+            {woParts.map((part, index) => <div className="grid grid-cols-12 gap-2" key={index}><div className="col-span-6"><SearchableSelect options={workOrderItemOptions} value={part.item_id} onChange={(value) => setWoParts(woParts.map((v, i) => i === index ? { ...v, item_id: value } : v))} placeholder="Select spare part / component..." /></div><input type="number" min="1" value={part.quantity} onChange={(e) => setWoParts(woParts.map((v, i) => i === index ? { ...v, quantity: Number(e.target.value) } : v))} className="col-span-3 border rounded p-1 bg-background" /><input value={part.unit} onChange={(e) => setWoParts(woParts.map((v, i) => i === index ? { ...v, unit: e.target.value } : v))} className="col-span-2 border rounded p-1 bg-background" /><button type="button" onClick={() => setWoParts(woParts.filter((_, i) => i !== index))}>Ã—</button></div>)}
             <button type="button" onClick={() => setWoParts([...woParts, { item_id: '', quantity: 1, unit: 'PCS' }])}>+ Add Spare Part / Consumable</button>
           </section>
           <section className="p-3 border rounded-xl"><label className="block font-bold">Associated Procedure or Work Order Document (Optional)<input type="file" accept="image/*,application/pdf,.doc,.docx" onChange={(e) => setWoFile(e.target.files?.[0] || null)} className="block mt-2" /></label>{woFile && <span>{woFile.name}</span>}</section>
@@ -519,4 +524,8 @@ export default function PreventiveMaintenanceWizard({
       </Modal>
     )}
   </Modal>;
+}
+
+export default function PreventiveMaintenanceWizard(props: Omit<ComponentProps<typeof PreventiveMaintenanceWizardForm>, 'saveImportFiles'>) {
+  return <MaintenanceImportGate kind="preventive" record={props.record} assets={props.assets} onClose={props.onClose}>{(draft, saveImportFiles) => <PreventiveMaintenanceWizardForm {...props} record={draft} saveImportFiles={saveImportFiles} />}</MaintenanceImportGate>;
 }

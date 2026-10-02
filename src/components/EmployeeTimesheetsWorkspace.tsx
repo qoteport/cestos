@@ -6,6 +6,7 @@ import { AlertTriangle, CalendarDays, Check, Clock3, Maximize2, Minimize2, Paper
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import { openUniversalFileViewer } from '@/lib/fileViewer';
 import SearchableSelect from './SearchableSelect';
+import CommandCenterTimesheetCsvModal from './CommandCenterTimesheetCsvModal';
 import AppDateTimePicker from './ui/AppDateTimePicker';
 
 type EmployeeOption = {
@@ -25,6 +26,8 @@ type TimesheetRow = {
   employee_number?: string;
   period: string;
   site_name?: string | null;
+  project_id?: string | null;
+  scope_project_id?: string | null;
   project_name?: string | null;
   daily_hours: Record<number, number>;
   total_hours: number;
@@ -126,6 +129,7 @@ export default function EmployeeTimesheetsWorkspace({
   const [refreshKey, setRefreshKey] = useState(0);
   const [editing, setEditing] = useState<TimesheetRow | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [employeeId, setEmployeeId] = useState('');
   const [customEmployee, setCustomEmployee] = useState(false);
   const [employeeName, setEmployeeName] = useState('');
@@ -147,7 +151,6 @@ export default function EmployeeTimesheetsWorkspace({
     try {
       const params = new URLSearchParams();
       if (requestedPeriod) params.set('period', requestedPeriod);
-      if (projectId) params.set('project_id', projectId);
       const query = params.size ? `?${params.toString()}` : '';
       const result = await apiFetch<{ period?: string; items?: TimesheetRow[] }>(
         `/api/v1/employees/timesheets${query}`,
@@ -164,7 +167,7 @@ export default function EmployeeTimesheetsWorkspace({
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, []);
 
   useEffect(() => { void reload(period); }, [period, refreshKey, reload]);
 
@@ -283,7 +286,7 @@ export default function EmployeeTimesheetsWorkspace({
       const endpoint = editing ? `/api/v1/employees/timesheets/${editing.id}` : '/api/v1/employees/timesheets';
       await apiFetch(endpoint, {
         method: editing ? 'PUT' : 'POST',
-        body: JSON.stringify({ employee_id: customEmployee ? null : employeeId, employee_name: enteredEmployeeName || null, project_id: projectId || null, period_start: `${formPeriod}-01`, site_name: siteName.trim() || null, entries }),
+        body: JSON.stringify({ employee_id: customEmployee ? null : employeeId, employee_name: enteredEmployeeName || null, project_id: editing ? editing.project_id || null : projectId || null, scope_project_id: editing ? editing.scope_project_id || null : projectId || null, project_name: editing?.project_name || null, period_start: `${formPeriod}-01`, site_name: siteName.trim() || null, entries }),
       });
       if (editing) {
         setShowForm(false);
@@ -350,7 +353,7 @@ export default function EmployeeTimesheetsWorkspace({
           <div className={`mt-0.5 rounded-xl bg-slate-100 p-2 dark:bg-slate-800 ${colors.icon}`}><CalendarDays size={19} /></div>
           <div>
             <h3 className="text-base font-bold text-slate-900 dark:text-white">Monthly time sheet</h3>
-            <p className="mt-0.5 text-xs text-slate-500">Daily reported hours by employee. Blank cells mean no hours were reported.</p>
+            <p className="mt-0.5 text-xs text-slate-500">Daily reported hours across accessible projects. Blank cells mean no hours were reported.</p>
           </div>
         </div>
         <div className="flex flex-wrap items-end gap-2">
@@ -366,12 +369,12 @@ export default function EmployeeTimesheetsWorkspace({
             </div>
           </div>
           {sourceCsvRow && <button type="button" onClick={() => void viewSourceFile(sourceCsvRow)} disabled={attachmentBusy === sourceCsvRow.id} className="mb-0.5 inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><Paperclip size={15} />{attachmentBusy === sourceCsvRow.id ? 'Opening source…' : 'Source File'}</button>}
-          {canReport && <button type="button" onClick={openNew} className={`mb-0.5 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 ${colors.action}`}><Plus size={16} /> Report hours</button>}
+          {canReport && <button type="button" onClick={openNew} className={`mb-0.5 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 ${colors.action}`}><Plus size={16} /> Log time sheet</button>}
         </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900"><p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{projectId ? 'Employee records for selected project' : 'Employee records'}</p><p className="mt-1 text-xl font-extrabold text-slate-900 dark:text-white">{activeRows}</p></div>
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900"><p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Employee records across accessible projects</p><p className="mt-1 text-xl font-extrabold text-slate-900 dark:text-white">{activeRows}</p></div>
         <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900"><p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Total reported hours</p><p className="mt-1 text-xl font-extrabold text-slate-900 dark:text-white">{allHours.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p></div>
       </div>
 
@@ -430,15 +433,17 @@ export default function EmployeeTimesheetsWorkspace({
         )}
       </div>
 
+      {showImport && <CommandCenterTimesheetCsvModal heading="Report employee hours" onClose={() => setShowImport(false)} onSaved={(importedPeriod) => { setPeriod(importedPeriod); setRefreshKey((value) => value + 1); }} />}
       {showForm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-2 sm:p-5" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowForm(false); }}>
           <div role="dialog" aria-modal="true" aria-labelledby="timesheet-form-title" className="flex max-h-[96vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800">
-              <div><h3 id="timesheet-form-title" className="font-bold text-slate-900 dark:text-white">{editing ? 'Edit employee time sheet' : 'Report employee hours'}</h3><p className="mt-1 text-xs text-slate-500">Enter hours for each day. Leave a cell blank when no hours were reported.</p></div>
+              <div><h3 id="timesheet-form-title" className="font-bold text-slate-900 dark:text-white">{editing ? 'Edit employee time sheet' : 'Report employee hours'}</h3><p className="mt-1 text-xs text-slate-500">Upload a CSV or Excel file, or enter employees one after another. Leave a day blank when no hours were reported.</p></div>
               <button type="button" onClick={() => setShowForm(false)} aria-label="Close" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"><X size={18} /></button>
             </div>
             <form onSubmit={saveTimesheet} className="flex min-h-0 flex-1 flex-col">
               <div ref={formScrollRef} className="grid gap-3 overflow-y-auto p-5 sm:grid-cols-2">
+                {!editing && <div className="rounded-xl border border-dashed border-slate-300 p-4 sm:col-span-2 dark:border-slate-600"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-semibold">Import hours from a file</p><p className="mt-1 text-xs text-slate-500">Upload CSV, XLSX or XLS and review the extracted employee rows. Excel uses the first worksheet.</p></div><button type="button" disabled={saving} onClick={() => setShowImport(true)} className={`rounded-lg px-4 py-2 text-sm font-bold text-white disabled:opacity-60 ${colors.action}`}>Upload CSV or Excel</button></div><p className="mt-3 text-xs text-slate-500">Or fill in the fields below, save, then select Log another to enter the next employee.</p></div>}
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Employee <span className="text-red-600">*</span>
                   <div className="mt-1">
                     {customEmployee
