@@ -4486,7 +4486,7 @@ Signed: Field Operations Administration
       {showExpenseModal && <OperationalExpenseSubmissionModal projectId={selectedProjectId} initialDocumentDraft={expenseCommandDraft} onClose={() => { setShowExpenseModal(false); setExpenseCommandDraft(null); }} onSubmitted={(expense) => { setShowExpenseModal(false); setExpenseCommandDraft(null); setOperationalExpenseRequests((rows) => [expense, ...rows.filter((row) => row.id !== expense.id)]); setBanner({ type: 'success', message: `${expense.expense_number || 'Operational expense'} submitted to Finance for payment.` }); }} />}
 
       {fieldAdminCommandOpen && <FieldAdminCommandCenterModal onClose={() => setFieldAdminCommandOpen(false)} onSelect={handleFieldAdminCommandSelect} />}
-      {showTimesheetCsvImport && <CommandCenterTimesheetCsvModal onClose={() => setShowTimesheetCsvImport(false)} />}
+      {showTimesheetCsvImport && <CommandCenterTimesheetCsvModal heading="Field admin portal" theme="orange" onClose={() => setShowTimesheetCsvImport(false)} />}
       {showMaintenanceCsvImport && <CommandCenterMaintenanceCsvModal initialKind={maintenanceCsvKind} initialProjectId={selectedProjectId} onClose={() => setShowMaintenanceCsvImport(false)} />}
       {showFinanceCommand && <FinanceCommandCenterModal allowedKinds={[financeCommandKind]} onClose={() => setShowFinanceCommand(false)} onDraftReady={handleFieldFinanceDraft} />}
 

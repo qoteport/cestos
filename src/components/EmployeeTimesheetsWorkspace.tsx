@@ -433,7 +433,7 @@ export default function EmployeeTimesheetsWorkspace({
         )}
       </div>
 
-      {showImport && <CommandCenterTimesheetCsvModal heading="Report employee hours" onClose={() => setShowImport(false)} onSaved={(importedPeriod) => { setPeriod(importedPeriod); setRefreshKey((value) => value + 1); }} />}
+      {showImport && <CommandCenterTimesheetCsvModal heading="Report employee hours" theme={accent === 'orange' ? 'orange' : accent === 'emerald' ? 'emerald' : 'blue'} onClose={() => setShowImport(false)} onSaved={(importedPeriod) => { setPeriod(importedPeriod); setRefreshKey((value) => value + 1); }} />}
       {showForm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-2 sm:p-5" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowForm(false); }}>
           <div role="dialog" aria-modal="true" aria-labelledby="timesheet-form-title" className="flex max-h-[96vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
