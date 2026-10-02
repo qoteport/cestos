@@ -8,6 +8,28 @@ export const PURCHASE_ORDER_CATEGORIES = [
   { value: 'MAINTENANCE_PARTS', label: 'Maintenance & parts' },
   { value: 'LOGISTICS', label: 'Logistics' },
   { value: 'CONSUMABLES', label: 'Consumables' },
+  { value: 'SPARE_PART', label: 'Spare part' },
+  { value: 'FOREIGN_PURCHASE', label: 'Foreign purchase' },
+  { value: 'SERVICE_RENDERED', label: 'Service rendered' },
+  { value: 'TRANSPORTATION', label: 'Transportation' },
+  { value: 'TELEPHONY_EXPENSES', label: 'Telephony Expenses' },
+  { value: 'INTERNET_EXPENSES', label: 'Internet Expenses' },
+  { value: 'CAR_RENTAL_EXPENSES', label: 'Car Rental Expenses' },
+  { value: 'EQUIPMENT_RENTAL_EXPENSES', label: 'Equipment Rental Expenses' },
+  { value: 'FUEL_OIL', label: 'Fuel & Oil' },
+  { value: 'REPAIRS_AND_MAINTENANCE', label: 'Repairs & Maintenance' },
+  { value: 'PROFESSIONAL_FEES', label: 'Professional Fees' },
+  { value: 'LEGAL_SERVICES', label: 'Legal Services' },
+  { value: 'ADMINISTRATION_SERVICES', label: 'Administration Services' },
+  { value: 'RENT_EXPENSE', label: 'Rent Expense' },
+  { value: 'DRILL_CONSUMABLES', label: 'Drill Consumables' },
+  { value: 'BUILDING_SUPPLIES', label: 'Building Supplies' },
+  { value: 'GENERATOR_MAINTENANCE', label: 'Generator Maintenance' },
+  { value: 'PLUMBING', label: 'Plumbing' },
+  { value: 'ELECTRICAL', label: 'Electrical' },
+  { value: 'UTILITIES', label: 'Utilities' },
+  { value: 'GENERATOR', label: 'Generator' },
+  { value: 'COMMUNITY_DEVELOPMENT', label: 'Community Development' },
 ] as const;
 
 const CUSTOM = '__CUSTOM_CATEGORY__';
@@ -56,7 +78,7 @@ export function PurchaseOrderCategoryField({
         }
       }}
       placeholder="No category"
-      searchable={false}
+      searchable={true}
       options={[
         { value: '', label: 'No category' },
         ...PURCHASE_ORDER_CATEGORIES.map((item) => ({ value: item.value, label: item.label })),

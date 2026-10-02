@@ -6,6 +6,7 @@ import { X, Plus, Loader2, Trash2, Paperclip } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import SearchableSelect from './SearchableSelect';
 import AppDateTimePicker from './AppDateTimePicker';
+import { PurchaseOrderCategoryField } from './PurchaseOrderCategoryField';
 
 type Row = Record<string, any>;
 type ExpenseItem = { inventory_item_id: string; name: string; description?: string; quantity: string; unit_cost: string; custom_item?: boolean };
@@ -21,6 +22,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
   const [payName, setPayName] = useState('');
   const [phone, setPhone] = useState('');
   const [bank, setBank] = useState('');
+  const [category, setCategory] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [method, setMethod] = useState('MOBILE_MONEY');
   const [invoice, setInvoice] = useState<File | null>(null);
@@ -32,6 +34,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
 
   function applyPurchaseOrder(po: Row, availablePayees: Row[] = payees) {
     setPurchaseOrderId(String(po.id));
+    if (po.category) setCategory(po.category);
     const orderItems = (po.items || []).map((line: Row) => ({
       inventory_item_id: line.inventory_item_id || '',
       name: line.item_name || line.description || '',
@@ -53,6 +56,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
       setPhone(savedPayee.phone || '');
       setBank(savedPayee.bank_account_details || '');
       if (savedPayee.payment_method) setMethod(savedPayee.payment_method);
+      if (savedPayee.bank_account_type) setCategory(savedPayee.bank_account_type);
     } else {
       setPayeeId('__NEW__');
       setPayName(supplierName);
@@ -133,6 +137,20 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
     if (manualTotal && (!manualAmount || Number(manualAmount) < 0)) { setError('Enter a valid manual total.'); return; }
     setBusy(true); setError('');
     try {
+      let finalItems = items;
+      if (finalItems.length === 0) {
+        const selectedPayee = payees.find((p) => String(p.id) === payeeId);
+        const catName = (selectedPayee && (selectedPayee.bank_account_type || selectedPayee.category)) || category || 'Operational Expense';
+        const displayName = catName.replace(/_/g, ' ');
+        const totalVal = manualTotal ? Number(manualAmount) : 0;
+        finalItems = [{
+          inventory_item_id: '',
+          name: displayName,
+          description: displayName,
+          quantity: '1',
+          unit_cost: String(totalVal),
+        }];
+      }
       const data = {
         purchase_order_id: purchaseOrderId || undefined,
         payee_id: payeeId && payeeId !== '__NEW__' ? payeeId : undefined,
@@ -141,7 +159,8 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
         bank_account_details: bank.trim() || undefined,
         expense_date: date,
         payment_method: method,
-        items: items.map((item) => ({ inventory_item_id: item.inventory_item_id || undefined, name: item.name.trim(), description: item.description?.trim() || undefined, quantity: Number(item.quantity), unit_cost: Number(item.unit_cost) })),
+        category: category || undefined,
+        items: finalItems.map((item) => ({ inventory_item_id: item.inventory_item_id || undefined, name: item.name.trim(), description: item.description?.trim() || undefined, quantity: Number(item.quantity), unit_cost: Number(item.unit_cost) })),
         total_cost: manualTotal ? Number(manualAmount) : undefined,
         manual_total: manualTotal,
       };
@@ -211,12 +230,22 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
                       if (value === '__NEW__') { setPayeeId('__NEW__'); setPayName(''); setPhone(''); setBank(''); return; }
                       setPayeeId(value);
                       const payee = payees.find((row) => String(row.id) === value);
-                      if (payee) { setPayName(payee.name || ''); setPhone(payee.phone || ''); setBank(payee.bank_account_details || ''); if (payee.payment_method) setMethod(payee.payment_method); }
+                      if (payee) {
+                        setPayName(payee.name || '');
+                        setPhone(payee.phone || '');
+                        setBank(payee.bank_account_details || '');
+                        if (payee.payment_method) setMethod(payee.payment_method);
+                        if (payee.bank_account_type) setCategory(payee.bank_account_type);
+                      }
                     }}
                     options={payeeOptions}
                     placeholder="Choose a saved payee or add a new one..."
                   />
                 )}
+              </label>
+              <label className="block space-y-1 font-semibold sm:col-span-2">
+                <span className="block">Category</span>
+                <PurchaseOrderCategoryField value={category} onChange={(val) => setCategory(val)} />
               </label>
               {method === 'BANK_TRANSFER' && <label className="block space-y-1 font-semibold sm:col-span-2"><span className="block">Bank account details</span><textarea rows={4} className={inputClass} value={bank} onChange={(event) => setBank(event.target.value)} placeholder="Bank name, account name, account number, branch or other payment instructions" /></label>}
               {method === 'MOBILE_MONEY' && <label className="block space-y-1 font-semibold sm:col-span-2"><span className="block">Phone number</span><input type="tel" className={inputClass} value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="Enter the payee's mobile money number" /></label>}
