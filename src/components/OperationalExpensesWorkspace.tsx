@@ -487,13 +487,16 @@ export default function OperationalExpensesWorkspace({
           {/* Totals & Upload */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
             <div className="space-y-3">
-              <label className="flex items-center gap-2 text-xs font-bold text-foreground cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={manual}
-                  onChange={(e) => setManual(e.target.checked)}
-                  className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
-                />
+              <label className="flex items-center gap-2.5 text-xs font-bold text-foreground cursor-pointer select-none">
+                <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${manual ? 'bg-violet-600 border-violet-600 text-white' : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900'}`}>
+                  <input
+                    type="checkbox"
+                    checked={manual}
+                    onChange={(e) => setManual(e.target.checked)}
+                    className="sr-only"
+                  />
+                  {manual && <Check size={12} strokeWidth={3} />}
+                </div>
                 Override &amp; Enter total cost manually
               </label>
 

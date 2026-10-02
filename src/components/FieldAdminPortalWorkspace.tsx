@@ -3220,6 +3220,7 @@ Signed: Field Operations Administration
               <FieldPurchaseOrdersPanel
                 projectId={selectedProjectId}
                 projectName={projects.find((project) => project.id === selectedProjectId)?.name}
+                projects={projects}
                 datePreset={datePreset}
                 customStartDate={customStartDate}
                 customEndDate={customEndDate}

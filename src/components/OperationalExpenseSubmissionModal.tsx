@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Plus, Loader2, Trash2, Paperclip } from 'lucide-react';
+import { X, Plus, Loader2, Trash2, Paperclip, Check } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import SearchableSelect from './SearchableSelect';
 import AppDateTimePicker from './AppDateTimePicker';
@@ -344,13 +344,16 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
               </button>
             </section>
             <section className="grid gap-3 rounded-xl border p-3 sm:grid-cols-2">
-              <label className="flex items-center gap-2 font-semibold sm:col-span-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={manualTotal}
-                  onChange={(event) => setManualTotal(event.target.checked)}
-                  className="h-4 w-4 rounded-md border-slate-300 text-orange-600 focus:ring-orange-500 dark:border-slate-700 dark:bg-slate-900 accent-orange-600 cursor-pointer"
-                />
+              <label className="flex items-center gap-2.5 font-semibold sm:col-span-2 cursor-pointer select-none">
+                <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${manualTotal ? 'bg-orange-600 border-orange-600 text-white' : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900'}`}>
+                  <input
+                    type="checkbox"
+                    checked={manualTotal}
+                    onChange={(event) => setManualTotal(event.target.checked)}
+                    className="sr-only"
+                  />
+                  {manualTotal && <Check size={12} strokeWidth={3} />}
+                </div>
                 Enter total manually
               </label>
               <label className="block space-y-1 font-semibold sm:col-span-2"><span className="block">Total cost {manualTotal ? '*' : '(calculated)'}</span><input type="number" min="0" step="0.01" required={manualTotal} readOnly={!manualTotal} className={inputClass} value={manualTotal ? manualAmount : calculatedTotal.toFixed(2)} onChange={(event) => setManualAmount(event.target.value)} /></label>

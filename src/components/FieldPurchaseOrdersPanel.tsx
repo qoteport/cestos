@@ -31,6 +31,7 @@ function ExpensePaymentBadge({ status }: { status?: string | null }) {
 export default function FieldPurchaseOrdersPanel({
   projectId,
   projectName,
+  projects,
   datePreset = 'ALL',
   customStartDate,
   customEndDate,
@@ -39,6 +40,7 @@ export default function FieldPurchaseOrdersPanel({
 }: {
   projectId: string;
   projectName?: string;
+  projects?: Row[];
   datePreset?: string;
   customStartDate?: string;
   customEndDate?: string;
@@ -397,10 +399,10 @@ export default function FieldPurchaseOrdersPanel({
                         onChange={(val) => setOrderProjectId(val)}
                         options={[
                           { value: '__GENERAL__', label: 'General / Organization-Wide (Not for a specific project)' },
-                          ...projectList.map((p) => ({
+                          ...((projects && projects.length > 0 ? projects : projectList).map((p) => ({
                             value: String(p.id),
                             label: `${p.name} (${p.code || 'Site'})`,
-                          })),
+                          }))),
                         ]}
                         placeholder="Select project scope or General..."
                       />
