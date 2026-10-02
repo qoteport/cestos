@@ -430,10 +430,6 @@ export default function FieldPurchaseOrdersPanel({
                       {quotation && <span className="block truncate text-[11px] text-slate-500">{quotation.name}</span>}
                       <span className="block text-[11px] font-normal text-slate-500">Uploaded for reference. Enter purchase order line items manually.</span>
                     </label>
-                    <label className="space-y-1 text-xs font-semibold sm:col-span-2">
-                      <span className="block">Notes / specifications</span>
-                      <textarea rows={3} className={input} value={notes} onChange={(e) => setNotes(e.target.value)} />
-                    </label>
                   </div>
                   <section className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -474,6 +470,12 @@ export default function FieldPurchaseOrdersPanel({
                       <Plus size={14} /> Add Item
                     </button>
                   </section>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="space-y-1 text-xs font-semibold sm:col-span-2">
+                      <span className="block">Notes / specifications</span>
+                      <textarea rows={3} className={input} value={notes} onChange={(e) => setNotes(e.target.value)} />
+                    </label>
+                  </div>
                 </>
               ) : (
                 <>
