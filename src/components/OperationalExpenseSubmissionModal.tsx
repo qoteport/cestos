@@ -170,7 +170,6 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!invoice) { setError('Attach the invoice or supporting document.'); return; }
     if (!payName.trim()) { setError('Enter who the expense is payable to.'); return; }
     if (items.some((item) => !item.name.trim() || Number(item.quantity) <= 0 || Number(item.unit_cost) < 0)) { setError('Complete each item name, quantity, and unit cost, or remove the blank item.'); return; }
     if (items.length === 0 && !manualTotal) { setError('Enter the total manually when no purchased items are listed.'); return; }
@@ -206,7 +205,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
       };
       const form = new FormData();
       form.append('expense_json', JSON.stringify(data));
-      form.append('invoice', invoice);
+      if (invoice) form.append('invoice', invoice);
       const created = await apiFetch<Row>('/api/v1/operational-expenses', { method: 'POST', body: form });
       onSubmitted(created);
     } catch (exception) {
@@ -294,10 +293,9 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
             </section>
             <section className="grid gap-3 rounded-xl border p-3 sm:grid-cols-2">
               <label className="block space-y-1 font-semibold sm:col-span-2">
-                <span className="block">Invoice upload *</span>
+                <span className="block">Invoice / supporting file <span className="font-normal text-slate-500">(optional)</span></span>
                 <input
                   type="file"
-                  required={!invoice}
                   accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,.docx,.xls,.xlsx,.txt,.csv,.rtf"
                   className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 dark:file:bg-orange-950/60 dark:file:text-orange-300 cursor-pointer transition"
                   onChange={(event) => void handleInvoiceChange(event.target.files?.[0] || null)}

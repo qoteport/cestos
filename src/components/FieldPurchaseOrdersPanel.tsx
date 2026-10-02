@@ -242,7 +242,7 @@ export default function FieldPurchaseOrdersPanel({
       setMessage('Please enter a supplier name.'); return;
     }
     setMessage('');
-    setFormStep('PREVIEW');
+    void saveOrder(false);
   }
 
   async function saveOrder(saveAsDraft: boolean) {
@@ -410,7 +410,7 @@ export default function FieldPurchaseOrdersPanel({
                       />
                     </div>
                     <label className="space-y-1 text-xs font-semibold">
-                      <span className="block">Quotation / supporting file</span>
+                      <span className="block">Quotation / supporting file <span className="font-normal text-slate-500">(optional)</span></span>
                       <input type="file" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,.docx,.xls,.xlsx,.txt,.csv,.rtf" className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 dark:file:bg-orange-950/60 dark:file:text-orange-300 cursor-pointer transition" onChange={(e) => void handleQuotationChange(e.target.files?.[0] || null)} />
                       {existingQuotation && <span className="block text-slate-500">Current file: {existingQuotation}</span>}
                       {quotation && <span className="block truncate text-[11px] text-slate-500">{quotation.name}</span>}
@@ -514,36 +514,12 @@ export default function FieldPurchaseOrdersPanel({
                 )}
               </label>
               <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
-                {formStep === 'EDIT' ? (
-                  <>
-                    <button type="button" onClick={() => { setShowForm(false); setFormStep('EDIT'); }} className="rounded-full border px-4 py-2 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition w-full sm:w-auto">
-                      Cancel
-                    </button>
-                    {(!editing || editing.status === 'DRAFT') && (
-                      <button type="button" disabled={busy} onClick={() => void saveOrder(true)} className="rounded-full border border-orange-300 px-4 py-2 text-xs font-bold text-orange-800 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/30 disabled:opacity-50 transition w-full sm:w-auto">
-                        {busy ? 'Saving…' : 'Save as draft'}
-                      </button>
-                    )}
-                    <button type="submit" disabled={busy} className="rounded-full bg-orange-600 px-4 py-2 text-xs font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto">
-                      Preview Purchase Order
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button type="button" onClick={() => setFormStep('EDIT')} className="rounded-full border px-4 py-2 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition w-full sm:w-auto">
-                      Back to edit
-                    </button>
-                    {editing?.status === 'WAITING_APPROVAL' ? (
-                      <button type="button" disabled={busy} onClick={() => void saveOrder(false)} className="rounded-full bg-orange-600 px-4 py-2 text-xs font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto">
-                        {busy ? 'Saving…' : 'Save changes'}
-                      </button>
-                    ) : (
-                      <button type="button" disabled={busy} onClick={() => void saveOrder(false)} className="rounded-full bg-orange-600 px-4 py-2 text-xs font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto">
-                        {busy ? 'Submitting…' : 'Submit for Executive approval'}
-                      </button>
-                    )}
-                  </>
-                )}
+                <button type="button" onClick={() => { setShowForm(false); setFormStep('EDIT'); }} className="rounded-xl border px-4 py-2 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition w-full sm:w-auto">
+                  Cancel
+                </button>
+                <button type="submit" disabled={busy} className="rounded-xl bg-orange-600 px-5 py-2 text-xs font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto shadow-xs">
+                  {busy ? 'Submitting…' : 'Submit for Executive Review'}
+                </button>
               </div>
             </div>
           </form>

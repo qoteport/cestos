@@ -451,21 +451,10 @@ export default function FieldAdminPortalWorkspace() {
       const pRes = await apiFetch<any>(projUrl);
       const pItems = Array.isArray(pRes) ? pRes : pRes?.items || [];
       setProjects(pItems);
-      const activeProject = pItems.find((p: ProjectOption) => String(p.id) === selectedProjectId);
-      if (!activeProject) {
-        const firstProjectId = pItems[0]?.id ? String(pItems[0].id) : '';
-        setSelectedProjectId(firstProjectId);
-        setAssets([]); setEmployees([]); setWorkOrders([]); setPreventiveJobCards([]); setBreakdownJobCards([]); setMaintenanceAssessments([]); setActionTrackerRecords([]); setPmTrackerRecords([]); setEquipmentRegisterRecords([]); setFuelDeliveries([]); setFuelAllocations([]);
-        setProjectSites([]);
-        setIncidents([]); setNotifications([]); setDownloadRequests([]); setExpenses([]); setProjectMetrics({});
-        if (!firstProjectId) setBanner({ type: 'info', message: 'No assigned project sites are available for this account.' });
-        fieldAdminDataLoaded.current = true;
-        setLoading(false);
-        return;
-      }
-      const assetUrl = `/api/v1/projects/${activeProject.id}/assets`;
-      const empUrl = `/api/v1/projects/${activeProject.id}/employees`;
-      const woUrl = `/api/v1/maintenance/work-orders?project_id=${activeProject.id}`;
+      const activeProject = selectedProjectId ? pItems.find((p: ProjectOption) => String(p.id) === selectedProjectId) : null;
+      const assetUrl = activeProject ? `/api/v1/projects/${activeProject.id}/assets` : '/api/v1/assets?page_size=100';
+      const empUrl = activeProject ? `/api/v1/projects/${activeProject.id}/employees` : '/api/v1/employees?page_size=100';
+      const woUrl = activeProject ? `/api/v1/maintenance/work-orders?project_id=${activeProject.id}` : '/api/v1/maintenance/work-orders?page_size=100';
       const fuelDelivUrl = '/api/v1/field-portal/fuel-deliveries';
       const fuelAllocUrl = '/api/v1/field-portal/fuel-allocations';
       const sitesUrl = '/api/v1/field-portal/sites';
@@ -475,7 +464,7 @@ export default function FieldAdminPortalWorkspace() {
       const costUrl = '/api/v1/commercial/cost-entries';
       const projectMetricsUrl = '/api/v1/projects/field-admin-metrics';
 
-      const fpAssetUrl = `/api/v1/field-portal/equipment?project_id=${activeProject.id}`;
+      const fpAssetUrl = activeProject ? `/api/v1/field-portal/equipment?project_id=${activeProject.id}` : '/api/v1/field-portal/equipment';
       const allAssetsUrl = '/api/v1/assets?page_size=100';
       const allEmpUrl = '/api/v1/employees?page_size=100';
 
@@ -513,11 +502,11 @@ export default function FieldAdminPortalWorkspace() {
           setBanner({ type: 'error', message: err?.message || 'Could not load action tracker records.' });
           return [];
         }),
-        apiFetch<any>(`/api/v1/pm-tracker?project_id=${activeProject.id}`).catch((err: any) => {
+        apiFetch<any>(activeProject ? `/api/v1/pm-tracker?project_id=${activeProject.id}` : '/api/v1/pm-tracker?page_size=100').catch((err: any) => {
           setBanner({ type: 'error', message: err?.message || 'Could not load PM tracker records.' });
           return [];
         }),
-        apiFetch<any>(`/api/v1/equipment-register?project_id=${activeProject.id}`).catch((err: any) => {
+        apiFetch<any>(activeProject ? `/api/v1/equipment-register?project_id=${activeProject.id}` : '/api/v1/equipment-register?page_size=100').catch((err: any) => {
           setBanner({ type: 'error', message: err?.message || 'Could not load equipment register entries.' });
           return [];
         }),
@@ -613,8 +602,8 @@ export default function FieldAdminPortalWorkspace() {
   // ─── Filtered Data By Project ────────────────────────────────────────────────
 
   const filterByProj = <T extends Record<string, any>>(items: T[]): T[] => {
-    if (!selectedProjectId) return [];
-    return items.filter((item) => String(item.project_id) === selectedProjectId || String(item.projectId) === selectedProjectId);
+    if (!selectedProjectId) return items;
+    return items.filter((item) => String(item.project_id || item.projectId || item.assigned_project_id) === selectedProjectId);
   };
 
   const isWithinDateFilter = (dateInput: string | Date | undefined) => {
@@ -724,6 +713,7 @@ export default function FieldAdminPortalWorkspace() {
     })),
   ];
   const scopedFuelDeliveries = (rows: any[]) => rows.filter((row) => {
+    if (!selectedProjectId) return true;
     const rowProjectId = row.project_id || row.projectId || projectSites.find((site) => String(site.id) === String(row.site_location_id))?.project_id;
     return String(rowProjectId || '').toLowerCase() === String(selectedProjectId).toLowerCase();
   });
@@ -1864,10 +1854,14 @@ Signed: Field Operations Administration
                 onChange={(val) => setSelectedProjectId(val)}
                 disabled={!projects.length}
                 className="w-48 text-xs"
-                options={projects.map((p) => ({
-                  value: p.id,
-                  label: `${p.name} (${p.code || 'Site'})`,
-                }))}
+                options={[
+                  { value: '', label: 'All Assigned Projects / Sites' },
+                  ...projects.map((p) => ({
+                    value: p.id,
+                    label: `${p.name} (${p.code || 'Site'})`,
+                  })),
+                ]}
+                placeholder="All Assigned Projects / Sites"
               />
             </div>
 
@@ -1950,10 +1944,14 @@ Signed: Field Operations Administration
             onChange={(val) => setSelectedProjectId(val)}
             disabled={!projects.length}
             className="w-full text-xs"
-            options={projects.map((p) => ({
-              value: p.id,
-              label: `${p.name} (${p.code || 'Site'})`,
-            }))}
+            options={[
+              { value: '', label: 'All Assigned Projects / Sites' },
+              ...projects.map((p) => ({
+                value: p.id,
+                label: `${p.name} (${p.code || 'Site'})`,
+              })),
+            ]}
+            placeholder="All Assigned Projects / Sites"
           />
         </div>
 
