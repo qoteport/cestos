@@ -2296,10 +2296,6 @@ export default function FieldWorkbookWorkspace({
             </div>
           </div>
         )}
-        <p className="text-xs text-slate-500">
-          {sheet.cells.length} rows × {sheet.widths.length} columns · Suggestions follow the
-          first-row headings and allow custom values · Basic tables only, no formula calculation
-        </p>
       </fieldset>
     </section>
   );
