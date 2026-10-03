@@ -27,8 +27,10 @@ import {
   FileSpreadsheet,
   Info,
   Plus,
+  Pencil,
   Redo2,
   Save,
+  Trash2,
   Undo2,
   Upload,
 } from 'lucide-react';
@@ -182,6 +184,10 @@ export default function FieldWorkbookWorkspace({
   const [showToolbar, setShowToolbar] = useState(true);
   const [showFormulaBar, setShowFormulaBar] = useState(true);
   const [showSelectionInfo, setShowSelectionInfo] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; sheetIndex: number } | null>(null);
+  const [editingSheetIndex, setEditingSheetIndex] = useState<number | null>(null);
+  const [editingSheetName, setEditingSheetName] = useState('');
+  const [confirmDeleteSheet, setConfirmDeleteSheet] = useState<FieldSheet | null>(null);
   const bookRef = useRef(book);
   bookRef.current = book;
   const sheetRef = useRef(sheetIndex);
@@ -658,6 +664,28 @@ export default function FieldWorkbookWorkspace({
       return;
     }
     if (name !== sheet.name) changeSheet((s) => ({ ...s, name }));
+  }
+  function finishSheetRename(index: number) {
+    const name = editingSheetName.trim();
+    const targetSheet = book?.sheets[index];
+    if (!book || !targetSheet) return;
+    if (
+      !name ||
+      name.length > 31 ||
+      /[\\/?*\[\]:]/.test(name) ||
+      book.sheets.some((st, idx) => idx !== index && st.name.toLowerCase() === name.toLowerCase())
+    ) {
+      setError('Use a unique sheet name of 1–31 characters without \\ / ? * [ ] :');
+      setEditingSheetIndex(null);
+      return;
+    }
+    if (name !== targetSheet.name) {
+      commit({
+        ...book,
+        sheets: book.sheets.map((st, idx) => (idx === index ? { ...st, name } : st)),
+      });
+    }
+    setEditingSheetIndex(null);
   }
   async function readFile(file?: File) {
     if (!file) return;
@@ -1366,24 +1394,52 @@ export default function FieldWorkbookWorkspace({
           <div
             role="tablist"
             aria-label="Worksheets"
-            className="flex max-w-full gap-1 overflow-auto"
+            className="flex max-w-full items-center gap-1 overflow-auto"
           >
-            {book.sheets.map((s, i) => (
-              <button
-                key={s.id}
-                role="tab"
-                aria-selected={i === sheetIndex}
-                className={`${button} whitespace-nowrap ${i === sheetIndex ? '!border-emerald-600 !bg-emerald-50 !text-emerald-800' : ''}`}
-                onClick={() => {
-                  setSheetIndex(i);
-                  setAnchor({ r: 0, c: 0 });
-                  setEnd({ r: 0, c: 0 });
-                  lastEdit.current = '';
-                }}
-              >
-                {s.name}
-              </button>
-            ))}
+            {book.sheets.map((s, i) =>
+              editingSheetIndex === i ? (
+                <input
+                  key={s.id}
+                  autoFocus
+                  aria-label="Rename sheet"
+                  className="w-28 rounded-lg border-2 border-emerald-600 bg-white px-3 py-1 text-xs font-semibold text-slate-800 outline-none dark:bg-slate-900 dark:text-slate-100"
+                  value={editingSheetName}
+                  maxLength={31}
+                  onChange={(e) => setEditingSheetName(e.target.value)}
+                  onFocus={(e) => e.target.select()}
+                  onBlur={() => finishSheetRename(i)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') finishSheetRename(i);
+                    if (e.key === 'Escape') setEditingSheetIndex(null);
+                  }}
+                />
+              ) : (
+                <button
+                  key={s.id}
+                  role="tab"
+                  aria-selected={i === sheetIndex}
+                  title="Right click or double click to rename or delete sheet"
+                  className={`${button} whitespace-nowrap ${i === sheetIndex ? '!border-emerald-600 !bg-emerald-50 !text-emerald-800 dark:!bg-emerald-950/60 dark:!text-emerald-200' : ''}`}
+                  onClick={() => {
+                    setSheetIndex(i);
+                    setAnchor({ r: 0, c: 0 });
+                    setEnd({ r: 0, c: 0 });
+                    lastEdit.current = '';
+                  }}
+                  onDoubleClick={() => {
+                    setEditingSheetIndex(i);
+                    setEditingSheetName(s.name);
+                  }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setSheetIndex(i);
+                    setContextMenu({ x: e.clientX, y: e.clientY, sheetIndex: i });
+                  }}
+                >
+                  {s.name}
+                </button>
+              )
+            )}
           </div>
           <button
             aria-label="Add worksheet"
@@ -1401,35 +1457,85 @@ export default function FieldWorkbookWorkspace({
             <Plus size={16} />
             Sheet
           </button>
-          <label className="text-xs">
-            Sheet name{' '}
-            <input
-              aria-label="Sheet name"
-              className="ml-1 w-40 rounded border p-2 dark:bg-slate-900"
-              value={sheetName}
-              maxLength={31}
-              onChange={(e) => setSheetName(e.target.value)}
-              onBlur={renameSheet}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') renameSheet();
+        </div>
+
+        {contextMenu && (
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-transparent"
+              onClick={() => setContextMenu(null)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setContextMenu(null);
               }}
             />
-          </label>
-          <button
-            className={button}
-            disabled={book.sheets.length === 1}
-            onClick={() => {
-              if (window.confirm(`Delete “${sheet.name}” and all its cells?`)) {
-                commit({ ...book, sheets: book.sheets.filter((s) => s.id !== sheet.id) });
-                setSheetIndex(0);
-                setAnchor({ r: 0, c: 0 });
-                setEnd({ r: 0, c: 0 });
-              }
-            }}
-          >
-            Delete sheet
-          </button>
-        </div>
+            <div
+              style={{ top: contextMenu.y, left: contextMenu.x }}
+              className="fixed z-50 min-w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
+            >
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+                onClick={() => {
+                  const idx = contextMenu.sheetIndex;
+                  setContextMenu(null);
+                  setEditingSheetIndex(idx);
+                  setEditingSheetName(book.sheets[idx].name);
+                }}
+              >
+                <Pencil size={14} />
+                Rename
+              </button>
+              <button
+                type="button"
+                disabled={book.sheets.length === 1}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-40 dark:hover:bg-red-950/40"
+                onClick={() => {
+                  const target = book.sheets[contextMenu.sheetIndex];
+                  setContextMenu(null);
+                  setConfirmDeleteSheet(target);
+                }}
+              >
+                <Trash2 size={14} />
+                Delete sheet
+              </button>
+            </div>
+          </>
+        )}
+
+        {confirmDeleteSheet && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-xs">
+            <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+              <h4 className="text-base font-bold text-slate-900 dark:text-white">Delete worksheet?</h4>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                Are you sure you want to delete <strong className="font-semibold text-slate-900 dark:text-white">“{confirmDeleteSheet.name}”</strong>? All cells and data on this sheet will be lost.
+              </p>
+              <div className="mt-5 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  className={button}
+                  onClick={() => setConfirmDeleteSheet(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg bg-red-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-red-700"
+                  onClick={() => {
+                    const targetId = confirmDeleteSheet.id;
+                    commit({ ...book, sheets: book.sheets.filter((s) => s.id !== targetId) });
+                    setSheetIndex(0);
+                    setAnchor({ r: 0, c: 0 });
+                    setEnd({ r: 0, c: 0 });
+                    setConfirmDeleteSheet(null);
+                  }}
+                >
+                  Delete sheet
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="flex flex-wrap gap-2">
           <button
             className={button}
