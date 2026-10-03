@@ -83,6 +83,7 @@ const GridCell = memo(function GridCell({
   onSelect,
   onNavigate,
   onPaste,
+  onContextMenu,
 }: {
   value: string;
   r: number;
@@ -99,12 +100,17 @@ const GridCell = memo(function GridCell({
   onSelect: (r: number, c: number, extend: boolean) => void;
   onNavigate: (r: number, c: number, key: string, shift: boolean) => void;
   onPaste: (r: number, c: number, text: string) => void;
+  onContextMenu?: (r: number, c: number, event: React.MouseEvent) => void;
 }) {
   return (
     <td
       data-grid-cell={`${r}:${c}`}
       rowSpan={merge ? merge.er - merge.r + 1 : 1}
       colSpan={merge ? merge.ec - merge.c + 1 : 1}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        onContextMenu?.(r, c, event);
+      }}
       className={`relative border border-slate-200 p-0 dark:border-slate-700 ${selected ? 'bg-emerald-50 dark:bg-emerald-950' : header ? 'bg-slate-100 dark:bg-slate-800' : 'bg-white dark:bg-slate-900'} ${active ? 'outline outline-2 -outline-offset-2 outline-emerald-600' : ''}`}
     >
       <input
@@ -124,6 +130,10 @@ const GridCell = memo(function GridCell({
             event.preventDefault();
             onSelect(r, c, true);
           }
+        }}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          onContextMenu?.(r, c, event);
         }}
         onChange={(event) => onValue(r, c, event.target.value)}
         onKeyDown={(event) => {
@@ -190,6 +200,13 @@ export default function FieldWorkbookWorkspace({
   const [editingSheetName, setEditingSheetName] = useState('');
   const [confirmDeleteSheet, setConfirmDeleteSheet] = useState<FieldSheet | null>(null);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [gridContextMenu, setGridContextMenu] = useState<{
+    type: 'column' | 'row' | 'cell';
+    r?: number;
+    c?: number;
+    x: number;
+    y: number;
+  } | null>(null);
   const bookRef = useRef(book);
   bookRef.current = book;
   const sheetRef = useRef(sheetIndex);
@@ -1305,6 +1322,19 @@ export default function FieldWorkbookWorkspace({
                   <th
                     key={c}
                     className="relative border bg-slate-100 text-xs font-medium dark:border-slate-700 dark:bg-slate-800"
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      if (c < selection.c || c > selection.ec) {
+                        setAnchor({ r: 0, c });
+                        setEnd({ r: sheet.cells.length - 1, c });
+                      }
+                      setGridContextMenu({
+                        type: 'column',
+                        c,
+                        x: event.clientX,
+                        y: event.clientY,
+                      });
+                    }}
                   >
                     <button
                       className="w-full py-2"
@@ -1330,7 +1360,22 @@ export default function FieldWorkbookWorkspace({
             <tbody>
               {sheet.cells.map((row, r) => (
                 <tr key={r} style={{ height: sheet.heights[r] }}>
-                  <th className="sticky left-0 z-10 border bg-slate-100 text-xs font-normal dark:border-slate-700 dark:bg-slate-800">
+                  <th
+                    className="sticky left-0 z-10 border bg-slate-100 text-xs font-normal dark:border-slate-700 dark:bg-slate-800"
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      if (r < selection.r || r > selection.er) {
+                        setAnchor({ r, c: 0 });
+                        setEnd({ r, c: sheet.widths.length - 1 });
+                      }
+                      setGridContextMenu({
+                        type: 'row',
+                        r,
+                        x: event.clientX,
+                        y: event.clientY,
+                      });
+                    }}
+                  >
                     <button
                       className="h-full w-full py-2"
                       aria-label={`Select row ${r + 1}`}
@@ -1374,6 +1419,24 @@ export default function FieldWorkbookWorkspace({
                         onSelect={onSelect}
                         onNavigate={onNavigate}
                         onPaste={onPaste}
+                        onContextMenu={(r, c, event) => {
+                          if (
+                            r < selection.r ||
+                            r > selection.er ||
+                            c < selection.c ||
+                            c > selection.ec
+                          ) {
+                            setAnchor({ r, c });
+                            setEnd({ r, c });
+                          }
+                          setGridContextMenu({
+                            type: 'cell',
+                            r,
+                            c,
+                            x: event.clientX,
+                            y: event.clientY,
+                          });
+                        }}
                       />
                     );
                   })}
@@ -1537,6 +1600,360 @@ export default function FieldWorkbookWorkspace({
               </div>
             </div>
           </div>
+        )}
+
+        {gridContextMenu && (
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-transparent"
+              onClick={() => setGridContextMenu(null)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setGridContextMenu(null);
+              }}
+            />
+            <div
+              style={{
+                top: Math.min(gridContextMenu.y, typeof window !== 'undefined' ? window.innerHeight - 320 : gridContextMenu.y),
+                left: Math.min(gridContextMenu.x, typeof window !== 'undefined' ? window.innerWidth - 240 : gridContextMenu.x),
+              }}
+              className="fixed z-50 min-w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 text-xs font-medium text-slate-700 dark:text-slate-200"
+            >
+              {gridContextMenu.type === 'column' && (
+                <>
+                  <div className="px-3 py-1.5 font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[10px]">
+                    Column {columnName(selection.c)}{selection.c !== selection.ec ? `–${columnName(selection.ec)}` : ''}
+                  </div>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onClick={() => {
+                      setGridContextMenu(null);
+                      dimension('column', false);
+                    }}
+                  >
+                    <BetweenVerticalStart size={15} />
+                    Insert 1 column left
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onClick={() => {
+                      setGridContextMenu(null);
+                      dimension('column', false, true);
+                    }}
+                  >
+                    <BetweenVerticalEnd size={15} />
+                    Insert 1 column right
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                    onClick={() => {
+                      setGridContextMenu(null);
+                      if (window.confirm('Delete the selected columns and their contents?'))
+                        dimension('column', true);
+                    }}
+                  >
+                    <Columns2 size={15} />
+                    Delete column{selection.c !== selection.ec ? 's' : ''}
+                  </button>
+                  <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onClick={() => {
+                      setGridContextMenu(null);
+                      const val = window.prompt('Set column width (60–600 px):', String(width));
+                      if (val) {
+                        const size = Math.max(60, Math.min(600, Number(val) || 160));
+                        changeSheet((s) => ({
+                          ...s,
+                          widths: s.widths.map((w, colIdx) =>
+                            colIdx >= selection.c && colIdx <= selection.ec ? size : w
+                          ),
+                        }));
+                      }
+                    }}
+                  >
+                    Column width…
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onClick={() => {
+                      setGridContextMenu(null);
+                      changeSheet((s) => ({
+                        ...s,
+                        cells: s.cells.map((row) =>
+                          row.map((cell, c) => (c >= selection.c && c <= selection.ec ? '' : cell))
+                        ),
+                      }));
+                    }}
+                  >
+                    <Eraser size={15} />
+                    Clear contents
+                  </button>
+                </>
+              )}
+
+              {gridContextMenu.type === 'row' && (
+                <>
+                  <div className="px-3 py-1.5 font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[10px]">
+                    Row {selection.r + 1}{selection.r !== selection.er ? `–${selection.er + 1}` : ''}
+                  </div>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onClick={() => {
+                      setGridContextMenu(null);
+                      dimension('row', false);
+                    }}
+                  >
+                    <BetweenHorizontalStart size={15} />
+                    Insert 1 row above
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onClick={() => {
+                      setGridContextMenu(null);
+                      dimension('row', false, true);
+                    }}
+                  >
+                    <BetweenHorizontalEnd size={15} />
+                    Insert 1 row below
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                    onClick={() => {
+                      setGridContextMenu(null);
+                      if (window.confirm('Delete the selected rows and their contents?'))
+                        dimension('row', true);
+                    }}
+                  >
+                    <Rows2 size={15} />
+                    Delete row{selection.r !== selection.er ? 's' : ''}
+                  </button>
+                  <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onClick={() => {
+                      setGridContextMenu(null);
+                      const val = window.prompt('Set row height (26–300 px):', String(height));
+                      if (val) {
+                        const size = Math.max(26, Math.min(300, Number(val) || 34));
+                        changeSheet((s) => ({
+                          ...s,
+                          heights: s.heights.map((h, rIdx) =>
+                            rIdx >= selection.r && rIdx <= selection.er ? size : h
+                          ),
+                        }));
+                      }
+                    }}
+                  >
+                    Row height…
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onClick={() => {
+                      setGridContextMenu(null);
+                      changeSheet((s) => ({
+                        ...s,
+                        cells: s.cells.map((row, r) =>
+                          r >= selection.r && r <= selection.er ? row.map(() => '') : row
+                        ),
+                      }));
+                    }}
+                  >
+                    <Eraser size={15} />
+                    Clear contents
+                  </button>
+                </>
+              )}
+
+              {gridContextMenu.type === 'cell' && (
+                <>
+                  <div className="px-3 py-1.5 font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[10px]">
+                    Range {columnName(selection.c)}{selection.r + 1}
+                    {selection.er !== selection.r || selection.ec !== selection.c
+                      ? `:${columnName(selection.ec)}${selection.er + 1}`
+                      : ''}
+                  </div>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onClick={() => {
+                      setGridContextMenu(null);
+                      void navigator.clipboard
+                        .writeText(selectionText())
+                        .then(() => setNotice('Selection copied.'))
+                        .catch(() => setError('Clipboard access unavailable.'));
+                    }}
+                  >
+                    <ClipboardCopy size={15} />
+                    Copy selection
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onClick={() => {
+                      setGridContextMenu(null);
+                      changeSheet((s) => ({
+                        ...s,
+                        cells: s.cells.map((row, r) =>
+                          row.map((cell, c) =>
+                            r >= selection.r && r <= selection.er && c >= selection.c && c <= selection.ec
+                              ? ''
+                              : cell
+                          )
+                        ),
+                      }));
+                    }}
+                  >
+                    <Eraser size={15} />
+                    Clear contents
+                  </button>
+                  <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+                  {(selection.r !== selection.er || selection.c !== selection.ec) && (
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      onClick={() => {
+                        setGridContextMenu(null);
+                        changeSheet((s) => {
+                          const next = mergeCells(s, selection);
+                          setAnchor({ r: selection.r, c: selection.c });
+                          setEnd({ r: selection.r, c: selection.c });
+                          return next;
+                        });
+                      }}
+                    >
+                      <TableCellsMerge size={15} />
+                      Merge selected cells
+                    </button>
+                  )}
+                  {sheet.merges.some((m) => overlaps(m, selection)) && (
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      onClick={() => {
+                        setGridContextMenu(null);
+                        changeSheet((s) => ({
+                          ...s,
+                          merges: s.merges.filter((m) => !overlaps(m, selection)),
+                        }));
+                      }}
+                    >
+                      <TableCellsSplit size={15} />
+                      Unmerge cells
+                    </button>
+                  )}
+                  <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+                  <div className="flex items-center justify-between px-2 py-1">
+                    <button
+                      type="button"
+                      title="Bold"
+                      className={`p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 ${cellFormat(sheet, anchor.r, anchor.c).bold ? 'bg-emerald-100 text-emerald-800 font-bold' : ''}`}
+                      onClick={() => {
+                        changeSheet((s) => formatCells(s, selection, { bold: !cellFormat(sheet, anchor.r, anchor.c).bold }));
+                      }}
+                    >
+                      <Bold size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      title="Italic"
+                      className={`p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 ${cellFormat(sheet, anchor.r, anchor.c).italic ? 'bg-emerald-100 text-emerald-800' : ''}`}
+                      onClick={() => {
+                        changeSheet((s) => formatCells(s, selection, { italic: !cellFormat(sheet, anchor.r, anchor.c).italic }));
+                      }}
+                    >
+                      <Italic size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      title="Align left"
+                      className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+                      onClick={() => {
+                        changeSheet((s) => formatCells(s, selection, { align: 'left' }));
+                      }}
+                    >
+                      <AlignLeft size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      title="Align centre"
+                      className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+                      onClick={() => {
+                        changeSheet((s) => formatCells(s, selection, { align: 'center' }));
+                      }}
+                    >
+                      <AlignCenter size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      title="Align right"
+                      className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+                      onClick={() => {
+                        changeSheet((s) => formatCells(s, selection, { align: 'right' }));
+                      }}
+                    >
+                      <AlignRight size={15} />
+                    </button>
+                  </div>
+                  <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onClick={() => {
+                      setGridContextMenu(null);
+                      dimension('row', false);
+                    }}
+                  >
+                    <BetweenHorizontalStart size={15} />
+                    Insert row above
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onClick={() => {
+                      setGridContextMenu(null);
+                      dimension('column', false);
+                    }}
+                  >
+                    <BetweenVerticalStart size={15} />
+                    Insert column left
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                    onClick={() => {
+                      setGridContextMenu(null);
+                      if (window.confirm('Delete the selected rows?')) dimension('row', true);
+                    }}
+                  >
+                    <Rows2 size={15} />
+                    Delete row(s)
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                    onClick={() => {
+                      setGridContextMenu(null);
+                      if (window.confirm('Delete the selected columns?')) dimension('column', true);
+                    }}
+                  >
+                    <Columns2 size={15} />
+                    Delete column(s)
+                  </button>
+                </>
+              )}
+            </div>
+          </>
         )}
         <div className="flex flex-wrap gap-2">
           <button
