@@ -33,6 +33,7 @@ import {
   Trash2,
   Undo2,
   Upload,
+  X,
 } from 'lucide-react';
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import {
@@ -188,6 +189,7 @@ export default function FieldWorkbookWorkspace({
   const [editingSheetIndex, setEditingSheetIndex] = useState<number | null>(null);
   const [editingSheetName, setEditingSheetName] = useState('');
   const [confirmDeleteSheet, setConfirmDeleteSheet] = useState<FieldSheet | null>(null);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
   const bookRef = useRef(book);
   bookRef.current = book;
   const sheetRef = useRef(sheetIndex);
@@ -1554,38 +1556,113 @@ export default function FieldWorkbookWorkspace({
           >
             Duplicate sheet
           </button>
-          <select
-            aria-label="Add sheets from a template"
+          <button
+            type="button"
             className={button}
-            value=""
-            onChange={(event) => {
-              if (!event.target.value) return;
-              const template = newWorkbook(Number(event.target.value));
-              if (book.sheets.length + template.sheets.length > 30) {
-                setError('A workbook can contain up to 30 sheets.');
-                return;
-              }
-              const names = new Set(book.sheets.map((s) => s.name.toLowerCase()));
-              for (const s of template.sheets) {
-                const base = s.name;
-                let n = 2;
-                while (names.has(s.name.toLowerCase())) s.name = `${base.slice(0, 25)} (${n++})`;
-                names.add(s.name.toLowerCase());
-              }
-              commit({ ...book, sheets: [...book.sheets, ...template.sheets] });
-              setSheetIndex(book.sheets.length);
-              setAnchor({ r: 0, c: 0 });
-              setEnd({ r: 0, c: 0 });
-            }}
+            disabled={book.sheets.length >= 30}
+            onClick={() => setShowTemplateModal(true)}
           >
-            <option value="">Add template sheets…</option>
-            {workbookTemplates.map((t, i) => (
-              <option key={t.name} value={String(i)}>
-                {t.name}
-              </option>
-            ))}
-          </select>
+            <Plus size={16} />
+            Add template sheets…
+          </button>
         </div>
+
+        {showTemplateModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-xs">
+            <div className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                    <FileSpreadsheet size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                      Add template sheets
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Choose an operational template to append its pre-structured sheets to this workbook.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                  onClick={() => setShowTemplateModal(false)}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="grid max-h-[60vh] gap-3 overflow-y-auto p-6 sm:grid-cols-2">
+                {workbookTemplates.map((t, index) => {
+                  const sheetsCount = t.sheets.length;
+                  const sheetNames = t.sheets.map((s) => s[0]).join(', ');
+                  return (
+                    <div
+                      key={t.name}
+                      className="flex flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/50 p-4 transition-all hover:border-emerald-500 hover:bg-emerald-50/20 dark:border-slate-800 dark:bg-slate-800/40 dark:hover:border-emerald-600"
+                    >
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">{t.name}</h4>
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+                          {t.description}
+                        </p>
+                        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+                            {sheetsCount} {sheetsCount === 1 ? 'sheet' : 'sheets'}
+                          </span>
+                          <span className="truncate text-[11px] text-slate-500 dark:text-slate-400" title={sheetNames}>
+                            {sheetNames}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700 disabled:opacity-50"
+                        disabled={book.sheets.length + sheetsCount > 30}
+                        onClick={() => {
+                          const template = newWorkbook(index);
+                          if (book.sheets.length + template.sheets.length > 30) {
+                            setError('A workbook can contain up to 30 sheets.');
+                            return;
+                          }
+                          const names = new Set(book.sheets.map((s) => s.name.toLowerCase()));
+                          for (const s of template.sheets) {
+                            const base = s.name;
+                            let n = 2;
+                            while (names.has(s.name.toLowerCase())) s.name = `${base.slice(0, 25)} (${n++})`;
+                            names.add(s.name.toLowerCase());
+                          }
+                          commit({ ...book, sheets: [...book.sheets, ...template.sheets] });
+                          setSheetIndex(book.sheets.length);
+                          setAnchor({ r: 0, c: 0 });
+                          setEnd({ r: 0, c: 0 });
+                          setShowTemplateModal(false);
+                        }}
+                      >
+                        <Plus size={14} />
+                        Add sheets
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center justify-between border-t border-slate-200 px-6 py-3 dark:border-slate-800">
+                <span className="text-xs text-slate-500">
+                  Current sheets: {book.sheets.length} / 30 max
+                </span>
+                <button
+                  type="button"
+                  className={button}
+                  onClick={() => setShowTemplateModal(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <p className="text-xs text-slate-500">
           {sheet.cells.length} rows × {sheet.widths.length} columns · Suggestions follow the
           first-row headings and allow custom values · Basic tables only, no formula calculation
