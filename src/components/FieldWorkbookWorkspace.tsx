@@ -19,6 +19,7 @@ import {
   TableCellsMerge,
   TableCellsSplit,
   ClipboardCopy,
+  Copy,
   Eraser,
   BookmarkPlus,
   Clock3,
@@ -1221,6 +1222,36 @@ export default function FieldWorkbookWorkspace({
             <div className="flex items-center gap-1">
               <button
                 type="button"
+                title="Duplicate sheet"
+                aria-label="Duplicate sheet"
+                className={iconButton}
+                disabled={book.sheets.length >= 30}
+                onClick={() => {
+                  const duplicate = structuredClone(sheet);
+                  duplicate.id = crypto.randomUUID();
+                  let n = 2;
+                  while (book.sheets.some((s) => s.name === `${sheet.name.slice(0, 25)} (${n})`)) n++;
+                  duplicate.name = `${sheet.name.slice(0, 25)} (${n})`;
+                  commit({ ...book, sheets: [...book.sheets, duplicate] });
+                  setSheetIndex(book.sheets.length);
+                  setAnchor({ r: 0, c: 0 });
+                  setEnd({ r: 0, c: 0 });
+                }}
+              >
+                <Copy size={18} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                title="Add template sheets…"
+                aria-label="Add template sheets"
+                className={iconButton}
+                disabled={book.sheets.length >= 30}
+                onClick={() => setShowTemplateModal(true)}
+              >
+                <FileSpreadsheet size={18} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
                 title="Save as template"
                 aria-label="Save as template"
                 className={iconButton}
@@ -2130,34 +2161,6 @@ export default function FieldWorkbookWorkspace({
             </div>
           </div>
         )}
-        <div className="flex flex-wrap gap-2">
-          <button
-            className={button}
-            disabled={book.sheets.length >= 30}
-            onClick={() => {
-              const duplicate = structuredClone(sheet);
-              duplicate.id = crypto.randomUUID();
-              let n = 2;
-              while (book.sheets.some((s) => s.name === `${sheet.name.slice(0, 25)} (${n})`)) n++;
-              duplicate.name = `${sheet.name.slice(0, 25)} (${n})`;
-              commit({ ...book, sheets: [...book.sheets, duplicate] });
-              setSheetIndex(book.sheets.length);
-              setAnchor({ r: 0, c: 0 });
-              setEnd({ r: 0, c: 0 });
-            }}
-          >
-            Duplicate sheet
-          </button>
-          <button
-            type="button"
-            className={button}
-            disabled={book.sheets.length >= 30}
-            onClick={() => setShowTemplateModal(true)}
-          >
-            <Plus size={16} />
-            Add template sheets…
-          </button>
-        </div>
 
         {showTemplateModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-xs">
