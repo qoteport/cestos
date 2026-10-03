@@ -1669,7 +1669,7 @@ export default function FieldWorkbookWorkspace({
               </datalist>
             )
         )}
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
+        <div className="sticky bottom-0 z-30 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white/95 p-2 backdrop-blur-md shadow-lg dark:border-slate-700 dark:bg-slate-900/95">
           <div
             role="tablist"
             aria-label="Worksheets"
