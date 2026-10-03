@@ -21,8 +21,11 @@ import {
   Eraser,
   BookmarkPlus,
   Clock3,
+  ChevronDown,
+  ChevronUp,
   Download,
   FileSpreadsheet,
+  Info,
   Plus,
   Redo2,
   Save,
@@ -176,6 +179,9 @@ export default function FieldWorkbookWorkspace({
   const [width, setWidth] = useState(160);
   const [height, setHeight] = useState(34);
   const [showHistory, setShowHistory] = useState(false);
+  const [showToolbar, setShowToolbar] = useState(true);
+  const [showFormulaBar, setShowFormulaBar] = useState(true);
+  const [showSelectionInfo, setShowSelectionInfo] = useState(false);
   const bookRef = useRef(book);
   bookRef.current = book;
   const sheetRef = useRef(sheetIndex);
@@ -845,228 +851,277 @@ export default function FieldWorkbookWorkspace({
 
       {feedback}
       <fieldset disabled={busy} className="min-w-0 space-y-3">
-        <div
-          className="flex items-center gap-1 rounded-xl border bg-white p-2 dark:border-slate-700 dark:bg-slate-900"
-          role="group"
-          aria-label="Text formatting"
-        >
-          {[
-            {
-              label: 'Bold',
-              Icon: Bold,
-              active: Boolean(cellFormat(sheet, anchor.r, anchor.c).bold),
-              format: { bold: !cellFormat(sheet, anchor.r, anchor.c).bold },
-            },
-            {
-              label: 'Italic',
-              Icon: Italic,
-              active: Boolean(cellFormat(sheet, anchor.r, anchor.c).italic),
-              format: { italic: !cellFormat(sheet, anchor.r, anchor.c).italic },
-            },
-            ...(
-              [
-                { label: 'Align left', Icon: AlignLeft, value: 'left' },
-                { label: 'Align centre', Icon: AlignCenter, value: 'center' },
-                { label: 'Align right', Icon: AlignRight, value: 'right' },
-              ] as const
-            ).map((item) => ({
-              ...item,
-              active: cellFormat(sheet, anchor.r, anchor.c).align === item.value,
-              format: { align: item.value },
-            })),
-          ].map(({ label, Icon, active, format }) => (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2 dark:border-slate-800">
+          <div className="flex flex-wrap items-center gap-2">
             <button
-              key={label}
               type="button"
-              title={label}
-              aria-label={label}
-              aria-pressed={active}
-              className={`${iconButton} ${active ? '!border-emerald-600 !bg-emerald-50 !text-emerald-800 dark:!bg-emerald-950 dark:!text-emerald-200' : ''}`}
-              onClick={() => changeSheet((s) => formatCells(s, selection, format))}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors ${
+                showToolbar
+                  ? 'bg-slate-100 border-slate-300 text-slate-800 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'
+              }`}
+              onClick={() => setShowToolbar(!showToolbar)}
             >
-              <Icon size={18} aria-hidden="true" />
+              {showToolbar ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              <span>Toolbar</span>
             </button>
-          ))}
+            <button
+              type="button"
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors ${
+                showFormulaBar
+                  ? 'bg-slate-100 border-slate-300 text-slate-800 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'
+              }`}
+              onClick={() => setShowFormulaBar(!showFormulaBar)}
+            >
+              {showFormulaBar ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              <span>Cell value</span>
+            </button>
+            <button
+              type="button"
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors ${
+                showSelectionInfo
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-200'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'
+              }`}
+              onClick={() => setShowSelectionInfo(!showSelectionInfo)}
+            >
+              <Info size={14} />
+              <span>Selection details ({columnName(selection.c)}{selection.r + 1})</span>
+              {showSelectionInfo ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
-          <button
-            className={button}
-            disabled={!undo.length}
-            aria-label="Undo"
-            onClick={() => undoRedo(false)}
-          >
-            <Undo2 size={16} />
-          </button>
-          <button
-            className={button}
-            disabled={!redo.length}
-            aria-label="Redo"
-            onClick={() => undoRedo(true)}
-          >
-            <Redo2 size={16} />
-          </button>
-          <button
-            type="button"
-            title="Insert row above"
-            aria-label="Insert row above"
-            className={iconButton}
-            onClick={() => dimension('row', false)}
-          >
-            <BetweenHorizontalStart size={18} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            title="Add row below"
-            aria-label="Add row below"
-            className={iconButton}
-            onClick={() => dimension('row', false, true)}
-          >
-            <BetweenHorizontalEnd size={18} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            title="Insert column left"
-            aria-label="Insert column left"
-            className={iconButton}
-            onClick={() => dimension('column', false)}
-          >
-            <BetweenVerticalStart size={18} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            title="Add column right"
-            aria-label="Add column right"
-            className={iconButton}
-            onClick={() => dimension('column', false, true)}
-          >
-            <BetweenVerticalEnd size={18} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            title="Delete row"
-            aria-label="Delete row"
-            className={iconButton}
-            onClick={() => {
-              if (window.confirm('Delete the selected rows and their contents?'))
-                dimension('row', true);
-            }}
-          >
-            <span className="relative" aria-hidden="true">
-              <Rows2 size={18} />
-              <Minus
-                size={10}
-                strokeWidth={3}
-                className="absolute -bottom-1 -right-1 rounded-full bg-white text-red-600 dark:bg-slate-800"
-              />
-            </span>
-          </button>
-          <button
-            type="button"
-            title="Delete column"
-            aria-label="Delete column"
-            className={iconButton}
-            onClick={() => {
-              if (window.confirm('Delete the selected columns and their contents?'))
-                dimension('column', true);
-            }}
-          >
-            <span className="relative" aria-hidden="true">
-              <Columns2 size={18} />
-              <Minus
-                size={10}
-                strokeWidth={3}
-                className="absolute -bottom-1 -right-1 rounded-full bg-white text-red-600 dark:bg-slate-800"
-              />
-            </span>
-          </button>
-          <button
-            type="button"
-            title="Merge selection"
-            aria-label="Merge selection"
-            className={iconButton}
-            onClick={() =>
-              changeSheet((s) => {
-                const next = mergeCells(s, selection);
-                setAnchor({ r: selection.r, c: selection.c });
-                setEnd({ r: selection.r, c: selection.c });
-                return next;
-              })
-            }
-          >
-            <TableCellsMerge size={18} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            title="Unmerge"
-            aria-label="Unmerge"
-            className={iconButton}
-            onClick={() =>
-              changeSheet((s) => ({
-                ...s,
-                merges: s.merges.filter((m) => !overlaps(m, selection)),
-              }))
-            }
-          >
-            <TableCellsSplit size={18} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            title="Copy selection"
-            aria-label="Copy selection"
-            className={iconButton}
-            onClick={() => {
-              void navigator.clipboard
-                .writeText(selectionText())
-                .then(() => setNotice('Selection copied.'))
-                .catch(() =>
-                  setError('Clipboard access is unavailable. Use Ctrl+C on a selected range.')
-                );
-            }}
-          >
-            <ClipboardCopy size={18} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            title="Clear selection"
-            aria-label="Clear selection"
-            className={iconButton}
-            onClick={() =>
-              changeSheet((s) => ({
-                ...s,
-                cells: s.cells.map((row, r) =>
-                  row.map((cell, c) =>
-                    r >= selection.r && r <= selection.er && c >= selection.c && c <= selection.ec
-                      ? ''
-                      : cell
-                  )
-                ),
-              }))
-            }
-          >
-            <Eraser size={18} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            title="Save as template"
-            aria-label="Save as template"
-            className={iconButton}
-            onClick={() => {
-              setTemplateName(`${book.name} template`);
-              setTemplatePicker(!templatePicker);
-            }}
-          >
-            <BookmarkPlus size={18} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            title="History"
-            aria-label="History"
-            className={iconButton}
-            onClick={() => setShowHistory(!showHistory)}
-          >
-            <Clock3 size={18} aria-hidden="true" />
-          </button>
-        </div>
+
+        {showToolbar && (
+          <div className="flex flex-wrap items-center gap-2">
+            <div
+              className="flex items-center gap-1 rounded-xl border bg-white p-2 dark:border-slate-700 dark:bg-slate-900"
+              role="group"
+              aria-label="Text formatting"
+            >
+              {[
+                {
+                  label: 'Bold',
+                  Icon: Bold,
+                  active: Boolean(cellFormat(sheet, anchor.r, anchor.c).bold),
+                  format: { bold: !cellFormat(sheet, anchor.r, anchor.c).bold },
+                },
+                {
+                  label: 'Italic',
+                  Icon: Italic,
+                  active: Boolean(cellFormat(sheet, anchor.r, anchor.c).italic),
+                  format: { italic: !cellFormat(sheet, anchor.r, anchor.c).italic },
+                },
+                ...(
+                  [
+                    { label: 'Align left', Icon: AlignLeft, value: 'left' },
+                    { label: 'Align centre', Icon: AlignCenter, value: 'center' },
+                    { label: 'Align right', Icon: AlignRight, value: 'right' },
+                  ] as const
+                ).map((item) => ({
+                  ...item,
+                  active: cellFormat(sheet, anchor.r, anchor.c).align === item.value,
+                  format: { align: item.value },
+                })),
+              ].map(({ label, Icon, active, format }) => (
+                <button
+                  key={label}
+                  type="button"
+                  title={label}
+                  aria-label={label}
+                  aria-pressed={active}
+                  className={`${iconButton} ${active ? '!border-emerald-600 !bg-emerald-50 !text-emerald-800 dark:!bg-emerald-950 dark:!text-emerald-200' : ''}`}
+                  onClick={() => changeSheet((s) => formatCells(s, selection, format))}
+                >
+                  <Icon size={18} aria-hidden="true" />
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
+              <button
+                className={button}
+                disabled={!undo.length}
+                aria-label="Undo"
+                onClick={() => undoRedo(false)}
+              >
+                <Undo2 size={16} />
+              </button>
+              <button
+                className={button}
+                disabled={!redo.length}
+                aria-label="Redo"
+                onClick={() => undoRedo(true)}
+              >
+                <Redo2 size={16} />
+              </button>
+              <button
+                type="button"
+                title="Insert row above"
+                aria-label="Insert row above"
+                className={iconButton}
+                onClick={() => dimension('row', false)}
+              >
+                <BetweenHorizontalStart size={18} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                title="Add row below"
+                aria-label="Add row below"
+                className={iconButton}
+                onClick={() => dimension('row', false, true)}
+              >
+                <BetweenHorizontalEnd size={18} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                title="Insert column left"
+                aria-label="Insert column left"
+                className={iconButton}
+                onClick={() => dimension('column', false)}
+              >
+                <BetweenVerticalStart size={18} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                title="Add column right"
+                aria-label="Add column right"
+                className={iconButton}
+                onClick={() => dimension('column', false, true)}
+              >
+                <BetweenVerticalEnd size={18} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                title="Delete row"
+                aria-label="Delete row"
+                className={iconButton}
+                onClick={() => {
+                  if (window.confirm('Delete the selected rows and their contents?'))
+                    dimension('row', true);
+                }}
+              >
+                <span className="relative" aria-hidden="true">
+                  <Rows2 size={18} />
+                  <Minus
+                    size={10}
+                    strokeWidth={3}
+                    className="absolute -bottom-1 -right-1 rounded-full bg-white text-red-600 dark:bg-slate-800"
+                  />
+                </span>
+              </button>
+              <button
+                type="button"
+                title="Delete column"
+                aria-label="Delete column"
+                className={iconButton}
+                onClick={() => {
+                  if (window.confirm('Delete the selected columns and their contents?'))
+                    dimension('column', true);
+                }}
+              >
+                <span className="relative" aria-hidden="true">
+                  <Columns2 size={18} />
+                  <Minus
+                    size={10}
+                    strokeWidth={3}
+                    className="absolute -bottom-1 -right-1 rounded-full bg-white text-red-600 dark:bg-slate-800"
+                  />
+                </span>
+              </button>
+              <button
+                type="button"
+                title="Merge selection"
+                aria-label="Merge selection"
+                className={iconButton}
+                onClick={() =>
+                  changeSheet((s) => {
+                    const next = mergeCells(s, selection);
+                    setAnchor({ r: selection.r, c: selection.c });
+                    setEnd({ r: selection.r, c: selection.c });
+                    return next;
+                  })
+                }
+              >
+                <TableCellsMerge size={18} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                title="Unmerge"
+                aria-label="Unmerge"
+                className={iconButton}
+                onClick={() =>
+                  changeSheet((s) => ({
+                    ...s,
+                    merges: s.merges.filter((m) => !overlaps(m, selection)),
+                  }))
+                }
+              >
+                <TableCellsSplit size={18} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                title="Copy selection"
+                aria-label="Copy selection"
+                className={iconButton}
+                onClick={() => {
+                  void navigator.clipboard
+                    .writeText(selectionText())
+                    .then(() => setNotice('Selection copied.'))
+                    .catch(() =>
+                      setError('Clipboard access is unavailable. Use Ctrl+C on a selected range.')
+                    );
+                }}
+              >
+                <ClipboardCopy size={18} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                title="Clear selection"
+                aria-label="Clear selection"
+                className={iconButton}
+                onClick={() =>
+                  changeSheet((s) => ({
+                    ...s,
+                    cells: s.cells.map((row, r) =>
+                      row.map((cell, c) =>
+                        r >= selection.r &&
+                        r <= selection.er &&
+                        c >= selection.c &&
+                        c <= selection.ec
+                          ? ''
+                          : cell
+                      )
+                    ),
+                  }))
+                }
+              >
+                <Eraser size={18} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                title="Save as template"
+                aria-label="Save as template"
+                className={iconButton}
+                onClick={() => {
+                  setTemplateName(`${book.name} template`);
+                  setTemplatePicker(!templatePicker);
+                }}
+              >
+                <BookmarkPlus size={18} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                title="History"
+                aria-label="History"
+                className={iconButton}
+                onClick={() => setShowHistory(!showHistory)}
+              >
+                <Clock3 size={18} aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        )}
         {templatePicker && (
           <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-4 dark:bg-slate-900">
             <input
@@ -1112,78 +1167,82 @@ export default function FieldWorkbookWorkspace({
             )}
           </div>
         )}
-        <div className="flex flex-wrap items-center gap-3 text-xs">
-          <span className="rounded border bg-white px-3 py-2 font-mono dark:bg-slate-900">
-            {columnName(selection.c)}
-            {selection.r + 1}
-            {selection.er !== selection.r || selection.ec !== selection.c
-              ? `:${columnName(selection.ec)}${selection.er + 1}`
-              : ''}
-          </span>
-          <label>
-            Column width{' '}
-            <input
-              aria-label="Column width"
-              type="number"
-              min={60}
-              max={600}
-              value={width}
-              className="ml-1 w-20 rounded border p-1 dark:bg-slate-900"
-              onChange={(e) => setWidth(Number(e.target.value))}
-              onBlur={() => {
-                const size = Math.max(60, Math.min(600, width || 160));
-                changeSheet((s) => ({
-                  ...s,
-                  widths: s.widths.map((w, c) =>
-                    c >= selection.c && c <= selection.ec ? size : w
-                  ),
-                }));
-              }}
+        {showSelectionInfo && (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-slate-50 p-2.5 text-xs dark:bg-slate-800/50">
+            <span className="rounded border bg-white px-3 py-2 font-mono dark:bg-slate-900">
+              {columnName(selection.c)}
+              {selection.r + 1}
+              {selection.er !== selection.r || selection.ec !== selection.c
+                ? `:${columnName(selection.ec)}${selection.er + 1}`
+                : ''}
+            </span>
+            <label>
+              Column width{' '}
+              <input
+                aria-label="Column width"
+                type="number"
+                min={60}
+                max={600}
+                value={width}
+                className="ml-1 w-20 rounded border p-1 dark:bg-slate-900"
+                onChange={(e) => setWidth(Number(e.target.value))}
+                onBlur={() => {
+                  const size = Math.max(60, Math.min(600, width || 160));
+                  changeSheet((s) => ({
+                    ...s,
+                    widths: s.widths.map((w, c) =>
+                      c >= selection.c && c <= selection.ec ? size : w
+                    ),
+                  }));
+                }}
+              />
+            </label>
+            <label>
+              Row height{' '}
+              <input
+                aria-label="Row height"
+                type="number"
+                min={26}
+                max={300}
+                value={height}
+                className="ml-1 w-20 rounded border p-1 dark:bg-slate-900"
+                onChange={(e) => setHeight(Number(e.target.value))}
+                onBlur={() => {
+                  const size = Math.max(26, Math.min(300, height || 34));
+                  changeSheet((s) => ({
+                    ...s,
+                    heights: s.heights.map((h, r) =>
+                      r >= selection.r && r <= selection.er ? size : h
+                    ),
+                  }));
+                }}
+              />
+            </label>
+            <p className="text-slate-500">
+              Drag across cells or row/column headings to select · Shift-click to extend · Tab / Enter
+              to move · Alt + arrows to navigate · Paste tables from Excel
+            </p>
+          </div>
+        )}
+        {showFormulaBar && (
+          <div className="flex items-start gap-3 rounded-lg border bg-white px-3 py-2 dark:bg-slate-900">
+            <label
+              htmlFor="workbook-cell-value"
+              className="shrink-0 whitespace-nowrap py-1 text-sm font-semibold leading-6 text-slate-500"
+            >
+              Cell value
+            </label>
+            <textarea
+              id="workbook-cell-value"
+              rows={1}
+              aria-label="Selected cell value"
+              className="block min-h-8 min-w-0 flex-1 resize-y border-0 bg-transparent px-0 py-1 text-sm leading-6 outline-none focus:ring-0"
+              value={sheet.cells[anchor.r]?.[anchor.c] || ''}
+              maxLength={32767}
+              onChange={(e) => onValue(anchor.r, anchor.c, e.target.value)}
             />
-          </label>
-          <label>
-            Row height{' '}
-            <input
-              aria-label="Row height"
-              type="number"
-              min={26}
-              max={300}
-              value={height}
-              className="ml-1 w-20 rounded border p-1 dark:bg-slate-900"
-              onChange={(e) => setHeight(Number(e.target.value))}
-              onBlur={() => {
-                const size = Math.max(26, Math.min(300, height || 34));
-                changeSheet((s) => ({
-                  ...s,
-                  heights: s.heights.map((h, r) =>
-                    r >= selection.r && r <= selection.er ? size : h
-                  ),
-                }));
-              }}
-            />
-          </label>
-          <p className="text-slate-500">
-            Drag across cells or row/column headings to select · Shift-click to extend · Tab / Enter
-            to move · Alt + arrows to navigate · Paste tables from Excel
-          </p>
-        </div>
-        <div className="flex items-start gap-3 rounded-lg border bg-white px-3 py-2 dark:bg-slate-900">
-          <label
-            htmlFor="workbook-cell-value"
-            className="shrink-0 whitespace-nowrap py-1 text-sm font-semibold leading-6 text-slate-500"
-          >
-            Cell value
-          </label>
-          <textarea
-            id="workbook-cell-value"
-            rows={1}
-            aria-label="Selected cell value"
-            className="block min-h-8 min-w-0 flex-1 resize-y border-0 bg-transparent px-0 py-1 text-sm leading-6 outline-none focus:ring-0"
-            value={sheet.cells[anchor.r]?.[anchor.c] || ''}
-            maxLength={32767}
-            onChange={(e) => onValue(anchor.r, anchor.c, e.target.value)}
-          />
-        </div>
+          </div>
+        )}
         <div
           ref={gridRef}
           onPointerDown={beginSelection}

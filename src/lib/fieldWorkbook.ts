@@ -43,7 +43,16 @@ export const workbookTemplates: {
   description: string;
   sheets: [string, string[]][];
 }[] = [
-  { name: 'Daily Fuel Consumption Sheet', description: 'Daily fuel issues, meter readings, receivers and acknowledgements.', sheets: [['Daily fuel consumption', ['Date', 'Time', 'Equipment', 'Quantity (Lt)', 'Km / Hrs', 'Receivers name', 'Signature']]] },
+  {
+    name: 'Daily Fuel Consumption Sheet',
+    description: 'Daily fuel issues, meter readings, receivers and acknowledgements.',
+    sheets: [
+      [
+        'Daily fuel consumption',
+        ['Date', 'Time', 'Equipment', 'Quantity (Lt)', 'Km / Hrs', 'Receivers name', 'Signature'],
+      ],
+    ],
+  },
   {
     name: 'Breakdown / Daily Repair Job Card',
     description: 'Failures, repairs, parts and labour.',

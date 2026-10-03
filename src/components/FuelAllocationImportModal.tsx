@@ -4,61 +4,621 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, Trash2, Upload, X } from 'lucide-react';
 import { apiFetch, ApiError } from '@/lib/api';
-import { fuelDate, fuelTime, matchFuelAsset, normalizeFuelName, readFuelImport, type FuelImportRow, type FuelImportSheet } from '@/lib/fuelImport';
+import {
+  fuelDate,
+  fuelTime,
+  matchFuelAsset,
+  normalizeFuelName,
+  readFuelImport,
+  type FuelImportRow,
+  type FuelImportSheet,
+} from '@/lib/fuelImport';
 import SearchableSelect from './SearchableSelect';
 
 type Row = FuelImportRow & { key: string; assetId: string; savedId?: string };
-const today = () => {const date=new Date();return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;};
-const blank = (): Row => ({key:crypto.randomUUID(),date:today(),time:new Date().toTimeString().slice(0,5),equipment:'',quantity:'',meter:'',receiver:'',signature:'',assetId:''});
-const inputClass='w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800';
-export default function FuelAllocationImportModal({projects,assets,deliveries,initialProjectId,onClose,onSaved}: {projects:any[];assets:any[];deliveries:any[];initialProjectId?:string;onClose:()=>void;onSaved:(record:any)=>void}) {
- const [projectId,setProjectId]=useState(initialProjectId&&initialProjectId!=='ALL'?initialProjectId:'');
- const [siteId,setSiteId]=useState('');const [sites,setSites]=useState<any[]>([]);const [deliveryId,setDeliveryId]=useState('');
- const [rows,setRows]=useState<Row[]>([blank()]);const [sheets,setSheets]=useState<FuelImportSheet[]>([]);const [sheetIndex,setSheetIndex]=useState(0);
- const [file,setFile]=useState<File|null>(null);const [ready,setReady]=useState(false);const [busy,setBusy]=useState(false);const [siteLoading,setSiteLoading]=useState(false);
- const [error,setError]=useState('');const [notice,setNotice]=useState('');const [progress,setProgress]=useState('');
- const sourceIds=useRef<string[]>([]);const saved=useRef(new Map<string,string>());const uncertain=useRef(new Set<string>());const batch=useRef(crypto.randomUUID());
- const savedCount=rows.filter(row=>row.savedId).length;const locked=savedCount>0||uncertain.current.size>0;
- useEffect(()=>{let active=true;if(!projectId){setSites([]);return;}setSites([]);setSiteLoading(true);apiFetch<any>(`/api/v1/projects/${encodeURIComponent(projectId)}/sites`).then(result=>{if(active)setSites((Array.isArray(result)?result:result.items||[]).filter((s:any)=>s.is_active!==false));}).catch(e=>{if(active){setSites([]);setError(e.message||'Could not load project sites.');}}).finally(()=>{if(active)setSiteLoading(false);});return()=>{active=false;};},[projectId]);
- useEffect(()=>{const guard=(e:BeforeUnloadEvent)=>{if(busy||rows.some(r=>!r.savedId&&(r.equipment||r.quantity))){e.preventDefault();}};window.addEventListener('beforeunload',guard);return()=>window.removeEventListener('beforeunload',guard);},[busy,rows]);
- const assetOptions=assets.map(a=>({value:String(a.id),label:`${a.name||a.asset_name||'Asset'} (${a.asset_number||a.unit_number||a.code||'Unit'})`}));
- const deliveryOptions=deliveries.filter(d=>!projectId||String(d.project_id)===projectId).map(d=>({value:String(d.id),label:`${d.supplier||'Bulk Fuel Delivery'} | ${d.quantity_litres} L (${d.fuel_type||'DIESEL'})`,sublabel:`Date: ${d.delivered_at?.slice(0,10)||d.created_at?.slice(0,10)||''} · Ref #: ${d.reference_number||'None'}`}));
- function selectSheet(index:number,source?:FuelImportSheet[]) {const item=(source||sheets)[index];setSheetIndex(index);setRows(item.rows.map(row=>({...row,key:crypto.randomUUID(),assetId:matchFuelAsset(row.equipment,assets).id})));}
- async function upload(source?:File){if(!source)return;setBusy(true);setError('');try{const matches=await readFuelImport(source);setSheets(matches);setFile(source);sourceIds.current=[];selectSheet(0,matches);setNotice('Review every row and equipment match before logging. Dates written as day/month/year are interpreted in that order.');}catch(e){setError(e instanceof Error?e.message:'Could not read file.');}finally{setBusy(false);}}
- function update(key:string,field:keyof Row,value:string){setRows(current=>current.map(row=>row.key===key?{...row,[field]:value}:row));}
- function match(key:string,id:string){const row=rows.find(r=>r.key===key);const name=normalizeFuelName(row?.equipment||'');setRows(current=>current.map(r=>!r.savedId&&(r.key===key||(name&&normalizeFuelName(r.equipment)===name))?{...r,assetId:id}:r));}
- function close(){if(busy)return;if(rows.some(row=>!row.savedId&&(row.equipment||row.quantity))&&!window.confirm('Close and discard the remaining unlogged rows?'))return;onClose();}
- async function save(){
-  setError('');if(!projectId||!siteId){setError('Select the project and project site.');return;}if(!rows.length){setError('Add at least one fuel entry.');return;}
-  for(const [index,row] of rows.entries()){if(row.savedId)continue;
-   const date=fuelDate(row.date),time=fuelTime(row.time);const stamp=new Date(`${date}T${time}`);
-   if(!row.assetId||!assets.some(a=>String(a.id)===row.assetId)){setError(`Row ${index+1}: choose the registered equipment.`);return;}
-   const parts=date.split('-').map(Number);const calendar=new Date(parts[0],parts[1]-1,parts[2]);
-   if(calendar.getFullYear()!==parts[0]||calendar.getMonth()!==parts[1]-1||calendar.getDate()!==parts[2]||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^\d{2}:\d{2}$/.test(time)||Number.isNaN(stamp.getTime())||stamp.getTime()>Date.now()+600000){setError(`Row ${index+1}: enter a valid date and time that is not in the future.`);return;}
-   if(!/^\d+(?:\.\d{1,3})?$/.test(row.quantity)||Number(row.quantity)<=0){setError(`Row ${index+1}: quantity must be greater than zero, with up to 3 decimal places.`);return;}
+const today = () => {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+const blank = (): Row => ({
+  key: crypto.randomUUID(),
+  date: today(),
+  time: new Date().toTimeString().slice(0, 5),
+  equipment: '',
+  quantity: '',
+  meter: '',
+  receiver: '',
+  signature: '',
+  assetId: '',
+});
+const inputClass =
+  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800';
+export default function FuelAllocationImportModal({
+  projects,
+  assets,
+  deliveries,
+  initialProjectId,
+  onClose,
+  onSaved,
+}: {
+  projects: any[];
+  assets: any[];
+  deliveries: any[];
+  initialProjectId?: string;
+  onClose: () => void;
+  onSaved: (record: any) => void;
+}) {
+  const [projectId, setProjectId] = useState(
+    initialProjectId && initialProjectId !== 'ALL' ? initialProjectId : ''
+  );
+  const [siteId, setSiteId] = useState('');
+  const [sites, setSites] = useState<any[]>([]);
+  const [deliveryId, setDeliveryId] = useState('');
+  const [rows, setRows] = useState<Row[]>([blank()]);
+  const [sheets, setSheets] = useState<FuelImportSheet[]>([]);
+  const [sheetIndex, setSheetIndex] = useState(0);
+  const [file, setFile] = useState<File | null>(null);
+  const [ready, setReady] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [siteLoading, setSiteLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [progress, setProgress] = useState('');
+  const sourceIds = useRef<string[]>([]);
+  const saved = useRef(new Map<string, string>());
+  const uncertain = useRef(new Set<string>());
+  const batch = useRef(crypto.randomUUID());
+  const savedCount = rows.filter((row) => row.savedId).length;
+  const locked = savedCount > 0 || uncertain.current.size > 0;
+  useEffect(() => {
+    let active = true;
+    if (!projectId) {
+      setSites([]);
+      return;
+    }
+    setSites([]);
+    setSiteLoading(true);
+    apiFetch<any>(`/api/v1/projects/${encodeURIComponent(projectId)}/sites`)
+      .then((result) => {
+        if (active)
+          setSites(
+            (Array.isArray(result) ? result : result.items || []).filter(
+              (s: any) => s.is_active !== false
+            )
+          );
+      })
+      .catch((e) => {
+        if (active) {
+          setSites([]);
+          setError(e.message || 'Could not load project sites.');
+        }
+      })
+      .finally(() => {
+        if (active) setSiteLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [projectId]);
+  useEffect(() => {
+    const guard = (e: BeforeUnloadEvent) => {
+      if (busy || rows.some((r) => !r.savedId && (r.equipment || r.quantity))) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('beforeunload', guard);
+    return () => window.removeEventListener('beforeunload', guard);
+  }, [busy, rows]);
+  const assetOptions = assets.map((a) => ({
+    value: String(a.id),
+    label: `${a.name || a.asset_name || 'Asset'} (${a.asset_number || a.unit_number || a.code || 'Unit'})`,
+  }));
+  const deliveryOptions = deliveries
+    .filter((d) => !projectId || String(d.project_id) === projectId)
+    .map((d) => ({
+      value: String(d.id),
+      label: `${d.supplier || 'Bulk Fuel Delivery'} | ${d.quantity_litres} L (${d.fuel_type || 'DIESEL'})`,
+      sublabel: `Date: ${d.delivered_at?.slice(0, 10) || d.created_at?.slice(0, 10) || ''} · Ref #: ${d.reference_number || 'None'}`,
+    }));
+  function selectSheet(index: number, source?: FuelImportSheet[]) {
+    const item = (source || sheets)[index];
+    setSheetIndex(index);
+    setRows(
+      item.rows.map((row) => ({
+        ...row,
+        key: crypto.randomUUID(),
+        assetId: matchFuelAsset(row.equipment, assets).id,
+      }))
+    );
   }
-  setBusy(true);try{
-   // Reconcile a lost response before retrying a POST; successful rows stay locked.
-   if(uncertain.current.size){const existing=await apiFetch<any[]>('/api/v1/field-portal/fuel-allocations',{},true,{bypassMemoryRead:true});for(const row of rows){if(!uncertain.current.has(row.key))continue;const found=existing.find(item=>String(item.notes||'').includes(`Fuel import reference: ${batch.current}:${row.key}`));if(found){saved.current.set(row.key,found.id);setRows(current=>current.map(r=>r.key===row.key?{...r,savedId:found.id}:r));onSaved(found);}uncertain.current.delete(row.key);}}
-   if(file){const sources=[file];if(!/\.csv$/i.test(file.name))sources.push(new File(['\uFEFF'+sheets[sheetIndex].csv],`${file.name.replace(/\.[^.]+$/,'')}-fuel-source.csv`,{type:'text/csv'}));for(let i=0;i<sources.length;i++){if(sourceIds.current[i])continue;const body=new FormData();body.append('file',sources[i]);body.append('title',sources[i].name.slice(0,250));body.append('category','Fuel Imports');body.append('tags',`fi-${batch.current}`);body.append('visibility','PRIVATE');const doc=await apiFetch<any>('/api/v1/documents',{method:'POST',body},true,{queueWhenOffline:false});sourceIds.current[i]=doc.id;}}
-   for(const [index,row] of rows.entries()){if(saved.current.has(row.key)||row.savedId)continue;setProgress(`Logging ${index+1} of ${rows.length}…`);
-    const notes=[row.equipment?`Equipment as reported: ${row.equipment}`:'',row.meter?`Km / Hrs: ${row.meter}`:'',row.receiver?`Receiver's name: ${row.receiver}`:'',row.signature?`Signature / acknowledgement as supplied: ${row.signature}`:'',file?`Source: ${file.name} / ${sheets[sheetIndex].name}`:'',sourceIds.current.length?`Source documents: ${sourceIds.current.join(', ')}`:'',`Fuel import reference: ${batch.current}:${row.key}`].filter(Boolean).join('\n');
-    uncertain.current.add(row.key);
-    const record=await apiFetch<any>('/api/v1/field-portal/fuel-allocations',{method:'POST',body:JSON.stringify({project_id:projectId,site_location_id:siteId,asset_id:row.assetId,delivery_id:deliveryId||undefined,recorded_at:new Date(`${fuelDate(row.date)}T${fuelTime(row.time)}`).toISOString(),quantity_litres:Number(row.quantity),notes})},true,{queueWhenOffline:false}).catch(error=>{if(error instanceof ApiError&&error.status>=400&&error.status<500)uncertain.current.delete(row.key);throw error;});
-    uncertain.current.delete(row.key);saved.current.set(row.key,record.id);setRows(current=>current.map(r=>r.key===row.key?{...r,savedId:record.id}:r));onSaved(record);
-   }
-   setNotice(`All ${rows.length} fuel entries logged. The original equipment names, readings, receiver names and signature text are retained in the allocation notes.`);
-  }catch(e){setError(`${saved.current.size} of ${rows.length} entries logged. ${e instanceof Error?e.message:'Could not save.'} You can retry the remaining entries.`);}finally{setBusy(false);setProgress('');}
- }
- return createPortal(<div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 p-2 sm:p-4"><div role="dialog" aria-modal="true" aria-labelledby="fuel-consumption-title" className="flex max-h-[96dvh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900">
-  <header className="flex items-center justify-between border-b px-5 py-4"><div><h2 id="fuel-consumption-title" className="font-bold">Allocate Fuel to Asset / Rig</h2><p className="text-xs text-slate-500">Daily Fuel Consumption Sheet · Upload a file or enter entries manually.</p></div><button aria-label="Close fuel consumption" disabled={busy} onClick={close}><X size={20}/></button></header>
-  <div className="space-y-4 overflow-auto p-5">
-   {!ready&&<section className="space-y-3 rounded-xl border-2 border-dashed p-5"><label className="block text-sm font-semibold"><Upload className="mr-2 inline" size={16}/>Upload CSV or Excel (optional)<input className="mt-3 block w-full text-sm" type="file" accept=".csv,.xls,.xlsx" disabled={busy} onChange={e=>{void upload(e.target.files?.[0]);e.target.value='';}}/></label><p className="text-xs text-slate-500">We scan all worksheets for Date, Equipment and Quantity columns. Text in Signature cells is imported; embedded signature images remain in the original file.</p>{file&&<><p className="text-sm">{file.name} · {rows.length} entries</p><label className="block text-xs">Matching worksheet<select className={inputClass} value={sheetIndex} disabled={busy} onChange={e=>selectSheet(Number(e.target.value))}>{sheets.map((s,i)=><option key={s.name} value={i}>{s.name} ({s.rows.length} entries)</option>)}</select></label><div className="max-h-48 overflow-auto text-xs">{rows.map((r,i)=><p key={r.key} className="border-b py-2">{i+1}. {r.date} {r.time} · {r.equipment||'Equipment missing'} · {r.quantity} L</p>)}</div><button className="text-xs underline" disabled={busy} onClick={()=>{setFile(null);setSheets([]);setRows([blank()]);}}>Remove file and enter manually</button></>}</section>}
-   {ready&&<><fieldset disabled={busy||locked} className="grid min-w-0 gap-4 sm:grid-cols-2"><label className="text-xs font-semibold">Project<SearchableSelect options={projects.map(p=>({value:String(p.id),label:p.name||p.project_name||'Project'}))} value={projectId} onChange={value=>{setProjectId(value);setSiteId('');setDeliveryId('');}}/></label><label className="text-xs font-semibold">Project site<SearchableSelect options={sites.map(s=>({value:String(s.id),label:s.name||'Site'}))} value={siteId} disabled={siteLoading||Boolean(deliveryId)} onChange={setSiteId} placeholder={siteLoading?'Loading sites…':'Select project site'}/></label><label className="text-xs font-semibold sm:col-span-2">Source Fuel Delivery / Bulk Supply Purchase (Project Logs)<SearchableSelect options={[{value:'',label:'No source selected'},...deliveryOptions]} value={deliveryId} onChange={value=>{setDeliveryId(value);const d=deliveries.find(item=>String(item.id)===value);if(d){setProjectId(String(d.project_id));setSiteId(String(d.site_location_id));}}} placeholder="Select source fuel delivery log..."/></label></fieldset>
-    <p className="text-xs text-slate-500">Review all matches. Similar names are suggestions only; selecting equipment also matches other rows with the same reported name. Times use your local timezone.</p>
-    {rows.map((row,index)=>{const suggestions=matchFuelAsset(row.equipment,assets).suggestions;return <fieldset key={row.key} disabled={busy||Boolean(row.savedId)||uncertain.current.has(row.key)} className="min-w-0 rounded-xl border p-4"><legend className="px-2 text-sm font-bold">Entry {index+1}{row.savedId?' · Logged':''}</legend><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><label className="text-xs font-semibold">Date *<input className={inputClass} type={/^\d{4}-\d{2}-\d{2}$/.test(row.date)||!row.date?'date':'text'} value={row.date} onChange={e=>update(row.key,'date',e.target.value)}/></label><label className="text-xs font-semibold">Time *<input className={inputClass} type={/^\d{2}:\d{2}$/.test(row.time)||!row.time?'time':'text'} value={row.time} onChange={e=>update(row.key,'time',e.target.value)}/></label><label className="text-xs font-semibold">Equipment as reported<input className={inputClass} value={row.equipment} maxLength={250} onChange={e=>{update(row.key,'equipment',e.target.value);update(row.key,'assetId','');}}/></label><label className="text-xs font-semibold">Quantity (Lt) *<input className={inputClass} type="number" min="0.001" step="0.001" value={row.quantity} onChange={e=>update(row.key,'quantity',e.target.value)}/></label><label className="text-xs font-semibold sm:col-span-2">Registered equipment *<SearchableSelect options={assetOptions} value={row.assetId} onChange={id=>match(row.key,id)} placeholder="Match equipment name or unit number…"/>{!row.assetId&&<span className="text-amber-700">Match required{suggestions.length?` · Suggested: ${suggestions.map(a=>a.name||a.asset_number).join(', ')}`:''}</span>}</label><label className="text-xs font-semibold">Km / Hrs<input className={inputClass} value={row.meter} maxLength={150} placeholder="e.g. 1250 hrs or 45200 km" onChange={e=>update(row.key,'meter',e.target.value)}/></label><label className="text-xs font-semibold">Receiver’s name<input className={inputClass} value={row.receiver} maxLength={250} onChange={e=>update(row.key,'receiver',e.target.value)}/></label><label className="text-xs font-semibold sm:col-span-2">Signature / acknowledgement (as supplied)<input className={inputClass} value={row.signature} maxLength={500} onChange={e=>update(row.key,'signature',e.target.value)}/></label><button type="button" className="self-end justify-self-end rounded-lg border p-2 text-red-600" title="Remove entry" aria-label={`Remove entry ${index+1}`} onClick={()=>setRows(current=>current.filter(r=>r.key!==row.key))}><Trash2 size={16}/></button></div></fieldset>;})}
-    <button disabled={busy||locked} type="button" className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm" onClick={()=>setRows(current=>[...current,blank()])}><Plus size={16}/>Add entry</button></>}
-   {error&&<p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}{notice&&<p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p>}
-  </div><footer className="flex items-center justify-between gap-3 border-t p-4"><span className="text-xs text-slate-500">{savedCount} / {rows.length} logged{file?' · Original file and worksheet CSV retained on save':''}</span><div className="flex gap-2"><button disabled={busy} className="rounded-lg border px-4 py-2 text-sm" onClick={close}>{savedCount===rows.length?'Done':'Close'}</button>{!ready?<button disabled={busy} className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-bold text-white" onClick={()=>{setReady(true);setError('');}}>{busy?'Reading…':'Continue'}</button>:<button disabled={busy||savedCount===rows.length} className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50" onClick={()=>void save()}>{busy?progress||'Saving source…':`Log ${rows.length-savedCount} entries`}</button>}</div></footer>
- </div></div>,document.body);
+  async function upload(source?: File) {
+    if (!source) return;
+    setBusy(true);
+    setError('');
+    try {
+      const matches = await readFuelImport(source);
+      setSheets(matches);
+      setFile(source);
+      sourceIds.current = [];
+      selectSheet(0, matches);
+      setNotice(
+        'Review every row and equipment match before logging. Dates written as day/month/year are interpreted in that order.'
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not read file.');
+    } finally {
+      setBusy(false);
+    }
+  }
+  function update(key: string, field: keyof Row, value: string) {
+    setRows((current) =>
+      current.map((row) => (row.key === key ? { ...row, [field]: value } : row))
+    );
+  }
+  function match(key: string, id: string) {
+    const row = rows.find((r) => r.key === key);
+    const name = normalizeFuelName(row?.equipment || '');
+    setRows((current) =>
+      current.map((r) =>
+        !r.savedId && (r.key === key || (name && normalizeFuelName(r.equipment) === name))
+          ? { ...r, assetId: id }
+          : r
+      )
+    );
+  }
+  function close() {
+    if (busy) return;
+    if (
+      rows.some((row) => !row.savedId && (row.equipment || row.quantity)) &&
+      !window.confirm('Close and discard the remaining unlogged rows?')
+    )
+      return;
+    onClose();
+  }
+  async function save() {
+    setError('');
+    if (!projectId || !siteId) {
+      setError('Select the project and project site.');
+      return;
+    }
+    if (!rows.length) {
+      setError('Add at least one fuel entry.');
+      return;
+    }
+    for (const [index, row] of rows.entries()) {
+      if (row.savedId) continue;
+      const date = fuelDate(row.date),
+        time = fuelTime(row.time);
+      const stamp = new Date(`${date}T${time}`);
+      if (!row.assetId || !assets.some((a) => String(a.id) === row.assetId)) {
+        setError(`Row ${index + 1}: choose the registered equipment.`);
+        return;
+      }
+      const parts = date.split('-').map(Number);
+      const calendar = new Date(parts[0], parts[1] - 1, parts[2]);
+      if (
+        calendar.getFullYear() !== parts[0] ||
+        calendar.getMonth() !== parts[1] - 1 ||
+        calendar.getDate() !== parts[2] ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+        !/^\d{2}:\d{2}$/.test(time) ||
+        Number.isNaN(stamp.getTime()) ||
+        stamp.getTime() > Date.now() + 600000
+      ) {
+        setError(`Row ${index + 1}: enter a valid date and time that is not in the future.`);
+        return;
+      }
+      if (!/^\d+(?:\.\d{1,3})?$/.test(row.quantity) || Number(row.quantity) <= 0) {
+        setError(
+          `Row ${index + 1}: quantity must be greater than zero, with up to 3 decimal places.`
+        );
+        return;
+      }
+    }
+    setBusy(true);
+    try {
+      // Reconcile a lost response before retrying a POST; successful rows stay locked.
+      if (uncertain.current.size) {
+        const existing = await apiFetch<any[]>('/api/v1/field-portal/fuel-allocations', {}, true, {
+          bypassMemoryRead: true,
+        });
+        for (const row of rows) {
+          if (!uncertain.current.has(row.key)) continue;
+          const found = existing.find((item) =>
+            String(item.notes || '').includes(`Fuel import reference: ${batch.current}:${row.key}`)
+          );
+          if (found) {
+            saved.current.set(row.key, found.id);
+            setRows((current) =>
+              current.map((r) => (r.key === row.key ? { ...r, savedId: found.id } : r))
+            );
+            onSaved(found);
+          }
+          uncertain.current.delete(row.key);
+        }
+      }
+      if (file) {
+        const sources = [file];
+        if (!/\.csv$/i.test(file.name))
+          sources.push(
+            new File(
+              ['\uFEFF' + sheets[sheetIndex].csv],
+              `${file.name.replace(/\.[^.]+$/, '')}-fuel-source.csv`,
+              { type: 'text/csv' }
+            )
+          );
+        for (let i = 0; i < sources.length; i++) {
+          if (sourceIds.current[i]) continue;
+          const body = new FormData();
+          body.append('file', sources[i]);
+          body.append('title', sources[i].name.slice(0, 250));
+          body.append('category', 'Fuel Imports');
+          body.append('tags', `fi-${batch.current}`);
+          body.append('visibility', 'PRIVATE');
+          const doc = await apiFetch<any>('/api/v1/documents', { method: 'POST', body }, true, {
+            queueWhenOffline: false,
+          });
+          sourceIds.current[i] = doc.id;
+        }
+      }
+      for (const [index, row] of rows.entries()) {
+        if (saved.current.has(row.key) || row.savedId) continue;
+        setProgress(`Logging ${index + 1} of ${rows.length}…`);
+        const notes = [
+          row.equipment ? `Equipment as reported: ${row.equipment}` : '',
+          row.meter ? `Km / Hrs: ${row.meter}` : '',
+          row.receiver ? `Receiver's name: ${row.receiver}` : '',
+          row.signature ? `Signature / acknowledgement as supplied: ${row.signature}` : '',
+          file ? `Source: ${file.name} / ${sheets[sheetIndex].name}` : '',
+          sourceIds.current.length ? `Source documents: ${sourceIds.current.join(', ')}` : '',
+          `Fuel import reference: ${batch.current}:${row.key}`,
+        ]
+          .filter(Boolean)
+          .join('\n');
+        uncertain.current.add(row.key);
+        const record = await apiFetch<any>(
+          '/api/v1/field-portal/fuel-allocations',
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              project_id: projectId,
+              site_location_id: siteId,
+              asset_id: row.assetId,
+              delivery_id: deliveryId || undefined,
+              recorded_at: new Date(`${fuelDate(row.date)}T${fuelTime(row.time)}`).toISOString(),
+              quantity_litres: Number(row.quantity),
+              notes,
+            }),
+          },
+          true,
+          { queueWhenOffline: false }
+        ).catch((error) => {
+          if (error instanceof ApiError && error.status >= 400 && error.status < 500)
+            uncertain.current.delete(row.key);
+          throw error;
+        });
+        uncertain.current.delete(row.key);
+        saved.current.set(row.key, record.id);
+        setRows((current) =>
+          current.map((r) => (r.key === row.key ? { ...r, savedId: record.id } : r))
+        );
+        onSaved(record);
+      }
+      setNotice(
+        `All ${rows.length} fuel entries logged. The original equipment names, readings, receiver names and signature text are retained in the allocation notes.`
+      );
+    } catch (e) {
+      setError(
+        `${saved.current.size} of ${rows.length} entries logged. ${e instanceof Error ? e.message : 'Could not save.'} You can retry the remaining entries.`
+      );
+    } finally {
+      setBusy(false);
+      setProgress('');
+    }
+  }
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 p-2 sm:p-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="fuel-consumption-title"
+        className="flex max-h-[96dvh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900"
+      >
+        <header className="flex items-center justify-between border-b px-5 py-4">
+          <div>
+            <h2 id="fuel-consumption-title" className="font-bold">
+              Allocate Fuel to Asset / Rig
+            </h2>
+            <p className="text-xs text-slate-500">
+              Daily Fuel Consumption Sheet · Upload a file or enter entries manually.
+            </p>
+          </div>
+          <button aria-label="Close fuel consumption" disabled={busy} onClick={close}>
+            <X size={20} />
+          </button>
+        </header>
+        <div className="space-y-4 overflow-auto p-5">
+          {!ready && (
+            <section className="space-y-3 rounded-xl border-2 border-dashed p-5">
+              <label className="block text-sm font-semibold">
+                <Upload className="mr-2 inline" size={16} />
+                Upload CSV or Excel (optional)
+                <input
+                  className="mt-3 block w-full text-sm"
+                  type="file"
+                  accept=".csv,.xls,.xlsx"
+                  disabled={busy}
+                  onChange={(e) => {
+                    void upload(e.target.files?.[0]);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+              <p className="text-xs text-slate-500">
+                We scan all worksheets for Date, Equipment and Quantity columns. Text in Signature
+                cells is imported; embedded signature images remain in the original file.
+              </p>
+              {file && (
+                <>
+                  <p className="text-sm">
+                    {file.name} · {rows.length} entries
+                  </p>
+                  <label className="block text-xs">
+                    Matching worksheet
+                    <select
+                      className={inputClass}
+                      value={sheetIndex}
+                      disabled={busy}
+                      onChange={(e) => selectSheet(Number(e.target.value))}
+                    >
+                      {sheets.map((s, i) => (
+                        <option key={s.name} value={i}>
+                          {s.name} ({s.rows.length} entries)
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="max-h-48 overflow-auto text-xs">
+                    {rows.map((r, i) => (
+                      <p key={r.key} className="border-b py-2">
+                        {i + 1}. {r.date} {r.time} · {r.equipment || 'Equipment missing'} ·{' '}
+                        {r.quantity} L
+                      </p>
+                    ))}
+                  </div>
+                  <button
+                    className="text-xs underline"
+                    disabled={busy}
+                    onClick={() => {
+                      setFile(null);
+                      setSheets([]);
+                      setRows([blank()]);
+                    }}
+                  >
+                    Remove file and enter manually
+                  </button>
+                </>
+              )}
+            </section>
+          )}
+          {ready && (
+            <>
+              <fieldset disabled={busy || locked} className="grid min-w-0 gap-4 sm:grid-cols-2">
+                <label className="text-xs font-semibold">
+                  Project
+                  <SearchableSelect
+                    options={projects.map((p) => ({
+                      value: String(p.id),
+                      label: p.name || p.project_name || 'Project',
+                    }))}
+                    value={projectId}
+                    onChange={(value) => {
+                      setProjectId(value);
+                      setSiteId('');
+                      setDeliveryId('');
+                    }}
+                  />
+                </label>
+                <label className="text-xs font-semibold">
+                  Project site
+                  <SearchableSelect
+                    options={sites.map((s) => ({ value: String(s.id), label: s.name || 'Site' }))}
+                    value={siteId}
+                    disabled={siteLoading || Boolean(deliveryId)}
+                    onChange={setSiteId}
+                    placeholder={siteLoading ? 'Loading sites…' : 'Select project site'}
+                  />
+                </label>
+                <label className="text-xs font-semibold sm:col-span-2">
+                  Source Fuel Delivery / Bulk Supply Purchase (Project Logs)
+                  <SearchableSelect
+                    options={[{ value: '', label: 'No source selected' }, ...deliveryOptions]}
+                    value={deliveryId}
+                    onChange={(value) => {
+                      setDeliveryId(value);
+                      const d = deliveries.find((item) => String(item.id) === value);
+                      if (d) {
+                        setProjectId(String(d.project_id));
+                        setSiteId(String(d.site_location_id));
+                      }
+                    }}
+                    placeholder="Select source fuel delivery log..."
+                  />
+                </label>
+              </fieldset>
+              <p className="text-xs text-slate-500">
+                Review all matches. Similar names are suggestions only; selecting equipment also
+                matches other rows with the same reported name. Times use your local timezone.
+              </p>
+              {rows.map((row, index) => {
+                const suggestions = matchFuelAsset(row.equipment, assets).suggestions;
+                return (
+                  <fieldset
+                    key={row.key}
+                    disabled={busy || Boolean(row.savedId) || uncertain.current.has(row.key)}
+                    className="min-w-0 rounded-xl border p-4"
+                  >
+                    <legend className="px-2 text-sm font-bold">
+                      Entry {index + 1}
+                      {row.savedId ? ' · Logged' : ''}
+                    </legend>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <label className="text-xs font-semibold">
+                        Date *
+                        <input
+                          className={inputClass}
+                          type={/^\d{4}-\d{2}-\d{2}$/.test(row.date) || !row.date ? 'date' : 'text'}
+                          value={row.date}
+                          onChange={(e) => update(row.key, 'date', e.target.value)}
+                        />
+                      </label>
+                      <label className="text-xs font-semibold">
+                        Time *
+                        <input
+                          className={inputClass}
+                          type={/^\d{2}:\d{2}$/.test(row.time) || !row.time ? 'time' : 'text'}
+                          value={row.time}
+                          onChange={(e) => update(row.key, 'time', e.target.value)}
+                        />
+                      </label>
+                      <label className="text-xs font-semibold">
+                        Equipment as reported
+                        <input
+                          className={inputClass}
+                          value={row.equipment}
+                          maxLength={250}
+                          onChange={(e) => {
+                            update(row.key, 'equipment', e.target.value);
+                            update(row.key, 'assetId', '');
+                          }}
+                        />
+                      </label>
+                      <label className="text-xs font-semibold">
+                        Quantity (Lt) *
+                        <input
+                          className={inputClass}
+                          type="number"
+                          min="0.001"
+                          step="0.001"
+                          value={row.quantity}
+                          onChange={(e) => update(row.key, 'quantity', e.target.value)}
+                        />
+                      </label>
+                      <label className="text-xs font-semibold sm:col-span-2">
+                        Registered equipment *
+                        <SearchableSelect
+                          options={assetOptions}
+                          value={row.assetId}
+                          onChange={(id) => match(row.key, id)}
+                          placeholder="Match equipment name or unit number…"
+                        />
+                        {!row.assetId && (
+                          <span className="text-amber-700">
+                            Match required
+                            {suggestions.length
+                              ? ` · Suggested: ${suggestions.map((a) => a.name || a.asset_number).join(', ')}`
+                              : ''}
+                          </span>
+                        )}
+                      </label>
+                      <label className="text-xs font-semibold">
+                        Km / Hrs
+                        <input
+                          className={inputClass}
+                          value={row.meter}
+                          maxLength={150}
+                          placeholder="e.g. 1250 hrs or 45200 km"
+                          onChange={(e) => update(row.key, 'meter', e.target.value)}
+                        />
+                      </label>
+                      <label className="text-xs font-semibold">
+                        Receiver’s name
+                        <input
+                          className={inputClass}
+                          value={row.receiver}
+                          maxLength={250}
+                          onChange={(e) => update(row.key, 'receiver', e.target.value)}
+                        />
+                      </label>
+                      <label className="text-xs font-semibold sm:col-span-2">
+                        Signature / acknowledgement (as supplied)
+                        <input
+                          className={inputClass}
+                          value={row.signature}
+                          maxLength={500}
+                          onChange={(e) => update(row.key, 'signature', e.target.value)}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className="self-end justify-self-end rounded-lg border p-2 text-red-600"
+                        title="Remove entry"
+                        aria-label={`Remove entry ${index + 1}`}
+                        onClick={() =>
+                          setRows((current) => current.filter((r) => r.key !== row.key))
+                        }
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </fieldset>
+                );
+              })}
+              <button
+                disabled={busy || locked}
+                type="button"
+                className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                onClick={() => setRows((current) => [...current, blank()])}
+              >
+                <Plus size={16} />
+                Add entry
+              </button>
+            </>
+          )}
+          {error && (
+            <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
+              {error}
+            </p>
+          )}
+          {notice && (
+            <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900">
+              {notice}
+            </p>
+          )}
+        </div>
+        <footer className="flex items-center justify-between gap-3 border-t p-4">
+          <span className="text-xs text-slate-500">
+            {savedCount} / {rows.length} logged
+            {file ? ' · Original file and worksheet CSV retained on save' : ''}
+          </span>
+          <div className="flex gap-2">
+            <button disabled={busy} className="rounded-lg border px-4 py-2 text-sm" onClick={close}>
+              {savedCount === rows.length ? 'Done' : 'Close'}
+            </button>
+            {!ready ? (
+              <button
+                disabled={busy}
+                className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-bold text-white"
+                onClick={() => {
+                  setReady(true);
+                  setError('');
+                }}
+              >
+                {busy ? 'Reading…' : 'Continue'}
+              </button>
+            ) : (
+              <button
+                disabled={busy || savedCount === rows.length}
+                className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+                onClick={() => void save()}
+              >
+                {busy ? progress || 'Saving source…' : `Log ${rows.length - savedCount} entries`}
+              </button>
+            )}
+          </div>
+        </footer>
+      </div>
+    </div>,
+    document.body
+  );
 }
