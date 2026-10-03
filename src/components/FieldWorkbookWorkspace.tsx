@@ -27,6 +27,8 @@ import {
   Download,
   FileSpreadsheet,
   Info,
+  Maximize2,
+  Minimize2,
   Plus,
   Pencil,
   Redo2,
@@ -210,6 +212,8 @@ export default function FieldWorkbookWorkspace({
     y: number;
   } | null>(null);
   const [showLeaveConfirmModal, setShowLeaveConfirmModal] = useState(false);
+  const [gridViewportHeight, setGridViewportHeight] = useState<number | null>(null);
+  const [isMaximized, setIsMaximized] = useState(false);
   const bookRef = useRef(book);
   bookRef.current = book;
   const sheetRef = useRef(sheetIndex);
@@ -537,6 +541,25 @@ export default function FieldWorkbookWorkspace({
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
     window.addEventListener('pointercancel', cancel);
+  }
+  function startGridHeightResize(event: React.PointerEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    const startY = event.clientY;
+    const startHeight = gridRef.current?.getBoundingClientRect().height || 450;
+
+    const onMove = (e: PointerEvent) => {
+      const delta = e.clientY - startY;
+      const nextHeight = Math.max(250, Math.min(1600, startHeight + delta));
+      setGridViewportHeight(nextHeight);
+      setIsMaximized(false);
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
   }
   function selectionText() {
     return (
@@ -1344,14 +1367,19 @@ export default function FieldWorkbookWorkspace({
         <div
           ref={gridRef}
           onPointerDown={beginSelection}
-          style={{ scrollPaddingLeft: 48, scrollPaddingTop: 36 }}
+          style={{
+            scrollPaddingLeft: 48,
+            scrollPaddingTop: 36,
+            height: isMaximized ? '82vh' : gridViewportHeight ? `${gridViewportHeight}px` : undefined,
+            maxHeight: isMaximized ? '82vh' : gridViewportHeight ? 'none' : '60vh',
+          }}
           onCopy={(event) => {
             if (selection.r !== selection.er || selection.c !== selection.ec) {
               event.preventDefault();
               event.clipboardData.setData('text/plain', selectionText());
             }
           }}
-          className="relative w-full max-w-full max-h-[60vh] overflow-auto rounded-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900"
+          className="relative w-full max-w-full overflow-auto rounded-t-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900 transition-[height]"
         >
           <table
             className="table-fixed border-separate border-spacing-0"
@@ -1497,6 +1525,14 @@ export default function FieldWorkbookWorkspace({
           </table>
         </div>
 
+        <div
+          title="Drag down to extend sheet view height and expose more rows in view"
+          onPointerDown={startGridHeightResize}
+          className="group flex h-3.5 w-full cursor-ns-resize items-center justify-center rounded-b-xl border border-t-0 border-slate-300 bg-slate-100 hover:bg-emerald-500/20 dark:border-slate-700 dark:bg-slate-800 transition-colors"
+        >
+          <div className="h-1 w-12 rounded-full bg-slate-300 group-hover:bg-emerald-600 dark:bg-slate-600" />
+        </div>
+
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-2.5 dark:border-slate-800 dark:bg-slate-900/80">
           <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
             <span className="font-semibold">{sheet.cells.length}</span> rows × <span className="font-semibold">{sheet.widths.length}</span> columns
@@ -1504,25 +1540,53 @@ export default function FieldWorkbookWorkspace({
             <span className="text-[11px] text-slate-500">Max limit: {MAX_ROWS} rows</span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Add rows:</span>
-            <div className="inline-flex items-center rounded-lg border border-slate-300 bg-white shadow-xs dark:border-slate-700 dark:bg-slate-900">
-              {[10, 25, 50, 100].map((count, idx, arr) => (
-                <div key={count} className="flex items-center">
-                  <button
-                    type="button"
-                    className="px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 dark:text-slate-200 dark:hover:bg-emerald-950 dark:hover:text-emerald-200 disabled:opacity-40 transition-colors"
-                    disabled={sheet.cells.length >= MAX_ROWS}
-                    onClick={() => addRows(count)}
-                    title={`Add ${count} more rows to the bottom of the sheet`}
-                  >
-                    +{count} rows
-                  </button>
-                  {idx < arr.length - 1 && (
-                    <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
-                  )}
-                </div>
-              ))}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">View height:</span>
+              <button
+                type="button"
+                title={isMaximized || gridViewportHeight ? 'Reset to standard view height (60vh)' : 'Extend view height to expose more rows (82vh)'}
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors ${
+                  isMaximized || gridViewportHeight
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-200'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400'
+                }`}
+                onClick={() => {
+                  if (isMaximized || gridViewportHeight) {
+                    setIsMaximized(false);
+                    setGridViewportHeight(null);
+                  } else {
+                    setIsMaximized(true);
+                  }
+                }}
+              >
+                {isMaximized ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                <span>{isMaximized ? 'Standard height' : 'Extend view height'}</span>
+              </button>
+            </div>
+
+            <div className="h-4 w-px bg-slate-300 dark:bg-slate-700 hidden sm:block" />
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Add rows:</span>
+              <div className="inline-flex items-center rounded-lg border border-slate-300 bg-white shadow-xs dark:border-slate-700 dark:bg-slate-900">
+                {[10, 25, 50, 100].map((count, idx, arr) => (
+                  <div key={count} className="flex items-center">
+                    <button
+                      type="button"
+                      className="px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 dark:text-slate-200 dark:hover:bg-emerald-950 dark:hover:text-emerald-200 disabled:opacity-40 transition-colors"
+                      disabled={sheet.cells.length >= MAX_ROWS}
+                      onClick={() => addRows(count)}
+                      title={`Add ${count} more rows to the bottom of the sheet`}
+                    >
+                      +{count} rows
+                    </button>
+                    {idx < arr.length - 1 && (
+                      <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
