@@ -299,6 +299,20 @@ export default function FieldWorkbookWorkspace({
       setHeight(sheet.heights[anchor.r] || 34);
     }
   }, [sheet, anchor]);
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => {
+      setNotice('');
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [notice]);
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => {
+      setError('');
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [error]);
 
   const latest = useMemo(() => {
     const seen = new Set<string>();
@@ -800,24 +814,46 @@ export default function FieldWorkbookWorkspace({
   }, [book, dirty, busy, setHeaderState, leave, commit, download, save]);
 
   const feedback = (
-    <>
+    <div className="fixed bottom-6 right-6 z-50 flex max-w-md flex-col gap-2 pointer-events-none">
       {error && (
-        <p
+        <div
           role="alert"
-          className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+          className="pointer-events-auto flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-600 px-4 py-3 text-sm font-medium text-white shadow-2xl backdrop-blur-md transition-all dark:border-red-800"
         >
-          {error}
-        </p>
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle size={18} className="shrink-0 text-red-200" />
+            <span>{error}</span>
+          </div>
+          <button
+            type="button"
+            className="rounded-lg p-1 text-red-200 hover:bg-red-700 hover:text-white transition-colors"
+            onClick={() => setError('')}
+            title="Dismiss notification"
+          >
+            <X size={16} />
+          </button>
+        </div>
       )}
       {notice && (
-        <p
+        <div
           role="status"
-          className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900"
+          className="pointer-events-auto flex items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-800/95 px-4 py-3 text-sm font-medium text-white shadow-2xl backdrop-blur-md transition-all dark:border-emerald-600/40"
         >
-          {notice}
-        </p>
+          <div className="flex items-center gap-2.5">
+            <Info size={18} className="shrink-0 text-emerald-300" />
+            <span>{notice}</span>
+          </div>
+          <button
+            type="button"
+            className="rounded-lg p-1 text-emerald-200 hover:bg-emerald-700 hover:text-white transition-colors"
+            onClick={() => setNotice('')}
+            title="Dismiss notification"
+          >
+            <X size={16} />
+          </button>
+        </div>
       )}
-    </>
+    </div>
   );
   if (!book || !sheet)
     return (
