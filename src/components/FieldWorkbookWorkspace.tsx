@@ -1431,173 +1431,175 @@ export default function FieldWorkbookWorkspace({
             />
           </div>
         )}
-        <div
-          ref={gridRef}
-          onPointerDown={beginSelection}
-          style={{
-            scrollPaddingLeft: 48,
-            scrollPaddingTop: 36,
-            height: isMaximized ? '82vh' : gridViewportHeight ? `${gridViewportHeight}px` : undefined,
-            maxHeight: isMaximized ? '82vh' : gridViewportHeight ? 'none' : '60vh',
-          }}
-          onCopy={(event) => {
-            if (selection.r !== selection.er || selection.c !== selection.ec) {
-              event.preventDefault();
-              event.clipboardData.setData('text/plain', selectionText());
-            }
-          }}
-          className="relative w-full max-w-full overflow-auto rounded-t-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900 transition-[height]"
-        >
-          <table
-            className="table-fixed border-separate border-spacing-0"
-            style={{ width: 48 + sheet.widths.reduce((a, b) => a + b, 0) }}
-            aria-label={sheet.name}
+        <div className="flex flex-col">
+          <div
+            ref={gridRef}
+            onPointerDown={beginSelection}
+            style={{
+              scrollPaddingLeft: 48,
+              scrollPaddingTop: 36,
+              height: isMaximized ? '82vh' : gridViewportHeight ? `${gridViewportHeight}px` : undefined,
+              maxHeight: isMaximized ? '82vh' : gridViewportHeight ? 'none' : '60vh',
+            }}
+            onCopy={(event) => {
+              if (selection.r !== selection.er || selection.c !== selection.ec) {
+                event.preventDefault();
+                event.clipboardData.setData('text/plain', selectionText());
+              }
+            }}
+            className="relative w-full max-w-full overflow-auto rounded-t-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900 transition-[height]"
           >
-            <colgroup>
-              <col style={{ width: 48 }} />
-              {sheet.widths.map((w, c) => (
-                <col key={c} style={{ width: w }} />
-              ))}
-            </colgroup>
-            <thead className="sticky top-0 z-20">
-              <tr>
-                <th className="sticky left-0 z-30 border bg-slate-100 text-xs dark:bg-slate-800">
-                  #
-                </th>
-                {sheet.widths.map((_, c) => (
-                  <th
-                    key={c}
-                    className="relative border bg-slate-100 text-xs font-medium dark:border-slate-700 dark:bg-slate-800"
-                    onContextMenu={(event) => {
-                      event.preventDefault();
-                      if (c < selection.c || c > selection.ec) {
-                        setAnchor({ r: 0, c });
-                        setEnd({ r: sheet.cells.length - 1, c });
-                      }
-                      setGridContextMenu({
-                        type: 'column',
-                        c,
-                        x: event.clientX,
-                        y: event.clientY,
-                      });
-                    }}
-                  >
-                    <button
-                      className="w-full py-2"
-                      data-grid-column={c}
-                      onClick={(event) => {
-                        if (event.detail !== 0) return;
-                        if (!event.shiftKey) setAnchor({ r: 0, c });
-                        setEnd({ r: sheet.cells.length - 1, c });
-                      }}
-                      aria-label={`Select column ${columnName(c)}`}
-                    >
-                      {columnName(c)}
-                    </button>
-                    <span
-                      title="Drag to resize column"
-                      onPointerDown={(event) => resize('column', c, event)}
-                      className="absolute -right-1 top-0 z-30 h-full w-2 cursor-col-resize touch-none hover:bg-emerald-500/40"
-                    />
-                  </th>
+            <table
+              className="table-fixed border-separate border-spacing-0"
+              style={{ width: 48 + sheet.widths.reduce((a, b) => a + b, 0) }}
+              aria-label={sheet.name}
+            >
+              <colgroup>
+                <col style={{ width: 48 }} />
+                {sheet.widths.map((w, c) => (
+                  <col key={c} style={{ width: w }} />
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {sheet.cells.map((row, r) => (
-                <tr key={r} style={{ height: sheet.heights[r] }}>
-                  <th
-                    className="sticky left-0 z-10 border bg-slate-100 text-xs font-normal dark:border-slate-700 dark:bg-slate-800"
-                    onContextMenu={(event) => {
-                      event.preventDefault();
-                      if (r < selection.r || r > selection.er) {
-                        setAnchor({ r, c: 0 });
-                        setEnd({ r, c: sheet.widths.length - 1 });
-                      }
-                      setGridContextMenu({
-                        type: 'row',
-                        r,
-                        x: event.clientX,
-                        y: event.clientY,
-                      });
-                    }}
-                  >
-                    <button
-                      className="h-full w-full py-2"
-                      aria-label={`Select row ${r + 1}`}
-                      data-grid-row={r}
-                      onClick={(event) => {
-                        if (event.detail !== 0) return;
-                        if (!event.shiftKey) setAnchor({ r, c: 0 });
-                        setEnd({ r, c: sheet.widths.length - 1 });
+              </colgroup>
+              <thead className="sticky top-0 z-20">
+                <tr>
+                  <th className="sticky left-0 z-30 border bg-slate-100 text-xs dark:bg-slate-800">
+                    #
+                  </th>
+                  {sheet.widths.map((_, c) => (
+                    <th
+                      key={c}
+                      className="relative border bg-slate-100 text-xs font-medium dark:border-slate-700 dark:bg-slate-800"
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        if (c < selection.c || c > selection.ec) {
+                          setAnchor({ r: 0, c });
+                          setEnd({ r: sheet.cells.length - 1, c });
+                        }
+                        setGridContextMenu({
+                          type: 'column',
+                          c,
+                          x: event.clientX,
+                          y: event.clientY,
+                        });
                       }}
                     >
-                      {r + 1}
-                    </button>
-                    <span
-                      title="Drag to resize row"
-                      onPointerDown={(event) => resize('row', r, event)}
-                      className="absolute -bottom-1 left-0 z-20 h-2 w-full cursor-row-resize touch-none hover:bg-emerald-500/40"
-                    />
-                  </th>
-                  {row.map((value, c) => {
-                    const merge = mergeLookup.get(`${r}:${c}`);
-                    if (merge && (merge.r !== r || merge.c !== c)) return null;
-                    return (
-                      <GridCell
-                        key={c}
-                        {...{ value, r, c, merge }}
-                        header={r === 0}
-                        {...cellFormat(sheet, r, c)}
-                        active={anchor.r === r && anchor.c === c}
-                        selected={
-                          r >= selection.r &&
-                          r <= selection.er &&
-                          c >= selection.c &&
-                          c <= selection.ec
-                        }
-                        list={
-                          r > 0 && suggestions[c]?.length
-                            ? `wb-suggest-${sheet.id}-${c}`
-                            : undefined
-                        }
-                        onValue={onValue}
-                        onSelect={onSelect}
-                        onNavigate={onNavigate}
-                        onPaste={onPaste}
-                        onContextMenu={(r, c, event) => {
-                          if (
-                            r < selection.r ||
-                            r > selection.er ||
-                            c < selection.c ||
-                            c > selection.ec
-                          ) {
-                            setAnchor({ r, c });
-                            setEnd({ r, c });
-                          }
-                          setGridContextMenu({
-                            type: 'cell',
-                            r,
-                            c,
-                            x: event.clientX,
-                            y: event.clientY,
-                          });
+                      <button
+                        className="w-full py-2"
+                        data-grid-column={c}
+                        onClick={(event) => {
+                          if (event.detail !== 0) return;
+                          if (!event.shiftKey) setAnchor({ r: 0, c });
+                          setEnd({ r: sheet.cells.length - 1, c });
                         }}
+                        aria-label={`Select column ${columnName(c)}`}
+                      >
+                        {columnName(c)}
+                      </button>
+                      <span
+                        title="Drag to resize column"
+                        onPointerDown={(event) => resize('column', c, event)}
+                        className="absolute -right-1 top-0 z-30 h-full w-2 cursor-col-resize touch-none hover:bg-emerald-500/40"
                       />
-                    );
-                  })}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {sheet.cells.map((row, r) => (
+                  <tr key={r} style={{ height: sheet.heights[r] }}>
+                    <th
+                      className="sticky left-0 z-10 border bg-slate-100 text-xs font-normal dark:border-slate-700 dark:bg-slate-800"
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        if (r < selection.r || r > selection.er) {
+                          setAnchor({ r, c: 0 });
+                          setEnd({ r, c: sheet.widths.length - 1 });
+                        }
+                        setGridContextMenu({
+                          type: 'row',
+                          r,
+                          x: event.clientX,
+                          y: event.clientY,
+                        });
+                      }}
+                    >
+                      <button
+                        className="h-full w-full py-2"
+                        aria-label={`Select row ${r + 1}`}
+                        data-grid-row={r}
+                        onClick={(event) => {
+                          if (event.detail !== 0) return;
+                          if (!event.shiftKey) setAnchor({ r, c: 0 });
+                          setEnd({ r, c: sheet.widths.length - 1 });
+                        }}
+                      >
+                        {r + 1}
+                      </button>
+                      <span
+                        title="Drag to resize row"
+                        onPointerDown={(event) => resize('row', r, event)}
+                        className="absolute -bottom-1 left-0 z-20 h-2 w-full cursor-row-resize touch-none hover:bg-emerald-500/40"
+                      />
+                    </th>
+                    {row.map((value, c) => {
+                      const merge = mergeLookup.get(`${r}:${c}`);
+                      if (merge && (merge.r !== r || merge.c !== c)) return null;
+                      return (
+                        <GridCell
+                          key={c}
+                          {...{ value, r, c, merge }}
+                          header={r === 0}
+                          {...cellFormat(sheet, r, c)}
+                          active={anchor.r === r && anchor.c === c}
+                          selected={
+                            r >= selection.r &&
+                            r <= selection.er &&
+                            c >= selection.c &&
+                            c <= selection.ec
+                          }
+                          list={
+                            r > 0 && suggestions[c]?.length
+                              ? `wb-suggest-${sheet.id}-${c}`
+                              : undefined
+                          }
+                          onValue={onValue}
+                          onSelect={onSelect}
+                          onNavigate={onNavigate}
+                          onPaste={onPaste}
+                          onContextMenu={(r, c, event) => {
+                            if (
+                              r < selection.r ||
+                              r > selection.er ||
+                              c < selection.c ||
+                              c > selection.ec
+                            ) {
+                              setAnchor({ r, c });
+                              setEnd({ r, c });
+                            }
+                            setGridContextMenu({
+                              type: 'cell',
+                              r,
+                              c,
+                              x: event.clientX,
+                              y: event.clientY,
+                            });
+                          }}
+                        />
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-        <div
-          title="Drag down to extend sheet view height and expose more rows in view"
-          onPointerDown={startGridHeightResize}
-          className="group flex h-3.5 w-full cursor-ns-resize items-center justify-center rounded-b-xl border border-t-0 border-slate-300 bg-slate-100 hover:bg-emerald-500/20 dark:border-slate-700 dark:bg-slate-800 transition-colors"
-        >
-          <div className="h-1 w-12 rounded-full bg-slate-300 group-hover:bg-emerald-600 dark:bg-slate-600" />
+          <div
+            title="Drag down to extend sheet view height and expose more rows in view"
+            onPointerDown={startGridHeightResize}
+            className="-mt-px group flex h-3.5 w-full cursor-ns-resize items-center justify-center rounded-b-xl border border-t-0 border-slate-300 bg-slate-100 hover:bg-emerald-500/20 dark:border-slate-700 dark:bg-slate-800 transition-colors"
+          >
+            <div className="h-1 w-12 rounded-full bg-slate-300 group-hover:bg-emerald-600 dark:bg-slate-600" />
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-2.5 dark:border-slate-800 dark:bg-slate-900/80">
