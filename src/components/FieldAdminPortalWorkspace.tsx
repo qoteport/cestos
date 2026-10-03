@@ -1,5 +1,6 @@
 'use client';
 import IncidentDetailModal from './IncidentDetailModal';
+import FuelAllocationImportModal from './FuelAllocationImportModal';
 import FieldWorkbookDialog from './FieldWorkbookDialog';
 import dynamic from 'next/dynamic';
 const FieldWorkbookWorkspace = dynamic(() => import('./FieldWorkbookWorkspace'), { ssr: false, loading: () => <p className="p-6 text-sm text-slate-500">Opening workbooks…</p> });
@@ -4268,108 +4269,7 @@ Signed: Field Operations Administration
       )}
 
       {/* 2. Allocate Fuel to Asset Modal (ENLARGED & RICH FORM) */}
-      {showFuelAllocModal && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[99999] flex items-center justify-center p-0 sm:p-4 overflow-hidden">
-          <div className="bg-white dark:bg-slate-900 w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-xl border-0 sm:border rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between border-b px-4 py-3.5 sm:px-6 sm:py-4 bg-white dark:bg-slate-900 shrink-0 sticky top-0 z-10">
-              <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
-                <Truck className="text-orange-600" size={20} /> Allocate Fuel to Asset / Rig
-              </h3>
-              <button type="button" onClick={() => setShowFuelAllocModal(false)} className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition"><X size={20} /></button>
-            </div>
-            <form onSubmit={handleCreateFuelAlloc} className="flex-1 flex flex-col min-h-0 overflow-hidden text-xs">
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-                {/* Linked Bulk Fuel Delivery Purchase for this Project */}
-              <div>
-                <label className="block font-bold mb-1">Source Fuel Delivery / Bulk Supply Purchase (Project Logs)</label>
-                <SearchableSelect
-                  options={filteredFuelDeliveries.map((d: any) => ({
-                    value: String(d.id),
-                    label: `${d.supplier || 'Bulk Fuel Delivery'} | ${d.quantity_litres} L (${d.fuel_type || 'DIESEL'})`,
-                    sublabel: `Date: ${d.delivered_at?.slice(0, 10) || d.created_at?.slice(0, 10) || '—'} · Ref #: ${d.reference_number || 'None'}`,
-                  }))}
-                  value={fuelAllocForm.delivery_id}
-                  onChange={(val: string) => setFuelAllocForm({ ...fuelAllocForm, delivery_id: val })}
-                  placeholder="Select source fuel delivery log..."
-                />
-              </div>
-
-              {/* Target Asset Searchable Select & Litres */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold mb-1">Target Asset / Equipment *</label>
-                  <SearchableSelect
-                    options={filteredAssets.map((a: any) => ({
-                      value: String(a.id),
-                      label: `${a.name || 'Asset'} (${a.asset_number || a.code || 'Unit'})`,
-                      sublabel: `Type: ${a.asset_type || a.category || 'Equipment'}`,
-                    }))}
-                    value={fuelAllocForm.asset_id}
-                    onChange={(val: string) => setFuelAllocForm({ ...fuelAllocForm, asset_id: val })}
-                    placeholder="Search equipment by name or unit #..."
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold mb-1">Allocated Quantity (Litres) *</label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    placeholder="e.g. 350"
-                    value={fuelAllocForm.quantity_litres}
-                    onChange={(e) => setFuelAllocForm({ ...fuelAllocForm, quantity_litres: e.target.value })}
-                    className="w-full p-2.5 border rounded-lg bg-background font-mono font-bold text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold mb-1">Odometer Reading (km)</label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 45200"
-                    value={fuelAllocForm.odometer_km}
-                    onChange={(e) => setFuelAllocForm({ ...fuelAllocForm, odometer_km: e.target.value })}
-                    className="w-full p-2.5 border rounded-lg bg-background font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold mb-1">Engine Operating Hours</label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 1250"
-                    value={fuelAllocForm.operating_hours}
-                    onChange={(e) => setFuelAllocForm({ ...fuelAllocForm, operating_hours: e.target.value })}
-                    className="w-full p-2.5 border rounded-lg bg-background font-mono"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold mb-1">Notes / Operational Remarks</label>
-                <textarea
-                  rows={2}
-                  placeholder="Specify refueling details or notes..."
-                  value={fuelAllocForm.notes}
-                  onChange={(e) => setFuelAllocForm({ ...fuelAllocForm, notes: e.target.value })}
-                  className="w-full p-2.5 border rounded-lg bg-background"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-row items-center justify-end gap-2 p-3 sm:px-6 sm:py-4 border-t bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 sticky bottom-0 z-10">
-              <button type="button" onClick={() => setShowFuelAllocModal(false)} className="px-4 py-2.5 border rounded-lg font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition flex-1 sm:flex-initial text-center">Cancel</button>
-              <button type="submit" disabled={busySubmit} className="px-5 py-2.5 bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 transition shadow-sm flex-1 sm:flex-initial text-center">
-                {busySubmit ? 'Allocating...' : 'Allocate Fuel'}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>,
-        document.body
-      )}
+      {showFuelAllocModal && <FuelAllocationImportModal projects={projects} assets={assets} deliveries={fuelDeliveries} initialProjectId={selectedProjectId} onClose={() => setShowFuelAllocModal(false)} onSaved={(record) => setFuelAllocations(current => [record, ...current.filter(row => String(row.id) !== String(record.id))])} />}
 
       {/* 3. Daily Maintenance / Breakdown Repair Job Card Wizard */}
       {(showWOModal || editingBreakdown) && (

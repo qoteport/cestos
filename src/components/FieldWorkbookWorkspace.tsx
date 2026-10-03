@@ -3,6 +3,11 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
+  Bold,
+  Italic,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
   BetweenHorizontalStart,
   BetweenHorizontalEnd,
   BetweenVerticalStart,
@@ -27,6 +32,9 @@ import {
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import {
   changeDimension,
+  cellFormat,
+  formatCells,
+  type CellFormat,
   columnName,
   copyWorkbook,
   exportWorkbook,
@@ -44,6 +52,7 @@ import {
   type FieldSheet,
   type FieldWorkbook,
 } from '@/lib/fieldWorkbook';
+import { useFieldWorkbookHeader } from './FieldWorkbookDialog';
 
 type Document = { id: string; title: string; tags: string[]; created_at: string };
 type Point = { r: number; c: number };
@@ -60,6 +69,9 @@ const GridCell = memo(function GridCell({
   active,
   merge,
   header,
+  bold,
+  italic,
+  align,
   list,
   onValue,
   onSelect,
@@ -73,6 +85,9 @@ const GridCell = memo(function GridCell({
   active: boolean;
   merge?: CellRange;
   header: boolean;
+  bold?: boolean;
+  italic?: boolean;
+  align?: CellFormat['align'];
   list?: string;
   onValue: (r: number, c: number, value: string) => void;
   onSelect: (r: number, c: number, extend: boolean) => void;
@@ -94,7 +109,8 @@ const GridCell = memo(function GridCell({
         value={value}
         maxLength={32767}
         autoComplete="off"
-        className={`h-full min-h-[32px] w-full min-w-0 bg-transparent px-2 py-1 text-sm text-slate-900 outline-none dark:text-slate-100 ${header ? 'font-semibold' : ''}`}
+        className={`h-full min-h-[32px] w-full min-w-0 bg-transparent px-2 py-1 text-sm text-slate-900 outline-none dark:text-slate-100 ${bold ? 'font-bold' : 'font-normal'} ${italic ? 'italic' : ''}`}
+        style={{ textAlign: align }}
         title={value}
         onFocus={() => onSelect(r, c, false)}
         onMouseDown={(event) => {
@@ -173,6 +189,9 @@ export default function FieldWorkbookWorkspace({
   const storageKey = `cestos-field-workbook:${storageScope}`;
   const sheet = book?.sheets[sheetIndex];
   const selection = rangeBetween(anchor, end);
+
+  const headerContext = useFieldWorkbookHeader();
+  const setHeaderState = headerContext?.setHeaderState;
 
   const loadLibrary = useCallback(async () => {
     setLoading(true);
@@ -660,6 +679,23 @@ export default function FieldWorkbookWorkspace({
       setBusy(false);
     }
   }
+  useEffect(() => {
+    if (!setHeaderState) return;
+    if (book) {
+      setHeaderState({
+        book,
+        dirty,
+        busy,
+        onLeave: leave,
+        onRename: (newName: string) => commit({ ...book, name: newName }, 'name'),
+        onDownload: () => void download(),
+        onSave: () => void save(),
+      });
+    } else {
+      setHeaderState(null);
+    }
+  }, [book, dirty, busy, setHeaderState, leave, commit, download, save]);
+
   const feedback = (
     <>
       {error && (
@@ -806,33 +842,52 @@ export default function FieldWorkbookWorkspace({
         }
       }}
     >
-      <header className="flex flex-wrap items-center gap-3">
-        <button className={button} disabled={busy} onClick={leave}>
-          <ArrowLeft size={15} />
-          Library
-        </button>
-        <input
-          aria-label="Workbook name"
-          maxLength={250}
-          className="min-w-0 flex-1 rounded-lg border bg-white px-3 py-2 text-lg font-bold dark:bg-slate-900"
-          value={book.name}
-          disabled={busy}
-          onChange={(e) => commit({ ...book, name: e.target.value }, 'name')}
-        />
-        <span className="text-xs text-slate-500">
-          {dirty ? 'Unsaved changes' : 'Saved'} · {book.sheets.length} sheets
-        </span>
-        <button className={button} disabled={busy} onClick={() => void download()}>
-          <Download size={15} />
-          Excel
-        </button>
-        <button className={primary} disabled={busy} onClick={() => void save()}>
-          <Save size={15} />
-          {busy ? 'Working…' : 'Save workbook'}
-        </button>
-      </header>
+
       {feedback}
       <fieldset disabled={busy} className="min-w-0 space-y-3">
+        <div
+          className="flex items-center gap-1 rounded-xl border bg-white p-2 dark:border-slate-700 dark:bg-slate-900"
+          role="group"
+          aria-label="Text formatting"
+        >
+          {[
+            {
+              label: 'Bold',
+              Icon: Bold,
+              active: Boolean(cellFormat(sheet, anchor.r, anchor.c).bold),
+              format: { bold: !cellFormat(sheet, anchor.r, anchor.c).bold },
+            },
+            {
+              label: 'Italic',
+              Icon: Italic,
+              active: Boolean(cellFormat(sheet, anchor.r, anchor.c).italic),
+              format: { italic: !cellFormat(sheet, anchor.r, anchor.c).italic },
+            },
+            ...(
+              [
+                { label: 'Align left', Icon: AlignLeft, value: 'left' },
+                { label: 'Align centre', Icon: AlignCenter, value: 'center' },
+                { label: 'Align right', Icon: AlignRight, value: 'right' },
+              ] as const
+            ).map((item) => ({
+              ...item,
+              active: cellFormat(sheet, anchor.r, anchor.c).align === item.value,
+              format: { align: item.value },
+            })),
+          ].map(({ label, Icon, active, format }) => (
+            <button
+              key={label}
+              type="button"
+              title={label}
+              aria-label={label}
+              aria-pressed={active}
+              className={`${iconButton} ${active ? '!border-emerald-600 !bg-emerald-50 !text-emerald-800 dark:!bg-emerald-950 dark:!text-emerald-200' : ''}`}
+              onClick={() => changeSheet((s) => formatCells(s, selection, format))}
+            >
+              <Icon size={18} aria-hidden="true" />
+            </button>
+          ))}
+        </div>
         <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
           <button
             className={button}
@@ -1112,12 +1167,18 @@ export default function FieldWorkbookWorkspace({
             to move · Alt + arrows to navigate · Paste tables from Excel
           </p>
         </div>
-        <div className="flex items-center gap-2 rounded-lg border bg-white px-3 py-2 dark:bg-slate-900">
-          <span className="text-xs font-semibold text-slate-500">Cell value</span>
+        <div className="flex items-start gap-3 rounded-lg border bg-white px-3 py-2 dark:bg-slate-900">
+          <label
+            htmlFor="workbook-cell-value"
+            className="shrink-0 whitespace-nowrap py-1 text-sm font-semibold leading-6 text-slate-500"
+          >
+            Cell value
+          </label>
           <textarea
-            rows={2}
+            id="workbook-cell-value"
+            rows={1}
             aria-label="Selected cell value"
-            className="min-w-0 flex-1 resize-y bg-transparent text-sm outline-none"
+            className="block min-h-8 min-w-0 flex-1 resize-y border-0 bg-transparent px-0 py-1 text-sm leading-6 outline-none focus:ring-0"
             value={sheet.cells[anchor.r]?.[anchor.c] || ''}
             maxLength={32767}
             onChange={(e) => onValue(anchor.r, anchor.c, e.target.value)}
@@ -1207,6 +1268,7 @@ export default function FieldWorkbookWorkspace({
                         key={c}
                         {...{ value, r, c, merge }}
                         header={r === 0}
+                        {...cellFormat(sheet, r, c)}
                         active={anchor.r === r && anchor.c === c}
                         selected={
                           r >= selection.r &&

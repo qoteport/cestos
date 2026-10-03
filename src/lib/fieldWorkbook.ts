@@ -1,3 +1,4 @@
+export type CellFormat = { bold?: boolean; italic?: boolean; align?: 'left' | 'center' | 'right' };
 export type CellRange = { r: number; c: number; er: number; ec: number };
 export type FieldSheet = {
   id: string;
@@ -6,6 +7,7 @@ export type FieldSheet = {
   widths: number[];
   heights: number[];
   merges: CellRange[];
+  formats?: Record<string, CellFormat>;
 };
 export type FieldWorkbook = {
   version: 1;
@@ -41,6 +43,7 @@ export const workbookTemplates: {
   description: string;
   sheets: [string, string[]][];
 }[] = [
+  { name: 'Daily Fuel Consumption Sheet', description: 'Daily fuel issues, meter readings, receivers and acknowledgements.', sheets: [['Daily fuel consumption', ['Date', 'Time', 'Equipment', 'Quantity (Lt)', 'Km / Hrs', 'Receivers name', 'Signature']]] },
   {
     name: 'Breakdown / Daily Repair Job Card',
     description: 'Failures, repairs, parts and labour.',
@@ -278,6 +281,19 @@ export function mergeCells(sheet: FieldSheet, range: CellRange): FieldSheet {
   next.merges.push(range);
   return next;
 }
+export function cellFormat(sheet: FieldSheet, r: number, c: number): CellFormat {
+  return { bold: r === 0, italic: false, align: 'left', ...sheet.formats?.[`${r}:${c}`] };
+}
+export function formatCells(sheet: FieldSheet, range: CellRange, format: CellFormat): FieldSheet {
+  const formats = { ...sheet.formats };
+  for (let r = range.r; r <= range.er; r++)
+    for (let c = range.c; c <= range.ec; c++) {
+      const merged = sheet.merges.find((m) => r >= m.r && r <= m.er && c >= m.c && c <= m.ec);
+      const key = merged ? `${merged.r}:${merged.c}` : `${r}:${c}`;
+      formats[key] = { ...formats[key], ...format };
+    }
+  return { ...sheet, formats };
+}
 export function changeDimension(
   sheet: FieldSheet,
   axis: 'row' | 'column',
@@ -302,15 +318,32 @@ export function changeDimension(
     next.cells.forEach((row) => row.splice(index, remove ? 1 : 0, ...(remove ? [] : [''])));
     next.widths.splice(index, remove ? 1 : 0, ...(remove ? [] : [160]));
   }
+  next.formats = {};
+  for (const [key, format] of Object.entries(sheet.formats || {})) {
+    let [r, c] = key.split(':').map(Number);
+    const position = axis === 'row' ? r : c;
+    if (remove && position === index) continue;
+    if (position >= index) {
+      if (axis === 'row') r += remove ? -1 : 1;
+      else c += remove ? -1 : 1;
+    }
+    next.formats[`${r}:${c}`] = format;
+  }
   const start = axis === 'row' ? 'r' : 'c',
     end = axis === 'row' ? 'er' : 'ec';
   next.merges = next.merges.flatMap((m) => {
-    if (remove && m[start] === index && m[end] > m[start])
+    if (remove && m[start] === index && m[end] > m[start]) {
+      next.formats![`${axis === 'row' ? index : m.r}:${axis === 'row' ? m.c : index}`] = cellFormat(
+        sheet,
+        m.r,
+        m.c
+      );
       next.cells[axis === 'row' ? index : m.r]?.splice(
         axis === 'row' ? m.c : index,
         1,
         sheet.cells[m.r][m.c]
       );
+    }
     if (remove) {
       if (index < m[start]) {
         m[start]--;
@@ -426,6 +459,21 @@ export function validateWorkbook(value: unknown): FieldWorkbook {
       !Array.isArray(s.merges)
     )
       throw new Error('Invalid worksheet dimensions.');
+    if (s.formats)
+      for (const [key, format] of Object.entries(s.formats)) {
+        const [r, c] = key.split(':').map(Number);
+        if (
+          !/^\d+:\d+$/.test(key) ||
+          r >= s.cells.length ||
+          c >= s.widths.length ||
+          !format ||
+          typeof format !== 'object' ||
+          (format.bold !== undefined && typeof format.bold !== 'boolean') ||
+          (format.italic !== undefined && typeof format.italic !== 'boolean') ||
+          (format.align !== undefined && !['left', 'center', 'right'].includes(format.align))
+        )
+          throw new Error('Invalid cell formatting.');
+      }
     ids.add(s.id);
     if (
       !s.name.trim() ||
@@ -518,7 +566,42 @@ export async function exportWorkbook(book: FieldWorkbook): Promise<Blob> {
     ws['!rows'] = sheet.heights.map((hpx) => ({ hpx }));
     XLSX.utils.book_append_sheet(output, ws, sheet.name);
   }
-  return new Blob([XLSX.write(output, { type: 'array', bookType: 'xlsx' })], {
+  // The installed SheetJS writer does not write custom fonts/alignment, so add
+  // these basic OOXML styles to the generated archive without another dependency.
+  const zip = XLSX.CFB.read(
+    new Uint8Array(XLSX.write(output, { type: 'array', bookType: 'xlsx' })),
+    { type: 'buffer' }
+  );
+  const fonts = Array.from(
+    { length: 4 },
+    (_, i) =>
+      `<font><sz val="11"/><name val="Calibri"/>${i & 1 ? '<b/>' : ''}${i & 2 ? '<i/>' : ''}</font>`
+  ).join('');
+  const styles = Array.from(
+    { length: 12 },
+    (_, i) =>
+      `<xf numFmtId="0" fontId="${Math.floor(i / 3)}" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="${['left', 'center', 'right'][i % 3]}" vertical="center"/></xf>`
+  ).join('');
+  const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="4">${fonts}</fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="12">${styles}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+  XLSX.CFB.utils.cfb_add(zip, '/xl/styles.xml', new TextEncoder().encode(xml));
+  book.sheets.forEach((sheet, index) => {
+    const path = `/xl/worksheets/sheet${index + 1}.xml`;
+    const entry = XLSX.CFB.find(zip, path);
+    if (!entry) throw new Error('Could not export worksheet formatting.');
+    const source = new TextDecoder().decode(entry.content);
+    const styled = source.replace(/<c\b([^>]*?)>/g, (tag: string, attributes: string) => {
+      const address = attributes.match(/\br="([A-Z]+\d+)"/)?.[1];
+      if (!address) return tag;
+      const { r, c } = XLSX.utils.decode_cell(address);
+      const format = cellFormat(sheet, r, c);
+      const style =
+        ((format.bold ? 1 : 0) + (format.italic ? 2 : 0)) * 3 +
+        ['left', 'center', 'right'].indexOf(format.align || 'left');
+      return `<c${attributes.replace(/\s+s="\d+"/, '')} s="${style}">`;
+    });
+    XLSX.CFB.utils.cfb_add(zip, path, new TextEncoder().encode(styled));
+  });
+  return new Blob([XLSX.CFB.write(zip, { type: 'array', fileType: 'zip' })], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
 }

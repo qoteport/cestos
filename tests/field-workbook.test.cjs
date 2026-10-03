@@ -9,11 +9,20 @@ vm.runInNewContext(
   ts.transpileModule(fs.readFileSync('src/lib/fieldWorkbook.ts', 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
   }).outputText,
-  { exports: api, require, File, Blob, crypto: require('node:crypto').webcrypto, structuredClone }
+  {
+    exports: api,
+    require,
+    File,
+    Blob,
+    crypto: require('node:crypto').webcrypto,
+    structuredClone,
+    TextEncoder,
+    TextDecoder,
+  }
 );
 const plain = (value) => JSON.parse(JSON.stringify(value));
-test('all six templates have unique valid sheets and copies are independent', () => {
-  assert.equal(api.workbookTemplates.length, 6);
+test('all seven templates have unique valid sheets and copies are independent', () => {
+  assert.equal(api.workbookTemplates.length, 7);
   api.workbookTemplates.forEach((_, i) => {
     const book = api.newWorkbook(i);
     api.validateWorkbook(book);
@@ -124,7 +133,7 @@ for (const ext of ['xlsx', 'xls', 'csv'])
     assert.equal(b.sheets[0].cells[1][1], '0012');
   });
 test('Excel export round trips sheets, merges, values, widths and heights', async () => {
-  const book = api.newWorkbook(0);
+  const book = api.newWorkbook(1);
   book.sheets[0].cells[1][0] = 'Card 1';
   book.sheets[0].widths[0] = 220;
   book.sheets[0].heights[1] = 65;
@@ -146,4 +155,40 @@ test('import rejects sheets exceeding the editor bounds', async () => {
     ),
     /exceeds/
   );
+});
+
+test('formatting applies to a range and survives copy and dimension edits', () => {
+  const book = api.newWorkbook();
+  const original = book.sheets[0];
+  const styled = api.formatCells(
+    original,
+    { r: 1, c: 1, er: 2, ec: 2 },
+    { bold: true, italic: true, align: 'center' }
+  );
+  assert.equal(api.cellFormat(original, 1, 1).bold, false);
+  assert.equal(api.cellFormat(styled, 2, 2).align, 'center');
+  book.sheets[0] = styled;
+  api.validateWorkbook(book);
+  const copied = api.copyWorkbook(book);
+  assert.equal(api.cellFormat(copied.sheets[0], 2, 2).italic, true);
+  const moved = api.changeDimension(styled, 'row', 1, false);
+  assert.equal(api.cellFormat(moved, 3, 2).bold, true);
+  const removed = api.changeDimension(moved, 'column', 0, true);
+  assert.equal(api.cellFormat(removed, 3, 1).italic, true);
+});
+test('Excel export contains font and alignment styles for selected cells', async () => {
+  const book = api.newWorkbook();
+  book.sheets[0].cells[1][1] = 'Formatted';
+  book.sheets[0] = api.formatCells(
+    book.sheets[0],
+    { r: 1, c: 1, er: 1, ec: 1 },
+    { bold: true, italic: true, align: 'right' }
+  );
+  const blob = await api.exportWorkbook(book);
+  const zip = XLSX.CFB.read(new Uint8Array(await blob.arrayBuffer()), { type: 'buffer' });
+  const styles = new TextDecoder().decode(XLSX.CFB.find(zip, '/xl/styles.xml').content);
+  const sheet = new TextDecoder().decode(XLSX.CFB.find(zip, '/xl/worksheets/sheet1.xml').content);
+  assert.match(styles, /<b\/><i\/>/);
+  assert.match(styles, /horizontal="right"/);
+  assert.match(sheet, /<c[^>]*r="B2"[^>]*s="11"/);
 });
