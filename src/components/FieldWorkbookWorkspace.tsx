@@ -46,6 +46,7 @@ import {
   exportWorkbook,
   importWorkbook,
   makeSheet,
+  MAX_ROWS,
   mergeCells,
   newWorkbook,
   overlaps,
@@ -668,6 +669,22 @@ export default function FieldWorkbookWorkspace({
     });
     setAnchor({ r: 0, c: 0 });
     setEnd({ r: 0, c: 0 });
+  }
+  function addRows(count: number) {
+    if (!sheet || !book) return;
+    if (sheet.cells.length + count > MAX_ROWS) {
+      setError(`Cannot exceed ${MAX_ROWS} rows per sheet.`);
+      return;
+    }
+    let nextSheet = sheet;
+    for (let i = 0; i < count; i++) {
+      nextSheet = changeDimension(nextSheet, 'row', nextSheet.cells.length, false);
+    }
+    commit({
+      ...book,
+      sheets: book.sheets.map((s, idx) => (idx === sheetIndex ? nextSheet : s)),
+    });
+    setNotice(`Added ${count} new rows to sheet.`);
   }
   function renameSheet() {
     const name = sheetName.trim();
@@ -1469,6 +1486,36 @@ export default function FieldWorkbookWorkspace({
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-2.5 dark:border-slate-800 dark:bg-slate-900/80">
+          <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+            <span className="font-semibold">{sheet.cells.length}</span> rows × <span className="font-semibold">{sheet.widths.length}</span> columns
+            <span className="text-slate-400 dark:text-slate-600">·</span>
+            <span className="text-[11px] text-slate-500">Max limit: {MAX_ROWS} rows</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Add rows:</span>
+            <div className="inline-flex items-center rounded-lg border border-slate-300 bg-white shadow-xs dark:border-slate-700 dark:bg-slate-900">
+              {[10, 25, 50, 100].map((count, idx, arr) => (
+                <div key={count} className="flex items-center">
+                  <button
+                    type="button"
+                    className="px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 dark:text-slate-200 dark:hover:bg-emerald-950 dark:hover:text-emerald-200 disabled:opacity-40 transition-colors"
+                    disabled={sheet.cells.length >= MAX_ROWS}
+                    onClick={() => addRows(count)}
+                    title={`Add ${count} more rows to the bottom of the sheet`}
+                  >
+                    +{count} rows
+                  </button>
+                  {idx < arr.length - 1 && (
+                    <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
         {suggestions.map(
           (values, c) =>
