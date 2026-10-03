@@ -941,9 +941,34 @@ export default function FieldWorkbookWorkspace({
         </div>
 
         {showToolbar && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
+            {/* Undo / Redo Group */}
+            <div className="flex items-center gap-1">
+              <button
+                className={button}
+                disabled={!undo.length}
+                aria-label="Undo"
+                title="Undo (Ctrl+Z)"
+                onClick={() => undoRedo(false)}
+              >
+                <Undo2 size={16} />
+              </button>
+              <button
+                className={button}
+                disabled={!redo.length}
+                aria-label="Redo"
+                title="Redo (Ctrl+Y)"
+                onClick={() => undoRedo(true)}
+              >
+                <Redo2 size={16} />
+              </button>
+            </div>
+
+            <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 self-center" aria-hidden="true" />
+
+            {/* Text Formatting Group */}
             <div
-              className="flex items-center gap-1 rounded-xl border bg-white p-2 dark:border-slate-700 dark:bg-slate-900"
+              className="flex items-center gap-1"
               role="group"
               aria-label="Text formatting"
             >
@@ -985,23 +1010,11 @@ export default function FieldWorkbookWorkspace({
                 </button>
               ))}
             </div>
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
-              <button
-                className={button}
-                disabled={!undo.length}
-                aria-label="Undo"
-                onClick={() => undoRedo(false)}
-              >
-                <Undo2 size={16} />
-              </button>
-              <button
-                className={button}
-                disabled={!redo.length}
-                aria-label="Redo"
-                onClick={() => undoRedo(true)}
-              >
-                <Redo2 size={16} />
-              </button>
+
+            <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 self-center" aria-hidden="true" />
+
+            {/* Row & Column Actions Group */}
+            <div className="flex items-center gap-1">
               <button
                 type="button"
                 title="Insert row above"
@@ -1076,6 +1089,12 @@ export default function FieldWorkbookWorkspace({
                   />
                 </span>
               </button>
+            </div>
+
+            <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 self-center" aria-hidden="true" />
+
+            {/* Merge & Selection Group */}
+            <div className="flex items-center gap-1">
               <button
                 type="button"
                 title="Merge selection"
@@ -1145,6 +1164,12 @@ export default function FieldWorkbookWorkspace({
               >
                 <Eraser size={18} aria-hidden="true" />
               </button>
+            </div>
+
+            <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 self-center" aria-hidden="true" />
+
+            {/* Template & History Group */}
+            <div className="flex items-center gap-1">
               <button
                 type="button"
                 title="Save as template"
