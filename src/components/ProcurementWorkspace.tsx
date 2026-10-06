@@ -5,7 +5,7 @@ import {
   ShoppingBag, Plus, RefreshCw, CheckCircle2, Clock, Truck, PackageCheck, AlertCircle, FileText, Search, Eye
 } from 'lucide-react';
 import { apiFetch, PurchaseOrderRead, receivePurchaseOrderGoods } from '@/lib/api';
-import { Modal, rows } from './DataUI';
+import { Modal, rows, TableShimmerSkeleton } from './DataUI';
 import { PurchaseOrderCategoryField, purchaseOrderCategoryLabel } from './PurchaseOrderCategoryField';
 import { useOperationalDataSync } from '@/lib/operationalDataSync';
 import SearchableSelect from './SearchableSelect';
@@ -157,43 +157,46 @@ export default function ProcurementWorkspace({ subResource }: { subResource?: st
             </tr>
           </thead>
           <tbody className="divide-y">
-            {filteredOrders.map((po) => (
-              <tr key={po.id} className="hover:bg-muted/30">
-                <td className="px-4 py-3 font-mono font-medium">{po.po_number}</td>
-                <td className="px-4 py-3 text-xs text-muted-foreground">
-                  {(po.items || []).map((i: any) => `${i.description} (${i.quantity_ordered})`).join(', ') || 'No line items'}
-                </td>
-                <td className="px-4 py-3">{purchaseOrderCategoryLabel(po.category)}</td>
-                <td className="px-4 py-3 font-bold">${Number(po.total_amount).toLocaleString()} {po.currency}</td>
-                <td className="px-4 py-3">
-                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                    po.status === 'RECEIVED' ? 'bg-emerald-500/10 text-emerald-600' :
-                    po.status === 'PARTIALLY_RECEIVED' ? 'bg-blue-500/10 text-blue-600' : 'bg-amber-500/10 text-amber-600'
-                  }`}>
-                    {String(po.status || '').replaceAll('_', ' ')}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right flex items-center justify-end gap-2">
-                  <button
-                    onClick={() => setSelectedPo(po)}
-                    className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-                    title="View Details"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </button>
-                  {po.status !== 'RECEIVED' && (
+            {loading ? (
+              <TableShimmerSkeleton rows={6} cols={6} />
+            ) : filteredOrders.length > 0 ? (
+              filteredOrders.map((po) => (
+                <tr key={po.id} className="hover:bg-muted/30">
+                  <td className="px-4 py-3 font-mono font-medium">{po.po_number}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                    {(po.items || []).map((i: any) => `${i.description} (${i.quantity_ordered})`).join(', ') || 'No line items'}
+                  </td>
+                  <td className="px-4 py-3">{purchaseOrderCategoryLabel(po.category)}</td>
+                  <td className="px-4 py-3 font-bold">${Number(po.total_amount).toLocaleString()} {po.currency}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                      po.status === 'RECEIVED' ? 'bg-emerald-500/10 text-emerald-600' :
+                      po.status === 'PARTIALLY_RECEIVED' ? 'bg-blue-500/10 text-blue-600' : 'bg-amber-500/10 text-amber-600'
+                    }`}>
+                      {String(po.status || '').replaceAll('_', ' ')}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right flex items-center justify-end gap-2">
                     <button
-                      onClick={() => openReceiveModal(po)}
-                      className="px-3 py-1 text-xs bg-primary text-primary-foreground rounded font-medium hover:bg-primary/90 flex items-center gap-1"
+                      onClick={() => setSelectedPo(po)}
+                      className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                      title="View Details"
                     >
-                      <PackageCheck className="h-3.5 w-3.5" />
-                      Receive Goods
+                      <Eye className="h-4 w-4" />
                     </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {filteredOrders.length === 0 && (
+                    {po.status !== 'RECEIVED' && (
+                      <button
+                        onClick={() => openReceiveModal(po)}
+                        className="px-3 py-1 text-xs bg-primary text-primary-foreground rounded font-medium hover:bg-primary/90 flex items-center gap-1"
+                      >
+                        <PackageCheck className="h-3.5 w-3.5" />
+                        Receive Goods
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))
+            ) : (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
                   No purchase orders found.

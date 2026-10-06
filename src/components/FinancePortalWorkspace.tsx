@@ -76,6 +76,7 @@ import UniversalFileViewerModal from './UniversalFileViewerModal';
 import { PurchaseOrderCategoryField, purchaseOrderCategoryLabel } from './PurchaseOrderCategoryField';
 import PurchaseOrderCategoryChart from './PurchaseOrderCategoryChart';
 import { useOperationalDataSync } from '@/lib/operationalDataSync';
+import { TableShimmerSkeleton } from './DataUI';
 
 // ─── Vendor Types ─────────────────────────────────────────────────────────────
 
@@ -2198,7 +2199,30 @@ Signed: Finance & Procurement Administration
                 <span>Issued Purchase Orders</span>
                 <span className="text-xs text-muted-foreground font-normal">{scopedPurchaseOrders.length} orders</span>
               </h3>
-              {scopedPurchaseOrders.length === 0 ? (
+              {loading ? (
+                <div className="overflow-x-auto rounded-2xl border bg-card shadow-xs">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/50 border-b">
+                      <tr>
+                        <th className="hidden sm:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">PO #</th>
+                        <th className="hidden md:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Order Date</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Vendor / Supplier</th>
+                        <th className="hidden lg:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Project Scope</th>
+                        <th className="hidden md:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Category</th>
+                        <th className="hidden sm:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Items Count</th>
+                        <th className="hidden lg:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Receipt</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Total Amount</th>
+                        <th className="hidden sm:table-cell px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Finance Payments</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 text-left font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      <TableShimmerSkeleton rows={6} cols={11} />
+                    </tbody>
+                  </table>
+                </div>
+              ) : scopedPurchaseOrders.length === 0 ? (
                 <EmptyState message="No purchase orders found matching the filter scope. Click 'Create Purchase Order' to issue a new PO." />
               ) : (
                 <div className="overflow-x-auto rounded-2xl border bg-card shadow-xs">

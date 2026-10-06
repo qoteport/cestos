@@ -97,6 +97,7 @@ import TrackerDetailsModal from './TrackerDetailsModal';
 import { PurchaseOrderCategoryField, purchaseOrderCategoryLabel } from './PurchaseOrderCategoryField';
 import PurchaseOrderCategoryChart from './PurchaseOrderCategoryChart';
 import { useOperationalDataSync } from '@/lib/operationalDataSync';
+import { TableShimmerSkeleton } from './DataUI';
 import EmployeeTimesheetsWorkspace from './EmployeeTimesheetsWorkspace';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -2362,7 +2363,22 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                   <span>Issued Purchase Orders</span>
                   <span className="text-xs text-slate-500 font-normal">{scopedPurchaseOrders.length} orders</span>
                 </h3>
-                {scopedPurchaseOrders.length === 0 ? (
+                {loading ? (
+                  <div className="overflow-x-auto max-w-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+                    <table className="w-full text-xs">
+                      <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700">
+                        <tr>
+                          {['PO #', 'Order Date', 'Vendor / Supplier', 'Project Scope', 'Category', 'Items Count', 'Quotation', 'Finance Payments', 'Status', 'Actions'].map((h) => (
+                            <th key={h} className="px-4 py-3 text-left font-bold text-slate-500 uppercase tracking-wider">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        <TableShimmerSkeleton rows={6} cols={10} />
+                      </tbody>
+                    </table>
+                  </div>
+                ) : scopedPurchaseOrders.length === 0 ? (
                   <div className="p-8 text-center text-slate-500 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">No purchase orders found matching the filter scope.</div>
                 ) : (<>
 

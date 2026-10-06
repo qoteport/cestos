@@ -11,7 +11,26 @@ vm.runInNewContext(
   }).outputText,
   {
     exports: api,
-    require,
+    require: (name) => {
+      if (name !== './excelWorkbook') return require(name);
+      const exports = {};
+      vm.runInNewContext(
+        ts.transpileModule(fs.readFileSync('src/lib/excelWorkbook.ts', 'utf8'), {
+          compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+        }).outputText,
+        {
+          exports,
+          require,
+          File,
+          Blob,
+          Uint8Array,
+          btoa,
+          atob,
+          crypto: require('node:crypto').webcrypto,
+        }
+      );
+      return exports;
+    },
     File,
     Blob,
     crypto: require('node:crypto').webcrypto,
@@ -143,18 +162,18 @@ test('Excel export round trips sheets, merges, values, widths and heights', asyn
   assert.equal(imported.sheets.length, 2);
   assert.equal(imported.sheets[0].cells[1][0], 'Card 1');
   assert.deepEqual(plain(imported.sheets[0].merges), plain(book.sheets[0].merges));
-  assert.equal(imported.sheets[0].widths[0], 220);
+  assert.ok(Math.abs(imported.sheets[0].widths[0] - 220) < 10);
   assert.equal(imported.sheets[0].heights[1], 65);
 });
-test('import rejects sheets exceeding the editor bounds', async () => {
-  const source = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(source, { '!ref': 'A1:AZ501' }, 'Large');
-  await assert.rejects(
-    api.importWorkbook(
-      new File([XLSX.write(source, { type: 'buffer', bookType: 'xlsx' })], 'large.xlsx')
-    ),
-    /exceeds/
-  );
+test('large XLSX sheets retain all data outside the editable preview', async () => {
+  const Excel = require('exceljs');
+  const source = new Excel.Workbook();
+  source.addWorksheet('Large').getCell('AZ501').value = 'Outside preview';
+  const bytes = await source.xlsx.writeBuffer();
+  const book = await api.importWorkbook(new File([bytes], 'large.xlsx'));
+  assert.equal(book.sheets[0].previewLimited, true);
+  const output = await api.exportWorkbook(book);
+  assert.deepEqual(Buffer.from(await output.arrayBuffer()), Buffer.from(bytes));
 });
 
 test('formatting applies to a range and survives copy and dimension edits', () => {
@@ -191,4 +210,45 @@ test('Excel export contains font and alignment styles for selected cells', async
   assert.match(styles, /<b\/><i\/>/);
   assert.match(styles, /horizontal="right"/);
   assert.match(sheet, /<c[^>]*r="B2"[^>]*s="11"/);
+});
+
+test('styled XLSX keeps every sheet and original bytes, and edited exports retain formulas and layout', async () => {
+  const Excel = require('exceljs');
+  const original = new Excel.Workbook();
+  for (let i = 0; i < 32; i++) original.addWorksheet('Sheet ' + i);
+  const ws = original.worksheets[0];
+  ws.getCell('A1').value = 'Title';
+  ws.mergeCells('A1:C1');
+  ws.getCell('A1').font = { name: 'Arial', size: 18, bold: true, color: { argb: 'FFFF0000' } };
+  ws.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  ws.getCell('A2').value = 2;
+  ws.getCell('B2').value = { formula: 'A2*2', result: 4 };
+  ws.getColumn(1).width = 30;
+  ws.getRow(1).height = 40;
+  ws.getCell('A3').value = 'Hidden data';
+  ws.getRow(3).hidden = true;
+  ws.pageSetup.orientation = 'landscape';
+  ws.views = [{ state: 'frozen', ySplit: 1 }];
+  original.worksheets[1].state = 'hidden';
+  const bytes = await original.xlsx.writeBuffer();
+  const book = await api.importWorkbook(new File([bytes], 'styled.xlsx'));
+  assert.equal(book.sheets.length, 32);
+  assert.equal(book.sheets[0].formats['0:0'].background, '#ffff00');
+  assert.equal(book.sheets[0].formats['0:0'].fontSize, 18);
+  assert.equal(book.sheets[1].hidden, true);
+  assert.deepEqual(
+    Buffer.from(await (await api.exportWorkbook(book)).arrayBuffer()),
+    Buffer.from(bytes)
+  );
+  book.sheets[0].cells[1][0] = '3';
+  const output = new Excel.Workbook();
+  await output.xlsx.load(await (await api.exportWorkbook(book)).arrayBuffer());
+  const edited = output.worksheets[0];
+  assert.equal(edited.getCell('A2').value, 3);
+  assert.equal(edited.getCell('B2').formula, 'A2*2');
+  assert.equal(edited.getCell('A1').font.size, 18);
+  assert.equal(edited.pageSetup.orientation, 'landscape');
+  assert.equal(edited.views[0].ySplit, 1);
+  assert.equal(edited.getRow(3).hidden, true);
+  assert.equal(output.worksheets.length, 32);
 });

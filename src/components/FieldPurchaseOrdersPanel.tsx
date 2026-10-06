@@ -9,6 +9,7 @@ import OperationalExpenseSubmissionModal from './OperationalExpenseSubmissionMod
 import UniversalFileViewerModal from './UniversalFileViewerModal';
 import { PurchaseOrderCategoryField, purchaseOrderCategoryLabel } from './PurchaseOrderCategoryField';
 import { useOperationalDataSync } from '@/lib/operationalDataSync';
+import { TableShimmerSkeleton } from './DataUI';
 
 type Row = Record<string, any>;
 type Line = { item_name: string; description: string; quantity_ordered: string; unit_price: string };
@@ -48,6 +49,7 @@ export default function FieldPurchaseOrdersPanel({
   initialDocumentDraft?: { key: number; file: File; data: Row } | null;
 }) {
   const [orders, setOrders] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
   const [suppliers, setSuppliers] = useState<Row[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
@@ -116,27 +118,33 @@ export default function FieldPurchaseOrdersPanel({
     }
   }
 
-  async function reload() {
-    const [poRows, supplierRows, projRows] = await Promise.all([
-      apiFetch<Row[]>('/api/v1/procurement/purchase-orders'),
-      apiFetch<Row[]>('/api/v1/fuel-suppliers').catch(() => []),
-      apiFetch<any>('/api/v1/projects?page_size=100').catch(() => []),
-    ]);
-    setOrders(Array.isArray(poRows) ? poRows : []);
-    setProjectList(Array.isArray(projRows) ? projRows : projRows?.items || []);
-    const orderList = Array.isArray(poRows) ? poRows : [];
-    const requestedId = new URLSearchParams(window.location.search).get('purchase_order_id');
-    const linkedOrder = requestedId ? orderList.find((row) => String(row.id) === requestedId) : null;
-    if (linkedOrder && handledPurchaseOrderLink.current !== requestedId) {
-      setViewDetailPO(linkedOrder);
-      handledPurchaseOrderLink.current = requestedId!;
-    } else {
-      setViewDetailPO((current) => current ? orderList.find((row) => row.id === current.id) || current : null);
+  async function reload(showLoadingState = false) {
+    if (showLoadingState) setLoading(true);
+    try {
+      const [poRows, supplierRows, projRows] = await Promise.all([
+        apiFetch<Row[]>('/api/v1/procurement/purchase-orders'),
+        apiFetch<Row[]>('/api/v1/fuel-suppliers').catch(() => []),
+        apiFetch<any>('/api/v1/projects?page_size=100').catch(() => []),
+      ]);
+      setOrders(Array.isArray(poRows) ? poRows : []);
+      setProjectList(Array.isArray(projRows) ? projRows : projRows?.items || []);
+      const orderList = Array.isArray(poRows) ? poRows : [];
+      const requestedId = new URLSearchParams(window.location.search).get('purchase_order_id');
+      const linkedOrder = requestedId ? orderList.find((row) => String(row.id) === requestedId) : null;
+      if (linkedOrder && handledPurchaseOrderLink.current !== requestedId) {
+        setViewDetailPO(linkedOrder);
+        handledPurchaseOrderLink.current = requestedId!;
+      } else {
+        setViewDetailPO((current) => current ? orderList.find((row) => row.id === current.id) || current : null);
+      }
+      setSuppliers(Array.isArray(supplierRows) ? supplierRows : []);
+    } finally {
+      setLoading(false);
     }
-    setSuppliers(Array.isArray(supplierRows) ? supplierRows : []);
   }
   useEffect(() => {
     const refresh = () => { if (document.visibilityState === 'visible') void reload().catch((e) => setMessage(e.message || 'Could not refresh purchase orders.')); };
+    setLoading(true);
     refresh();
     const interval = window.setInterval(refresh, 60_000);
     window.addEventListener('focus', refresh);
@@ -324,33 +332,38 @@ export default function FieldPurchaseOrdersPanel({
           </tr>
         </thead>
         <tbody className="divide-y">
-          {filteredOrders.map((po) => {
-            const payments = po.expense_payments || [];
-            return <tr key={po.id} className="align-top">
-              <td className="p-3 font-mono font-bold">{po.po_number}</td>
-              <td className="p-3">{po.supplier_name || '—'}</td>
-              <td className="p-3">{(po.items || []).length}</td>
-              <td className="p-3">{purchaseOrderCategoryLabel(po.category)}</td>
-              <td className="whitespace-nowrap p-3">{po.currency} {Number(po.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-              <td className="p-3">{po.attachment_file_name ? <div className="flex min-w-40 items-center gap-1.5"><button type="button" onClick={() => void handleViewPOAttachment(po.id)} className="inline-flex min-w-0 items-center gap-1 rounded border border-orange-200 bg-orange-50 px-2 py-1 font-mono text-[11px] font-semibold text-orange-800 transition hover:bg-orange-100 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-300" title={`View attached quotation: ${po.attachment_file_name}`}><Paperclip size={12} className="shrink-0 text-orange-600" /><span className="max-w-[110px] truncate">{po.attachment_file_name}</span></button><button type="button" onClick={() => void handleDownloadPOAttachment(po.id, po.attachment_file_name)} className="rounded p-1 text-slate-500 transition hover:bg-slate-100 hover:text-orange-600 dark:hover:bg-slate-800" title={`Download ${po.attachment_file_name}`}><Download size={13} /></button></div> : <span className="text-[11px] text-slate-400">No quotation</span>}</td>
-              <td className="p-3">
-                <div className="min-w-[225px] space-y-1.5">
-                  <div className="rounded-md border border-blue-100 bg-blue-50 px-2.5 py-1.5 dark:border-blue-900 dark:bg-blue-950/30">
-                    <div className="flex justify-between gap-3"><span className="text-slate-600 dark:text-slate-300">Paid to date</span><strong className="whitespace-nowrap">{po.currency} {Number(po.expense_paid_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
-                    {po.expense_raised && <div className="mt-0.5 flex justify-between gap-3 text-[10px] text-slate-500"><span>Balance</span><span className="whitespace-nowrap">{po.currency} {Number(po.expense_balance_due || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>}
+          {loading ? (
+            <TableShimmerSkeleton rows={6} cols={9} />
+          ) : filteredOrders.length > 0 ? (
+            filteredOrders.map((po) => {
+              const payments = po.expense_payments || [];
+              return <tr key={po.id} className="align-top">
+                <td className="p-3 font-mono font-bold">{po.po_number}</td>
+                <td className="p-3">{po.supplier_name || '—'}</td>
+                <td className="p-3">{(po.items || []).length}</td>
+                <td className="p-3">{purchaseOrderCategoryLabel(po.category)}</td>
+                <td className="whitespace-nowrap p-3">{po.currency} {Number(po.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td className="p-3">{po.attachment_file_name ? <div className="flex min-w-40 items-center gap-1.5"><button type="button" onClick={() => void handleViewPOAttachment(po.id)} className="inline-flex min-w-0 items-center gap-1 rounded border border-orange-200 bg-orange-50 px-2 py-1 font-mono text-[11px] font-semibold text-orange-800 transition hover:bg-orange-100 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-300" title={`View attached quotation: ${po.attachment_file_name}`}><Paperclip size={12} className="shrink-0 text-orange-600" /><span className="max-w-[110px] truncate">{po.attachment_file_name}</span></button><button type="button" onClick={() => void handleDownloadPOAttachment(po.id, po.attachment_file_name)} className="rounded p-1 text-slate-500 transition hover:bg-slate-100 hover:text-orange-600 dark:hover:bg-slate-800" title={`Download ${po.attachment_file_name}`}><Download size={13} /></button></div> : <span className="text-[11px] text-slate-400">No quotation</span>}</td>
+                <td className="p-3">
+                  <div className="min-w-[225px] space-y-1.5">
+                    <div className="rounded-md border border-blue-100 bg-blue-50 px-2.5 py-1.5 dark:border-blue-900 dark:bg-blue-950/30">
+                      <div className="flex justify-between gap-3"><span className="text-slate-600 dark:text-slate-300">Paid to date</span><strong className="whitespace-nowrap">{po.currency} {Number(po.expense_paid_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
+                      {po.expense_raised && <div className="mt-0.5 flex justify-between gap-3 text-[10px] text-slate-500"><span>Balance</span><span className="whitespace-nowrap">{po.currency} {Number(po.expense_balance_due || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>}
+                    </div>
+                    {payments.length ? payments.map((payment: Row, index: number) => <div key={payment.id} className="rounded-md border px-2.5 py-1.5">
+                      <div className="flex items-center justify-between gap-3"><span className="font-semibold text-slate-600 dark:text-slate-300">Installment {payments.length - index}</span><strong className="whitespace-nowrap">{po.currency} {Number(payment.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
+                      <div className="mt-0.5 flex flex-wrap items-center justify-between gap-x-2 text-[10px] text-slate-500"><span>{payment.payment_date ? new Date(`${payment.payment_date}T00:00:00`).toLocaleDateString() : 'Date unavailable'}</span>{payment.reference && <span className="max-w-28 truncate" title={payment.reference}>Ref: {payment.reference}</span>}</div>
+                      {payment.receipt_name ? <div className="mt-1 flex items-center gap-2 border-t pt-1"><span className="max-w-28 truncate text-[10px] text-slate-500" title={payment.receipt_name}>{payment.receipt_name}</span><button type="button" onClick={() => void handleViewPaymentReceipt(payment)} className="inline-flex items-center gap-1 font-semibold text-blue-700 underline" title={`View ${payment.receipt_name}`}><Eye size={11} />View</button><button type="button" onClick={() => void handleDownloadPaymentReceipt(payment)} className="inline-flex items-center gap-1 font-semibold text-slate-600 hover:text-blue-700" title={`Download ${payment.receipt_name}`}><Download size={11} />Download</button></div> : <p className="mt-1 text-[10px] text-slate-400">No receipt attached</p>}
+                    </div>) : <span className="text-[10px] text-slate-400">No payments recorded</span>}
                   </div>
-                  {payments.length ? payments.map((payment: Row, index: number) => <div key={payment.id} className="rounded-md border px-2.5 py-1.5">
-                    <div className="flex items-center justify-between gap-3"><span className="font-semibold text-slate-600 dark:text-slate-300">Installment {payments.length - index}</span><strong className="whitespace-nowrap">{po.currency} {Number(payment.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
-                    <div className="mt-0.5 flex flex-wrap items-center justify-between gap-x-2 text-[10px] text-slate-500"><span>{payment.payment_date ? new Date(`${payment.payment_date}T00:00:00`).toLocaleDateString() : 'Date unavailable'}</span>{payment.reference && <span className="max-w-28 truncate" title={payment.reference}>Ref: {payment.reference}</span>}</div>
-                    {payment.receipt_name ? <div className="mt-1 flex items-center gap-2 border-t pt-1"><span className="max-w-28 truncate text-[10px] text-slate-500" title={payment.receipt_name}>{payment.receipt_name}</span><button type="button" onClick={() => void handleViewPaymentReceipt(payment)} className="inline-flex items-center gap-1 font-semibold text-blue-700 underline" title={`View ${payment.receipt_name}`}><Eye size={11} />View</button><button type="button" onClick={() => void handleDownloadPaymentReceipt(payment)} className="inline-flex items-center gap-1 font-semibold text-slate-600 hover:text-blue-700" title={`Download ${payment.receipt_name}`}><Download size={11} />Download</button></div> : <p className="mt-1 text-[10px] text-slate-400">No receipt attached</p>}
-                  </div>) : <span className="text-[10px] text-slate-400">No payments recorded</span>}
-                </div>
-              </td>
-              <td className="p-3"><div className="flex flex-col items-start gap-1"><span>{String(po.status).replaceAll('_', ' ')}</span>{hasExpense(po) && <ExpensePaymentBadge status={po.expense_status} />}</div></td>
-              <td className="p-3"><div className="flex min-w-36 flex-wrap gap-2"><button type="button" onClick={() => setViewDetailPO(po)} className="inline-flex items-center gap-1 rounded border border-slate-200 bg-white px-2.5 py-1.5 font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700" title="View PO Details & Line Items"><Eye size={13} className="shrink-0 text-orange-600" />Details</button>{['DRAFT', 'WAITING_APPROVAL'].includes(po.status) && <button type="button" onClick={() => openEdit(po)} className="rounded border px-2.5 py-1.5 font-semibold hover:bg-orange-50">{po.status === 'DRAFT' ? 'Edit draft' : 'Edit / add quotation'}</button>}{po.status === 'APPROVED' && !hasExpense(po) && <button type="button" onClick={() => setExpensePO(po)} className="rounded bg-orange-600 px-2.5 py-1.5 font-bold text-white hover:bg-orange-700">Raise Expense</button>}{canReceive(po) && <button type="button" onClick={() => openReceive(po)} className="inline-flex items-center gap-1 rounded bg-emerald-600 px-2.5 py-1.5 font-bold text-white hover:bg-emerald-700"><Truck size={12} />Receive Goods</button>}</div></td>
-            </tr>;
-          })}
-          {filteredOrders.length === 0 && <tr><td className="p-8 text-center text-slate-500" colSpan={9}>No purchase orders found matching the selected filters.</td></tr>}
+                </td>
+                <td className="p-3"><div className="flex flex-col items-start gap-1"><span>{String(po.status).replaceAll('_', ' ')}</span>{hasExpense(po) && <ExpensePaymentBadge status={po.expense_status} />}</div></td>
+                <td className="p-3"><div className="flex min-w-36 flex-wrap gap-2"><button type="button" onClick={() => setViewDetailPO(po)} className="inline-flex items-center gap-1 rounded border border-slate-200 bg-white px-2.5 py-1.5 font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700" title="View PO Details & Line Items"><Eye size={13} className="shrink-0 text-orange-600" />Details</button>{['DRAFT', 'WAITING_APPROVAL'].includes(po.status) && <button type="button" onClick={() => openEdit(po)} className="rounded border px-2.5 py-1.5 font-semibold hover:bg-orange-50">{po.status === 'DRAFT' ? 'Edit draft' : 'Edit / add quotation'}</button>}{po.status === 'APPROVED' && !hasExpense(po) && <button type="button" onClick={() => setExpensePO(po)} className="rounded bg-orange-600 px-2.5 py-1.5 font-bold text-white hover:bg-orange-700">Raise Expense</button>}{canReceive(po) && <button type="button" onClick={() => openReceive(po)} className="inline-flex items-center gap-1 rounded bg-emerald-600 px-2.5 py-1.5 font-bold text-white hover:bg-emerald-700"><Truck size={12} />Receive Goods</button>}</div></td>
+              </tr>;
+            })
+          ) : (
+            <tr><td className="p-8 text-center text-slate-500" colSpan={9}>No purchase orders found matching the selected filters.</td></tr>
+          )}
         </tbody>
       </table>
     </div>
@@ -426,7 +439,7 @@ export default function FieldPurchaseOrdersPanel({
                       />
                     </div>
                     <label className="space-y-1 text-xs font-semibold">
-                      <span className="block">Quotation / supporting file <span className="font-normal text-slate-500">(optional)</span></span>
+                      <span className="block">Quotation / Invoice <span className="font-normal text-slate-500">(optional)</span></span>
                       <input type="file" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,.docx,.xls,.xlsx,.txt,.csv,.rtf" className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 dark:file:bg-orange-950/60 dark:file:text-orange-300 cursor-pointer transition" onChange={(e) => void handleQuotationChange(e.target.files?.[0] || null)} />
                       {existingQuotation && <span className="block text-slate-500">Current file: {existingQuotation}</span>}
                       {quotation && <span className="block truncate text-[11px] text-slate-500">{quotation.name}</span>}
@@ -536,7 +549,7 @@ export default function FieldPurchaseOrdersPanel({
                   Cancel
                 </button>
                 <button type="submit" disabled={busy} className="rounded-xl bg-orange-600 px-5 py-2 text-xs font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto shadow-xs">
-                  {busy ? 'Submitting…' : 'Submit for Executive Review'}
+                  {busy ? 'Submitting…' : 'Submit for Review'}
                 </button>
               </div>
             </div>

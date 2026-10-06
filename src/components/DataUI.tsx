@@ -197,3 +197,24 @@ export function SearchableProjectSelect({
     </div>
   );
 }
+
+export function TableShimmerSkeleton({ rows = 5, cols = 6 }: { rows?: number; cols?: number }) {
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, rIdx) => (
+        <tr key={rIdx} className="animate-pulse border-b border-border/50 bg-slate-50/50 dark:bg-slate-800/30">
+          {Array.from({ length: cols }).map((_, cIdx) => (
+            <td key={cIdx} className="px-4 py-3.5">
+              <div
+                className={`h-4 rounded-md bg-slate-200/80 dark:bg-slate-700/60 ${
+                  cIdx === 0 ? 'w-24 font-mono' : cIdx === 1 ? 'w-44' : cIdx === cols - 1 ? 'w-20 ml-auto' : 'w-28'
+                }`}
+              />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
+

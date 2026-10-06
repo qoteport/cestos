@@ -1,4 +1,18 @@
-export type CellFormat = { bold?: boolean; italic?: boolean; align?: 'left' | 'center' | 'right' };
+import { importStyledWorkbook, exportStyledWorkbook } from './excelWorkbook';
+export type CellFormat = {
+  fontName?: string;
+  fontSize?: number;
+  color?: string;
+  background?: string;
+  underline?: boolean;
+  strike?: boolean;
+  wrap?: boolean;
+  vertical?: 'top' | 'middle' | 'bottom';
+  borders?: Record<string, string>;
+  bold?: boolean;
+  italic?: boolean;
+  align?: 'left' | 'center' | 'right';
+};
 export type CellRange = { r: number; c: number; er: number; ec: number };
 export type FieldSheet = {
   id: string;
@@ -8,6 +22,12 @@ export type FieldSheet = {
   heights: number[];
   merges: CellRange[];
   formats?: Record<string, CellFormat>;
+  imported?: boolean;
+  excelId?: number;
+  hidden?: boolean;
+  previewLimited?: boolean;
+  rowOrigins?: (number | null)[];
+  columnOrigins?: (number | null)[];
 };
 export type FieldWorkbook = {
   version: 1;
@@ -15,6 +35,11 @@ export type FieldWorkbook = {
   name: string;
   sheets: FieldSheet[];
   template: boolean;
+  source?: {
+    name: string;
+    base64: string;
+    sheets: Record<string, { excelId: number; snapshot: string }>;
+  };
 };
 export const MAX_ROWS = 500;
 export const MAX_COLS = 50;
@@ -291,7 +316,12 @@ export function mergeCells(sheet: FieldSheet, range: CellRange): FieldSheet {
   return next;
 }
 export function cellFormat(sheet: FieldSheet, r: number, c: number): CellFormat {
-  return { bold: r === 0, italic: false, align: 'left', ...sheet.formats?.[`${r}:${c}`] };
+  return {
+    bold: !sheet.imported && r === 0,
+    italic: false,
+    align: 'left',
+    ...sheet.formats?.[`${r}:${c}`],
+  };
 }
 export function formatCells(sheet: FieldSheet, range: CellRange, format: CellFormat): FieldSheet {
   const formats = { ...sheet.formats };
@@ -309,7 +339,10 @@ export function changeDimension(
   index: number,
   remove: boolean
 ): FieldSheet {
+  if (sheet.previewLimited) throw new Error('Change this large sheet structure in Excel.');
   const next = structuredClone(sheet);
+  const origins = axis === 'row' ? next.rowOrigins : next.columnOrigins;
+  origins?.splice(index, remove ? 1 : 0, ...(remove ? [] : [null]));
   const count = axis === 'row' ? next.cells.length : next.widths.length;
   if (remove && count === 1) throw new Error('Keep at least one row and one column.');
   if (!remove && count >= (axis === 'row' ? MAX_ROWS : MAX_COLS))
@@ -390,8 +423,12 @@ export function pasteCells(
   next.cells = Array.from({ length: rows }, (_, r) =>
     Array.from({ length: cols }, (_, c) => next.cells[r]?.[c] || '')
   );
-  next.widths = Array.from({ length: cols }, (_, c) => next.widths[c] || 160);
-  next.heights = Array.from({ length: rows }, (_, r) => next.heights[r] || 34);
+  if (next.rowOrigins)
+    next.rowOrigins = Array.from({ length: rows }, (_, r) => next.rowOrigins?.[r] ?? null);
+  if (next.columnOrigins)
+    next.columnOrigins = Array.from({ length: cols }, (_, c) => next.columnOrigins?.[c] ?? null);
+  next.widths = Array.from({ length: cols }, (_, c) => next.widths[c] ?? 160);
+  next.heights = Array.from({ length: rows }, (_, r) => next.heights[r] ?? 34);
   values.forEach((line, r) =>
     line.forEach((value, c) => {
       next.cells[row + r][col + c] = value;
@@ -446,7 +483,7 @@ export function validateWorkbook(value: unknown): FieldWorkbook {
     typeof book.name !== 'string' ||
     !Array.isArray(book.sheets) ||
     !book.sheets.length ||
-    book.sheets.length > 30
+    (!book.source && book.sheets.length > 30)
   )
     throw new Error('This is not a supported Cestos workbook.');
   const ids = new Set<string>();
@@ -502,8 +539,8 @@ export function validateWorkbook(value: unknown): FieldWorkbook {
     )
       throw new Error('Invalid worksheet cells.');
     if (
-      s.widths.some((n) => !Number.isFinite(n) || n < 60 || n > 600) ||
-      s.heights.some((n) => !Number.isFinite(n) || n < 26 || n > 300)
+      s.widths.some((n) => !Number.isFinite(n) || n < (s.imported ? 0 : 60) || n > 10000) ||
+      s.heights.some((n) => !Number.isFinite(n) || n < (s.imported ? 0 : 26) || n > 10000)
     )
       throw new Error('Invalid worksheet sizes.');
     s.merges.forEach((m, i) => {
@@ -526,6 +563,7 @@ export function validateWorkbook(value: unknown): FieldWorkbook {
 export async function importWorkbook(file: File): Promise<FieldWorkbook> {
   if (!/\.(csv|xlsx|xls)$/i.test(file.name)) throw new Error('Choose a CSV, XLSX or XLS file.');
   if (file.size > 15 * 1024 * 1024) throw new Error('Choose a file smaller than 15 MB.');
+  if (/\.xlsx$/i.test(file.name)) return validateWorkbook(await importStyledWorkbook(file));
   const XLSX = await import('xlsx');
   const source = XLSX.read(await file.arrayBuffer(), {
     type: 'array',
@@ -566,13 +604,14 @@ export async function importWorkbook(file: File): Promise<FieldWorkbook> {
   return validateWorkbook(book);
 }
 export async function exportWorkbook(book: FieldWorkbook): Promise<Blob> {
+  if (book.source) return exportStyledWorkbook(book);
   const XLSX = await import('xlsx');
   const output = XLSX.utils.book_new();
   for (const sheet of book.sheets) {
     const ws = XLSX.utils.aoa_to_sheet(sheet.cells);
     ws['!merges'] = sheet.merges.map((m) => ({ s: { r: m.r, c: m.c }, e: { r: m.er, c: m.ec } }));
     ws['!cols'] = sheet.widths.map((wpx) => ({ wpx }));
-    ws['!rows'] = sheet.heights.map((hpx) => ({ hpx }));
+    ws['!rows'] = sheet.heights.map((hpx) => ({ hpt: (hpx * 3) / 4 }));
     XLSX.utils.book_append_sheet(output, ws, sheet.name);
   }
   // The installed SheetJS writer does not write custom fonts/alignment, so add

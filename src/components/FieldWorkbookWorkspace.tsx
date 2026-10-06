@@ -1,4 +1,5 @@
 'use client';
+import { originalBytes } from '@/lib/excelWorkbook';
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -83,6 +84,7 @@ const GridCell = memo(function GridCell({
   bold,
   italic,
   align,
+  appearance,
   list,
   onValue,
   onSelect,
@@ -100,6 +102,7 @@ const GridCell = memo(function GridCell({
   bold?: boolean;
   italic?: boolean;
   align?: CellFormat['align'];
+  appearance?: CellFormat;
   list?: string;
   onValue: (r: number, c: number, value: string) => void;
   onSelect: (r: number, c: number, extend: boolean) => void;
@@ -109,6 +112,14 @@ const GridCell = memo(function GridCell({
 }) {
   return (
     <td
+      style={{
+        backgroundColor: selected ? undefined : appearance?.background,
+        verticalAlign: appearance?.vertical,
+        borderTop: appearance?.borders?.top,
+        borderBottom: appearance?.borders?.bottom,
+        borderLeft: appearance?.borders?.left,
+        borderRight: appearance?.borders?.right,
+      }}
       data-grid-cell={`${r}:${c}`}
       rowSpan={merge ? merge.er - merge.r + 1 : 1}
       colSpan={merge ? merge.ec - merge.c + 1 : 1}
@@ -127,7 +138,17 @@ const GridCell = memo(function GridCell({
         maxLength={32767}
         autoComplete="off"
         className={`h-full min-h-[32px] w-full min-w-0 bg-transparent px-2 py-1 text-sm text-slate-900 outline-none dark:text-slate-100 ${bold ? 'font-bold' : 'font-normal'} ${italic ? 'italic' : ''}`}
-        style={{ textAlign: align }}
+        style={{
+          textAlign: align,
+          fontFamily: appearance?.fontName,
+          fontSize: appearance?.fontSize ? `${appearance.fontSize}pt` : undefined,
+          color: appearance?.color,
+          textDecoration: [
+            appearance?.underline ? 'underline' : '',
+            appearance?.strike ? 'line-through' : '',
+          ].join(' '),
+          minHeight: appearance ? 0 : undefined,
+        }}
         title={value}
         onFocus={() => onSelect(r, c, false)}
         onMouseDown={(event) => {
@@ -200,7 +221,11 @@ export default function FieldWorkbookWorkspace({
   const [showToolbar, setShowToolbar] = useState(true);
   const [showFormulaBar, setShowFormulaBar] = useState(true);
   const [showSelectionInfo, setShowSelectionInfo] = useState(false);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; sheetIndex: number } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    sheetIndex: number;
+  } | null>(null);
   const [editingSheetIndex, setEditingSheetIndex] = useState<number | null>(null);
   const [editingSheetName, setEditingSheetName] = useState('');
   const [confirmDeleteSheet, setConfirmDeleteSheet] = useState<FieldSheet | null>(null);
@@ -777,7 +802,7 @@ export default function FieldWorkbookWorkspace({
     try {
       activate(await importWorkbook(file), true);
       setNotice(
-        'Imported all worksheets. Formula cells use saved values; advanced Excel formatting is not imported.'
+        'Imported all worksheets. XLSX layout and common formatting are retained; formulas display saved results. Original XLSX retained intact. Advanced Excel features may not display here or survive an edited export.'
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not import workbook.');
@@ -833,6 +858,19 @@ export default function FieldWorkbookWorkspace({
             <X size={16} />
           </button>
         </div>
+      )}
+      {book?.source && (
+        <button
+          className={`${button} pointer-events-auto`}
+          onClick={() =>
+            downloadBlob(
+              new Blob([originalBytes(book.source!.base64) as BlobPart]),
+              book.source!.name
+            )
+          }
+        >
+          Download original Excel file
+        </button>
       )}
       {notice && (
         <div
@@ -981,7 +1019,6 @@ export default function FieldWorkbookWorkspace({
         }
       }}
     >
-
       {feedback}
       <fieldset disabled={busy} className="min-w-0 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2 dark:border-slate-800">
@@ -1020,7 +1057,10 @@ export default function FieldWorkbookWorkspace({
               onClick={() => setShowSelectionInfo(!showSelectionInfo)}
             >
               <Info size={14} />
-              <span>Selection details ({columnName(selection.c)}{selection.r + 1})</span>
+              <span>
+                Selection details ({columnName(selection.c)}
+                {selection.r + 1})
+              </span>
               {showSelectionInfo ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </button>
           </div>
@@ -1050,14 +1090,13 @@ export default function FieldWorkbookWorkspace({
               </button>
             </div>
 
-            <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 self-center" aria-hidden="true" />
+            <div
+              className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 self-center"
+              aria-hidden="true"
+            />
 
             {/* Text Formatting Group */}
-            <div
-              className="flex items-center gap-1"
-              role="group"
-              aria-label="Text formatting"
-            >
+            <div className="flex items-center gap-1" role="group" aria-label="Text formatting">
               {[
                 {
                   label: 'Bold',
@@ -1097,7 +1136,10 @@ export default function FieldWorkbookWorkspace({
               ))}
             </div>
 
-            <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 self-center" aria-hidden="true" />
+            <div
+              className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 self-center"
+              aria-hidden="true"
+            />
 
             {/* Row & Column Actions Group */}
             <div className="flex items-center gap-1">
@@ -1177,7 +1219,10 @@ export default function FieldWorkbookWorkspace({
               </button>
             </div>
 
-            <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 self-center" aria-hidden="true" />
+            <div
+              className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 self-center"
+              aria-hidden="true"
+            />
 
             {/* Merge & Selection Group */}
             <div className="flex items-center gap-1">
@@ -1252,7 +1297,10 @@ export default function FieldWorkbookWorkspace({
               </button>
             </div>
 
-            <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 self-center" aria-hidden="true" />
+            <div
+              className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 self-center"
+              aria-hidden="true"
+            />
 
             {/* Template & History Group */}
             <div className="flex items-center gap-1">
@@ -1266,7 +1314,8 @@ export default function FieldWorkbookWorkspace({
                   const duplicate = structuredClone(sheet);
                   duplicate.id = crypto.randomUUID();
                   let n = 2;
-                  while (book.sheets.some((s) => s.name === `${sheet.name.slice(0, 25)} (${n})`)) n++;
+                  while (book.sheets.some((s) => s.name === `${sheet.name.slice(0, 25)} (${n})`))
+                    n++;
                   duplicate.name = `${sheet.name.slice(0, 25)} (${n})`;
                   commit({ ...book, sheets: [...book.sheets, duplicate] });
                   setSheetIndex(book.sheets.length);
@@ -1407,8 +1456,8 @@ export default function FieldWorkbookWorkspace({
               />
             </label>
             <p className="text-slate-500">
-              Drag across cells or row/column headings to select · Shift-click to extend · Tab / Enter
-              to move · Alt + arrows to navigate · Paste tables from Excel
+              Drag across cells or row/column headings to select · Shift-click to extend · Tab /
+              Enter to move · Alt + arrows to navigate · Paste tables from Excel
             </p>
           </div>
         )}
@@ -1438,7 +1487,11 @@ export default function FieldWorkbookWorkspace({
             style={{
               scrollPaddingLeft: 48,
               scrollPaddingTop: 36,
-              height: isMaximized ? '82vh' : gridViewportHeight ? `${gridViewportHeight}px` : undefined,
+              height: isMaximized
+                ? '82vh'
+                : gridViewportHeight
+                  ? `${gridViewportHeight}px`
+                  : undefined,
               maxHeight: isMaximized ? '82vh' : gridViewportHeight ? 'none' : '60vh',
             }}
             onCopy={(event) => {
@@ -1457,7 +1510,7 @@ export default function FieldWorkbookWorkspace({
               <colgroup>
                 <col style={{ width: 48 }} />
                 {sheet.widths.map((w, c) => (
-                  <col key={c} style={{ width: w }} />
+                  <col key={c} style={{ width: w, visibility: w === 0 ? 'collapse' : undefined }} />
                 ))}
               </colgroup>
               <thead className="sticky top-0 z-20">
@@ -1468,6 +1521,7 @@ export default function FieldWorkbookWorkspace({
                   {sheet.widths.map((_, c) => (
                     <th
                       key={c}
+                      style={{ display: sheet.widths[c] === 0 ? 'none' : undefined }}
                       className="relative border bg-slate-100 text-xs font-medium dark:border-slate-700 dark:bg-slate-800"
                       onContextMenu={(event) => {
                         event.preventDefault();
@@ -1506,7 +1560,13 @@ export default function FieldWorkbookWorkspace({
               </thead>
               <tbody>
                 {sheet.cells.map((row, r) => (
-                  <tr key={r} style={{ height: sheet.heights[r] }}>
+                  <tr
+                    key={r}
+                    style={{
+                      height: sheet.heights[r],
+                      display: sheet.heights[r] === 0 ? 'none' : undefined,
+                    }}
+                  >
                     <th
                       className="sticky left-0 z-10 border bg-slate-100 text-xs font-normal dark:border-slate-700 dark:bg-slate-800"
                       onContextMenu={(event) => {
@@ -1542,13 +1602,15 @@ export default function FieldWorkbookWorkspace({
                       />
                     </th>
                     {row.map((value, c) => {
+                      if (sheet.widths[c] === 0) return null;
                       const merge = mergeLookup.get(`${r}:${c}`);
                       if (merge && (merge.r !== r || merge.c !== c)) return null;
                       return (
                         <GridCell
                           key={c}
                           {...{ value, r, c, merge }}
-                          header={r === 0}
+                          header={!sheet.imported && r === 0}
+                          appearance={cellFormat(sheet, r, c)}
                           {...cellFormat(sheet, r, c)}
                           active={anchor.r === r && anchor.c === c}
                           selected={
@@ -1604,17 +1666,24 @@ export default function FieldWorkbookWorkspace({
 
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-2.5 dark:border-slate-800 dark:bg-slate-900/80">
           <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-            <span className="font-semibold">{sheet.cells.length}</span> rows × <span className="font-semibold">{sheet.widths.length}</span> columns
+            <span className="font-semibold">{sheet.cells.length}</span> rows ×{' '}
+            <span className="font-semibold">{sheet.widths.length}</span> columns
             <span className="text-slate-400 dark:text-slate-600">·</span>
             <span className="text-[11px] text-slate-500">Max limit: {MAX_ROWS} rows</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">View height:</span>
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                View height:
+              </span>
               <button
                 type="button"
-                title={isMaximized || gridViewportHeight ? 'Reset to standard view height (60vh)' : 'Extend view height to expose more rows (82vh)'}
+                title={
+                  isMaximized || gridViewportHeight
+                    ? 'Reset to standard view height (60vh)'
+                    : 'Extend view height to expose more rows (82vh)'
+                }
                 className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors ${
                   isMaximized || gridViewportHeight
                     ? 'bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-200'
@@ -1637,7 +1706,9 @@ export default function FieldWorkbookWorkspace({
             <div className="h-4 w-px bg-slate-300 dark:bg-slate-700 hidden sm:block" />
 
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Add rows:</span>
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Add rows:
+              </span>
               <div className="inline-flex items-center rounded-lg border border-slate-300 bg-white shadow-xs dark:border-slate-700 dark:bg-slate-900">
                 {[10, 25, 50, 100].map((count, idx, arr) => (
                   <div key={count} className="flex items-center">
@@ -1785,9 +1856,15 @@ export default function FieldWorkbookWorkspace({
         {confirmDeleteSheet && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-xs">
             <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
-              <h4 className="text-base font-bold text-slate-900 dark:text-white">Delete worksheet?</h4>
+              <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                Delete worksheet?
+              </h4>
               <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                Are you sure you want to delete <strong className="font-semibold text-slate-900 dark:text-white">“{confirmDeleteSheet.name}”</strong>? All cells and data on this sheet will be lost.
+                Are you sure you want to delete{' '}
+                <strong className="font-semibold text-slate-900 dark:text-white">
+                  “{confirmDeleteSheet.name}”
+                </strong>
+                ? All cells and data on this sheet will be lost.
               </p>
               <div className="mt-5 flex items-center justify-end gap-2">
                 <button
@@ -1828,15 +1905,22 @@ export default function FieldWorkbookWorkspace({
             />
             <div
               style={{
-                top: Math.min(gridContextMenu.y, typeof window !== 'undefined' ? window.innerHeight - 320 : gridContextMenu.y),
-                left: Math.min(gridContextMenu.x, typeof window !== 'undefined' ? window.innerWidth - 240 : gridContextMenu.x),
+                top: Math.min(
+                  gridContextMenu.y,
+                  typeof window !== 'undefined' ? window.innerHeight - 320 : gridContextMenu.y
+                ),
+                left: Math.min(
+                  gridContextMenu.x,
+                  typeof window !== 'undefined' ? window.innerWidth - 240 : gridContextMenu.x
+                ),
               }}
               className="fixed z-50 min-w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 text-xs font-medium text-slate-700 dark:text-slate-200"
             >
               {gridContextMenu.type === 'column' && (
                 <>
                   <div className="px-3 py-1.5 font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[10px]">
-                    Column {columnName(selection.c)}{selection.c !== selection.ec ? `–${columnName(selection.ec)}` : ''}
+                    Column {columnName(selection.c)}
+                    {selection.c !== selection.ec ? `–${columnName(selection.ec)}` : ''}
                   </div>
                   <button
                     type="button"
@@ -1914,7 +1998,8 @@ export default function FieldWorkbookWorkspace({
               {gridContextMenu.type === 'row' && (
                 <>
                   <div className="px-3 py-1.5 font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[10px]">
-                    Row {selection.r + 1}{selection.r !== selection.er ? `–${selection.er + 1}` : ''}
+                    Row {selection.r + 1}
+                    {selection.r !== selection.er ? `–${selection.er + 1}` : ''}
                   </div>
                   <button
                     type="button"
@@ -1992,7 +2077,8 @@ export default function FieldWorkbookWorkspace({
               {gridContextMenu.type === 'cell' && (
                 <>
                   <div className="px-3 py-1.5 font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[10px]">
-                    Range {columnName(selection.c)}{selection.r + 1}
+                    Range {columnName(selection.c)}
+                    {selection.r + 1}
                     {selection.er !== selection.r || selection.ec !== selection.c
                       ? `:${columnName(selection.ec)}${selection.er + 1}`
                       : ''}
@@ -2020,7 +2106,10 @@ export default function FieldWorkbookWorkspace({
                         ...s,
                         cells: s.cells.map((row, r) =>
                           row.map((cell, c) =>
-                            r >= selection.r && r <= selection.er && c >= selection.c && c <= selection.ec
+                            r >= selection.r &&
+                            r <= selection.er &&
+                            c >= selection.c &&
+                            c <= selection.ec
                               ? ''
                               : cell
                           )
@@ -2073,7 +2162,11 @@ export default function FieldWorkbookWorkspace({
                       title="Bold"
                       className={`p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 ${cellFormat(sheet, anchor.r, anchor.c).bold ? 'bg-emerald-100 text-emerald-800 font-bold' : ''}`}
                       onClick={() => {
-                        changeSheet((s) => formatCells(s, selection, { bold: !cellFormat(sheet, anchor.r, anchor.c).bold }));
+                        changeSheet((s) =>
+                          formatCells(s, selection, {
+                            bold: !cellFormat(sheet, anchor.r, anchor.c).bold,
+                          })
+                        );
                       }}
                     >
                       <Bold size={15} />
@@ -2083,7 +2176,11 @@ export default function FieldWorkbookWorkspace({
                       title="Italic"
                       className={`p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 ${cellFormat(sheet, anchor.r, anchor.c).italic ? 'bg-emerald-100 text-emerald-800' : ''}`}
                       onClick={() => {
-                        changeSheet((s) => formatCells(s, selection, { italic: !cellFormat(sheet, anchor.r, anchor.c).italic }));
+                        changeSheet((s) =>
+                          formatCells(s, selection, {
+                            italic: !cellFormat(sheet, anchor.r, anchor.c).italic,
+                          })
+                        );
                       }}
                     >
                       <Italic size={15} />
@@ -2175,10 +2272,16 @@ export default function FieldWorkbookWorkspace({
             <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
               <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400">
                 <AlertTriangle size={24} />
-                <h4 className="text-base font-bold text-slate-900 dark:text-white">Unsaved changes</h4>
+                <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                  Unsaved changes
+                </h4>
               </div>
               <p className="mt-2.5 text-sm text-slate-600 dark:text-slate-300">
-                You have unsaved changes in <strong className="font-semibold text-slate-900 dark:text-white">“{book?.name}”</strong>. If you leave now, your recent edits will be lost.
+                You have unsaved changes in{' '}
+                <strong className="font-semibold text-slate-900 dark:text-white">
+                  “{book?.name}”
+                </strong>
+                . If you leave now, your recent edits will be lost.
               </p>
               <div className="mt-5 flex items-center justify-end gap-2">
                 <button
@@ -2213,7 +2316,8 @@ export default function FieldWorkbookWorkspace({
                       Add template sheets
                     </h3>
                     <p className="text-xs text-slate-500">
-                      Choose an operational template to append its pre-structured sheets to this workbook.
+                      Choose an operational template to append its pre-structured sheets to this
+                      workbook.
                     </p>
                   </div>
                 </div>
@@ -2236,7 +2340,9 @@ export default function FieldWorkbookWorkspace({
                       className="flex flex-col justify-between rounded-xl border border-slate-200 bg-slate-50/50 p-4 transition-all hover:border-emerald-500 hover:bg-emerald-50/20 dark:border-slate-800 dark:bg-slate-800/40 dark:hover:border-emerald-600"
                     >
                       <div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">{t.name}</h4>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          {t.name}
+                        </h4>
                         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
                           {t.description}
                         </p>
@@ -2244,7 +2350,10 @@ export default function FieldWorkbookWorkspace({
                           <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-300">
                             {sheetsCount} {sheetsCount === 1 ? 'sheet' : 'sheets'}
                           </span>
-                          <span className="truncate text-[11px] text-slate-500 dark:text-slate-400" title={sheetNames}>
+                          <span
+                            className="truncate text-[11px] text-slate-500 dark:text-slate-400"
+                            title={sheetNames}
+                          >
                             {sheetNames}
                           </span>
                         </div>
@@ -2263,7 +2372,8 @@ export default function FieldWorkbookWorkspace({
                           for (const s of template.sheets) {
                             const base = s.name;
                             let n = 2;
-                            while (names.has(s.name.toLowerCase())) s.name = `${base.slice(0, 25)} (${n++})`;
+                            while (names.has(s.name.toLowerCase()))
+                              s.name = `${base.slice(0, 25)} (${n++})`;
                             names.add(s.name.toLowerCase());
                           }
                           commit({ ...book, sheets: [...book.sheets, ...template.sheets] });
