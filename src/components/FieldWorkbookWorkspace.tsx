@@ -1486,7 +1486,11 @@ export default function FieldWorkbookWorkspace({
                 type="button"
                 title="History"
                 aria-label="History"
-                className={iconButton}
+                className={`${iconButton} ${
+                  showHistory
+                    ? '!border-emerald-600 !bg-emerald-100 !text-emerald-800 dark:!border-emerald-500 dark:!bg-emerald-950 dark:!text-emerald-300 ring-2 ring-emerald-600/30'
+                    : ''
+                }`}
                 onClick={() => setShowHistory(!showHistory)}
               >
                 <Clock3 size={18} aria-hidden="true" />
@@ -1515,7 +1519,7 @@ export default function FieldWorkbookWorkspace({
           </div>
         )}
         {showHistory && (
-          <div className="max-h-48 space-y-2 overflow-auto rounded-xl border bg-white p-3 dark:bg-slate-900">
+          <div className="max-h-48 space-y-2 overflow-auto rounded-none border bg-white p-3 dark:bg-slate-900">
             <p className="text-sm font-semibold">Saved versions</p>
             {documents
               .filter((d) => d.tags.includes(`wb-${book.id}`))
