@@ -298,3 +298,20 @@ test('typed cells export real numbers, dates and times with Excel number formats
  assert.equal(ws.getCell('C2').value.toISOString(),'2026-10-07T00:00:00.000Z');
  assert.equal(ws.getCell('D2').numFmt,'hh:mm');assert.equal(ws.getCell('E2').value,'00123');
 });
+
+test('workbook copies retain mappings but isolate imports and discard previous record links', () => {
+ const book=api.newWorkbook();
+ book.sheets[0].connection={table:'/api/v1/equipment-register',mapping:{equipment:0},headerRow:0,validatedAt:'2026-10-07',importId:'original-import',writeMode:'insert',recordIds:['old-record'],completedRows:[1]};
+ const copy=api.copyWorkbook(book);
+ const connection=copy.sheets[0].connection;
+ assert.equal(connection.table,book.sheets[0].connection.table);
+ assert.deepEqual(plain(connection.mapping),{equipment:0});
+ assert.equal(connection.writeMode,'insert');
+ assert.notEqual(connection.importId,'original-import');
+ assert.notEqual(connection.importId,api.copyWorkbook(book).sheets[0].connection.importId);
+ assert.equal(connection.recordIds,undefined);assert.equal(connection.completedRows,undefined);
+ assert.equal(connection.validatedAt,undefined);
+ connection.mapping.equipment=1;
+ assert.equal(book.sheets[0].connection.mapping.equipment,0);
+ assert.deepEqual(book.sheets[0].connection.recordIds,['old-record']);
+});

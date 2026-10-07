@@ -1,14 +1,12 @@
 'use client';
+import WorkbookDatabaseConnection from './WorkbookDatabaseConnection';
 import SearchableSelect from './SearchableSelect';
 import WorkbookColorPicker from './WorkbookColorPicker';
 import { displayCellValue } from '@/lib/workbookCellTypes';
-import { originalBytes } from '@/lib/excelWorkbook';
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
-  MoveHorizontal,
-  MoveVertical,
   Bold,
   Italic,
   AlignLeft,
@@ -126,7 +124,8 @@ const GridCell = memo(function GridCell({
     <td
       style={{
         backgroundColor: appearance?.background || undefined,
-        boxShadow: selected ? "inset 0 0 0 1px #059669" : undefined,
+        backgroundImage: selected ? "linear-gradient(rgba(16,185,129,.22),rgba(16,185,129,.22))" : undefined,
+
         verticalAlign: appearance?.vertical,
         borderTop: appearance?.borders?.top,
         borderBottom: appearance?.borders?.bottom,
@@ -140,7 +139,7 @@ const GridCell = memo(function GridCell({
         event.preventDefault();
         onContextMenu?.(r, c, event);
       }}
-      className={`relative border border-slate-200 p-0 dark:border-slate-700 ${selected ? 'bg-emerald-50 dark:bg-emerald-950' : header ? 'bg-slate-100 dark:bg-slate-800' : 'bg-white dark:bg-slate-900'} ${active ? 'outline outline-2 -outline-offset-2 outline-emerald-600 z-10' : ''}`}
+      className={`relative border border-slate-200 p-0 dark:border-slate-700 ${selected ? 'bg-emerald-50 dark:bg-emerald-950' : header ? 'bg-slate-100 dark:bg-slate-800' : 'bg-white dark:bg-slate-900'} `}
     >
       <input
         data-cell={`${r}:${c}`}
@@ -242,6 +241,7 @@ export default function FieldWorkbookWorkspace({
   const [showToolbar, setShowToolbar] = useState(true);
   const [showFormulaBar, setShowFormulaBar] = useState(true);
   const [showSelectionInfo, setShowSelectionInfo] = useState(false);
+  const [connectionSheet, setConnectionSheet] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -564,39 +564,38 @@ export default function FieldWorkbookWorkspace({
     const start = axis === 'row' ? event.clientY : event.clientX;
     const original = axis === 'row' ? sheet.heights[index] : sheet.widths[index];
     let size = original;
-    const element =
-      axis === 'row'
-        ? gridRef.current?.querySelectorAll('tbody tr')[index]
-        : gridRef.current?.querySelectorAll('col')[index + 1];
+    const low = axis === 'row' ? selection.r : selection.c;
+    const high = axis === 'row' ? selection.er : selection.ec;
+    const indices = index >= low && index <= high ? Array.from({length: high-low+1},(_,i)=>low+i) : [index];
+    const sizes = axis === 'row' ? sheet.heights : sheet.widths;
+    const elements = indices.map(i => axis === 'row' ? gridRef.current?.querySelectorAll('tbody tr')[i] : gridRef.current?.querySelectorAll('col')[i+1]);
+    const table = gridRef.current?.querySelector('table');
+    const originalTableWidth = 48 + sheet.widths.reduce((a,b)=>a+b,0);
     const move = (e: PointerEvent) => {
-      size = Math.max(
-        axis === 'row' ? 26 : 60,
-        Math.min(
-          axis === 'row' ? 300 : 600,
-          original + (axis === 'row' ? e.clientY : e.clientX) - start
-        )
-      );
-      if (element instanceof HTMLElement)
-        element.style[axis === 'row' ? 'height' : 'width'] = `${size}px`;
+      size = Math.max(axis === 'row' ? 26 : 60, Math.min(axis === 'row' ? 300 : 600, original + (axis === 'row' ? e.clientY : e.clientX) - start));
+      elements.forEach(element => { if(element instanceof HTMLElement) element.style[axis === 'row' ? 'height' : 'width'] = `${size}px`; });
+      if(axis === 'column' && table) table.style.width = `${originalTableWidth + indices.reduce((sum,i)=>sum+size-sizes[i],0)}px`;
     };
     const cleanup = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', cancel);
     };
-    const up = () => {
+    const up = (event: PointerEvent) => {
+      move(event);
       cleanup();
-      if (size !== original)
+      resizeCleanup.current = () => {};
+      if (indices.some(i => sizes[i] !== size))
         changeSheet((s) =>
           axis === 'row'
-            ? { ...s, heights: s.heights.map((v, i) => (i === index ? size : v)) }
-            : { ...s, widths: s.widths.map((v, i) => (i === index ? size : v)) }
+            ? { ...s, heights: s.heights.map((v, i) => (indices.includes(i) ? size : v)) }
+            : { ...s, widths: s.widths.map((v, i) => (indices.includes(i) ? size : v)) }
         );
     };
     const cancel = () => {
       cleanup();
-      if (element instanceof HTMLElement)
-        element.style[axis === 'row' ? 'height' : 'width'] = `${original}px`;
+      elements.forEach((element,n) => { if(element instanceof HTMLElement) element.style[axis === 'row' ? 'height' : 'width'] = `${sizes[indices[n]]}px`; });
+      if(table) table.style.width = `${originalTableWidth}px`;
     };
     resizeCleanup.current = cancel;
     window.addEventListener('pointermove', move);
@@ -636,6 +635,7 @@ export default function FieldWorkbookWorkspace({
     );
   }
   function activate(next: FieldWorkbook, isDirty: boolean) {
+    next = {...next, createdAt: next.createdAt || new Date().toISOString()};
     try {
       localStorage.removeItem(storageKey);
     } catch {}
@@ -674,7 +674,7 @@ export default function FieldWorkbookWorkspace({
     try {
       const blob = await apiFetchBlob(`/api/v1/documents/${doc.id}/download`);
       const source = validateWorkbook(JSON.parse(await blob.text()));
-      const next = asTemplate ? copyWorkbook(source) : source;
+      const next = asTemplate ? copyWorkbook(source) : {...source, createdAt: source.createdAt || doc.created_at};
       if (asTemplate) next.name = source.name.replace(/ template$/i, '');
       activate(next, asTemplate);
     } catch (e) {
@@ -682,6 +682,31 @@ export default function FieldWorkbookWorkspace({
     } finally {
       setBusy(false);
     }
+  }
+  async function copyDocument(doc: Document) {
+    setBusy(true); setError('');
+    try {
+      const source = validateWorkbook(JSON.parse(await (await apiFetchBlob(`/api/v1/documents/${doc.id}/download`)).text()));
+      const copy = copyWorkbook(source, source.template);
+      const baseName=source.name.slice(0,240);
+      let suffix=1; const names=new Set(latest.map(d=>d.title.toLowerCase()));
+      while(names.has(`${baseName}-${suffix}`.toLowerCase())) suffix++;
+      copy.name=`${baseName}-${suffix}`;
+      const form=new FormData();
+      form.append('file',new File([JSON.stringify(copy)],`${copy.id}.cestos.json`,{type:'application/json'}));
+      form.append('title',copy.name.slice(0,250)); form.append('category','Field Workbooks');
+      form.append('tags',`wb-${copy.id},${copy.template ? 'workbook-template' : 'field-workbook'}`); form.append('visibility','PRIVATE');
+      await apiFetch('/api/v1/documents',{method:'POST',body:form},true,{queueWhenOffline:false});
+      await loadLibrary(); setNotice('Workbook copied successfully.');
+    } catch(e) {setError(e instanceof Error ? e.message : 'Could not copy workbook.');} finally {setBusy(false);}
+  }
+  async function deleteDocument(doc: Document) {
+    if(!window.confirm(`Delete “${doc.title}” and all its saved versions?`)) return;
+    setBusy(true); setError('');
+    try {
+      await apiFetch(`/api/v1/documents/${doc.id}/workbook`,{method:'DELETE'},true,{queueWhenOffline:false});
+      await loadLibrary(); setNotice('Workbook deleted.');
+    } catch(e) {setError(e instanceof Error ? e.message : 'Could not delete workbook.');} finally {setBusy(false);}
   }
   async function save(asTemplate = false) {
     if (!book) return;
@@ -694,7 +719,7 @@ export default function FieldWorkbookWorkspace({
     try {
       const saved = asTemplate
         ? { ...copyWorkbook(book, true), name: templateName.trim() || `${book.name} template` }
-        : book;
+        : { ...book, createdAt: book.createdAt || new Date().toISOString() };
       validateWorkbook(saved);
       const form = new FormData();
       form.append(
@@ -720,7 +745,7 @@ export default function FieldWorkbookWorkspace({
       setNotice(
         asTemplate
           ? 'Template saved. Reuse it from the workbook library.'
-          : 'Workbook saved. Previous saved versions remain available in History.'
+          : 'Workbook saved successfully.'
       );
       await loadLibrary();
     } catch (e) {
@@ -880,19 +905,6 @@ export default function FieldWorkbookWorkspace({
           </button>
         </div>
       )}
-      {book?.source && (
-        <button
-          className={`${button} pointer-events-auto`}
-          onClick={() =>
-            downloadBlob(
-              new Blob([originalBytes(book.source!.base64) as BlobPart]),
-              book.source!.name
-            )
-          }
-        >
-          Download original Excel file
-        </button>
-      )}
       {notice && (
         <div
           role="status"
@@ -978,7 +990,7 @@ export default function FieldWorkbookWorkspace({
             {latest
               .filter((d) => d.title.toLowerCase().includes(search.toLowerCase()))
               .map((doc) => (
-                <div key={doc.id} className="rounded-xl border p-4">
+                <div key={doc.id} className="group rounded-xl border p-4">
                   <p className="font-semibold">{doc.title}</p>
                   <p className="my-2 text-xs text-slate-500">
                     {doc.tags.includes('workbook-template') ? 'Template' : 'Workbook'} ·{' '}
@@ -991,6 +1003,10 @@ export default function FieldWorkbookWorkspace({
                   >
                     {doc.tags.includes('workbook-template') ? 'Use template' : 'Open workbook'}
                   </button>
+                  <div className="mt-2 flex gap-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100">
+                    <button className={button} disabled={busy} onClick={() => void copyDocument(doc)}><Copy size={14}/>Copy</button>
+                    <button className={button} disabled={busy} onClick={() => void deleteDocument(doc)}><Trash2 size={14}/>Delete</button>
+                  </div>
                 </div>
               ))}
           </div>
@@ -1615,7 +1631,7 @@ export default function FieldWorkbookWorkspace({
                         onPointerDown={(event) => resize('column', c, event)}
                         className="absolute -right-2 top-0 z-30 flex h-full w-4 cursor-col-resize touch-none items-center justify-center text-slate-500 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-950"
                       >
-                        <MoveHorizontal size={14} aria-hidden="true" className="pointer-events-none shrink-0" />
+
                       </span>
                     </th>
                   ))}
@@ -1663,7 +1679,7 @@ export default function FieldWorkbookWorkspace({
                         onPointerDown={(event) => resize('row', r, event)}
                         className="absolute -bottom-2 left-0 z-20 flex h-4 w-full cursor-row-resize touch-none items-center justify-center text-slate-500 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-950"
                       >
-                        <MoveVertical size={14} aria-hidden="true" className="pointer-events-none shrink-0" />
+
                       </span>
                     </th>
                     {row.map((value, c) => {
@@ -1874,6 +1890,10 @@ export default function FieldWorkbookWorkspace({
           </button>
         </div>
 
+        {connectionSheet && book.sheets.find(s=>s.id===connectionSheet) && <WorkbookDatabaseConnection
+          sheet={book.sheets.find(s=>s.id===connectionSheet)!} onClose={()=>setConnectionSheet(null)}
+          onSave={connection=>{commit({...book,sheets:book.sheets.map(s=>s.id===connectionSheet?{...s,connection}:s)});setConnectionSheet(null);setNotice('Mapping added. Save the workbook to retain it. No database records were created.');}} />}
+
         {contextMenu && (
           <>
             <div
@@ -1885,9 +1905,11 @@ export default function FieldWorkbookWorkspace({
               }}
             />
             <div
-              style={{ top: contextMenu.y, left: contextMenu.x }}
+              style={{ top: Math.max(8, Math.min(contextMenu.y - 132, window.innerHeight - 148)), left: Math.max(8, Math.min(contextMenu.x, window.innerWidth - 264)), maxHeight: 'calc(100dvh - 16px)', maxWidth: 'calc(100vw - 16px)', overflowY: 'auto', width: 256 }}
               className="fixed z-50 min-w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
             >
+              <button type="button" className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-slate-100 dark:hover:bg-slate-800"
+                onClick={()=>{setConnectionSheet(book.sheets[contextMenu.sheetIndex].id);setContextMenu(null);}}>Connect to Database Table</button>
               <button
                 type="button"
                 className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"

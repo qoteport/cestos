@@ -17,6 +17,7 @@ export type CellFormat = {
 };
 export type CellRange = { r: number; c: number; er: number; ec: number };
 export type FieldSheet = {
+  connection?: { table: string; mapping: Record<string, number>; headerRow: number; validatedAt?: string; importId?: string; writeMode?: 'insert' };
   id: string;
   name: string;
   cells: string[][];
@@ -33,6 +34,7 @@ export type FieldSheet = {
 };
 export type FieldWorkbook = {
   version: 1;
+  createdAt?: string;
   id: string;
   name: string;
   sheets: FieldSheet[];
@@ -153,6 +155,7 @@ export function newWorkbook(templateIndex?: number): FieldWorkbook {
   return {
     version: 1,
     id: uid(),
+    createdAt: new Date().toISOString(),
     name: template?.name || 'Untitled workbook',
     template: false,
     sheets: template
@@ -161,9 +164,22 @@ export function newWorkbook(templateIndex?: number): FieldWorkbook {
   };
 }
 export function copyWorkbook(book: FieldWorkbook, template = false): FieldWorkbook {
+  const copy = structuredClone(book);
+  // Copy mapping configuration only, never record identities or prior import state.
+  copy.sheets = copy.sheets.map(sheet => ({
+    ...sheet,
+    ...(sheet.connection ? {connection: {
+      table: sheet.connection.table,
+      mapping: {...sheet.connection.mapping},
+      headerRow: sheet.connection.headerRow,
+      importId: uid(),
+      writeMode: 'insert' as const,
+    }} : {}),
+  }));
   return {
-    ...structuredClone(book),
+    ...copy,
     id: uid(),
+    createdAt: new Date().toISOString(),
     name: `${book.name}${template ? ' template' : ' copy'}`,
     template,
   };
