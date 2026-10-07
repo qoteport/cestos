@@ -1,5 +1,6 @@
 'use client';
 import styles from './FieldWorkbookWorkspace.module.css';
+import {readDeviceSession, saveDeviceSession, saveDeviceWorkbook, listDeviceWorkbooks, sheetCsv, type DeviceWorkbook} from '@/lib/workbookDevice';
 import WorkbookDatabaseConnection from './WorkbookDatabaseConnection';
 import SearchableSelect from './SearchableSelect';
 import WorkbookColorPicker from './WorkbookColorPicker';
@@ -255,6 +256,19 @@ export default function FieldWorkbookWorkspace({
   const [editingSheetIndex, setEditingSheetIndex] = useState<number | null>(null);
   const [editingSheetName, setEditingSheetName] = useState('');
   const [confirmDeleteSheet, setConfirmDeleteSheet] = useState<FieldSheet | null>(null);
+  const [customModal, setCustomModal] = useState<{
+    type: 'confirm' | 'prompt' | 'alert';
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    confirmVariant?: 'danger' | 'primary';
+    defaultValue?: string;
+    inputType?: 'number' | 'text';
+    min?: number;
+    max?: number;
+    onConfirm: (val?: any) => void;
+  } | null>(null);
+  const [promptInput, setPromptInput] = useState('');
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [gridContextMenu, setGridContextMenu] = useState<{
     type: 'column' | 'row' | 'cell';
@@ -276,6 +290,17 @@ export default function FieldWorkbookWorkspace({
   const resizeCleanup = useRef<() => void>(() => {});
   useEffect(() => () => resizeCleanup.current(), []);
   const gridRef = useRef<HTMLDivElement>(null);
+  const [deviceBooks, setDeviceBooks] = useState<DeviceWorkbook[]>([]);
+  const [storageReady, setStorageReady] = useState('');
+  const [online, setOnline] = useState(true);
+  const [offlineToolsReady, setOfflineToolsReady] = useState(false);
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    update(); window.addEventListener('online', update); window.addEventListener('offline', update);
+    const prepare = () => {void Promise.all([import('xlsx'), import('exceljs')]).then(() => setOfflineToolsReady(true)).catch(() => setOfflineToolsReady(false));};
+    prepare(); window.addEventListener('online', prepare);
+    return () => {window.removeEventListener('online', update);window.removeEventListener('offline', update);window.removeEventListener('online', prepare);};
+  }, []);
   const storageKey = `cestos-field-workbook:${storageScope}`;
   const sheet = book?.sheets[sheetIndex];
   const selection = rangeBetween(anchor, end);
@@ -285,6 +310,7 @@ export default function FieldWorkbookWorkspace({
   const setTabsState = headerContext.setTabsState;
 
   const loadLibrary = useCallback(async () => {
+    if(!navigator.onLine) {setLoading(false);return;}
     setLoading(true);
     try {
       const all: Document[] = [];
@@ -311,32 +337,38 @@ export default function FieldWorkbookWorkspace({
     void loadLibrary();
   }, [loadLibrary]);
   useEffect(() => {
-    setBook(null);setSessions([]);setDirty(false);
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (!raw) return;
-      const stored = JSON.parse(raw);
-      if (stored.openBooks) {
-        const recovered: WorkbookSession[] = stored.openBooks.map((item: any) => freshSession(validateWorkbook(item.book), Boolean(item.dirty)));
-        setSessions(recovered);
-        const active = recovered.find(item => item.book.id === stored.activeId);
-        if(active) {setBook(active.book);setDirty(active.dirty);}
-      } else {
-        const recovered = validateWorkbook(stored);
-        setBook(recovered);setDirty(true);setSessions([freshSession(recovered,true)]);
-      }
-      setNotice('Restored your open workbooks.');
-    } catch {setError('Open workbooks could not be restored. Saved files are still in the library.');}
+    let active = true;
+    setStorageReady('');setBook(null);setSessions([]);setDirty(false);setDeviceBooks([]);
+    void (async () => {
+      try {
+        const cached = await readDeviceSession(storageKey);
+        const legacy = !cached ? localStorage.getItem(storageKey) : null;
+        const stored = cached || (legacy ? JSON.parse(legacy) : null);
+        if (!active) return;
+        if (stored) {
+          const recovered: WorkbookSession[] = stored.openBooks
+            ? stored.openBooks.map((item: any) => freshSession(validateWorkbook(item.book), Boolean(item.dirty)))
+            : [freshSession(validateWorkbook(stored), true)];
+          setSessions(recovered);
+          const selected = stored.openBooks ? recovered.find(item => item.book.id === stored.activeId) : recovered[0];
+          if (selected) {setBook(selected.book);bookRef.current=selected.book;setDirty(selected.dirty);setSheetIndex(0);setAnchor({r:0,c:0});setEnd({r:0,c:0});setUndo([]);setRedo([]);}
+          if(recovered.length) setNotice('Restored your open workbooks from this device.');
+        }
+        const saved = await listDeviceWorkbooks(storageKey);
+        if(active) setDeviceBooks(saved);
+      } catch {if(active)setError('Device recovery is unavailable. Download a backup before closing your workbook.');}
+      finally {if(active)setStorageReady(storageKey);}
+    })();
+    return () => {active=false;};
   }, [storageKey]);
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const openBooks = sessions.map(item => item.book.id === book?.id ? {book,dirty} : {book:item.book,dirty:item.dirty});
-      if(book && !openBooks.some(item=>item.book.id===book.id)) openBooks.push({book,dirty});
-      try {localStorage.setItem(storageKey,JSON.stringify({openBooks,activeId:book?.id || null}));}
-      catch {setError('Browser recovery storage is full. Save your open workbooks to keep changes.');}
-    },400);
-    return ()=>window.clearTimeout(timer);
-  },[sessions,book,dirty,storageKey]);
+    if(storageReady !== storageKey) return;
+    const openBooks = sessions.map(item => item.book.id === book?.id ? {book,dirty} : {book:item.book,dirty:item.dirty});
+    if(book && !openBooks.some(item=>item.book.id===book.id)) openBooks.push({book,dirty});
+    // IndexedDB transactions preserve write order and avoid localStorage's small quota.
+    void saveDeviceSession(storageKey,{openBooks,activeId:book?.id || null})
+      .catch(() => setError('Device recovery could not be saved. Download a backup to keep your changes.'));
+  },[sessions,book,dirty,storageKey,storageReady]);
   useEffect(() => {
     if (!dirty && !sessions.some(item => item.book.id !== book?.id && item.dirty)) return;
     const guard = (event: BeforeUnloadEvent) => {event.preventDefault();};
@@ -716,14 +748,38 @@ export default function FieldWorkbookWorkspace({
     } catch(e) {setError(e instanceof Error ? e.message : 'Could not copy workbook.');} finally {setBusy(false);}
   }
   async function deleteDocument(doc: Document) {
-    if(!window.confirm(`Delete “${doc.title}”, all saved versions, and its open tab?`)) return;
-    setBusy(true); setError('');
-    try {
-      await apiFetch(`/api/v1/documents/${doc.id}/workbook`,{method:'DELETE'},true,{queueWhenOffline:false});
-      const deletedId=doc.tags.find(tag=>tag.startsWith('wb-'))?.slice(3);
-      setSessions(items=>items.filter(item=>item.book.id!==deletedId));
-      await loadLibrary(); setNotice('Workbook deleted.');
-    } catch(e) {setError(e instanceof Error ? e.message : 'Could not delete workbook.');} finally {setBusy(false);}
+    setCustomModal({
+      type: 'confirm',
+      title: 'Delete saved workbook?',
+      message: `Are you sure you want to delete “${doc.title}”, all saved versions, and its open tab?`,
+      confirmLabel: 'Delete workbook',
+      confirmVariant: 'danger',
+      onConfirm: () => {
+        void (async () => {
+          setBusy(true); setError('');
+          try {
+            await apiFetch(`/api/v1/documents/${doc.id}/workbook`,{method:'DELETE'},true,{queueWhenOffline:false});
+            const deletedId=doc.tags.find(tag=>tag.startsWith('wb-'))?.slice(3);
+            setSessions(items=>items.filter(item=>item.book.id!==deletedId));
+            await loadLibrary(); setNotice('Workbook deleted.');
+          } catch(e) {setError(e instanceof Error ? e.message : 'Could not delete workbook.');} finally {setBusy(false);}
+        })();
+      },
+    });
+  }
+  async function saveToDevice(asTemplate = false) {
+    if(!book) return;
+    const saved = asTemplate ? {...copyWorkbook(book,true),name:templateName.trim() || `${book.name} template`} : book;
+    validateWorkbook(saved);
+    await saveDeviceWorkbook(storageKey,saved);
+    setDeviceBooks(await listDeviceWorkbooks(storageKey));
+    return saved;
+  }
+  async function saveDeviceOnly() {
+    setBusy(true);setError('');
+    try {await saveToDevice();setNotice('Workbook saved on this device. Use Save to server when connected.');}
+    catch(e){setError(e instanceof Error?e.message:'Device save failed. Download a backup.');}
+    finally{setBusy(false);}
   }
   async function save(asTemplate = false) {
     if (!book) return;
@@ -734,9 +790,11 @@ export default function FieldWorkbookWorkspace({
     setBusy(true);
     setError('');
     try {
-      const saved = asTemplate
+      const deviceSaved = await saveToDevice(asTemplate);
+      if(!navigator.onLine) {setTemplatePicker(false);setNotice('Saved on this device. Reconnect and choose Save to server to upload it.');return;}
+      const saved = deviceSaved || (asTemplate
         ? { ...copyWorkbook(book, true), name: templateName.trim() || `${book.name} template` }
-        : { ...book, createdAt: book.createdAt || new Date().toISOString() };
+        : { ...book, createdAt: book.createdAt || new Date().toISOString() });
       validateWorkbook(saved);
       const form = new FormData();
       form.append(
@@ -765,7 +823,7 @@ export default function FieldWorkbookWorkspace({
       );
       await loadLibrary();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save workbook.');
+      setError(`Server save failed. Your device copy is available if the device save completed. ${e instanceof Error ? e.message : ''}`);
     } finally {
       setBusy(false);
     }
@@ -862,7 +920,7 @@ export default function FieldWorkbookWorkspace({
     setBusy(true);
     setError('');
     try {
-      activate(await importWorkbook(file), true);
+      activate(/\.cestos\.json$/i.test(file.name) ? validateWorkbook(JSON.parse(await file.text())) : await importWorkbook(file), true);
       setNotice(
         'Imported all worksheets. XLSX layout and common formatting are retained; formulas display saved results. Original XLSX retained intact. Advanced Excel features may not display here or survive an edited export.'
       );
@@ -872,11 +930,14 @@ export default function FieldWorkbookWorkspace({
       setBusy(false);
     }
   }
-  async function download() {
+  async function download(format: 'xlsx' | 'csv' | 'backup' = 'xlsx') {
     if (!book) return;
     setBusy(true);
     try {
-      downloadBlob(await exportWorkbook(book), `${book.name.replace(/[\\/:*?"<>|]/g, '-')}.xlsx`);
+      const name=book.name.replace(/[\\/:*?"<>|]/g, '-');
+      if(format === 'csv') {if(!sheet)return;downloadBlob(new Blob([sheetCsv(sheet)],{type:'text/csv;charset=utf-8'}),`${name}-${sheet.name.replace(/[\\/:*?"<>|]/g,'-')}.csv`);setNotice('Current sheet downloaded as CSV. CSV contains values only; use Excel or backup for all sheets and formatting.');}
+      else if(format === 'backup') downloadBlob(new Blob([JSON.stringify(book)],{type:'application/json'}),`${name}.cestos.json`);
+      else downloadBlob(await exportWorkbook(book), `${name}.xlsx`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Export failed.');
     } finally {
@@ -892,13 +953,16 @@ export default function FieldWorkbookWorkspace({
         busy,
         onLeave: leave,
         onRename: (newName: string) => commit({ ...book, name: newName }, 'name'),
-        onDownload: () => void download(),
+        onDownload: (format) => void download(format),
+        onSaveDevice: () => void saveDeviceOnly(),
+        online,
+        offlineToolsReady,
         onSave: () => void save(),
       });
     } else {
       setHeaderState(null);
     }
-  }, [book, dirty, busy, setHeaderState, leave, commit, download, save]);
+  }, [book, dirty, busy, online, offlineToolsReady, setHeaderState, leave, commit, download, save]);
 
   const feedback = (
     <div className="fixed bottom-6 right-6 z-50 flex max-w-md flex-col gap-2 pointer-events-none">
@@ -956,7 +1020,7 @@ export default function FieldWorkbookWorkspace({
                 <strong className="font-semibold text-slate-900 dark:text-white">
                   “{closingWorkbook.name}”
                 </strong>
-                . Closing this tab will discard those changes. Keep editing to save them first.
+                . Closing this tab discards the open draft. Copies already saved on this device or server remain available.
               </p>
               <div className="mt-5 flex items-center justify-end gap-2">
                 <button
@@ -1002,12 +1066,12 @@ export default function FieldWorkbookWorkspace({
             </button>
             <label className={`${button} cursor-pointer`}>
               <Upload size={16} />
-              Import Excel / CSV
+              Import Excel / CSV / backup
               <input
                 aria-label="Import Excel or CSV workbook"
                 className="hidden"
                 type="file"
-                accept=".xlsx,.xls,.csv"
+                accept=".xlsx,.xls,.csv,.cestos.json"
                 disabled={busy}
                 onChange={(e) => {
                   void readFile(e.target.files?.[0]);
@@ -1019,6 +1083,12 @@ export default function FieldWorkbookWorkspace({
         </header>
         {feedback}
         {busy && <p role="status">Opening workbook…</p>}
+        <div className="rounded border border-slate-200 bg-white p-4 dark:bg-slate-900">
+          <h3 className="font-semibold">Saved on this device</h3>
+          <p className="my-2 text-xs text-slate-500">Available without internet in this browser profile. Device saves are separate from server saves. Keep a downloaded backup before clearing browser data.</p>
+          {!deviceBooks.length && <p className="text-sm text-slate-500">Open a workbook and choose Save on device.</p>}
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{deviceBooks.filter(item=>item.book.name.toLowerCase().includes(search.toLowerCase())).map(item=><div key={item.key} className="rounded border p-3"><p className="font-semibold">{item.book.name}</p><p className="my-2 text-xs text-slate-500">{item.book.template?'Template · ':''}{new Date(item.savedAt).toLocaleString()}</p><button type="button" className={button} disabled={busy} onClick={()=>{if(item.book.template)activate(copyWorkbook(item.book,false),true);else if(sessions.some(session=>session.book.id===item.book.id))switchWorkbook(item.book.id);else activate(validateWorkbook(item.book),true);}}>{item.book.template?'Use template':'Open workbook'}</button><button type="button" className={`${button} ml-2`} disabled={busy} onClick={()=>{activate(copyWorkbook(item.book,false),true);}}>Copy</button></div>)}</div>
+        </div>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <h3 className="font-semibold">Saved workbooks & templates</h3>
           <div className="flex min-w-0 w-full items-center gap-2 lg:w-auto">
@@ -1320,8 +1390,14 @@ export default function FieldWorkbookWorkspace({
                 aria-label="Delete row"
                 className={iconButton}
                 onClick={() => {
-                  if (window.confirm('Delete the selected rows and their contents?'))
-                    dimension('row', true);
+                  setCustomModal({
+                    type: 'confirm',
+                    title: 'Delete selected rows?',
+                    message: 'Are you sure you want to delete the selected rows and their contents?',
+                    confirmLabel: 'Delete rows',
+                    confirmVariant: 'danger',
+                    onConfirm: () => dimension('row', true),
+                  });
                 }}
               >
                 <span className="relative" aria-hidden="true">
@@ -1339,8 +1415,14 @@ export default function FieldWorkbookWorkspace({
                 aria-label="Delete column"
                 className={iconButton}
                 onClick={() => {
-                  if (window.confirm('Delete the selected columns and their contents?'))
-                    dimension('column', true);
+                  setCustomModal({
+                    type: 'confirm',
+                    title: 'Delete selected columns?',
+                    message: 'Are you sure you want to delete the selected columns and their contents?',
+                    confirmLabel: 'Delete columns',
+                    confirmVariant: 'danger',
+                    onConfirm: () => dimension('column', true),
+                  });
                 }}
               >
                 <span className="relative" aria-hidden="true">
@@ -1528,11 +1610,18 @@ export default function FieldWorkbookWorkspace({
                   key={doc.id}
                   className={`${button} mr-2`}
                   onClick={() => {
-                    if (
-                      !dirty ||
-                      window.confirm('Open this saved version and discard unsaved changes?')
-                    )
+                    if (!dirty) {
                       void openDocument(doc, false, true);
+                    } else {
+                      setCustomModal({
+                        type: 'confirm',
+                        title: 'Discard unsaved changes?',
+                        message: 'Opening this saved version will discard your current unsaved changes. Do you want to continue?',
+                        confirmLabel: 'Open version',
+                        confirmVariant: 'danger',
+                        onConfirm: () => void openDocument(doc, false, true),
+                      });
+                    }
                   }}
                 >
                   {new Date(doc.created_at).toLocaleString()}
@@ -2140,8 +2229,14 @@ export default function FieldWorkbookWorkspace({
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
                     onClick={() => {
                       setGridContextMenu(null);
-                      if (window.confirm('Delete the selected columns and their contents?'))
-                        dimension('column', true);
+                      setCustomModal({
+                        type: 'confirm',
+                        title: 'Delete selected columns?',
+                        message: 'Are you sure you want to delete the selected columns and their contents?',
+                        confirmLabel: 'Delete columns',
+                        confirmVariant: 'danger',
+                        onConfirm: () => dimension('column', true),
+                      });
                     }}
                   >
                     <Columns2 size={15} />
@@ -2153,16 +2248,25 @@ export default function FieldWorkbookWorkspace({
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
                     onClick={() => {
                       setGridContextMenu(null);
-                      const val = window.prompt('Set column width (60–600 px):', String(width));
-                      if (val) {
-                        const size = Math.max(60, Math.min(600, Number(val) || 160));
-                        changeSheet((s) => ({
-                          ...s,
-                          widths: s.widths.map((w, colIdx) =>
-                            colIdx >= selection.c && colIdx <= selection.ec ? size : w
-                          ),
-                        }));
-                      }
+                      setPromptInput(String(width));
+                      setCustomModal({
+                        type: 'prompt',
+                        title: 'Set column width',
+                        message: 'Enter custom column width in pixels (60–600 px):',
+                        defaultValue: String(width),
+                        inputType: 'number',
+                        min: 60,
+                        max: 600,
+                        onConfirm: (val) => {
+                          const size = Math.max(60, Math.min(600, Number(val) || 160));
+                          changeSheet((s) => ({
+                            ...s,
+                            widths: s.widths.map((w, colIdx) =>
+                              colIdx >= selection.c && colIdx <= selection.ec ? size : w
+                            ),
+                          }));
+                        },
+                      });
                     }}
                   >
                     Column width…
@@ -2219,8 +2323,14 @@ export default function FieldWorkbookWorkspace({
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
                     onClick={() => {
                       setGridContextMenu(null);
-                      if (window.confirm('Delete the selected rows and their contents?'))
-                        dimension('row', true);
+                      setCustomModal({
+                        type: 'confirm',
+                        title: 'Delete selected rows?',
+                        message: 'Are you sure you want to delete the selected rows and their contents?',
+                        confirmLabel: 'Delete rows',
+                        confirmVariant: 'danger',
+                        onConfirm: () => dimension('row', true),
+                      });
                     }}
                   >
                     <Rows2 size={15} />
@@ -2232,16 +2342,25 @@ export default function FieldWorkbookWorkspace({
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
                     onClick={() => {
                       setGridContextMenu(null);
-                      const val = window.prompt('Set row height (26–300 px):', String(height));
-                      if (val) {
-                        const size = Math.max(26, Math.min(300, Number(val) || 34));
-                        changeSheet((s) => ({
-                          ...s,
-                          heights: s.heights.map((h, rIdx) =>
-                            rIdx >= selection.r && rIdx <= selection.er ? size : h
-                          ),
-                        }));
-                      }
+                      setPromptInput(String(height));
+                      setCustomModal({
+                        type: 'prompt',
+                        title: 'Set row height',
+                        message: 'Enter custom row height in pixels (26–300 px):',
+                        defaultValue: String(height),
+                        inputType: 'number',
+                        min: 26,
+                        max: 300,
+                        onConfirm: (val) => {
+                          const size = Math.max(26, Math.min(300, Number(val) || 34));
+                          changeSheet((s) => ({
+                            ...s,
+                            heights: s.heights.map((h, rIdx) =>
+                              rIdx >= selection.r && rIdx <= selection.er ? size : h
+                            ),
+                          }));
+                        },
+                      });
                     }}
                   >
                     Row height…
@@ -2401,7 +2520,14 @@ export default function FieldWorkbookWorkspace({
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
                     onClick={() => {
                       setGridContextMenu(null);
-                      if (window.confirm('Delete the selected rows?')) dimension('row', true);
+                      setCustomModal({
+                        type: 'confirm',
+                        title: 'Delete selected rows?',
+                        message: 'Are you sure you want to delete the selected rows and their contents?',
+                        confirmLabel: 'Delete rows',
+                        confirmVariant: 'danger',
+                        onConfirm: () => dimension('row', true),
+                      });
                     }}
                   >
                     <Rows2 size={15} />
@@ -2412,7 +2538,14 @@ export default function FieldWorkbookWorkspace({
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
                     onClick={() => {
                       setGridContextMenu(null);
-                      if (window.confirm('Delete the selected columns?')) dimension('column', true);
+                      setCustomModal({
+                        type: 'confirm',
+                        title: 'Delete selected columns?',
+                        message: 'Are you sure you want to delete the selected columns and their contents?',
+                        confirmLabel: 'Delete columns',
+                        confirmVariant: 'danger',
+                        onConfirm: () => dimension('column', true),
+                      });
                     }}
                   >
                     <Columns2 size={15} />
@@ -2422,6 +2555,70 @@ export default function FieldWorkbookWorkspace({
               )}
             </div>
           </>
+        )}
+
+        {customModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-xs">
+            <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+              <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                {customModal.title}
+              </h4>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                {customModal.message}
+              </p>
+              {customModal.type === 'prompt' && (
+                <div className="mt-4">
+                  <input
+                    type={customModal.inputType || 'text'}
+                    min={customModal.min}
+                    max={customModal.max}
+                    value={promptInput}
+                    onChange={(e) => setPromptInput(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/30 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const handler = customModal.onConfirm;
+                        setCustomModal(null);
+                        handler(promptInput);
+                      }
+                    }}
+                  />
+                </div>
+              )}
+              <div className="mt-5 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  className={button}
+                  onClick={() => setCustomModal(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className={`rounded-lg px-3.5 py-2 text-xs font-semibold text-white shadow-xs ${
+                    customModal.type === 'confirm' && customModal.confirmVariant === 'danger'
+                      ? 'bg-red-600 hover:bg-red-700'
+                      : 'bg-emerald-600 hover:bg-emerald-700'
+                  }`}
+                  onClick={() => {
+                    const modal = customModal;
+                    setCustomModal(null);
+                    if (modal.type === 'confirm' || modal.type === 'alert') {
+                      modal.onConfirm();
+                    } else if (modal.type === 'prompt') {
+                      modal.onConfirm(promptInput);
+                    }
+                  }}
+                >
+                  {customModal.type === 'prompt'
+                    ? 'Save'
+                    : customModal.confirmLabel || (customModal.type === 'confirm' ? 'Confirm' : 'OK')}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {closePrompt}
