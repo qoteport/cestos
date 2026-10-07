@@ -571,7 +571,12 @@ export default function FieldAdminPortalWorkspace() {
     }
   }, [selectedProjectId]);
 
-  useApiDataRefresh(() => { void reloadData(); });
+  useApiDataRefresh(() => {
+    void reloadData();
+    void apiFetch<any>('/api/v1/operational-expenses').then((response) => {
+      setOperationalExpenseRequests(Array.isArray(response) ? response : response?.items || []);
+    }).catch(() => {});
+  });
 
   useEffect(() => {
     void reloadData();

@@ -447,11 +447,7 @@ export default function FinancePortalWorkspace() {
           const list = Array.isArray(res) ? res : res?.items || [];
           setOperationalExpenseRequests(list);
         }
-      }).catch(() => {
-        if (active) {
-          setOperationalExpenseRequests([]);
-        }
-      }),
+      }).catch(() => { /* Keep the last successful data during a temporary outage. */ }),
       apiFetch<any>('/api/v1/procurement/purchase-orders')
         .then((res) => { if (active) setPurchaseOrders(Array.isArray(res) ? res : res?.items || []); })
         .catch(() => []),
@@ -864,8 +860,7 @@ export default function FinancePortalWorkspace() {
   };
 
   const handleOpenFile = (path: string, fileName: string) => {
-    setViewerState({
-      isOpen: true,
+    openUniversalFileViewer({
       fileUrl: path,
       fileName: fileName || 'Document',
       title: 'Finance Subledger File Evidence',
@@ -873,8 +868,7 @@ export default function FinancePortalWorkspace() {
   };
 
   const viewPoAttachment = (po: any) => {
-    setViewerState({
-      isOpen: true,
+    openUniversalFileViewer({
       fileUrl: `/api/v1/procurement/purchase-orders/${po.id}/file?inline=true`,
       fileName: po.attachment_file_name || `Purchase_Order_${po.po_number || po.id}_Attachment.pdf`,
       title: `Purchase Order Attachment: ${po.po_number || 'PO'}`,
@@ -5344,7 +5338,6 @@ Signed: Finance & Procurement Administration
         document.body
       )}
 
-      <UniversalFileViewerModal isOpen={viewerState.isOpen} onClose={() => setViewerState({ isOpen: false })} fileUrl={viewerState.fileUrl} fileName={viewerState.fileName} title={viewerState.title} />
       </div>
     </div>
   );

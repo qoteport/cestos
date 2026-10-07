@@ -188,6 +188,8 @@ export default function UniversalFileViewerModal({
     mime.includes('excel');
   const isText =
     !isSpreadsheet &&
+    !isImage &&
+    !isPdf &&
     (/\.(txt|log|json|md|xml|html)$/i.test(lowerName) ||
       mime.includes('text') ||
       mime.includes('json'));
@@ -395,15 +397,15 @@ export default function UniversalFileViewerModal({
 
               {/* Image Viewer */}
               {isImage && (
-                <div className="w-full h-full flex items-center justify-center overflow-auto p-4">
+                <div className="w-full h-full flex items-center justify-center overflow-auto p-2 sm:p-6 text-center">
                   <img
                     src={objectUrl}
                     alt={fileName}
                     style={{
-                      transform: `scale(${zoomLevel / 100}) rotate(${rotation}deg)`,
+                      transform: zoomLevel !== 100 || rotation !== 0 ? `scale(${zoomLevel / 100}) rotate(${rotation}deg)` : undefined,
                       transition: 'transform 0.2s ease-in-out',
                     }}
-                    className="max-h-full max-w-full object-contain rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 bg-white"
+                    className="max-h-full max-w-full object-contain rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 bg-white m-auto"
                   />
                 </div>
               )}

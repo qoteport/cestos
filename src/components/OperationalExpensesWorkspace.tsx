@@ -1,7 +1,8 @@
 'use client';
+import { useApiDataRefresh } from '@/lib/apiDataRefresh';
 
 import { createPortal } from 'react-dom';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FileText,
   Plus,
@@ -131,7 +132,7 @@ export default function OperationalExpensesWorkspace({
   const reload = async () => {
     try {
       const [expenseRows, payeeRows, inventoryRows] = await Promise.all([
-        apiFetch<any>('/api/v1/operational-expenses').catch(() => []),
+        apiFetch<any>('/api/v1/operational-expenses'),
         apiFetch<any>('/api/v1/operational-expenses/payees').catch(() => []),
         apiFetch<any>('/api/v1/inventory/items?page_size=200').catch(() => ({ items: [] })),
       ]);
@@ -139,7 +140,6 @@ export default function OperationalExpensesWorkspace({
       setPayees(Array.isArray(payeeRows) ? payeeRows : (payeeRows as any)?.items || []);
       setInventory(Array.isArray(inventoryRows) ? inventoryRows : (inventoryRows as any)?.items || []);
     } catch (e) {
-      setRows([]);
       setError(e instanceof Error ? e.message : 'Could not load expenses');
     }
   };
@@ -147,13 +147,21 @@ export default function OperationalExpensesWorkspace({
   useEffect(() => {
     void reload();
   }, []);
+  useApiDataRefresh(() => { void reload(); });
   useOperationalDataSync((update) => {
     if (update.domain === 'expenses' && document.visibilityState === 'visible') void reload();
   });
+  const scrolledExpenseId = useRef<string | null>(null);
   useEffect(() => {
+    if (scrolledExpenseId.current === focusedExpenseId) return;
     if (!focusedExpenseId || !rows.some((row) => String(row.id) === focusedExpenseId)) return;
+    scrolledExpenseId.current = focusedExpenseId;
     document.getElementById(`operational-expense-${focusedExpenseId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [focusedExpenseId, rows]);
+
+  useEffect(() => {
+    setViewingExpense(current => current ? rows.find(row => row.id === current.id) || null : null);
+  }, [rows]);
 
   const sortedRows = useMemo(() => {
     return [...rows].sort((a, b) => {

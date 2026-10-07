@@ -1,3 +1,4 @@
+import { typedCellValue, cellNumberFormat } from './workbookCellTypes';
 import type { FieldWorkbook, FieldSheet, CellFormat } from './fieldWorkbook';
 import type { Workbook, Worksheet, Cell, Color } from 'exceljs';
 const MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -118,7 +119,7 @@ export async function importStyledWorkbook(file: File): Promise<FieldWorkbook> {
   const X = await import('xlsx');
   const bytes = new Uint8Array(await file.arrayBuffer());
   const original = new Excel.Workbook();
-  await original.xlsx.load(bytes as any);
+  if (bytes.length) await original.xlsx.load(bytes as any);
   const values = X.read(bytes, { type: 'array', cellStyles: true, raw: true });
   const theme = themeColors(original);
   const sheets: FieldSheet[] = original.worksheets.map((ws) => {
@@ -204,7 +205,7 @@ function reshape(ws: Worksheet, origins: (number | null)[], count: number, axis:
   }
 }
 export async function exportStyledWorkbook(book: FieldWorkbook): Promise<Blob> {
-  const source = book.source!;
+  const source = book.source || {base64:'', sheets:{} as Record<string,{excelId:number;snapshot:string}>};
   const bytes = originalBytes(source.base64);
   if (
     book.sheets.length === Object.keys(source.sheets).length &&
@@ -214,7 +215,7 @@ export async function exportStyledWorkbook(book: FieldWorkbook): Promise<Blob> {
   const Excel = await import('exceljs');
   const X = await import('xlsx');
   const original = new Excel.Workbook();
-  await original.xlsx.load(bytes as any);
+  if (bytes.length) await original.xlsx.load(bytes as any);
   const retainedIds = new Set(book.sheets.map((s) => source.sheets[s.id]?.excelId));
   for (const ws of [...original.worksheets])
     if (!retainedIds.has(ws.id)) original.removeWorksheet(ws.id);
@@ -257,8 +258,15 @@ export async function exportStyledWorkbook(book: FieldWorkbook): Promise<Blob> {
               : typeof cell.value === 'number' && /^[-+]?\d+(\.\d+)?$/.test(value)
                 ? Number(value)
                 : value;
-        const style = sheet.formats?.[`${r}:${c}`];
+        const style = {...(!previous ? {bold: !sheet.imported && r === 0, italic: false, align: 'left' as const} : {}), ...sheet.formats?.[`${r}:${c}`]};
         const oldStyle = previous?.formats?.[`${originalRow}:${originalCol}`];
+        if (style.dataType) {
+          cell.numFmt = cellNumberFormat(style);
+          if (!previous || value !== previous.cells[originalRow]?.[originalCol] || style.dataType !== oldStyle?.dataType) {
+            // Preserve existing formulas when only their display format changes.
+            if (!cell.formula || value !== previous?.cells[originalRow]?.[originalCol]) cell.value = typedCellValue(value, style);
+          }
+        }
         if (style && JSON.stringify(style) !== JSON.stringify(oldStyle)) {
           cell.font = { ...cell.font, bold: style.bold, italic: style.italic };
           if (!previous) {
@@ -278,6 +286,8 @@ export async function exportStyledWorkbook(book: FieldWorkbook): Promise<Blob> {
               };
             cell.alignment = { ...cell.alignment, wrapText: style.wrap, vertical: style.vertical };
           }
+          if (style.color !== oldStyle?.color) cell.font = {...cell.font, color: style.color ? {argb: 'FF' + style.color.slice(1)} : {theme: 1}};
+          if (style.background !== oldStyle?.background) cell.fill = style.background ? {type:'pattern', pattern:'solid', fgColor:{argb:'FF'+style.background.slice(1)}} : {type:'pattern', pattern:'none'};
           cell.alignment = { ...cell.alignment, horizontal: style.align || 'left' };
         }
       }

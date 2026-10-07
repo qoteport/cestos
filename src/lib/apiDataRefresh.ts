@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { startTransition, useEffect, useRef } from 'react';
 import { API_DATA_REFRESHED_EVENT } from './apiDataEvents';
 
 export function useApiDataRefresh(onRefresh: () => void) {
@@ -11,7 +11,7 @@ export function useApiDataRefresh(onRefresh: () => void) {
     let timer: number | undefined;
     const handle = () => {
       if (timer) window.clearTimeout(timer);
-      timer = window.setTimeout(() => callback.current(), 180);
+      timer = window.setTimeout(() => startTransition(() => callback.current()), 180);
     };
     window.addEventListener(API_DATA_REFRESHED_EVENT, handle);
     return () => {

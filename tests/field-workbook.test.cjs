@@ -40,8 +40,8 @@ vm.runInNewContext(
   }
 );
 const plain = (value) => JSON.parse(JSON.stringify(value));
-test('all seven templates have unique valid sheets and copies are independent', () => {
-  assert.equal(api.workbookTemplates.length, 7);
+test('all remaining templates have unique valid sheets and copies are independent', () => {
+  assert.equal(api.workbookTemplates.length, 4);
   api.workbookTemplates.forEach((_, i) => {
     const book = api.newWorkbook(i);
     api.validateWorkbook(book);
@@ -153,13 +153,14 @@ for (const ext of ['xlsx', 'xls', 'csv'])
   });
 test('Excel export round trips sheets, merges, values, widths and heights', async () => {
   const book = api.newWorkbook(1);
+  book.sheets.push(api.makeSheet('Additional sheet'));
   book.sheets[0].cells[1][0] = 'Card 1';
   book.sheets[0].widths[0] = 220;
   book.sheets[0].heights[1] = 65;
   book.sheets[0] = api.mergeCells(book.sheets[0], { r: 2, c: 1, er: 3, ec: 2 });
   const blob = await api.exportWorkbook(book);
   const imported = await api.importWorkbook(new File([blob], 'roundtrip.xlsx'));
-  assert.equal(imported.sheets.length, 2);
+  assert.equal(imported.sheets.length, book.sheets.length);
   assert.equal(imported.sheets[0].cells[1][0], 'Card 1');
   assert.deepEqual(plain(imported.sheets[0].merges), plain(book.sheets[0].merges));
   assert.ok(Math.abs(imported.sheets[0].widths[0] - 220) < 10);
@@ -251,4 +252,37 @@ test('styled XLSX keeps every sheet and original bytes, and edited exports retai
   assert.equal(edited.views[0].ySplit, 1);
   assert.equal(edited.getRow(3).hidden, true);
   assert.equal(output.worksheets.length, 32);
+});
+test('range colors survive native and imported Excel exports and can be reset', async () => {
+  const Excel = require('exceljs');
+  const book = api.newWorkbook();
+  const range = {r:1,c:0,er:2,ec:1};
+  book.sheets[0] = api.formatCells(book.sheets[0],range,{color:'#ff0000',background:'#ffff00'});
+  const blob = await api.exportWorkbook(book);
+  const native = new Excel.Workbook(); await native.xlsx.load(await blob.arrayBuffer());
+  assert.equal(native.worksheets[0].getCell('B3').font.color.argb,'FFff0000');
+  assert.equal(native.worksheets[0].getCell('B3').fill.fgColor.argb,'FFffff00');
+  const imported = await api.importWorkbook(new File([blob],'colors.xlsx'));
+  imported.sheets[0] = api.formatCells(imported.sheets[0],range,{color:'#0000ff',background:'#00ff00'});
+  const edited = new Excel.Workbook(); await edited.xlsx.load(await (await api.exportWorkbook(imported)).arrayBuffer());
+  assert.equal(edited.worksheets[0].getCell('B3').font.color.argb,'FF0000ff');
+  assert.equal(edited.worksheets[0].getCell('B3').fill.fgColor.argb,'FF00ff00');
+  imported.sheets[0] = api.formatCells(imported.sheets[0],range,{color:'',background:''});
+  const reset = new Excel.Workbook(); await reset.xlsx.load(await (await api.exportWorkbook(imported)).arrayBuffer());
+  assert.equal(reset.worksheets[0].getCell('B3').fill.pattern,'none');
+  assert.equal(reset.worksheets[0].getCell('B3').font.color.theme,1);
+});
+test('table designs style the selected range without changing data or merged header formatting', () => {
+ const sheet = api.makeSheet(); sheet.cells[1][1] = 'Heading';
+ const merged = api.mergeCells(sheet, {r:1,c:1,er:2,ec:2});
+ const before = plain(merged);
+ const styled = api.applyTableDesign(merged, {r:1,c:1,er:4,ec:3}, 0);
+ assert.deepEqual(plain(styled.cells),before.cells);
+ assert.deepEqual(plain(styled.merges),before.merges);
+ assert.equal(styled.formats['1:1'].background,api.tableDesigns[0].header);
+ assert.equal(styled.formats['1:1'].bold,true);
+ assert.equal(styled.formats['4:3'].background,api.tableDesigns[0].stripe);
+ assert.equal(styled.formats['3:3'].background,'#ffffff');
+ assert.equal(styled.formats['0:0'],undefined);
+ assert.equal(merged.formats?.['1:1']?.background,undefined);
 });

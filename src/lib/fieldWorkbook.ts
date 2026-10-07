@@ -1,5 +1,7 @@
 import { importStyledWorkbook, exportStyledWorkbook } from './excelWorkbook';
 export type CellFormat = {
+  dataType?: 'general' | 'text' | 'number' | 'currency' | 'percent' | 'date' | 'time' | 'datetime';
+  decimals?: number; currency?: string;
   fontName?: string;
   fontSize?: number;
   color?: string;
@@ -76,126 +78,6 @@ export const workbookTemplates: {
         'Daily fuel consumption',
         ['Date', 'Time', 'Equipment', 'Quantity (Lt)', 'Km / Hrs', 'Receivers name', 'Signature'],
       ],
-    ],
-  },
-  {
-    name: 'Breakdown / Daily Repair Job Card',
-    description: 'Failures, repairs, parts and labour.',
-    sheets: [
-      [
-        'Job cards',
-        [
-          'Job Card Number',
-          'Date',
-          'Project',
-          'Site',
-          'Equipment',
-          'Unit Number',
-          'Operator',
-          'Hour Meter',
-          'Reported Failure',
-          'Diagnosis',
-          'Corrective Action',
-          'Status',
-          'Technician',
-          'Supervisor',
-          'Remarks',
-        ],
-      ],
-      [
-        'Parts & labour',
-        [
-          'Job Card Number',
-          'Date',
-          'Part / Material',
-          'Quantity',
-          'Unit',
-          'Technician',
-          'Hours',
-          'Remarks',
-        ],
-      ],
-    ],
-  },
-  {
-    name: 'Preventive Maintenance Job Card',
-    description: 'Service intervals, inspections and release.',
-    sheets: [
-      [
-        'PM job cards',
-        [
-          'Job Card Number',
-          'Date',
-          'Project',
-          'Site',
-          'Equipment',
-          'Unit Number',
-          'PM Interval',
-          'Hour Meter',
-          'Technician',
-          'PM Result',
-          'Defects / Recommendations',
-          'Machine Status',
-          'Supervisor',
-          'Remarks',
-        ],
-      ],
-      [
-        'Checklist',
-        [
-          'Job Card Number',
-          'System / Component',
-          'Inspection / Service Task',
-          'Condition / Reading',
-          'Parts / Quantity',
-          'Remarks',
-        ],
-      ],
-    ],
-  },
-  {
-    name: 'Maintenance Assessment Report',
-    description: 'Fleet condition, actions and maintenance KPIs.',
-    sheets: [
-      [
-        'Report',
-        [
-          'Report Number',
-          'Report Date',
-          'Project',
-          'Site',
-          'Prepared By',
-          'Period Start',
-          'Period End',
-          'Executive Summary',
-          'Manpower Requirements',
-          'Conclusion',
-        ],
-      ],
-      [
-        'Fleet assessment',
-        [
-          'Equipment',
-          'Unit Number',
-          'Quantity',
-          'Maintenance Focus',
-          'Current Approach',
-          'Observation / Failure',
-          'Action Taken / Response',
-          'Current Status',
-        ],
-      ],
-      [
-        'Preventive improvements',
-        ['Equipment', 'Improvement', 'Action Required', 'Responsible', 'Target Date', 'Status'],
-      ],
-      [
-        'Spare parts',
-        ['Part / Material', 'Equipment', 'Quantity', 'Action Required', 'Priority', 'Remarks'],
-      ],
-      ['Control documents', ['Document', 'Purpose', 'Status', 'Responsible', 'Remarks']],
-      ['Action plan', ['Action', 'Priority', 'Responsible', 'Target Date', 'Status', 'Remarks']],
-      ['KPIs', ['KPI', 'Target', 'Actual', 'Remarks']],
     ],
   },
   {
@@ -333,6 +215,34 @@ export function formatCells(sheet: FieldSheet, range: CellRange, format: CellFor
     }
   return { ...sheet, formats };
 }
+export const tableDesigns = [
+  { name: 'Emerald', header: '#065f46', stripe: '#ecfdf5', text: '#064e3b' },
+  { name: 'Ocean', header: '#1e40af', stripe: '#eff6ff', text: '#172554' },
+  { name: 'Slate', header: '#334155', stripe: '#f1f5f9', text: '#0f172a' },
+  { name: 'Plum', header: '#6b21a8', stripe: '#faf5ff', text: '#3b0764' },
+  { name: 'Amber', header: '#92400e', stripe: '#fffbeb', text: '#451a03' },
+] as const;
+
+export function applyTableDesign(sheet: FieldSheet, range: CellRange, designIndex: number): FieldSheet {
+  const design = tableDesigns[designIndex];
+  if (!design) throw new Error('Choose a table design.');
+  const formats = {...sheet.formats};
+  const visited = new Set<string>();
+  for (let r = range.r; r <= range.er; r++) {
+    for (let c = range.c; c <= range.ec; c++) {
+      const merged = sheet.merges.find(m => r >= m.r && r <= m.er && c >= m.c && c <= m.ec);
+      const row = merged?.r ?? r;
+      const key = `${row}:${merged?.c ?? c}`;
+      if (visited.has(key)) continue;
+      visited.add(key);
+      const header = row === range.r;
+      formats[key] = {...formats[key], bold: header, color: header ? '#ffffff' : design.text,
+        background: header ? design.header : (row - range.r) % 2 ? design.stripe : '#ffffff'};
+    }
+  }
+  return {...sheet, formats};
+}
+
 export function changeDimension(
   sheet: FieldSheet,
   axis: 'row' | 'column',
@@ -604,7 +514,7 @@ export async function importWorkbook(file: File): Promise<FieldWorkbook> {
   return validateWorkbook(book);
 }
 export async function exportWorkbook(book: FieldWorkbook): Promise<Blob> {
-  if (book.source) return exportStyledWorkbook(book);
+  if (book.source || book.sheets.some(s => Object.values(s.formats || {}).some(f => f.color || f.background || f.dataType))) return exportStyledWorkbook(book);
   const XLSX = await import('xlsx');
   const output = XLSX.utils.book_new();
   for (const sheet of book.sheets) {

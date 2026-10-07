@@ -1,4 +1,5 @@
 'use client';
+import { useApiDataRefresh } from '@/lib/apiDataRefresh';
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -6,7 +7,7 @@ import { apiFetch, apiFetchBlob, downloadBlob, receivePurchaseOrderGoods } from 
 import { Eye, Download, FileText, Paperclip, X, Plus, CheckCircle2, ShoppingCart, Truck, PackageCheck, RefreshCw, Trash } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
 import OperationalExpenseSubmissionModal from './OperationalExpenseSubmissionModal';
-import UniversalFileViewerModal from './UniversalFileViewerModal';
+import { openUniversalFileViewer } from '@/lib/fileViewer';
 import { PurchaseOrderCategoryField, purchaseOrderCategoryLabel } from './PurchaseOrderCategoryField';
 import { useOperationalDataSync } from '@/lib/operationalDataSync';
 import { TableShimmerSkeleton } from './DataUI';
@@ -88,9 +89,7 @@ export default function FieldPurchaseOrdersPanel({
   async function handleViewPOAttachment(poId: string) {
     try {
       const blob = await apiFetchBlob(`/api/v1/procurement/purchase-orders/${poId}/file?inline=true`);
-      const url = URL.createObjectURL(blob);
-      setViewerState({
-        isOpen: true,
+      openUniversalFileViewer({
         blob,
         fileName: `Purchase_Order_${poId}_Attachment.pdf`,
         title: `Purchase Order Quotation Attachment`,
@@ -103,7 +102,7 @@ export default function FieldPurchaseOrdersPanel({
   async function handleViewPaymentReceipt(payment: Row) {
     try {
       const blob = await apiFetchBlob(`/api/v1/operational-expenses/${payment.expense_id}/payments/${payment.id}/receipt`);
-      setViewerState({ isOpen: true, blob, fileName: payment.receipt_name || 'Payment receipt', title: 'Finance payment receipt' });
+      openUniversalFileViewer({ blob, fileName: payment.receipt_name || 'Payment receipt', title: 'Finance payment receipt' });
     } catch (err: any) {
       setMessage(`Could not view payment receipt: ${err?.message || 'View error'}`);
     }
@@ -135,7 +134,7 @@ export default function FieldPurchaseOrdersPanel({
         setViewDetailPO(linkedOrder);
         handledPurchaseOrderLink.current = requestedId!;
       } else {
-        setViewDetailPO((current) => current ? orderList.find((row) => row.id === current.id) || current : null);
+        setViewDetailPO((current) => current ? orderList.find((row) => row.id === current.id) || null : null);
       }
       setSuppliers(Array.isArray(supplierRows) ? supplierRows : []);
     } finally {
@@ -150,6 +149,7 @@ export default function FieldPurchaseOrdersPanel({
     window.addEventListener('focus', refresh);
     return () => { window.clearInterval(interval); window.removeEventListener('focus', refresh); };
   }, []);
+  useApiDataRefresh(() => { void reload().catch(() => {}); });
   useOperationalDataSync(() => { if (document.visibilityState === 'visible') void reload().catch((e) => setMessage(e.message || 'Could not refresh purchase orders.')); });
 
   const isWithinDate = (dateInput: string | Date | undefined) => {
@@ -929,6 +929,5 @@ export default function FieldPurchaseOrdersPanel({
       document.body
     )}
     {expensePO && <OperationalExpenseSubmissionModal projectId={String(expensePO.project_id || projectId || '')} initialPurchaseOrder={expensePO} onClose={() => setExpensePO(null)} onSubmitted={async (expense) => { const poNumber = expensePO.po_number; const poId = String(expensePO.id); setRaisedPurchaseOrderIds((current) => new Set(current).add(poId)); setExpensePO(null); setMessage(`${expense.expense_number || 'Expense'} submitted to Finance for ${poNumber}.`); await reload(); }} />}
-    <UniversalFileViewerModal isOpen={viewerState.isOpen} onClose={() => setViewerState({ isOpen: false })} fileUrl={viewerState.fileUrl} blob={viewerState.blob} fileName={viewerState.fileName} title={viewerState.title} />
   </section>;
 }

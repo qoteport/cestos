@@ -45,6 +45,8 @@ import {
   changeDimension,
   cellFormat,
   formatCells,
+  applyTableDesign,
+  tableDesigns,
   type CellFormat,
   columnName,
   copyWorkbook,
@@ -113,7 +115,8 @@ const GridCell = memo(function GridCell({
   return (
     <td
       style={{
-        backgroundColor: selected ? undefined : appearance?.background,
+        backgroundColor: appearance?.background || undefined,
+        boxShadow: selected ? "inset 0 0 0 1px #059669" : undefined,
         verticalAlign: appearance?.vertical,
         borderTop: appearance?.borders?.top,
         borderBottom: appearance?.borders?.bottom,
@@ -137,12 +140,12 @@ const GridCell = memo(function GridCell({
         value={value}
         maxLength={32767}
         autoComplete="off"
-        className={`h-full min-h-[32px] w-full min-w-0 bg-transparent px-2 py-1 text-sm text-slate-900 outline-none dark:text-slate-100 ${bold ? 'font-bold' : 'font-normal'} ${italic ? 'italic' : ''}`}
+        className={`h-full min-h-[32px] w-full min-w-0 bg-transparent px-2 py-1 text-sm text-slate-900 !border-0 !outline-none !ring-0 !ring-offset-0 !shadow-none focus:!outline-none focus-visible:!outline-none dark:text-slate-100 ${bold ? 'font-bold' : 'font-normal'} ${italic ? 'italic' : ''}`}
         style={{
           textAlign: align,
           fontFamily: appearance?.fontName,
           fontSize: appearance?.fontSize ? `${appearance.fontSize}pt` : undefined,
-          color: appearance?.color,
+          color: appearance?.color || undefined,
           textDecoration: [
             appearance?.underline ? 'underline' : '',
             appearance?.strike ? 'line-through' : '',
@@ -152,6 +155,10 @@ const GridCell = memo(function GridCell({
         title={value}
         onFocus={() => onSelect(r, c, false)}
         onMouseDown={(event) => {
+          if (event.button !== 0) {
+            event.preventDefault();
+            return;
+          }
           if (event.shiftKey) {
             event.preventDefault();
             onSelect(r, c, true);
@@ -935,39 +942,20 @@ export default function FieldWorkbookWorkspace({
         </header>
         {feedback}
         {busy && <p role="status">Opening workbook…</p>}
-        <div>
-          <h3 className="mb-3 font-semibold">Ready-to-use templates</h3>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {workbookTemplates.map((template, index) => (
-              <button
-                key={template.name}
-                disabled={busy}
-                onClick={() => activate(newWorkbook(index), true)}
-                className="rounded-xl border border-slate-200 p-4 text-left transition hover:border-emerald-500 hover:bg-emerald-50 dark:border-slate-700 dark:hover:bg-emerald-950"
-              >
-                <FileSpreadsheet className="mb-3 text-emerald-700" size={22} />
-                <p className="text-sm font-bold">{template.name}</p>
-                <p className="mt-1 text-xs text-slate-500">{template.description}</p>
-                <span className="mt-3 block text-xs font-medium text-emerald-700">
-                  {template.sheets.length} {template.sheets.length === 1 ? 'sheet' : 'sheets'} · Use
-                  template →
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <h3 className="font-semibold">Saved workbooks & templates</h3>
+          <div className="flex min-w-0 w-full items-center gap-2 lg:w-auto">
           <input
             aria-label="Search workbooks"
             placeholder="Search saved files…"
-            className="input-field"
+            className="input-field !h-10 min-w-0 flex-1 lg:w-72"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <button className={button} disabled={loading} onClick={() => void loadLibrary()}>
+          <button className={`${button} h-10 shrink-0`} disabled={loading} onClick={() => void loadLibrary()}>
             Refresh
           </button>
+          </div>
         </div>
         <p className="text-xs text-slate-500">
           Saved privately in your document library. Each save keeps a new version. Workbook data
@@ -1002,6 +990,27 @@ export default function FieldWorkbookWorkspace({
             )}
           </div>
         )}
+        <div>
+          <h3 className="mb-3 font-semibold">Ready-to-use templates</h3>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {workbookTemplates.map((template, index) => (
+              <button
+                key={template.name}
+                disabled={busy}
+                onClick={() => activate(newWorkbook(index), true)}
+                className="rounded-xl border border-slate-200 p-4 text-left transition hover:border-emerald-500 hover:bg-emerald-50 dark:border-slate-700 dark:hover:bg-emerald-950"
+              >
+                <FileSpreadsheet className="mb-3 text-emerald-700" size={22} />
+                <p className="text-sm font-bold">{template.name}</p>
+                <p className="mt-1 text-xs text-slate-500">{template.description}</p>
+                <span className="mt-3 block text-xs font-medium text-emerald-700">
+                  {template.sheets.length} {template.sheets.length === 1 ? 'sheet' : 'sheets'} · Use
+                  template →
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
       </section>
     );
 
@@ -1140,6 +1149,40 @@ export default function FieldWorkbookWorkspace({
               className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 self-center"
               aria-hidden="true"
             />
+
+            <div className="flex items-center gap-2" role="group" aria-label="Cell colors">
+              {([{key: 'color', label: 'Text color', fallback: '#000000'}, {key: 'background', label: 'Cell background color', fallback: '#ffffff'}] as const).map(({key, label, fallback}) => (
+                <label key={key} title={label} className={`${button} h-10 cursor-pointer !px-2`}>
+                  <span className="text-xs">{key === 'color' ? 'A' : 'Fill'}</span>
+                  <input type="color" aria-label={label} className="h-6 w-7 cursor-pointer border-0 bg-transparent p-0"
+                    value={cellFormat(sheet, anchor.r, anchor.c)[key] || fallback}
+                    onChange={(event) => changeSheet(s => formatCells(s, selection, {[key]: event.target.value}))} />
+                </label>
+              ))}
+              <button type="button" className={button} title="Reset text and background colors" onClick={() => changeSheet(s => formatCells(s, selection, {color: '', background: ''}))}>Reset colors</button>
+            </div>
+
+            <details className="relative">
+              <summary className={`${button} h-10 cursor-pointer list-none`}>Table designs</summary>
+              <div className="absolute left-0 top-full z-30 mt-2 w-64 rounded-xl border bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                <p className="mb-2 text-xs text-slate-500">Applies to your selection. The first selected row is the header.</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {tableDesigns.map((design, index) => (
+                    <button key={design.name} type="button" aria-label={`Apply ${design.name} table design`}
+                      className="overflow-hidden rounded-lg border text-left focus-visible:outline-emerald-600"
+                      onClick={event => {
+                        changeSheet(s => applyTableDesign(s, selection, index));
+                        event.currentTarget.closest('details')?.removeAttribute('open');
+                      }}>
+                      <span className="block px-2 py-1 text-xs font-bold" style={{background: design.header, color: '#ffffff'}}>{design.name}</span>
+                      <span aria-hidden="true" className="block h-3" style={{background: design.stripe}} />
+                      <span aria-hidden="true" className="block h-3 bg-white" />
+                      <span aria-hidden="true" className="block h-3" style={{background: design.stripe}} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </details>
 
             {/* Row & Column Actions Group */}
             <div className="flex items-center gap-1">
@@ -1483,6 +1526,10 @@ export default function FieldWorkbookWorkspace({
         <div className="flex flex-col">
           <div
             ref={gridRef}
+            onMouseDownCapture={(event) => {
+              // Secondary clicks must not focus an input and collapse the selected range.
+              if (event.button === 2) event.preventDefault();
+            }}
             onPointerDown={beginSelection}
             style={{
               scrollPaddingLeft: 48,
@@ -1914,8 +1961,45 @@ export default function FieldWorkbookWorkspace({
                   typeof window !== 'undefined' ? window.innerWidth - 240 : gridContextMenu.x
                 ),
               }}
-              className="fixed z-50 min-w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 text-xs font-medium text-slate-700 dark:text-slate-200"
+              className="fixed z-50 max-h-[calc(100dvh-16px)] overflow-y-auto min-w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 text-xs font-medium text-slate-700 dark:text-slate-200"
             >
+              <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-500" aria-label="Selected cell range">
+                Selection: {columnName(selection.c)}{selection.r + 1}:{columnName(selection.ec)}{selection.er + 1}
+              </div>
+                  {(selection.r !== selection.er || selection.c !== selection.ec) && (
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      onClick={() => {
+                        setGridContextMenu(null);
+                        changeSheet((s) => {
+                          const next = mergeCells(s, selection);
+                          setAnchor({ r: selection.r, c: selection.c });
+                          setEnd({ r: selection.r, c: selection.c });
+                          return next;
+                        });
+                      }}
+                    >
+                      <TableCellsMerge size={15} />
+                      Merge cells
+                    </button>
+                  )}
+                  {sheet.merges.some((m) => overlaps(m, selection)) && (
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      onClick={() => {
+                        setGridContextMenu(null);
+                        changeSheet((s) => ({
+                          ...s,
+                          merges: s.merges.filter((m) => !overlaps(m, selection)),
+                        }));
+                      }}
+                    >
+                      <TableCellsSplit size={15} />
+                      Unmerge cells
+                    </button>
+                  )}
               {gridContextMenu.type === 'column' && (
                 <>
                   <div className="px-3 py-1.5 font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[10px]">
@@ -2121,40 +2205,6 @@ export default function FieldWorkbookWorkspace({
                     Clear contents
                   </button>
                   <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
-                  {(selection.r !== selection.er || selection.c !== selection.ec) && (
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
-                      onClick={() => {
-                        setGridContextMenu(null);
-                        changeSheet((s) => {
-                          const next = mergeCells(s, selection);
-                          setAnchor({ r: selection.r, c: selection.c });
-                          setEnd({ r: selection.r, c: selection.c });
-                          return next;
-                        });
-                      }}
-                    >
-                      <TableCellsMerge size={15} />
-                      Merge selected cells
-                    </button>
-                  )}
-                  {sheet.merges.some((m) => overlaps(m, selection)) && (
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
-                      onClick={() => {
-                        setGridContextMenu(null);
-                        changeSheet((s) => ({
-                          ...s,
-                          merges: s.merges.filter((m) => !overlaps(m, selection)),
-                        }));
-                      }}
-                    >
-                      <TableCellsSplit size={15} />
-                      Unmerge cells
-                    </button>
-                  )}
                   <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
                   <div className="flex items-center justify-between px-2 py-1">
                     <button

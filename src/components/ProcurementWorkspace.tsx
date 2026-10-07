@@ -1,6 +1,7 @@
 'use client';
+import { useApiDataRefresh } from '@/lib/apiDataRefresh';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   ShoppingBag, Plus, RefreshCw, CheckCircle2, Clock, Truck, PackageCheck, AlertCircle, FileText, Search, Eye
 } from 'lucide-react';
@@ -11,6 +12,7 @@ import { useOperationalDataSync } from '@/lib/operationalDataSync';
 import SearchableSelect from './SearchableSelect';
 
 export default function ProcurementWorkspace({ subResource }: { subResource?: string }) {
+  const loaded = useRef(false);
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<PurchaseOrderRead[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -38,13 +40,14 @@ export default function ProcurementWorkspace({ subResource }: { subResource?: st
   const [receiptQuantities, setReceiptQuantities] = useState<Record<string, number>>({});
 
   const reload = () => setVersion((v) => v + 1);
+  useApiDataRefresh(reload);
   useOperationalDataSync((update) => {
     if ((update.domain === 'purchase_orders' || update.domain === 'expenses') && document.visibilityState === 'visible') reload();
   });
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
+    if (!loaded.current) setLoading(true);
 
     Promise.all([
       apiFetch<PurchaseOrderRead[]>('/api/v1/procurement/purchase-orders').catch(() => []),
@@ -55,6 +58,7 @@ export default function ProcurementWorkspace({ subResource }: { subResource?: st
       setOrders(rows(poRes) as PurchaseOrderRead[]);
       setSuppliers(rows(suppRes));
       setProjects(rows(projRes));
+      loaded.current = true;
       setLoading(false);
     });
 
