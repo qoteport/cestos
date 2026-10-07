@@ -1,10 +1,14 @@
 'use client';
+import SearchableSelect from './SearchableSelect';
+import WorkbookColorPicker from './WorkbookColorPicker';
 import { displayCellValue } from '@/lib/workbookCellTypes';
 import { originalBytes } from '@/lib/excelWorkbook';
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
+  MoveHorizontal,
+  MoveVertical,
   Bold,
   Italic,
   AlignLeft,
@@ -122,7 +126,6 @@ const GridCell = memo(function GridCell({
     <td
       style={{
         backgroundColor: appearance?.background || undefined,
-        boxShadow: selected ? "inset 0 0 0 1px #059669" : undefined,
         verticalAlign: appearance?.vertical,
         borderTop: appearance?.borders?.top,
         borderBottom: appearance?.borders?.bottom,
@@ -136,7 +139,7 @@ const GridCell = memo(function GridCell({
         event.preventDefault();
         onContextMenu?.(r, c, event);
       }}
-      className={`relative border border-slate-200 p-0 dark:border-slate-700 ${selected ? 'bg-emerald-50 dark:bg-emerald-950' : header ? 'bg-slate-100 dark:bg-slate-800' : 'bg-white dark:bg-slate-900'} ${active ? 'outline outline-2 -outline-offset-2 outline-emerald-600' : ''}`}
+      className={`relative border border-slate-200 p-0 dark:border-slate-700 ${selected ? 'bg-emerald-50 dark:bg-emerald-950' : header ? 'bg-slate-100 dark:bg-slate-800' : 'bg-white dark:bg-slate-900'} ${active ? 'outline outline-2 -outline-offset-2 outline-emerald-600 z-10' : ''}`}
     >
       <input
         data-cell={`${r}:${c}`}
@@ -1162,12 +1165,9 @@ export default function FieldWorkbookWorkspace({
 
             <div className="flex items-center gap-2" role="group" aria-label="Cell colors">
               {([{key: 'color', label: 'Text color', fallback: '#000000'}, {key: 'background', label: 'Cell background color', fallback: '#ffffff'}] as const).map(({key, label, fallback}) => (
-                <label key={key} title={label} className={`${button} h-10 cursor-pointer !px-2`}>
-                  <span className="text-xs">{key === 'color' ? 'A' : 'Fill'}</span>
-                  <input type="color" aria-label={label} className="h-6 w-7 cursor-pointer border-0 bg-transparent p-0"
-                    value={cellFormat(sheet, anchor.r, anchor.c)[key] || fallback}
-                    onChange={(event) => changeSheet(s => formatCells(s, selection, {[key]: event.target.value}))} />
-                </label>
+                <WorkbookColorPicker key={key} label={label} fallback={fallback}
+                  value={cellFormat(sheet, anchor.r, anchor.c)[key]}
+                  onChange={color => changeSheet(s => formatCells(s, selection, {[key]: color}))} />
               ))}
               <button type="button" className={button} title="Reset text and background colors" onClick={() => changeSheet(s => formatCells(s, selection, {color: '', background: ''}))}>Reset colors</button>
             </div>
@@ -1175,13 +1175,13 @@ export default function FieldWorkbookWorkspace({
             <details className="relative">
               <summary className={`${button} h-10 cursor-pointer list-none`}>Table designs</summary>
               <div className="absolute left-0 top-full z-30 mt-2 w-64 rounded-xl border bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-                <p className="mb-2 text-xs text-slate-500">Applies to your selection. The first selected row is the header.</p>
+                <p className="mb-2 text-xs text-slate-500">Applies to the entire current sheet. The first row is the header.</p>
                 <div className="grid grid-cols-2 gap-2">
                   {tableDesigns.map((design, index) => (
                     <button key={design.name} type="button" aria-label={`Apply ${design.name} table design`}
                       className="overflow-hidden rounded-lg border text-left focus-visible:outline-emerald-600"
                       onClick={event => {
-                        changeSheet(s => applyTableDesign(s, selection, index));
+                        changeSheet(s => applyTableDesign(s, {r: 0, c: 0, er: s.cells.length - 1, ec: s.widths.length - 1}, index));
                         event.currentTarget.closest('details')?.removeAttribute('open');
                       }}>
                       <span className="block px-2 py-1 text-xs font-bold" style={{background: design.header, color: '#ffffff'}}>{design.name}</span>
@@ -1195,10 +1195,10 @@ export default function FieldWorkbookWorkspace({
             </details>
 
             <div className="flex items-center gap-2" role="group" aria-label="Cell data format">
-              <select aria-label="Cell content type" className="input-field !h-10 !w-auto" value={cellFormat(sheet, anchor.r, anchor.c).dataType || 'general'}
-                onChange={e => changeSheet(s => formatCells(s, selection, {dataType: e.target.value as CellFormat['dataType']}))}>
-                {['general','text','number','currency','percent','date','time','datetime'].map(type => <option key={type} value={type}>{type === 'datetime' ? 'Date & time' : type.charAt(0).toUpperCase()+type.slice(1)}</option>)}
-              </select>
+              <SearchableSelect ariaLabel="Cell content type" className="min-w-40" disabled={busy}
+                value={cellFormat(sheet, anchor.r, anchor.c).dataType || 'general'}
+                options={['general','text','number','currency','percent','date','time','datetime'].map(type => ({value: type, label: type === 'datetime' ? 'Date & time' : type.charAt(0).toUpperCase()+type.slice(1)}))}
+                onChange={value => changeSheet(s => formatCells(s, selection, {dataType: value as CellFormat['dataType']}))} />
               {['number','currency','percent'].includes(cellFormat(sheet, anchor.r, anchor.c).dataType || '') && <>
                 <label className="flex items-center gap-1 text-xs">Decimals<select aria-label="Decimal places" className="input-field !h-10 !w-auto" value={cellFormat(sheet, anchor.r, anchor.c).decimals ?? 2} onChange={e => changeSheet(s => formatCells(s, selection, {decimals:Number(e.target.value)}))}>{[0,1,2,3,4,5,6].map(n=><option key={n} value={n}>{n}</option>)}</select></label>
                 {cellFormat(sheet, anchor.r, anchor.c).dataType === 'currency' && <select aria-label="Currency" className="input-field !h-10 !w-auto" value={cellFormat(sheet, anchor.r, anchor.c).currency || 'USD'} onChange={e => changeSheet(s => formatCells(s, selection, {currency:e.target.value}))}>{['USD','GHS','EUR','GBP','LRD'].map(code=><option key={code}>{code}</option>)}</select>}
@@ -1621,8 +1621,10 @@ export default function FieldWorkbookWorkspace({
                       <span
                         title="Drag to resize column"
                         onPointerDown={(event) => resize('column', c, event)}
-                        className="absolute -right-1 top-0 z-30 h-full w-2 cursor-col-resize touch-none hover:bg-emerald-500/40"
-                      />
+                        className="absolute -right-2 top-0 z-30 flex h-full w-4 cursor-col-resize touch-none items-center justify-center text-slate-500 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-950"
+                      >
+                        <MoveHorizontal size={14} aria-hidden="true" className="pointer-events-none shrink-0" />
+                      </span>
                     </th>
                   ))}
                 </tr>
@@ -1667,8 +1669,10 @@ export default function FieldWorkbookWorkspace({
                       <span
                         title="Drag to resize row"
                         onPointerDown={(event) => resize('row', r, event)}
-                        className="absolute -bottom-1 left-0 z-20 h-2 w-full cursor-row-resize touch-none hover:bg-emerald-500/40"
-                      />
+                        className="absolute -bottom-2 left-0 z-20 flex h-4 w-full cursor-row-resize touch-none items-center justify-center text-slate-500 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-950"
+                      >
+                        <MoveVertical size={14} aria-hidden="true" className="pointer-events-none shrink-0" />
+                      </span>
                     </th>
                     {row.map((value, c) => {
                       if (sheet.widths[c] === 0) return null;

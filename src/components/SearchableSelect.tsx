@@ -339,7 +339,7 @@ export default function SearchableSelect({
             )}
           </div>
         </div>,
-        document.body
+        containerRef.current?.closest('dialog') || document.body
       )}
     </div>
   );
