@@ -217,7 +217,7 @@ export default function SearchableSelect({
         aria-haspopup="listbox"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
-        className={`input-field flex items-center justify-between text-left cursor-pointer text-xs sm:text-sm w-full min-h-[42px] px-3.5 py-2.5 bg-background border rounded-xl transition-all shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 ${
+        className={`input-field flex items-center justify-between text-left cursor-pointer text-xs sm:text-sm w-full min-h-[42px] px-3.5 py-2.5 bg-background border rounded-xl transition-all shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 ${
           isOpen ? 'ring-2 ring-primary/30 border-primary shadow-sm' : 'hover:border-primary/50'
         } ${disabled ? 'opacity-50 cursor-not-allowed bg-muted' : ''}`}
       >

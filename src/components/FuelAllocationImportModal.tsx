@@ -32,7 +32,7 @@ const blank = (): Row => ({
   assetId: '',
 });
 const inputClass =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800';
+  'mt-1.5 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-xs outline-none transition-all focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/30 focus:ring-offset-0 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-emerald-500 dark:focus:ring-emerald-500/30';
 export default function FuelAllocationImportModal({
   projects,
   assets,
@@ -439,7 +439,7 @@ export default function FuelAllocationImportModal({
           {ready && (
             <>
               <fieldset disabled={busy || locked} className="grid min-w-0 gap-4 sm:grid-cols-2">
-                <label className="text-xs font-semibold">
+                <label className="flex flex-col gap-1.5 text-xs font-semibold">
                   Project
                   <SearchableSelect
                     options={projects.map((p) => ({
@@ -454,7 +454,7 @@ export default function FuelAllocationImportModal({
                     }}
                   />
                 </label>
-                <label className="text-xs font-semibold">
+                <label className="flex flex-col gap-1.5 text-xs font-semibold">
                   Project site
                   <SearchableSelect
                     options={sites.map((s) => ({ value: String(s.id), label: s.name || 'Site' }))}
@@ -464,7 +464,7 @@ export default function FuelAllocationImportModal({
                     placeholder={siteLoading ? 'Loading sites…' : 'Select project site'}
                   />
                 </label>
-                <label className="text-xs font-semibold sm:col-span-2">
+                <label className="flex flex-col gap-1.5 text-xs font-semibold sm:col-span-2">
                   Source Fuel Delivery / Bulk Supply Purchase (Project Logs)
                   <SearchableSelect
                     options={[{ value: '', label: 'No source selected' }, ...deliveryOptions]}
@@ -498,7 +498,7 @@ export default function FuelAllocationImportModal({
                       {row.savedId ? ' · Logged' : ''}
                     </legend>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                      <label className="text-xs font-semibold">
+                      <label className="flex flex-col gap-1.5 text-xs font-semibold">
                         Date *
                         <input
                           className={inputClass}
@@ -507,7 +507,7 @@ export default function FuelAllocationImportModal({
                           onChange={(e) => update(row.key, 'date', e.target.value)}
                         />
                       </label>
-                      <label className="text-xs font-semibold">
+                      <label className="flex flex-col gap-1.5 text-xs font-semibold">
                         Time *
                         <input
                           className={inputClass}
@@ -516,7 +516,7 @@ export default function FuelAllocationImportModal({
                           onChange={(e) => update(row.key, 'time', e.target.value)}
                         />
                       </label>
-                      <label className="text-xs font-semibold">
+                      <label className="flex flex-col gap-1.5 text-xs font-semibold">
                         Equipment as reported
                         <input
                           className={inputClass}
@@ -528,7 +528,7 @@ export default function FuelAllocationImportModal({
                           }}
                         />
                       </label>
-                      <label className="text-xs font-semibold">
+                      <label className="flex flex-col gap-1.5 text-xs font-semibold">
                         Quantity (Lt) *
                         <input
                           className={inputClass}
@@ -539,7 +539,7 @@ export default function FuelAllocationImportModal({
                           onChange={(e) => update(row.key, 'quantity', e.target.value)}
                         />
                       </label>
-                      <label className="text-xs font-semibold sm:col-span-2">
+                      <label className="flex flex-col gap-1.5 text-xs font-semibold sm:col-span-2">
                         Registered equipment *
                         <SearchableSelect
                           options={assetOptions}
@@ -556,7 +556,7 @@ export default function FuelAllocationImportModal({
                           </span>
                         )}
                       </label>
-                      <label className="text-xs font-semibold">
+                      <label className="flex flex-col gap-1.5 text-xs font-semibold">
                         Km / Hrs
                         <input
                           className={inputClass}
@@ -566,7 +566,7 @@ export default function FuelAllocationImportModal({
                           onChange={(e) => update(row.key, 'meter', e.target.value)}
                         />
                       </label>
-                      <label className="text-xs font-semibold">
+                      <label className="flex flex-col gap-1.5 text-xs font-semibold">
                         Receiver’s name
                         <input
                           className={inputClass}
@@ -575,7 +575,7 @@ export default function FuelAllocationImportModal({
                           onChange={(e) => update(row.key, 'receiver', e.target.value)}
                         />
                       </label>
-                      <label className="text-xs font-semibold sm:col-span-2">
+                      <label className="flex flex-col gap-1.5 text-xs font-semibold sm:col-span-2">
                         Signature / acknowledgement (as supplied)
                         <input
                           className={inputClass}
