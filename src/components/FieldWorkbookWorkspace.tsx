@@ -126,6 +126,7 @@ const GridCell = memo(function GridCell({
     <td
       style={{
         backgroundColor: appearance?.background || undefined,
+        boxShadow: selected ? "inset 0 0 0 1px #059669" : undefined,
         verticalAlign: appearance?.vertical,
         borderTop: appearance?.borders?.top,
         borderBottom: appearance?.borders?.bottom,
