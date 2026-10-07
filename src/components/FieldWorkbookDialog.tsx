@@ -113,8 +113,28 @@ export default function FieldWorkbookDialog({
           <header className="shrink-0 border-b border-slate-200 bg-[#edf2f3] dark:border-slate-700 dark:bg-slate-900">
             <h2 id="field-workbooks-title" className="sr-only">Cestos Workbooks</h2>
             <div className="flex h-11 items-stretch gap-1 px-2">
-              <div className="flex shrink-0 items-center gap-2 px-2 text-emerald-800 dark:text-emerald-300"><FileSpreadsheet size={20}/><span className="hidden text-xs font-bold tracking-wide sm:inline">CESTOS SHEETS</span></div>
-              <button type="button" title="Workbook library" aria-label="Workbook library" disabled={tabsState?.busy} onClick={tabsState?.onLibrary} className={`my-1 rounded px-3 text-slate-600 hover:bg-white dark:hover:bg-slate-800 ${!tabsState?.activeId ? 'bg-white dark:bg-slate-800' : ''}`}><FolderOpen size={17}/></button>
+              <div className="flex shrink-0 items-center gap-1.5 px-2">
+                <button
+                  type="button"
+                  title="Workbook library"
+                  aria-label="Workbook library"
+                  disabled={tabsState?.busy}
+                  onClick={tabsState?.onLibrary}
+                  className={`group relative flex items-center justify-center rounded-lg p-1.5 transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-50 active:scale-95 ${
+                    !tabsState?.activeId
+                      ? 'bg-emerald-100/90 text-emerald-700 shadow-xs dark:bg-emerald-950 dark:text-emerald-300'
+                      : 'text-emerald-800 hover:bg-emerald-100/70 hover:text-emerald-600 dark:text-emerald-300 dark:hover:bg-emerald-950/60 dark:hover:text-emerald-200'
+                  }`}
+                >
+                  <FileSpreadsheet
+                    size={20}
+                    className="transition-transform duration-150 group-hover:scale-110"
+                  />
+                </button>
+                <span className="hidden text-xs font-bold tracking-wide text-slate-800 dark:text-slate-200 sm:inline select-none">
+                  CESTOS SHEETS
+                </span>
+              </div>
               <div role="tablist" aria-label="Open workbooks" className="flex min-w-0 flex-1 items-end gap-1 overflow-x-auto">
                 {tabsState?.tabs.map(tab=><div key={tab.id} className={`flex h-9 min-w-32 max-w-56 shrink-0 items-center rounded-t-md border border-b-0 ${tabsState.activeId===tab.id ? 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-950' : 'border-transparent bg-slate-200/50 hover:bg-slate-200 dark:bg-slate-800'}`}>
                   <button type="button" role="tab" aria-selected={tabsState.activeId===tab.id} aria-label={`Open workbook ${tab.name}`} disabled={tabsState.busy} onClick={()=>tabsState.onSelect(tab.id)} className={`flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-xs ${tabsState.activeId===tab.id ? 'font-semibold text-emerald-800 dark:text-emerald-300' : 'text-slate-600 dark:text-slate-300'}`}><span className="truncate">{tab.name}</span>{tab.dirty && <span aria-label="Unsaved changes" className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-600"/>}</button>
