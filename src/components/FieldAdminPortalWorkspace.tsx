@@ -138,6 +138,9 @@ export default function FieldAdminPortalWorkspace() {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
     if (tab === 'NOTIFICATIONS' || tab === 'EQUIPMENT' || tab === 'PURCHASE_ORDERS' || tab === 'EXPENSES') setActiveTab(tab as AdminTab);
+    if (params.get('workbooks') === 'true' || params.get('workbooks') === '1' || tab === 'WORKBOOKS') {
+      setWorkbooksOpen(true);
+    }
   }, []);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
@@ -1888,16 +1891,17 @@ Signed: Field Operations Administration
               <RefreshCw size={16} className={loading ? 'animate-spin text-orange-600 dark:text-orange-400' : ''} />
             </button>
 
-            <button
-              type="button"
-              onClick={() => setWorkbooksOpen(true)}
+            <a
+              href="/field-admin-portal?workbooks=true"
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-orange-600 via-amber-600 to-orange-700 text-white hover:from-orange-700 hover:to-amber-700 text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all border border-orange-500/30"
-              title="Open workbooks"
-              aria-label="Open workbooks"
+              title="Open workbooks in new tab"
+              aria-label="Open workbooks in new tab"
             >
               <FileText size={16} />
               <span className="hidden sm:inline">Workbooks</span>
-            </button>
+            </a>
 
             <button
               onClick={() => setActiveTab('NOTIFICATIONS')}

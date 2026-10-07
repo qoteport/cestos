@@ -1,4 +1,5 @@
 'use client';
+import styles from './FieldWorkbookWorkspace.module.css';
 import WorkbookDatabaseConnection from './WorkbookDatabaseConnection';
 import SearchableSelect from './SearchableSelect';
 import WorkbookColorPicker from './WorkbookColorPicker';
@@ -73,6 +74,8 @@ import { useFieldWorkbookHeader } from './FieldWorkbookDialog';
 
 type Document = { id: string; title: string; tags: string[]; created_at: string };
 type Point = { r: number; c: number };
+type WorkbookSession = {book: FieldWorkbook; dirty: boolean; sheetIndex: number; anchor: Point; end: Point; undo: FieldWorkbook[]; redo: FieldWorkbook[]; scrollTop: number; scrollLeft: number};
+const freshSession = (book: FieldWorkbook, dirty = false): WorkbookSession => ({book, dirty, sheetIndex:0, anchor:{r:0,c:0}, end:{r:0,c:0}, undo:[], redo:[], scrollTop:0, scrollLeft:0});
 const button =
   'inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700';
 const iconButton = `${button} h-10 w-10 shrink-0 !p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2`;
@@ -218,6 +221,8 @@ export default function FieldWorkbookWorkspace({
   sites: any[];
   storageScope: string;
 }) {
+  const [sessions, setSessions] = useState<WorkbookSession[]>([]);
+  const [ribbonTab, setRibbonTab] = useState('Home');
   const [book, setBook] = useState<FieldWorkbook | null>(null);
   const [sheetIndex, setSheetIndex] = useState(0);
   const dragSelection = useRef<{ kind: 'cell' | 'row' | 'column'; start: Point } | null>(null);
@@ -258,7 +263,7 @@ export default function FieldWorkbookWorkspace({
     x: number;
     y: number;
   } | null>(null);
-  const [showLeaveConfirmModal, setShowLeaveConfirmModal] = useState(false);
+  const [closingWorkbook, setClosingWorkbook] = useState<{id: string; name: string} | null>(null);
   const [gridViewportHeight, setGridViewportHeight] = useState<number | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
   const bookRef = useRef(book);
@@ -277,6 +282,7 @@ export default function FieldWorkbookWorkspace({
 
   const headerContext = useFieldWorkbookHeader();
   const setHeaderState = headerContext?.setHeaderState;
+  const setTabsState = headerContext.setTabsState;
 
   const loadLibrary = useCallback(async () => {
     setLoading(true);
@@ -305,37 +311,38 @@ export default function FieldWorkbookWorkspace({
     void loadLibrary();
   }, [loadLibrary]);
   useEffect(() => {
+    setBook(null);setSessions([]);setDirty(false);
     try {
       const raw = localStorage.getItem(storageKey);
-      if (raw) {
-        setBook(validateWorkbook(JSON.parse(raw)));
-        setDirty(true);
-        setNotice('Recovered your unsaved workbook from this browser.');
+      if (!raw) return;
+      const stored = JSON.parse(raw);
+      if (stored.openBooks) {
+        const recovered: WorkbookSession[] = stored.openBooks.map((item: any) => freshSession(validateWorkbook(item.book), Boolean(item.dirty)));
+        setSessions(recovered);
+        const active = recovered.find(item => item.book.id === stored.activeId);
+        if(active) {setBook(active.book);setDirty(active.dirty);}
+      } else {
+        const recovered = validateWorkbook(stored);
+        setBook(recovered);setDirty(true);setSessions([freshSession(recovered,true)]);
       }
-    } catch {
-      setError(
-        'A previous draft could not be restored. Saved workbooks are still available below.'
-      );
-    }
+      setNotice('Restored your open workbooks.');
+    } catch {setError('Open workbooks could not be restored. Saved files are still in the library.');}
   }, [storageKey]);
   useEffect(() => {
-    if (!dirty || !book) return;
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(book));
-    } catch {
-      setError(
-        'The browser could not keep a recovery draft. Save your workbook to keep your changes.'
-      );
-    }
-  }, [book, dirty, storageKey]);
+    const timer = window.setTimeout(() => {
+      const openBooks = sessions.map(item => item.book.id === book?.id ? {book,dirty} : {book:item.book,dirty:item.dirty});
+      if(book && !openBooks.some(item=>item.book.id===book.id)) openBooks.push({book,dirty});
+      try {localStorage.setItem(storageKey,JSON.stringify({openBooks,activeId:book?.id || null}));}
+      catch {setError('Browser recovery storage is full. Save your open workbooks to keep changes.');}
+    },400);
+    return ()=>window.clearTimeout(timer);
+  },[sessions,book,dirty,storageKey]);
   useEffect(() => {
-    if (!dirty) return;
-    const guard = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-    };
-    window.addEventListener('beforeunload', guard);
-    return () => window.removeEventListener('beforeunload', guard);
-  }, [dirty]);
+    if (!dirty && !sessions.some(item => item.book.id !== book?.id && item.dirty)) return;
+    const guard = (event: BeforeUnloadEvent) => {event.preventDefault();};
+    window.addEventListener('beforeunload',guard);
+    return ()=>window.removeEventListener('beforeunload',guard);
+  },[dirty,sessions,book?.id]);
   useEffect(() => {
     setSheetName(sheet?.name || '');
   }, [sheet?.id, sheet?.name]);
@@ -634,41 +641,49 @@ export default function FieldWorkbookWorkspace({
         .join('\n') || ''
     );
   }
+  function stashCurrent(): WorkbookSession[] {
+    if(!book) return sessions;
+    const snapshot: WorkbookSession = {book,dirty,sheetIndex,anchor,end,undo,redo,scrollTop:gridRef.current?.scrollTop || 0,scrollLeft:gridRef.current?.scrollLeft || 0};
+    const next = sessions.some(item=>item.book.id===book.id) ? sessions.map(item=>item.book.id===book.id ? snapshot : item) : [...sessions,snapshot];
+    setSessions(next);
+    return next;
+  }
+  function restoreSession(target: WorkbookSession) {
+    resizeCleanup.current();selectionCleanup.current();
+    setBook(target.book);bookRef.current=target.book;setDirty(target.dirty);
+    setSheetIndex(target.sheetIndex);setAnchor(target.anchor);setEnd(target.end);setUndo(target.undo);setRedo(target.redo);
+    lastEdit.current='';setContextMenu(null);setGridContextMenu(null);setConnectionSheet(null);setShowHistory(false);setTemplatePicker(false);setError('');setNotice('');
+    requestAnimationFrame(()=>{if(gridRef.current){gridRef.current.scrollTop=target.scrollTop;gridRef.current.scrollLeft=target.scrollLeft;}});
+  }
+  function switchWorkbook(id:string) {
+    if(busy || id===book?.id) return;
+    const next=stashCurrent();const target=next.find(item=>item.book.id===id);
+    if(target) restoreSession(target);
+  }
   function activate(next: FieldWorkbook, isDirty: boolean) {
-    next = {...next, createdAt: next.createdAt || new Date().toISOString()};
-    try {
-      localStorage.removeItem(storageKey);
-    } catch {}
-    setBook(next);
-    bookRef.current = next;
-    setSheetIndex(0);
-    setAnchor({ r: 0, c: 0 });
-    setEnd({ r: 0, c: 0 });
-    setUndo([]);
-    setRedo([]);
-    lastEdit.current = '';
-    setDirty(isDirty);
-    setTemplatePicker(false);
-    setShowHistory(false);
-    setError('');
-    setNotice('');
+    next={...next,createdAt:next.createdAt || new Date().toISOString()};
+    const open=stashCurrent();
+    const session=freshSession(next,isDirty);
+    setSessions(open.some(item=>item.book.id===next.id) ? open.map(item=>item.book.id===next.id ? session : item) : [...open,session]);
+    restoreSession(session);
   }
-  function performLeave() {
-    localStorage.removeItem(storageKey);
-    setBook(null);
-    setDirty(false);
-    setError('');
-    setNotice('');
-    setShowLeaveConfirmModal(false);
+  function performLeave() {stashCurrent();setBook(null);bookRef.current=null;setDirty(false);setError('');setNotice('');setClosingWorkbook(null);}
+  function leave() {performLeave();}
+  function closeWorkbook(id:string, discard = false) {
+    if(busy) return;
+    const open=stashCurrent();const target=open.find(item=>item.book.id===id);
+    if(target?.dirty && !discard) {setClosingWorkbook({id, name:target.book.name});return;}
+    setClosingWorkbook(null);
+    const remaining=open.filter(item=>item.book.id!==id);setSessions(remaining);
+    if(id===book?.id) {if(remaining.length) restoreSession(remaining[remaining.length-1]);else {setBook(null);bookRef.current=null;setDirty(false);}}
   }
-  function leave() {
-    if (dirty) {
-      setShowLeaveConfirmModal(true);
-    } else {
-      performLeave();
-    }
-  }
-  async function openDocument(doc: Document, asTemplate = false) {
+  useEffect(()=>{
+    const tabs=sessions.map(item=>({id:item.book.id,name:item.book.id===book?.id ? book.name : item.book.name,dirty:item.book.id===book?.id ? dirty : item.dirty}));
+    setTabsState({tabs,activeId:book?.id || null,busy,onSelect:switchWorkbook,onCloseTab:closeWorkbook,onNew:()=>activate(newWorkbook(),true),onLibrary:leave});
+  },[sessions,book,dirty,busy,sheetIndex,anchor,end,undo,redo,setTabsState]);
+  async function openDocument(doc: Document, asTemplate = false, restoreVersion = false) {
+    const id=doc.tags.find(tag=>tag.startsWith('wb-'))?.slice(3);
+    if(!asTemplate && !restoreVersion && id && sessions.some(item=>item.book.id===id)){switchWorkbook(id);return;}
     setBusy(true);
     setError('');
     try {
@@ -701,10 +716,12 @@ export default function FieldWorkbookWorkspace({
     } catch(e) {setError(e instanceof Error ? e.message : 'Could not copy workbook.');} finally {setBusy(false);}
   }
   async function deleteDocument(doc: Document) {
-    if(!window.confirm(`Delete “${doc.title}” and all its saved versions?`)) return;
+    if(!window.confirm(`Delete “${doc.title}”, all saved versions, and its open tab?`)) return;
     setBusy(true); setError('');
     try {
       await apiFetch(`/api/v1/documents/${doc.id}/workbook`,{method:'DELETE'},true,{queueWhenOffline:false});
+      const deletedId=doc.tags.find(tag=>tag.startsWith('wb-'))?.slice(3);
+      setSessions(items=>items.filter(item=>item.book.id!==deletedId));
       await loadLibrary(); setNotice('Workbook deleted.');
     } catch(e) {setError(e instanceof Error ? e.message : 'Could not delete workbook.');} finally {setBusy(false);}
   }
@@ -739,7 +756,6 @@ export default function FieldWorkbookWorkspace({
       if (!asTemplate) {
         setDirty(false);
         lastEdit.current = '';
-        localStorage.removeItem(storageKey);
       }
       setTemplatePicker(false);
       setNotice(
@@ -926,18 +942,53 @@ export default function FieldWorkbookWorkspace({
       )}
     </div>
   );
+  const closePrompt = closingWorkbook && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-xs">
+            <div role="alertdialog" aria-modal="true" aria-label="Close unsaved workbook" className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400">
+                <AlertTriangle size={24} />
+                <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                  Unsaved changes
+                </h4>
+              </div>
+              <p className="mt-2.5 text-sm text-slate-600 dark:text-slate-300">
+                You have unsaved changes in{' '}
+                <strong className="font-semibold text-slate-900 dark:text-white">
+                  “{closingWorkbook.name}”
+                </strong>
+                . Closing this tab will discard those changes. Keep editing to save them first.
+              </p>
+              <div className="mt-5 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  className={button}
+                  onClick={() => setClosingWorkbook(null)}
+                >
+                  Keep editing
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg bg-red-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-red-700"
+                  onClick={() => closeWorkbook(closingWorkbook.id, true)}
+                >
+                  Discard & Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
   if (!book || !sheet)
     return (
-      <section className="space-y-6 rounded-2xl border bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
+      <section className={`${styles.library} space-y-6 bg-slate-50 p-6 dark:bg-slate-950 sm:p-10`}>
+        {closePrompt}
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-emerald-700">
-              Field Admin
+              Your workspace
             </p>
             <h2 className="mt-1 text-2xl font-bold">Workbooks</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Simple tables for field work. Start with a template, a blank file or your existing
-              spreadsheet.
+              Open a workbook, start a new one, or import an Excel file. Your open workbooks stay in tabs above.
             </p>
           </div>
           <div className="flex gap-2">
@@ -1037,8 +1088,12 @@ export default function FieldWorkbookWorkspace({
 
   return (
     <section
-      className="min-w-0 max-w-full space-y-3"
+      className={`${styles.editor} min-w-0 max-w-full`}
       onKeyDown={(event) => {
+        if (event.ctrlKey && event.key === 'Tab' && sessions.length > 1) {
+          event.preventDefault();const index=sessions.findIndex(item=>item.book.id===book?.id);
+          switchWorkbook(sessions[(index+(event.shiftKey?-1:1)+sessions.length)%sessions.length].book.id);
+        }
         if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
           event.preventDefault();
           if (!busy) void save();
@@ -1050,8 +1105,13 @@ export default function FieldWorkbookWorkspace({
       }}
     >
       {feedback}
-      <fieldset disabled={busy} className="min-w-0 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2 dark:border-slate-800">
+      <fieldset disabled={busy} className="min-w-0">
+        <nav aria-label="Workbook ribbon" className={styles.ribbonTabs}>
+          <button type="button" onClick={leave} className={styles.fileTab}>File</button>
+          {['Home','Insert','Data','View'].map(tab=><button type="button" key={tab} aria-pressed={ribbonTab===tab} onClick={()=>{setRibbonTab(tab);setShowToolbar(true);}} className={ribbonTab===tab ? styles.ribbonActive : ''}>{tab}</button>)}
+          <button type="button" className="!ml-auto" aria-label={showToolbar?'Collapse ribbon':'Expand ribbon'} onClick={()=>setShowToolbar(!showToolbar)}>{showToolbar?<ChevronUp size={14}/>:<ChevronDown size={14}/>}</button>
+        </nav>
+        <div className={`${styles.viewControls} ${ribbonTab === "View" && showToolbar ? "" : "!hidden"}`}>
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -1097,9 +1157,11 @@ export default function FieldWorkbookWorkspace({
         </div>
 
         {showToolbar && (
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
+          <div className={styles.ribbon}>
+            {ribbonTab === 'Data' && <button type="button" className={button} onClick={()=>setConnectionSheet(sheet.id)}><FileSpreadsheet size={16}/>Connect to database table</button>}
+            {ribbonTab === 'View' && <p className="text-xs text-slate-500">Use the view controls above to show the cell bar and selection details.</p>}
             {/* Undo / Redo Group */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1" hidden={!["Home"].includes(ribbonTab)}>
               <button
                 className={button}
                 disabled={!undo.length}
@@ -1126,7 +1188,7 @@ export default function FieldWorkbookWorkspace({
             />
 
             {/* Text Formatting Group */}
-            <div className="flex items-center gap-1" role="group" aria-label="Text formatting">
+            <div className="flex items-center gap-1" role="group" aria-label="Text formatting" hidden={!["Home"].includes(ribbonTab)}>
               {[
                 {
                   label: 'Bold',
@@ -1171,7 +1233,7 @@ export default function FieldWorkbookWorkspace({
               aria-hidden="true"
             />
 
-            <div className="flex items-center gap-2" role="group" aria-label="Cell colors">
+            <div className="flex items-center gap-2" role="group" aria-label="Cell colors" hidden={ribbonTab !== "Home"}>
               {([{key: 'color', label: 'Text color', fallback: '#000000'}, {key: 'background', label: 'Cell background color', fallback: '#ffffff'}] as const).map(({key, label, fallback}) => (
                 <WorkbookColorPicker key={key} label={label} fallback={fallback}
                   value={cellFormat(sheet, anchor.r, anchor.c)[key]}
@@ -1180,7 +1242,7 @@ export default function FieldWorkbookWorkspace({
               <button type="button" className={button} title="Reset text and background colors" onClick={() => changeSheet(s => formatCells(s, selection, {color: '', background: ''}))}>Reset colors</button>
             </div>
 
-            <details className="relative">
+            <details className="relative" hidden={ribbonTab !== "Home"}>
               <summary className={`${button} h-10 cursor-pointer list-none`}>Table designs</summary>
               <div className="absolute left-0 top-full z-30 mt-2 w-64 rounded-xl border bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900">
                 <p className="mb-2 text-xs text-slate-500">Applies to the entire current sheet. The first row is the header.</p>
@@ -1202,7 +1264,7 @@ export default function FieldWorkbookWorkspace({
               </div>
             </details>
 
-            <div className="flex items-center gap-2" role="group" aria-label="Cell data format">
+            <div className="flex items-center gap-2" role="group" aria-label="Cell data format" hidden={!["Home","Data"].includes(ribbonTab)}>
               <SearchableSelect ariaLabel="Cell content type" className="min-w-40" disabled={busy}
                 value={cellFormat(sheet, anchor.r, anchor.c).dataType || 'general'}
                 options={['general','text','number','currency','percent','date','time','datetime'].map(type => ({value: type, label: type === 'datetime' ? 'Date & time' : type.charAt(0).toUpperCase()+type.slice(1)}))}
@@ -1215,7 +1277,7 @@ export default function FieldWorkbookWorkspace({
             </div>
 
             {/* Row & Column Actions Group */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1" hidden={!["Insert"].includes(ribbonTab)}>
               <button
                 type="button"
                 title="Insert row above"
@@ -1298,7 +1360,7 @@ export default function FieldWorkbookWorkspace({
             />
 
             {/* Merge & Selection Group */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1" hidden={!["Home", "Insert"].includes(ribbonTab)}>
               <button
                 type="button"
                 title="Merge selection"
@@ -1376,7 +1438,7 @@ export default function FieldWorkbookWorkspace({
             />
 
             {/* Template & History Group */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1" hidden={!["Insert", "Data"].includes(ribbonTab)}>
               <button
                 type="button"
                 title="Duplicate sheet"
@@ -1466,7 +1528,7 @@ export default function FieldWorkbookWorkspace({
                       !dirty ||
                       window.confirm('Open this saved version and discard unsaved changes?')
                     )
-                      void openDocument(doc);
+                      void openDocument(doc, false, true);
                   }}
                 >
                   {new Date(doc.created_at).toLocaleString()}
@@ -1535,12 +1597,13 @@ export default function FieldWorkbookWorkspace({
           </div>
         )}
         {showFormulaBar && (
-          <div className="flex items-start gap-3 rounded-lg border bg-white px-3 py-2 dark:bg-slate-900">
+          <div className={styles.formulaBar}>
+            <span className={styles.cellReference} aria-label="Cell reference">{columnName(anchor.c)}{anchor.r+1}</span>
             <label
               htmlFor="workbook-cell-value"
               className="shrink-0 whitespace-nowrap py-1 text-sm font-semibold leading-6 text-slate-500"
             >
-              Cell value
+              <span aria-hidden="true" className="font-serif italic">fx</span><span className="sr-only">Cell value</span>
             </label>
             <textarea
               id="workbook-cell-value"
@@ -1553,7 +1616,7 @@ export default function FieldWorkbookWorkspace({
             />
           </div>
         )}
-        <div className="flex flex-col">
+        <div className={styles.gridArea}>
           <div
             ref={gridRef}
             onMouseDownCapture={(event) => {
@@ -1577,7 +1640,7 @@ export default function FieldWorkbookWorkspace({
                 event.clipboardData.setData('text/plain', selectionText());
               }
             }}
-            className="relative w-full max-w-full overflow-auto rounded-t-xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900 transition-[height]"
+            className={`${styles.gridViewport} relative w-full max-w-full overflow-auto border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900`}
           >
             <table
               className="table-fixed border-separate border-spacing-0"
@@ -1745,7 +1808,7 @@ export default function FieldWorkbookWorkspace({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-2.5 dark:border-slate-800 dark:bg-slate-900/80">
+        <div className={styles.statusBar}>
           <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
             <span className="font-semibold">{sheet.cells.length}</span> rows ×{' '}
             <span className="font-semibold">{sheet.widths.length}</span> columns
@@ -1821,7 +1884,7 @@ export default function FieldWorkbookWorkspace({
               </datalist>
             )
         )}
-        <div className="sticky bottom-0 z-30 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white/95 p-2 backdrop-blur-md shadow-lg dark:border-slate-700 dark:bg-slate-900/95">
+        <div className={styles.sheetTabs}>
           <div
             role="tablist"
             aria-label="Worksheets"
@@ -2357,41 +2420,7 @@ export default function FieldWorkbookWorkspace({
           </>
         )}
 
-        {showLeaveConfirmModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-xs">
-            <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
-              <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400">
-                <AlertTriangle size={24} />
-                <h4 className="text-base font-bold text-slate-900 dark:text-white">
-                  Unsaved changes
-                </h4>
-              </div>
-              <p className="mt-2.5 text-sm text-slate-600 dark:text-slate-300">
-                You have unsaved changes in{' '}
-                <strong className="font-semibold text-slate-900 dark:text-white">
-                  “{book?.name}”
-                </strong>
-                . If you leave now, your recent edits will be lost.
-              </p>
-              <div className="mt-5 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  className={button}
-                  onClick={() => setShowLeaveConfirmModal(false)}
-                >
-                  Keep editing
-                </button>
-                <button
-                  type="button"
-                  className="rounded-lg bg-red-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-red-700"
-                  onClick={performLeave}
-                >
-                  Discard & Leave
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {closePrompt}
 
         {showTemplateModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-xs">
