@@ -1057,7 +1057,7 @@ export default function FieldPortalWorkspace() {
     label: `${p.name} [${p.code || 'PRJ'}]`,
   }));
 
-  const availableSites = projectSites.filter(site => site.project_id === selectedProjectId);
+  const availableSites = projectSites.filter(site => !selectedProjectId || selectedProjectId === 'ALL' || site.project_id === selectedProjectId);
   const siteOptions = availableSites.map(site => ({ value: site.id, label: `${site.name} | ${site.project_name}` }));
   const siteHoles = drillHoles.filter(hole => hole.project_id === (shiftForm.project_id || selectedProjectId) && hole.site_location_id === shiftForm.site_location_id);
   const holeFinished = (hole: any) => {
@@ -4868,7 +4868,10 @@ export default function FieldPortalWorkspace() {
                 <div>
                     <label className="block font-bold mb-1">Site / Location *</label>
                   <SearchableSelect
-                    options={projectSites.filter(site => site.project_id === (fuelRefillForm.project_id || selectedProjectId)).map(site => ({ value: site.id, label: `${site.name} | ${site.project_name || ''}` }))}
+                    options={projectSites.filter(site => {
+                      const targetProj = fuelRefillForm.project_id || selectedProjectId;
+                      return !targetProj || targetProj === 'ALL' || site.project_id === targetProj;
+                    }).map(site => ({ value: site.id, label: `${site.name} | ${site.project_name || ''}` }))}
                     value={fuelRefillForm.site_location_id}
                     onChange={(val: string) => setFuelRefillForm({ ...fuelRefillForm, site_location_id: val, project_id: projectSites.find(site => site.id === val)?.project_id || fuelRefillForm.project_id || selectedProjectId })}
                     placeholder="Select site..."
@@ -5130,7 +5133,7 @@ export default function FieldPortalWorkspace() {
           }
         >
           <form id="fuel-alloc-modal-form" onSubmit={handleSubmitFuelAllocation} className="space-y-4 text-xs">
-            <div><label className="block font-bold mb-1">Site / Location *</label><SearchableSelect value={fuelAllocationForm.site_location_id} onChange={(value) => setFuelAllocationForm({ ...fuelAllocationForm, site_location_id: value })} options={projectSites.filter(site => site.project_id === selectedProjectId).map(site => ({ value: site.id, label: `${site.name} | ${site.project_name || ''}` }))} placeholder="Select site..." required /></div>
+            <div><label className="block font-bold mb-1">Site / Location *</label><SearchableSelect value={fuelAllocationForm.site_location_id} onChange={(value) => setFuelAllocationForm({ ...fuelAllocationForm, site_location_id: value })} options={projectSites.filter(site => !selectedProjectId || selectedProjectId === 'ALL' || site.project_id === selectedProjectId).map(site => ({ value: site.id, label: `${site.name} | ${site.project_name || ''}` }))} placeholder="Select site..." required /></div>
             <div><label className="block font-bold mb-1">Vehicle / Rig *</label><SearchableSelect value={fuelAllocationForm.asset_id} onChange={(value) => setFuelAllocationForm({ ...fuelAllocationForm, asset_id: value })} options={assetOptions} placeholder="Select vehicle..." required /></div>
             <div><label className="block font-bold mb-1">Allocated Quantity (Litres) *</label><input type="number" min="0.001" step="0.001" required value={fuelAllocationForm.quantity_litres || ''} onChange={e => setFuelAllocationForm({ ...fuelAllocationForm, quantity_litres: Number(e.target.value) })} className="w-full border rounded-lg p-2 bg-background" /></div>
             <div><label className="block font-bold mb-1">Notes</label><textarea value={fuelAllocationForm.notes} onChange={e => setFuelAllocationForm({ ...fuelAllocationForm, notes: e.target.value })} className="w-full border rounded-lg p-2 bg-background" /></div>

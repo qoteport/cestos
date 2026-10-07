@@ -4076,7 +4076,10 @@ Signed: Field Operations Administration
                         setFuelBoughtForm({ ...fuelBoughtForm, site_location_id: val, project_id: site?.project_id || selectedProjectId });
                       }}
                       placeholder="-- Select Project Site --"
-                      options={projectSites.filter((site) => String(site.project_id) === (fuelBoughtForm.project_id || selectedProjectId)).map((site) => ({
+                      options={projectSites.filter((site) => {
+                        const targetProj = fuelBoughtForm.project_id || selectedProjectId;
+                        return !targetProj || targetProj === 'ALL' || String(site.project_id) === String(targetProj);
+                      }).map((site) => ({
                         value: site.id,
                         label: `${site.name}${site.project_name ? ` | ${site.project_name}` : ''}`,
                       }))}

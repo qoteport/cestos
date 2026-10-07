@@ -72,8 +72,19 @@ export default function FuelAllocationImportModal({
   const locked = savedCount > 0 || uncertain.current.size > 0;
   useEffect(() => {
     let active = true;
-    if (!projectId) {
-      setSites([]);
+    if (!projectId || projectId === 'ALL') {
+      apiFetch<any>('/api/v1/locations?page_size=100')
+        .then((result) => {
+          if (active)
+            setSites(
+              (Array.isArray(result) ? result : result.items || []).filter(
+                (s: any) => s.is_active !== false
+              )
+            );
+        })
+        .catch(() => {
+          if (active) setSites([]);
+        });
       return;
     }
     setSites([]);
@@ -177,7 +188,11 @@ export default function FuelAllocationImportModal({
   }
   async function save() {
     setError('');
-    if (!projectId || !siteId) {
+    if ((!projectId || projectId === 'ALL') && !siteId) {
+      setError('Select the project site.');
+      return;
+    }
+    if (!projectId && !siteId) {
       setError('Select the project and project site.');
       return;
     }
@@ -261,6 +276,13 @@ export default function FuelAllocationImportModal({
           sourceIds.current[i] = doc.id;
         }
       }
+      const resolvedProjectId =
+        projectId && projectId !== 'ALL'
+          ? projectId
+          : sites.find((s: any) => String(s.id) === String(siteId))?.project_id ||
+            sites.find((s: any) => String(s.id) === String(siteId))?.site_project_id ||
+            projects[0]?.id ||
+            '';
       for (const [index, row] of rows.entries()) {
         if (saved.current.has(row.key) || row.savedId) continue;
         setProgress(`Logging ${index + 1} of ${rows.length}…`);
@@ -281,7 +303,7 @@ export default function FuelAllocationImportModal({
           {
             method: 'POST',
             body: JSON.stringify({
-              project_id: projectId,
+              project_id: resolvedProjectId,
               site_location_id: siteId,
               asset_id: row.assetId,
               delivery_id: deliveryId || undefined,
@@ -339,12 +361,25 @@ export default function FuelAllocationImportModal({
         </header>
         <div className="space-y-4 overflow-auto p-5">
           {!ready && (
-            <section className="space-y-3 rounded-xl border-2 border-dashed p-5">
-              <label className="block text-sm font-semibold">
-                <Upload className="mr-2 inline" size={16} />
-                Upload CSV or Excel (optional)
+            <section className="space-y-4 rounded-2xl border-2 border-dashed border-emerald-300 bg-emerald-50/40 p-6 text-center transition-all hover:border-emerald-500 hover:bg-emerald-50/70 dark:border-emerald-800 dark:bg-emerald-950/20 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/40">
+              <label className="group flex cursor-pointer flex-col items-center justify-center space-y-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 shadow-xs transition group-hover:scale-105 dark:bg-emerald-900/80 dark:text-emerald-300">
+                  <Upload size={22} />
+                </div>
+                <div>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">
+                    Upload Daily Fuel Consumption Sheet (CSV or Excel)
+                  </span>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Click to browse files or drag and drop your report sheet (.csv, .xlsx, .xls)
+                  </p>
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-800 transition">
+                  <Upload size={14} />
+                  <span>Choose file to import</span>
+                </div>
                 <input
-                  className="mt-3 block w-full text-sm"
+                  className="hidden"
                   type="file"
                   accept=".csv,.xls,.xlsx"
                   disabled={busy}
@@ -354,7 +389,7 @@ export default function FuelAllocationImportModal({
                   }}
                 />
               </label>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 border-t border-slate-200/60 pt-3 dark:border-slate-800">
                 We scan all worksheets for Date, Equipment and Quantity columns. Text in Signature
                 cells is imported; embedded signature images remain in the original file.
               </p>
