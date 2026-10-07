@@ -1,4 +1,5 @@
 'use client';
+import { displayCellValue } from '@/lib/workbookCellTypes';
 import { originalBytes } from '@/lib/excelWorkbook';
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -112,6 +113,11 @@ const GridCell = memo(function GridCell({
   onPaste: (r: number, c: number, text: string) => void;
   onContextMenu?: (r: number, c: number, event: React.MouseEvent) => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const kind = appearance?.dataType;
+  const picker = kind === 'datetime' ? 'datetime-local' : kind === 'date' || kind === 'time' ? kind : 'text';
+  // Keep incompatible existing values visible until the user explicitly replaces them.
+  const compatible = !value || (kind === 'date' ? /^\d{4}-\d{2}-\d{2}$/.test(value) : kind === 'time' ? /^\d{2}:\d{2}(?::\d{2})?$/.test(value) : /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value));
   return (
     <td
       style={{
@@ -137,7 +143,10 @@ const GridCell = memo(function GridCell({
         aria-label={`${columnName(c)}${r + 1}`}
         aria-selected={selected}
         list={list}
-        value={value}
+        type={picker !== 'text' && compatible ? picker : 'text'}
+        step={kind === 'time' || kind === 'datetime' ? 1 : undefined}
+        inputMode={['number','currency','percent'].includes(kind || '') ? 'decimal' : undefined}
+        value={editing ? value : displayCellValue(value, appearance || {})}
         maxLength={32767}
         autoComplete="off"
         className={`h-full min-h-[32px] w-full min-w-0 bg-transparent px-2 py-1 text-sm text-slate-900 !border-0 !outline-none !ring-0 !ring-offset-0 !shadow-none focus:!outline-none focus-visible:!outline-none dark:text-slate-100 ${bold ? 'font-bold' : 'font-normal'} ${italic ? 'italic' : ''}`}
@@ -153,7 +162,8 @@ const GridCell = memo(function GridCell({
           minHeight: appearance ? 0 : undefined,
         }}
         title={value}
-        onFocus={() => onSelect(r, c, false)}
+        onFocus={() => { setEditing(true); onSelect(r, c, false); }}
+        onBlur={() => setEditing(false)}
         onMouseDown={(event) => {
           if (event.button !== 0) {
             event.preventDefault();
@@ -1183,6 +1193,18 @@ export default function FieldWorkbookWorkspace({
                 </div>
               </div>
             </details>
+
+            <div className="flex items-center gap-2" role="group" aria-label="Cell data format">
+              <select aria-label="Cell content type" className="input-field !h-10 !w-auto" value={cellFormat(sheet, anchor.r, anchor.c).dataType || 'general'}
+                onChange={e => changeSheet(s => formatCells(s, selection, {dataType: e.target.value as CellFormat['dataType']}))}>
+                {['general','text','number','currency','percent','date','time','datetime'].map(type => <option key={type} value={type}>{type === 'datetime' ? 'Date & time' : type.charAt(0).toUpperCase()+type.slice(1)}</option>)}
+              </select>
+              {['number','currency','percent'].includes(cellFormat(sheet, anchor.r, anchor.c).dataType || '') && <>
+                <label className="flex items-center gap-1 text-xs">Decimals<select aria-label="Decimal places" className="input-field !h-10 !w-auto" value={cellFormat(sheet, anchor.r, anchor.c).decimals ?? 2} onChange={e => changeSheet(s => formatCells(s, selection, {decimals:Number(e.target.value)}))}>{[0,1,2,3,4,5,6].map(n=><option key={n} value={n}>{n}</option>)}</select></label>
+                {cellFormat(sheet, anchor.r, anchor.c).dataType === 'currency' && <select aria-label="Currency" className="input-field !h-10 !w-auto" value={cellFormat(sheet, anchor.r, anchor.c).currency || 'USD'} onChange={e => changeSheet(s => formatCells(s, selection, {currency:e.target.value}))}>{['USD','GHS','EUR','GBP','LRD'].map(code=><option key={code}>{code}</option>)}</select>}
+                {cellFormat(sheet, anchor.r, anchor.c).dataType === 'percent' && <span className="text-xs text-slate-500">0.25 = 25%</span>}
+              </>}
+            </div>
 
             {/* Row & Column Actions Group */}
             <div className="flex items-center gap-1">

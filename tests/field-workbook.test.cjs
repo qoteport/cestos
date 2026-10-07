@@ -12,7 +12,7 @@ vm.runInNewContext(
   {
     exports: api,
     require: (name) => {
-      if (name !== './excelWorkbook') return require(name);
+      if (name !== './excelWorkbook' && name !== './workbookCellTypes') return require(name);
       const exports = {};
       vm.runInNewContext(
         ts.transpileModule(fs.readFileSync('src/lib/excelWorkbook.ts', 'utf8'), {
@@ -20,7 +20,7 @@ vm.runInNewContext(
         }).outputText,
         {
           exports,
-          require,
+          require: name => { if(name !== './workbookCellTypes') return require(name); const result={}; vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/workbookCellTypes.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:result,Date}); return result; },
           File,
           Blob,
           Uint8Array,
@@ -285,4 +285,16 @@ test('table designs style the selected range without changing data or merged hea
  assert.equal(styled.formats['3:3'].background,'#ffffff');
  assert.equal(styled.formats['0:0'],undefined);
  assert.equal(merged.formats?.['1:1']?.background,undefined);
+});
+
+test('typed cells export real numbers, dates and times with Excel number formats', async () => {
+ const book=api.newWorkbook();
+ const formats=[{dataType:'currency',currency:'GHS',decimals:2},{dataType:'percent',decimals:1},{dataType:'date'},{dataType:'time'},{dataType:'text'}];
+ const values=['1234.5','0.25','2026-10-07','13:30','00123'];
+ formats.forEach((format,c)=>{book.sheets[0].cells[1][c]=values[c];book.sheets[0]=api.formatCells(book.sheets[0],{r:1,c,er:1,ec:c},format);});
+ const E=require('exceljs');const output=new E.Workbook();await output.xlsx.load(await (await api.exportWorkbook(book)).arrayBuffer());
+ const ws=output.worksheets[0];assert.equal(ws.getCell('A2').value,1234.5);assert.equal(ws.getCell('A2').numFmt,'"GHS" #,##0.00');
+ assert.equal(ws.getCell('B2').value,0.25);assert.equal(ws.getCell('B2').numFmt,'0.0%');
+ assert.equal(ws.getCell('C2').value.toISOString(),'2026-10-07T00:00:00.000Z');
+ assert.equal(ws.getCell('D2').numFmt,'hh:mm');assert.equal(ws.getCell('E2').value,'00123');
 });
