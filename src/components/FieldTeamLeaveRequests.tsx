@@ -41,10 +41,10 @@ export default function FieldTeamLeaveRequests({ projectId, search }: { projectI
     let active = true;
     setRequests([]);
     setSelected(null);
-    if (!isSupervisor || !projectId) { setLoading(false); return; }
+    if (!isSupervisor) { setLoading(false); return; }
     setLoading(true);
     setError('');
-    const query = `?project_id=${encodeURIComponent(projectId)}`;
+    const query = projectId ? `?project_id=${encodeURIComponent(projectId)}` : '';
     apiFetch<TeamLeave[]>(`/api/v1/field-portal/team-leave-requests${query}`)
       .then((data) => { if (active) setRequests(data); })
       .catch((err) => { if (active) setError(err instanceof Error ? err.message : 'Could not load team leave requests.'); })

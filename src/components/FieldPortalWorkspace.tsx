@@ -12,6 +12,7 @@ import FieldConsumables from './FieldConsumables';
 import FieldPortalLayout from '@/components/FieldPortalLayout';
 import DrillingWorkspace from '@/components/DrillingWorkspace';
 import FieldTeamLeaveRequests from '@/components/FieldTeamLeaveRequests';
+import EmployeeTimesheetsWorkspace from './EmployeeTimesheetsWorkspace';
 import OperationsPerformanceCombinedChart from '@/app/components/OperationsPerformanceCombinedChart';
 import { projectShiftReports } from '@/lib/fieldPortalShifts';
 import { drillHoleProgressById } from '@/lib/drillHoleProgress';
@@ -118,6 +119,7 @@ export default function FieldPortalWorkspace() {
   const [leaveAttachment, setLeaveAttachment] = useState<File | null>(null);
   const [showFullProfileModal, setShowFullProfileModal] = useState<boolean>(false);
   const [searchTeam, setSearchTeam] = useState<string>('');
+  const [teamSubTab, setTeamSubTab] = useState<'DIRECTORY' | 'TIMESHEETS'>('DIRECTORY');
 
   // Scoped Data State
   const [myProjects, setMyProjects] = useState<any[]>([]);
@@ -799,14 +801,15 @@ export default function FieldPortalWorkspace() {
     let active = true;
     setShiftPage(1);
     setShiftsError('');
-    if (!user || !isSupervisorOrAdmin || !selectedProjectId) {
+    if (!user || !isSupervisorOrAdmin) {
       setShiftsLoading(false);
       return;
     }
     setShiftsLoading(true);
-    apiFetch<any>(`/api/v1/field-portal/shifts?project_id=${encodeURIComponent(selectedProjectId)}`)
+    const query = selectedProjectId ? `?project_id=${encodeURIComponent(selectedProjectId)}` : '';
+    apiFetch<any>(`/api/v1/field-portal/shifts${query}`)
       .then((result) => {
-        if (active) setShiftReports(projectShiftReports(rows(result), selectedProjectId));
+        if (active) setShiftReports(projectShiftReports(rows(result), selectedProjectId || 'ALL'));
       })
       .catch((error) => {
         if (active)
@@ -3564,164 +3567,185 @@ export default function FieldPortalWorkspace() {
           </div>
         )}
 
-        {/* TAB 5: DEDICATED SITE TEAM DIRECTORY PAGE */}
+        {/* TAB 5: DEDICATED SITE TEAM DIRECTORY PAGE & TIME SHEETS */}
         {activeTab === 'TEAM' && (
           <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-bold flex items-center gap-2 text-foreground">
-                  <User className="h-5 w-5 text-primary" />
-                  Site Team Directory & Assigned Personnel
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  View all colleagues and site personnel assigned to{' '}
-                  <strong className="text-foreground">
-                    {myProjects.find((p) => p.id === selectedProjectId)?.name ||
-                      'No assigned project'}
-                  </strong>
-                </p>
-              </div>
-
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search team member or role..."
-                  value={searchTeam}
-                  onChange={(e) => setSearchTeam(e.target.value)}
-                  className="w-full pl-9 pr-3 py-1.5 text-xs border rounded-lg bg-background"
-                />
-              </div>
+            <div className="flex border-b border-slate-200 dark:border-slate-800" role="tablist" aria-label="Team directory and time sheet">
+              {([{ id: 'DIRECTORY', label: 'Team Directory' }, { id: 'TIMESHEETS', label: 'Time sheet' }] as const).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={teamSubTab === tab.id}
+                  onClick={() => setTeamSubTab(tab.id)}
+                  className={`border-b-2 px-4 py-2.5 text-sm font-bold ${teamSubTab === tab.id ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
 
-            {/* Team Cards Grid */}
-            <FieldTeamLeaveRequests
-              key={`${user?.id}-${selectedProjectId}-${version}`}
-              projectId={selectedProjectId}
-              search={searchTeam}
-            />
-            {(() => {
-              const activeProj = myProjects.find((p) => p.id === selectedProjectId);
-              const activeProjectName = activeProj?.name || 'No assigned project';
-              const filteredTeam = teamEmployees.filter((emp) => {
-                if (!selectedProjectId) return false;
-                if (selectedProjectId) {
-                  const pId =
-                    emp.assigned_project_id ||
-                    emp.current_project_id ||
-                    emp.project_id ||
-                    emp.current_project?.id ||
-                    emp.current_assignment?.project_id ||
-                    '';
-                  const pName =
-                    emp.assigned_project_name ||
-                    emp.current_project_name ||
-                    emp.project_name ||
-                    emp.current_project?.name ||
-                    emp.current_assignment?.project?.name ||
-                    '';
-                  const matchId = pId && pId === selectedProjectId;
-                  const matchName =
-                    pName &&
-                    activeProj?.name &&
-                    pName.toLowerCase() === activeProj.name.toLowerCase();
-                  if (!matchId && !matchName) return false;
-                }
-                if (searchTeam) {
-                  const q = searchTeam.toLowerCase();
-                  const fullName = `${emp.first_name || ''} ${emp.last_name || ''}`.toLowerCase();
-                  const jobTitle = (emp.job_title || '').toLowerCase();
-                  const dept = (emp.department || '').toLowerCase();
-                  if (!fullName.includes(q) && !jobTitle.includes(q) && !dept.includes(q)) {
-                    return false;
-                  }
-                }
-                return true;
-              });
-
-              if (filteredTeam.length === 0) {
-                return (
-                  <div className="p-8 text-center bg-card border rounded-xl space-y-2">
-                    <User className="mx-auto h-8 w-8 text-muted-foreground opacity-50" />
-                    <h4 className="font-bold text-sm text-foreground">No Team Members Found</h4>
+            {teamSubTab === 'TIMESHEETS' ? (
+              <EmployeeTimesheetsWorkspace employees={teamEmployees} canReport accent="emerald" />
+            ) : (
+              <>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-bold flex items-center gap-2 text-foreground">
+                      <User className="h-5 w-5 text-primary" />
+                      Site Team Directory &amp; Assigned Personnel
+                    </h2>
                     <p className="text-xs text-muted-foreground">
-                      {searchTeam
-                        ? `No site personnel matching "${searchTeam}" found.`
-                        : `No personnel currently assigned to ${activeProjectName}.`}
+                      View all colleagues and site personnel assigned to{' '}
+                      <strong className="text-foreground">
+                        {myProjects.find((p) => p.id === selectedProjectId)?.name ||
+                          'No assigned project'}
+                      </strong>
                     </p>
                   </div>
-                );
-              }
 
-              return (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {filteredTeam.map((emp) => (
-                    <div
-                      key={emp.id || emp.email}
-                      className="p-4 border rounded-xl bg-card space-y-3 shadow-sm hover:border-primary/50 transition cursor-pointer flex flex-col justify-between"
-                      onClick={() => setSelectedColleague(emp)}
-                    >
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary text-primary-foreground font-extrabold flex items-center justify-center text-sm shadow-sm shrink-0">
-                            {emp.first_name?.[0] || 'E'}
-                          </div>
-                          <div className="min-w-0">
-                            <h3 className="font-bold text-sm text-foreground truncate">
-                              {emp.first_name} {emp.last_name}
-                            </h3>
-                            <span className="text-[10px] font-medium text-muted-foreground block truncate">
-                              {emp.job_title || 'Field Specialist'}
-                            </span>
-                            {[
-                              emp.role,
-                              emp.role_name,
-                              emp.user_role,
-                              ...(Array.isArray(emp.roles) ? emp.roles : []),
-                              emp.job_title,
-                            ]
-                              .filter(Boolean)
-                              .join(' ')
-                              .toLowerCase()
-                              .includes('supervisor') && (
-                              <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-primary/10 text-primary border border-primary/20">
-                                <ShieldCheck size={10} /> Supervisor
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="space-y-1 text-[11px] pt-2 border-t">
-                          <div className="flex justify-between text-muted-foreground">
-                            <span>Shift Status:</span>
-                            <span className="font-bold text-primary">ON SHIFT / ACTIVE</span>
-                          </div>
-                          <div className="flex justify-between text-muted-foreground">
-                            <span>Assigned Site:</span>
-                            <span className="font-medium text-foreground truncate max-w-[120px]">
-                              {emp.assigned_project_name ||
-                                myProjects.find((p) => p.id === selectedProjectId)?.name ||
-                                'Site Assigned'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedColleague(emp);
-                        }}
-                        className="w-full py-1.5 bg-secondary text-primary font-bold rounded-lg text-xs hover:bg-muted transition flex items-center justify-center gap-1 mt-2"
-                      >
-                        <User size={13} /> View Contact Card
-                      </button>
-                    </div>
-                  ))}
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Search team member or role..."
+                      value={searchTeam}
+                      onChange={(e) => setSearchTeam(e.target.value)}
+                      className="w-full pl-9 pr-3 py-1.5 text-xs border rounded-lg bg-background"
+                    />
+                  </div>
                 </div>
-              );
-            })()}
+
+                {/* Team Cards Grid */}
+                <FieldTeamLeaveRequests
+                  key={`${user?.id}-${selectedProjectId}-${version}`}
+                  projectId={selectedProjectId}
+                  search={searchTeam}
+                />
+                {(() => {
+                  const activeProj = myProjects.find((p) => p.id === selectedProjectId);
+                  const activeProjectName = activeProj?.name || 'No assigned project';
+                  const filteredTeam = teamEmployees.filter((emp) => {
+                    if (!selectedProjectId) return false;
+                    if (selectedProjectId) {
+                      const pId =
+                        emp.assigned_project_id ||
+                        emp.current_project_id ||
+                        emp.project_id ||
+                        emp.current_project?.id ||
+                        emp.current_assignment?.project_id ||
+                        '';
+                      const pName =
+                        emp.assigned_project_name ||
+                        emp.current_project_name ||
+                        emp.project_name ||
+                        emp.current_project?.name ||
+                        emp.current_assignment?.project?.name ||
+                        '';
+                      const matchId = pId && pId === selectedProjectId;
+                      const matchName =
+                        pName &&
+                        activeProj?.name &&
+                        pName.toLowerCase() === activeProj.name.toLowerCase();
+                      if (!matchId && !matchName) return false;
+                    }
+                    if (searchTeam) {
+                      const q = searchTeam.toLowerCase();
+                      const fullName = `${emp.first_name || ''} ${emp.last_name || ''}`.toLowerCase();
+                      const jobTitle = (emp.job_title || '').toLowerCase();
+                      const dept = (emp.department || '').toLowerCase();
+                      if (!fullName.includes(q) && !jobTitle.includes(q) && !dept.includes(q)) {
+                        return false;
+                      }
+                    }
+                    return true;
+                  });
+
+                  if (filteredTeam.length === 0) {
+                    return (
+                      <div className="p-8 text-center bg-card border rounded-xl space-y-2">
+                        <User className="mx-auto h-8 w-8 text-muted-foreground opacity-50" />
+                        <h4 className="font-bold text-sm text-foreground">No Team Members Found</h4>
+                        <p className="text-xs text-muted-foreground">
+                          {searchTeam
+                            ? `No site personnel matching "${searchTeam}" found.`
+                            : `No personnel currently assigned to ${activeProjectName}.`}
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {filteredTeam.map((emp) => (
+                        <div
+                          key={emp.id || emp.email}
+                          className="p-4 border rounded-xl bg-card space-y-3 shadow-sm hover:border-primary/50 transition cursor-pointer flex flex-col justify-between"
+                          onClick={() => setSelectedColleague(emp)}
+                        >
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-full bg-primary text-primary-foreground font-extrabold flex items-center justify-center text-sm shadow-sm shrink-0">
+                                {emp.first_name?.[0] || 'E'}
+                              </div>
+                              <div className="min-w-0">
+                                <h3 className="font-bold text-sm text-foreground truncate">
+                                  {emp.first_name} {emp.last_name}
+                                </h3>
+                                <span className="text-[10px] font-medium text-muted-foreground block truncate">
+                                  {emp.job_title || 'Field Specialist'}
+                                </span>
+                                {[
+                                  emp.role,
+                                  emp.role_name,
+                                  emp.user_role,
+                                  ...(Array.isArray(emp.roles) ? emp.roles : []),
+                                  emp.job_title,
+                                ]
+                                  .filter(Boolean)
+                                  .join(' ')
+                                  .toLowerCase()
+                                  .includes('supervisor') && (
+                                  <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-primary/10 text-primary border border-primary/20">
+                                    <ShieldCheck size={10} /> Supervisor
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="space-y-1 text-[11px] pt-2 border-t">
+                              <div className="flex justify-between text-muted-foreground">
+                                <span>Shift Status:</span>
+                                <span className="font-bold text-primary">ON SHIFT / ACTIVE</span>
+                              </div>
+                              <div className="flex justify-between text-muted-foreground">
+                                <span>Assigned Site:</span>
+                                <span className="font-medium text-foreground truncate max-w-[120px]">
+                                  {emp.assigned_project_name ||
+                                    myProjects.find((p) => p.id === selectedProjectId)?.name ||
+                                    'Site Assigned'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedColleague(emp);
+                            }}
+                            className="w-full py-1.5 bg-secondary text-primary font-bold rounded-lg text-xs hover:bg-muted transition flex items-center justify-center gap-1 mt-2"
+                          >
+                            <User size={13} /> View Contact Card
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </>
+            )}
           </div>
         )}
 
