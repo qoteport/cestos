@@ -971,10 +971,6 @@ export default function FieldWorkbookWorkspace({
           </button>
           </div>
         </div>
-        <p className="text-xs text-slate-500">
-          Saved privately in your document library. Each save keeps a new version. Workbook data
-          stays in these sheets; it does not create maintenance records.
-        </p>
         {loading ? (
           <p role="status">Loading saved files…</p>
         ) : (
@@ -997,11 +993,6 @@ export default function FieldWorkbookWorkspace({
                   </button>
                 </div>
               ))}
-            {!latest.length && (
-              <p className="text-sm text-slate-500">
-                Your saved workbooks and templates will appear here.
-              </p>
-            )}
           </div>
         )}
         <div>
