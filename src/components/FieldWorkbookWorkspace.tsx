@@ -1,5 +1,6 @@
 'use client';
 import styles from './FieldWorkbookWorkspace.module.css';
+import { workbookShortcut } from '@/lib/workbookShortcuts';
 import {printSheet, autofillRange, commonColumnValues} from '@/lib/workbookConvenience';
 import {readDeviceSession, saveDeviceSession, saveDeviceWorkbook, listDeviceWorkbooks, deviceRevisions, sheetCsv, type DeviceWorkbook} from '@/lib/workbookDevice';
 import WorkbookShareDialog from './WorkbookShareDialog';
@@ -190,7 +191,7 @@ const GridCell = memo(function GridCell({
         onChange={(event) => onValue(r, c, event.target.value)}
         onKeyDown={(event) => {
           if (
-            event.key === 'Tab' ||
+            (event.key === 'Tab' && !event.ctrlKey && !event.metaKey) ||
             event.key === 'Enter' ||
             (event.shiftKey && event.key.startsWith('Arrow')) ||
             (event.altKey && event.key.startsWith('Arrow'))
@@ -492,6 +493,7 @@ export default function FieldWorkbookWorkspace({
       kind === 'row' ? { r: base.r, c: 0 } : kind === 'column' ? { r: 0, c: base.c } : base;
     dragSelection.current = { kind, start };
     if (event.shiftKey || kind !== 'cell') event.preventDefault();
+    if (kind !== 'cell') gridRef.current?.focus({preventScroll: true});
     setAnchor(start);
     setEnd(
       kind === 'row'
@@ -1186,17 +1188,39 @@ export default function FieldWorkbookWorkspace({
     <section
       className={`${styles.editor} min-w-0 max-w-full`}
       onKeyDown={(event) => {
-        if (event.ctrlKey && event.key === 'Tab' && sessions.length > 1) {
-          event.preventDefault();const index=sessions.findIndex(item=>item.book.id===book?.id);
-          switchWorkbook(sessions[(index+(event.shiftKey?-1:1)+sessions.length)%sessions.length].book.id);
+        const target = event.target as HTMLElement;
+        if (event.defaultPrevented || event.nativeEvent.isComposing || customModal || connectionSheet) return;
+        const inGrid = !!gridRef.current?.contains(target);
+        // Leave text inputs in dialogs, search, and the formula bar to native editing.
+        if (!inGrid && target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return;
+        const action = workbookShortcut(event, inGrid, selection.r !== selection.er || selection.c !== selection.ec);
+        if (!action) return;
+        event.preventDefault();
+        if (busy) return;
+        if (action === 'save') { void save(); return; }
+        if (action === 'undo' || action === 'redo') { undoRedo(action === 'redo'); return; }
+        if (action === 'workbook') {
+          if (sessions.length > 1) {
+            const index = sessions.findIndex(item => item.book.id === book.id);
+            switchWorkbook(sessions[(index + (event.shiftKey ? -1 : 1) + sessions.length) % sessions.length].book.id);
+          }
+          return;
         }
-        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
-          event.preventDefault();
-          if (!busy) void save();
-        }
-        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
-          event.preventDefault();
-          if (!busy) undoRedo(event.shiftKey);
+        if (action === 'bold' || action === 'italic' || action === 'underline') {
+          changeSheet(s => formatCells(s, selection, { [action]: !cellFormat(s, anchor.r, anchor.c)[action] }));
+        } else if (action === 'down' || action === 'right') {
+          changeSheet(s => autofillRange(s, selection, action));
+        } else if (action === 'all') {
+          setAnchor({r: 0, c: 0}); setEnd({r: sheet.cells.length - 1, c: sheet.widths.length - 1});
+        } else if (action === 'row') {
+          setAnchor({r: selection.r, c: 0}); setEnd({r: selection.er, c: sheet.widths.length - 1});
+        } else if (action === 'column') {
+          setAnchor({r: 0, c: selection.c}); setEnd({r: sheet.cells.length - 1, c: selection.ec});
+        } else if (action === 'home') {
+          focus(0, 0);
+        } else if (action === 'clear') {
+          changeSheet(s => ({...s, cells: s.cells.map((row, r) => row.map((value, c) =>
+            r >= selection.r && r <= selection.er && c >= selection.c && c <= selection.ec ? '' : value))}));
         }
       }}
     >
@@ -1255,7 +1279,7 @@ export default function FieldWorkbookWorkspace({
         {showToolbar && (
           <div className={styles.ribbon}>
             {ribbonTab === 'Data' && <button type="button" className={button} onClick={()=>setConnectionSheet(sheet.id)}><FileSpreadsheet size={16}/>Connect to database table</button>}
-            {ribbonTab === 'View' && <p className="text-xs text-slate-500">Use the view controls above to show the cell bar and selection details.</p>}
+            {ribbonTab === 'View' && <p className="text-xs text-slate-500">Shortcuts: Ctrl/Cmd+S save · Ctrl/Cmd+Z undo · Ctrl/Cmd+Shift+Z or Ctrl+Y redo · Ctrl/Cmd+B/I/U bold/italic/underline · Ctrl/Cmd+D/R fill down/right · Ctrl/Cmd+A select all cells · Shift+Space select rows · Ctrl+Space select columns · Ctrl/Cmd+Home first cell · Delete clear selected range. Tab/Enter move cells; Shift+Arrow extends selection. Formatting and selection shortcuts apply inside the grid.</p>}
             {/* Undo / Redo Group */}
             <div className="flex items-center gap-1" hidden={!["Home"].includes(ribbonTab)}>
               <button
@@ -1416,14 +1440,7 @@ export default function FieldWorkbookWorkspace({
                 aria-label="Delete row"
                 className={iconButton}
                 onClick={() => {
-                  setCustomModal({
-                    type: 'confirm',
-                    title: 'Delete selected rows?',
-                    message: 'Are you sure you want to delete the selected rows and their contents?',
-                    confirmLabel: 'Delete rows',
-                    confirmVariant: 'danger',
-                    onConfirm: () => dimension('row', true),
-                  });
+                  dimension('row', true);
                 }}
               >
                 <span className="relative" aria-hidden="true">
@@ -1441,14 +1458,7 @@ export default function FieldWorkbookWorkspace({
                 aria-label="Delete column"
                 className={iconButton}
                 onClick={() => {
-                  setCustomModal({
-                    type: 'confirm',
-                    title: 'Delete selected columns?',
-                    message: 'Are you sure you want to delete the selected columns and their contents?',
-                    confirmLabel: 'Delete columns',
-                    confirmVariant: 'danger',
-                    onConfirm: () => dimension('column', true),
-                  });
+                  dimension('column', true);
                 }}
               >
                 <span className="relative" aria-hidden="true">
@@ -1743,6 +1753,7 @@ export default function FieldWorkbookWorkspace({
         <div className={styles.gridArea}>
           <div
             ref={gridRef}
+            tabIndex={0}
             onMouseDownCapture={(event) => {
               // Secondary clicks must not focus an input and collapse the selected range.
               if (event.button === 2) event.preventDefault();
@@ -2260,14 +2271,7 @@ export default function FieldWorkbookWorkspace({
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
                     onClick={() => {
                       setGridContextMenu(null);
-                      setCustomModal({
-                        type: 'confirm',
-                        title: 'Delete selected columns?',
-                        message: 'Are you sure you want to delete the selected columns and their contents?',
-                        confirmLabel: 'Delete columns',
-                        confirmVariant: 'danger',
-                        onConfirm: () => dimension('column', true),
-                      });
+                      dimension('column', true);
                     }}
                   >
                     <Columns2 size={15} />
@@ -2354,14 +2358,7 @@ export default function FieldWorkbookWorkspace({
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
                     onClick={() => {
                       setGridContextMenu(null);
-                      setCustomModal({
-                        type: 'confirm',
-                        title: 'Delete selected rows?',
-                        message: 'Are you sure you want to delete the selected rows and their contents?',
-                        confirmLabel: 'Delete rows',
-                        confirmVariant: 'danger',
-                        onConfirm: () => dimension('row', true),
-                      });
+                      dimension('row', true);
                     }}
                   >
                     <Rows2 size={15} />
@@ -2551,14 +2548,7 @@ export default function FieldWorkbookWorkspace({
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
                     onClick={() => {
                       setGridContextMenu(null);
-                      setCustomModal({
-                        type: 'confirm',
-                        title: 'Delete selected rows?',
-                        message: 'Are you sure you want to delete the selected rows and their contents?',
-                        confirmLabel: 'Delete rows',
-                        confirmVariant: 'danger',
-                        onConfirm: () => dimension('row', true),
-                      });
+                      dimension('row', true);
                     }}
                   >
                     <Rows2 size={15} />
@@ -2569,14 +2559,7 @@ export default function FieldWorkbookWorkspace({
                     className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
                     onClick={() => {
                       setGridContextMenu(null);
-                      setCustomModal({
-                        type: 'confirm',
-                        title: 'Delete selected columns?',
-                        message: 'Are you sure you want to delete the selected columns and their contents?',
-                        confirmLabel: 'Delete columns',
-                        confirmVariant: 'danger',
-                        onConfirm: () => dimension('column', true),
-                      });
+                      dimension('column', true);
                     }}
                   >
                     <Columns2 size={15} />

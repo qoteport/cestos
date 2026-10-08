@@ -315,3 +315,20 @@ test('workbook copies retain mappings but isolate imports and discard previous r
  assert.equal(book.sheets[0].connection.mapping.equipment,0);
  assert.deepEqual(book.sheets[0].connection.recordIds,['old-record']);
 });
+
+
+test('row and column deletion preserve complete snapshots for undo', () => {
+  for (const axis of ['row', 'column']) {
+    const original = api.makeSheet();
+    original.cells[1][1] = 'Keep for undo';
+    original.formats = {'1:1': {bold: true, background: '#ff0000'}};
+    original.merges = [{r: 1, c: 1, er: 2, ec: 2}];
+    const snapshot = plain(original);
+    const changed = api.changeDimension(original, axis, 1, true);
+    assert.deepEqual(plain(original), snapshot);
+    assert.notEqual(changed, original);
+    assert.equal(axis === 'row' ? changed.cells.length : changed.widths.length,
+      (axis === 'row' ? original.cells.length : original.widths.length) - 1);
+    assert.equal(original.cells[1][1], 'Keep for undo');
+  }
+});
