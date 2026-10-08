@@ -176,7 +176,7 @@ export default function LoginForm() {
                   onChange={(e) => setRemember(e.target.checked)}
                   className="h-4 w-4 rounded-md border-slate-300 accent-primary cursor-pointer"
                 />
-                Trust this device (7 days offline)
+                Trust this device
               </label>
               <button
                 type="button"

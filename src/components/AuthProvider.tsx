@@ -51,7 +51,7 @@ export function AuthProvider({children}:{children:ReactNode}) {
    const profile=await apiFetch<UserRead>('/api/v1/auth/me',{},true,policy);
    const permissions=await apiFetch<Access>('/api/v1/auth/access',{},true,policy);
    if(run!==generation.current)return;
-   // Only fresh server responses can renew the seven-day offline window.
+   // Only fresh server responses can renew the 30-day offline window.
    try {rememberVerifiedSession(profile,permissions,getAccessToken(),!!localStorage.getItem('cestos_refresh_token'));}catch{lockOfflineAccess();setError('This browser could not enable offline access. Keep the app open while working.');}
    exitOfflineAccess();setOffline(false);setOfflineUntil(null);
    if(profile?.portal_type)localStorage.setItem('cestos_portal_type',profile.portal_type.toUpperCase());

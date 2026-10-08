@@ -1,5 +1,5 @@
 // Offline identity is for local work only. It never authorizes server requests.
-export const OFFLINE_ACCESS_MS = 7 * 24 * 60 * 60 * 1000;
+export const OFFLINE_ACCESS_MS = 30 * 24 * 60 * 60 * 1000;
 const KEY = 'cestos_trusted_offline_session';
 let offline = false;
 export type TrustedSession = {
@@ -42,7 +42,9 @@ export function readTrustedSession(): TrustedSession | null {
       !Array.isArray(saved.access?.roles) ||
       !Number.isFinite(saved.verifiedAt) ||
       saved.verifiedAt > now ||
-      saved.expiresAt !== saved.verifiedAt + OFFLINE_ACCESS_MS ||
+      // Keep existing seven-day sessions valid until their original expiry.
+      (saved.expiresAt !== saved.verifiedAt + OFFLINE_ACCESS_MS &&
+        saved.expiresAt !== saved.verifiedAt + 7 * 24 * 60 * 60 * 1000) ||
       now >= saved.expiresAt
     )
       return null;
