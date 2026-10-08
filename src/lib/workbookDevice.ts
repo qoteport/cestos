@@ -4,12 +4,15 @@ const DATABASE = 'cestos-workbook-device-v1';
 let database: Promise<IDBDatabase> | undefined;
 function openDatabase() {
   if (!database) database = new Promise<IDBDatabase>((resolve, reject) => {
-    const request = indexedDB.open(DATABASE, 1);
+    const request = indexedDB.open(DATABASE, 2);
+    let blocked=false;
+    request.onblocked=()=>{blocked=true;database=undefined;reject(new Error('Close older workbook tabs and reload to upgrade device storage.'));};
     request.onupgradeneeded = () => {
-      request.result.createObjectStore('sessions');
-      request.result.createObjectStore('workbooks', {keyPath: 'key'});
+      if(!request.result.objectStoreNames.contains('sessions'))request.result.createObjectStore('sessions');
+      if(!request.result.objectStoreNames.contains('workbooks'))request.result.createObjectStore('workbooks', {keyPath: 'key'});
+      if(!request.result.objectStoreNames.contains('revisions'))request.result.createObjectStore('revisions', {keyPath:'key'});
     };
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {if(blocked){request.result.close();return;}request.result.onversionchange=()=>{request.result.close();database=undefined;};resolve(request.result);};
     request.onerror = () => {database = undefined; reject(request.error);};
   });
   return database;
@@ -28,7 +31,27 @@ export type DeviceWorkbook = {key: string; scope: string; book: FieldWorkbook; s
 export const readDeviceSession = (scope: string) => transact<DeviceSession | undefined>('sessions', 'readonly', store => store.get(scope));
 export const saveDeviceSession = (scope: string, session: DeviceSession) => transact('sessions', 'readwrite', store => store.put(session, scope));
 export async function saveDeviceWorkbook(scope: string, book: FieldWorkbook) {
-  await transact('workbooks', 'readwrite', store => store.put({key: JSON.stringify([scope, book.id]), scope, book, savedAt: new Date().toISOString()} satisfies DeviceWorkbook));
+  const db=await openDatabase();
+  await new Promise<void>((resolve,reject)=>{
+    const tx=db.transaction(['workbooks','revisions'],'readwrite');
+    const books=tx.objectStore('workbooks'),revisions=tx.objectStore('revisions');
+    const key=JSON.stringify([scope,book.id]);
+    const request=books.get(key);
+    request.onsuccess=()=>{
+      const previous=request.result as DeviceWorkbook | undefined;
+      if(previous && JSON.stringify(previous.book)===JSON.stringify(book))return;
+      if(previous) {
+        const read=revisions.get(key);
+        read.onsuccess=()=>revisions.put({key,items:[previous,...(read.result?.items || [])].slice(0,5)});
+      }
+      books.put({key,scope,book,savedAt:new Date().toISOString()} satisfies DeviceWorkbook);
+    };
+    tx.oncomplete=()=>resolve();tx.onabort=tx.onerror=()=>reject(tx.error || new Error('Device autosave failed. Download a backup.'));
+  });
+}
+export async function deviceRevisions(scope:string,id:string):Promise<DeviceWorkbook[]> {
+  const row=await transact<{items:DeviceWorkbook[]} | undefined>('revisions','readonly',store=>store.get(JSON.stringify([scope,id])));
+  return row?.items || [];
 }
 export async function listDeviceWorkbooks(scope: string): Promise<DeviceWorkbook[]> {
   const rows = await transact<DeviceWorkbook[]>('workbooks', 'readonly', store => store.getAll());

@@ -13,7 +13,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
-  if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
+  if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/') || url.pathname.startsWith('/workbook-share')) return;
   // Next dev output and HMR assets change constantly; don't let the PWA cache proxy them.
   if ((url.hostname === 'localhost' || url.hostname === '127.0.0.1') && url.pathname.startsWith('/_next/')) return;
   if (url.pathname.startsWith('/_next/static/')) {

@@ -1,6 +1,8 @@
 'use client';
 import styles from './FieldWorkbookWorkspace.module.css';
-import {readDeviceSession, saveDeviceSession, saveDeviceWorkbook, listDeviceWorkbooks, sheetCsv, type DeviceWorkbook} from '@/lib/workbookDevice';
+import {printSheet, autofillRange, commonColumnValues} from '@/lib/workbookConvenience';
+import {readDeviceSession, saveDeviceSession, saveDeviceWorkbook, listDeviceWorkbooks, deviceRevisions, sheetCsv, type DeviceWorkbook} from '@/lib/workbookDevice';
+import WorkbookShareDialog from './WorkbookShareDialog';
 import WorkbookDatabaseConnection from './WorkbookDatabaseConnection';
 import SearchableSelect from './SearchableSelect';
 import WorkbookColorPicker from './WorkbookColorPicker';
@@ -215,13 +217,18 @@ export default function FieldWorkbookWorkspace({
   employees,
   sites,
   storageScope,
+  initialWorkbook,
+  onPublish,
 }: {
   projects: any[];
   assets: any[];
   employees: any[];
   sites: any[];
   storageScope: string;
+  initialWorkbook?: FieldWorkbook;
+  onPublish?: (book:FieldWorkbook)=>Promise<void>;
 }) {
+  const [sharing,setSharing]=useState(false);
   const [sessions, setSessions] = useState<WorkbookSession[]>([]);
   const [ribbonTab, setRibbonTab] = useState('Home');
   const [book, setBook] = useState<FieldWorkbook | null>(null);
@@ -290,6 +297,8 @@ export default function FieldWorkbookWorkspace({
   const resizeCleanup = useRef<() => void>(() => {});
   useEffect(() => () => resizeCleanup.current(), []);
   const gridRef = useRef<HTMLDivElement>(null);
+  const [autosaveStatus,setAutosaveStatus]=useState('Preparing autosave…');
+  const [recoveryVersions,setRecoveryVersions]=useState<DeviceWorkbook[] | null>(null);
   const [deviceBooks, setDeviceBooks] = useState<DeviceWorkbook[]>([]);
   const [storageReady, setStorageReady] = useState('');
   const [online, setOnline] = useState(true);
@@ -343,7 +352,7 @@ export default function FieldWorkbookWorkspace({
       try {
         const cached = await readDeviceSession(storageKey);
         const legacy = !cached ? localStorage.getItem(storageKey) : null;
-        const stored = cached || (legacy ? JSON.parse(legacy) : null);
+        const stored = initialWorkbook ? {openBooks:[{book:initialWorkbook,dirty:false}],activeId:initialWorkbook.id} : cached || (legacy ? JSON.parse(legacy) : null);
         if (!active) return;
         if (stored) {
           const recovered: WorkbookSession[] = stored.openBooks
@@ -360,7 +369,7 @@ export default function FieldWorkbookWorkspace({
       finally {if(active)setStorageReady(storageKey);}
     })();
     return () => {active=false;};
-  }, [storageKey]);
+  }, [storageKey,initialWorkbook]);
   useEffect(() => {
     if(storageReady !== storageKey) return;
     const openBooks = sessions.map(item => item.book.id === book?.id ? {book,dirty} : {book:item.book,dirty:item.dirty});
@@ -369,6 +378,16 @@ export default function FieldWorkbookWorkspace({
     void saveDeviceSession(storageKey,{openBooks,activeId:book?.id || null})
       .catch(() => setError('Device recovery could not be saved. Download a backup to keep your changes.'));
   },[sessions,book,dirty,storageKey,storageReady]);
+  useEffect(()=>{
+    if(!book || storageReady!==storageKey)return;
+    let active=true;
+    setAutosaveStatus('Saving on device…');
+    const timer=setTimeout(()=>{void (async()=>{
+      try {validateWorkbook(book);await saveDeviceWorkbook(storageKey,book);const rows=await listDeviceWorkbooks(storageKey);if(active){setDeviceBooks(rows);setAutosaveStatus('Autosaved on device');}}
+      catch {if(active)setAutosaveStatus('Autosave failed — download a backup');}
+    })();},1000);
+    return ()=>{active=false;clearTimeout(timer);};
+  },[book,storageKey,storageReady]);
   useEffect(() => {
     if (!dirty && !sessions.some(item => item.book.id !== book?.id && item.dirty)) return;
     const guard = (event: BeforeUnloadEvent) => {event.preventDefault();};
@@ -585,9 +604,9 @@ export default function FieldWorkbookWorkspace({
   const suggestions = useMemo(
     () =>
       sheet?.widths.map((_, c) =>
-        suggestionsFor(sheet.cells[0][c] || '', projects, assets, employees, sites)
+        [...new Set([...suggestionsFor(sheet.cells[0][c] || '', projects, assets, employees, sites), ...commonColumnValues(deviceBooks.flatMap(item=>item.book.sheets),sheet.cells[0][c] || '',sheet,c)])].slice(0,100)
       ) || [],
-    [sheet?.cells[0], sheet?.widths, projects, assets, employees, sites]
+    [sheet, deviceBooks, projects, assets, employees, sites]
   );
   const mergeLookup = useMemo(() => {
     const map = new Map<string, CellRange>();
@@ -791,6 +810,7 @@ export default function FieldWorkbookWorkspace({
     setError('');
     try {
       const deviceSaved = await saveToDevice(asTemplate);
+      if(onPublish && !asTemplate && book.id===initialWorkbook?.id) {await onPublish(book);setDirty(false);setNotice('Shared workbook saved successfully.');return;}
       if(!navigator.onLine) {setTemplatePicker(false);setNotice('Saved on this device. Reconnect and choose Save to server to upload it.');return;}
       const saved = deviceSaved || (asTemplate
         ? { ...copyWorkbook(book, true), name: templateName.trim() || `${book.name} template` }
@@ -954,6 +974,10 @@ export default function FieldWorkbookWorkspace({
         onLeave: leave,
         onRename: (newName: string) => commit({ ...book, name: newName }, 'name'),
         onDownload: (format) => void download(format),
+        autosaveStatus,
+        onShare: () => setSharing(true),
+        onRecover: () => {void deviceRevisions(storageKey,book.id).then(setRecoveryVersions).catch(()=>setError('Could not load device versions.'));},
+        onPrint: () => {try{if(sheet)printSheet(sheet,book.name);}catch(e){setError(e instanceof Error?e.message:'Print failed.');}},
         onSaveDevice: () => void saveDeviceOnly(),
         online,
         offlineToolsReady,
@@ -962,7 +986,7 @@ export default function FieldWorkbookWorkspace({
     } else {
       setHeaderState(null);
     }
-  }, [book, dirty, busy, online, offlineToolsReady, setHeaderState, leave, commit, download, save]);
+  }, [book, dirty, busy, online, offlineToolsReady, autosaveStatus, setHeaderState, leave, commit, download, save]);
 
   const feedback = (
     <div className="fixed bottom-6 right-6 z-50 flex max-w-md flex-col gap-2 pointer-events-none">
@@ -1044,6 +1068,8 @@ export default function FieldWorkbookWorkspace({
   if (!book || !sheet)
     return (
       <section className={`${styles.library} space-y-6 bg-slate-50 p-6 dark:bg-slate-950 sm:p-10`}>
+        {sharing && book && <WorkbookShareDialog book={book} onClose={()=>setSharing(false)}/>}
+        {recoveryVersions && <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/40 p-4"><div role="dialog" aria-label="Device recovery versions" className="max-h-[80vh] w-full max-w-lg overflow-auto rounded bg-white p-5 dark:bg-slate-900"><h3 className="font-bold">Device recovery versions</h3><p className="my-2 text-sm">The last five saved versions. Recovery opens a new copy so your current workbook remains intact.</p>{!recoveryVersions.length && <p>No older versions yet.</p>}{recoveryVersions.map((item,i)=><button type="button" className="my-1 block w-full rounded border p-2 text-left" key={i} onClick={()=>{activate({...copyWorkbook(validateWorkbook(item.book),false),name:item.book.name+' — recovered'},true);setRecoveryVersions(null);}}>{new Date(item.savedAt).toLocaleString()}</button>)}<button type="button" className={button} onClick={()=>setRecoveryVersions(null)}>Close</button></div></div>}
         {closePrompt}
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -1441,6 +1467,11 @@ export default function FieldWorkbookWorkspace({
               aria-hidden="true"
             />
 
+            <div className="flex items-center gap-1" hidden={ribbonTab!=='Home'}>
+              <button type="button" className={button} title="Copy the first selected row down (undo available)" onClick={()=>changeSheet(s=>autofillRange(s,selection,'down'))}>Fill down</button>
+              <button type="button" className={button} title="Copy the first selected column right (undo available)" onClick={()=>changeSheet(s=>autofillRange(s,selection,'right'))}>Fill right</button>
+              <button type="button" className={button} title="Extend two starting numbers or ISO dates down the selection" onClick={()=>changeSheet(s=>autofillRange(s,selection,'down',true))}>Fill series</button>
+            </div>
             {/* Merge & Selection Group */}
             <div className="flex items-center gap-1" hidden={!["Home", "Insert"].includes(ribbonTab)}>
               <button
@@ -1785,7 +1816,7 @@ export default function FieldWorkbookWorkspace({
                       <span
                         title="Drag to resize column"
                         onPointerDown={(event) => resize('column', c, event)}
-                        className="absolute -right-2 top-0 z-30 flex h-full w-4 cursor-col-resize touch-none items-center justify-center text-slate-500 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-950"
+                        className={`${styles.columnResize} absolute -right-2 top-0 z-30 flex h-full w-4 touch-none items-center justify-center text-slate-500 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-950`}
                       >
 
                       </span>
@@ -1833,7 +1864,7 @@ export default function FieldWorkbookWorkspace({
                       <span
                         title="Drag to resize row"
                         onPointerDown={(event) => resize('row', r, event)}
-                        className="absolute -bottom-2 left-0 z-20 flex h-4 w-full cursor-row-resize touch-none items-center justify-center text-slate-500 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-950"
+                        className={`${styles.rowResize} absolute -bottom-2 left-0 z-20 flex h-4 w-full touch-none items-center justify-center text-slate-500 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-950`}
                       >
 
                       </span>
@@ -2621,6 +2652,8 @@ export default function FieldWorkbookWorkspace({
           </div>
         )}
 
+        {sharing && book && <WorkbookShareDialog book={book} onClose={()=>setSharing(false)}/>}
+        {recoveryVersions && <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/40 p-4"><div role="dialog" aria-label="Device recovery versions" className="max-h-[80vh] w-full max-w-lg overflow-auto rounded bg-white p-5 dark:bg-slate-900"><h3 className="font-bold">Device recovery versions</h3><p className="my-2 text-sm">The last five saved versions. Recovery opens a new copy so your current workbook remains intact.</p>{!recoveryVersions.length && <p>No older versions yet.</p>}{recoveryVersions.map((item,i)=><button type="button" className="my-1 block w-full rounded border p-2 text-left" key={i} onClick={()=>{activate({...copyWorkbook(validateWorkbook(item.book),false),name:item.book.name+' — recovered'},true);setRecoveryVersions(null);}}>{new Date(item.savedAt).toLocaleString()}</button>)}<button type="button" className={button} onClick={()=>setRecoveryVersions(null)}>Close</button></div></div>}
         {closePrompt}
 
         {showTemplateModal && (
