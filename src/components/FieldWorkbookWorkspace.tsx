@@ -796,7 +796,7 @@ export default function FieldWorkbookWorkspace({
   }
   async function saveDeviceOnly() {
     setBusy(true);setError('');
-    try {await saveToDevice();setNotice('Workbook saved on this device. Use Save to server when connected.');}
+    try {await saveToDevice();setNotice('Workbook saved on this device.');}
     catch(e){setError(e instanceof Error?e.message:'Device save failed. Download a backup.');}
     finally{setBusy(false);}
   }
@@ -811,7 +811,7 @@ export default function FieldWorkbookWorkspace({
     try {
       const deviceSaved = await saveToDevice(asTemplate);
       if(onPublish && !asTemplate && book.id===initialWorkbook?.id) {await onPublish(book);setDirty(false);setNotice('Shared workbook saved successfully.');return;}
-      if(!navigator.onLine) {setTemplatePicker(false);setNotice('Saved on this device. Reconnect and choose Save to server to upload it.');return;}
+      if(!navigator.onLine) {setTemplatePicker(false);setNotice('Saved on this device. Reconnect to sync with server.');return;}
       const saved = deviceSaved || (asTemplate
         ? { ...copyWorkbook(book, true), name: templateName.trim() || `${book.name} template` }
         : { ...book, createdAt: book.createdAt || new Date().toISOString() });

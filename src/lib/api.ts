@@ -1,3 +1,4 @@
+import {offlineAccessActive,readTrustedSession,lockOfflineAccess,offlineRestrictedPath,offlineWriteAllowed,tokenScope} from './offlineAuth';
 // Browser calls stay on this origin; Next.js proxies to the configured backend.
 import {getAccessToken, getRefreshToken, setTokens, clearTokens, refreshSession} from './session';
 import { notifyOperationalDataUpdated } from './operationalDataSync';
@@ -11,7 +12,7 @@ export class ApiError extends Error {
 export class OfflineQueuedError extends ApiError {
   constructor(public queueId: string) { super(0, 'Cestos is unreachable. This change is saved on this device and will sync when the server is available.'); this.name = 'OfflineQueuedError'; }
 }
-type ApiFetchPolicy = { queueWhenOffline?: boolean; cacheOfflineRead?: boolean; cacheResponse?: boolean; memoryCache?: boolean; bypassMemoryRead?: boolean };
+type ApiFetchPolicy = { queueWhenOffline?: boolean; cacheOfflineRead?: boolean; cacheResponse?: boolean; memoryCache?: boolean; bypassMemoryRead?: boolean; verifySession?: boolean };
 type MemoryApiEntry = { value: unknown; savedAt: number; revalidating?: boolean };
 const MEMORY_API_REVALIDATE_MS = 15_000;
 const MEMORY_CACHE_INVALIDATED_EVENT = 'cestos:api-cache-invalidated';
@@ -82,12 +83,13 @@ async function checkApiBackend(): Promise<boolean> {
 }
 
 async function enqueueRequest(path: string, options: RequestInit, method: string, authenticated: boolean, scope: string | null): Promise<never> {
+  if (!offlineWriteAllowed(path,method))throw new ApiError(0,'This action requires online verification and cannot be queued.');
   if (!authenticated || /\/auth\/(login|refresh|logout|password-reset|reset-password)/i.test(path)) {
     throw new ApiError(0, 'This action needs an active internet connection and cannot be queued safely.');
   }
   const body = serializeOfflineBody(options.body);
   const token = getAccessToken();
-  if (!body || !scope || !token) throw new ApiError(0, 'Cestos is unreachable and this request cannot be safely stored for later sync.');
+  if (!body || !scope || (!token && !offlineAccessActive())) throw new ApiError(0, 'Cestos is unreachable and this request cannot be safely stored for later sync.');
   const id = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const headers = new Headers(options.headers);
   headers.delete('authorization');
@@ -126,6 +128,7 @@ function extractErrorMessage(body: any, status: number): string {
   return `Request failed (${status}). Please retry.`;
 }
 export function handleSessionExpired() {
+  lockOfflineAccess();
   clearTokens();
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event('cestos:session-expired'));
@@ -156,12 +159,15 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, authe
   const isOnlineOnlyAuth = /\/(?:auth\/(?:login|refresh|logout|password-reset|reset-password|forgot-password)|hr\/password-reset)(?:\/|$)/i.test(path);
   const mayQueue = policy.queueWhenOffline !== false && !isOnlineOnlyAuth;
   const token = authenticated ? getAccessToken() : null;
+  const localOnly=authenticated && offlineAccessActive() && !policy.verifySession;
+  if(localOnly && offlineRestrictedPath(path))throw new ApiError(0,'This action requires an online verified session.');
+  if(localOnly && !isRead) {if(policy.queueWhenOffline===false)throw new ApiError(0,'Reconnect and verify your session before saving to the server.');return enqueueRequest(path,options,method,authenticated,readTrustedSession()?.scope || null);}
   setupCacheInvalidation();
   const cacheKey = memoryCacheKey(path, token);
   const memoryCacheable = isRead && policy.memoryCache !== false && policy.cacheResponse !== false && !/\/notifications(?:\/|$)/i.test(path);
   const memoryEntry = memoryCacheable ? memoryApiCache.get(cacheKey) : undefined;
   if (memoryEntry && !policy.bypassMemoryRead) {
-    if (navigator.onLine !== false && Date.now() - memoryEntry.savedAt >= MEMORY_API_REVALIDATE_MS && !memoryEntry.revalidating) {
+    if (!localOnly && navigator.onLine !== false && Date.now() - memoryEntry.savedAt >= MEMORY_API_REVALIDATE_MS && !memoryEntry.revalidating) {
       memoryEntry.revalidating = true;
       void apiFetch<T>(path, { method: 'GET', headers: options.headers }, authenticated, { ...policy, bypassMemoryRead: true })
         .then((latest) => {
@@ -174,8 +180,8 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, authe
     }
     return memoryEntry.value as T;
   }
-  const offlineScope = await currentOfflineScope(token);
-  if (isRead && navigator.onLine === false) {
+  let offlineScope = authenticated ? (token ? await currentOfflineScope(token) : offlineAccessActive() ? readTrustedSession()?.scope || null : null) : 'anonymous';
+  if (isRead && (navigator.onLine === false || localOnly)) {
     if (policy.cacheOfflineRead !== false && offlineScope) {
       const cached = await readCachedApiResponse<T>(offlineScope, path);
       if (cached !== undefined) return cached;
@@ -205,7 +211,15 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}, authe
     throw new ApiError(0, 'Cannot reach the server. Check your connection and try again.');
   }
   if (response.status === 401 && authenticated) {
-    if (await refreshSession(BASE_URL, token)) {
+    let renewed=false;
+    try {renewed=await refreshSession(BASE_URL,token);}catch {
+      window.dispatchEvent(new Event('cestos:offline-session-needed'));
+      if(isRead && policy.cacheOfflineRead!==false && offlineScope) {const cached=await readCachedApiResponse<T>(offlineScope,path);if(cached!==undefined)return cached;}
+      throw new ApiError(0,'Session verification is unavailable. Your saved work remains on this device. Please retry when connected.');
+    }
+    if (renewed) {
+      if(tokenScope(token) && tokenScope(token)!==tokenScope(getAccessToken()))throw new ApiError(409,'The signed-in account changed. Reopen this action under the correct account.');
+      offlineScope=await currentOfflineScope(getAccessToken());
       headers.set('Authorization', `Bearer ${getAccessToken()}`);
       response = await fetch(`${BASE_URL}${path}`, {...options, headers, cache:'no-store'});
     }
@@ -260,12 +274,14 @@ export async function syncOfflineWriteQueue(): Promise<void> {
   if (typeof window === 'undefined' || navigator.onLine === false || offlineSync) return offlineSync || undefined;
   const token = getAccessToken();
   const scope = await currentOfflineScope(token);
-  if (!scope) return;
+  if (!scope || !token || offlineAccessActive()) return;
   if (!(await checkApiBackend())) return;
   const sync = async () => {
+    try {await apiFetch('/api/v1/auth/me',{},true,{verifySession:true,bypassMemoryRead:true,memoryCache:false,cacheOfflineRead:false,cacheResponse:false});}catch{return;}
+    if(tokenScope(getAccessToken())!==scope || offlineAccessActive())return;
     const rows = await listOfflineWrites(scope);
     for (const row of rows) {
-      if (navigator.onLine === false || row.state === 'failed') break;
+      if (navigator.onLine === false || row.state === 'failed' || !getAccessToken() || tokenScope(getAccessToken())!==scope || offlineAccessActive()) break;
       try {
         const headers = new Headers(row.headers);
         const body = restoreOfflineBody(row);
@@ -294,9 +310,11 @@ export async function syncOfflineWriteQueue(): Promise<void> {
 export async function apiFetchBlob(path: string, options: RequestInit = {}, authenticated = true): Promise<Blob> {
   const token = authenticated ? getAccessToken() : null;
   const method = (options.method || 'GET').toUpperCase();
-  const offlineScope = await currentOfflineScope(token);
+  let offlineScope = authenticated ? (token ? await currentOfflineScope(token) : offlineAccessActive() ? readTrustedSession()?.scope || null : null) : 'anonymous';
+  const localOnly=authenticated && offlineAccessActive();
+  if(localOnly && (method!=='GET' || offlineRestrictedPath(path)))throw new ApiError(0,'This file requires online verification.');
   const cachedFile = () => method === 'GET' && offlineScope ? readCachedApiResponse<Blob>(offlineScope, path) : Promise.resolve(undefined);
-  if (method === 'GET' && navigator.onLine === false) {
+  if (method === 'GET' && (navigator.onLine === false || localOnly)) {
     const cached = await cachedFile();
     if (cached) return cached;
     throw new ApiError(0, 'This file has not been opened on this device and is unavailable offline.');
@@ -312,6 +330,8 @@ export async function apiFetchBlob(path: string, options: RequestInit = {}, auth
   }
   if (response.status === 401 && authenticated) {
     if (await refreshSession(BASE_URL, token)) {
+      if(tokenScope(token) && tokenScope(token)!==tokenScope(getAccessToken()))throw new ApiError(409,'The signed-in account changed. Reopen this action under the correct account.');
+      offlineScope=await currentOfflineScope(getAccessToken());
       headers.set('Authorization', `Bearer ${getAccessToken()}`);
       response = await fetch(`${BASE_URL}${path}`, {...options, headers, cache:'no-store'});
     }
@@ -388,6 +408,7 @@ export async function getMe(): Promise<UserRead> {
 }
 
 export async function logout(): Promise<void> {
+  lockOfflineAccess();
   const refresh_token = getRefreshToken();
   clearTokens();
   if (refresh_token) await apiFetch('/api/v1/auth/logout', {method:'POST', body:JSON.stringify({refresh_token})}, false);

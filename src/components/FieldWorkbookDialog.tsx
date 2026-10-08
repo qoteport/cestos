@@ -152,16 +152,95 @@ export default function FieldWorkbookDialog({
               <button type="button" aria-label="Close workbooks" onClick={close} className="my-1 rounded px-2 text-slate-500 hover:bg-red-100 hover:text-red-700"><X size={18}/></button>
             </div>
             {headerState?.book && <div className="flex min-h-10 flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white px-4 dark:border-slate-700 dark:bg-slate-950">
-              <div className="flex min-w-0 items-center gap-3"><input aria-label="Workbook name" maxLength={250} value={headerState.book.name} disabled={headerState.busy} onChange={e=>headerState.onRename(e.target.value)} className="min-w-0 max-w-60 rounded border border-transparent bg-transparent px-1 py-0.5 text-xs font-semibold hover:border-slate-300 focus:border-emerald-600 focus:outline-none"/><span className="hidden text-[11px] text-slate-400 sm:inline">{!headerState.online ? 'Offline · ' : ''}{headerState.dirty ? 'Not saved to server' : 'Saved to server'} · {headerState.book.sheets.length} {headerState.book.sheets.length === 1 ? 'sheet' : 'sheets'}</span></div>
+              <div className="flex min-w-0 items-center gap-3"><input aria-label="Workbook name" maxLength={250} value={headerState.book.name} disabled={headerState.busy} onChange={e=>headerState.onRename(e.target.value)} className="min-w-0 max-w-60 rounded border border-transparent bg-transparent px-1 py-0.5 text-xs font-semibold hover:border-slate-300 focus:border-emerald-600 focus:outline-none"/><span className="hidden text-[11px] text-slate-400 sm:inline">{!headerState.online ? 'Offline · ' : ''}{headerState.dirty ? 'Unsaved changes' : 'Saved'} · {headerState.book.sheets.length} {headerState.book.sheets.length === 1 ? 'sheet' : 'sheets'}</span></div>
               <div className="flex flex-wrap items-center gap-2 py-1">
-                <details className="relative"><summary className="flex cursor-pointer items-center gap-1.5 rounded px-2 py-1 text-xs text-slate-600 dark:text-slate-300"><Download size={14}/>Export</summary><div className="absolute right-0 top-full z-[80] mt-1 w-60 rounded border bg-white p-2 text-xs shadow-lg dark:border-slate-700 dark:bg-slate-900">
-                  <button type="button" disabled={headerState.busy} className="block w-full rounded px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800" onClick={event=>{headerState.onDownload('xlsx');event.currentTarget.closest('details')?.removeAttribute('open');}}>Download Excel</button>
-                  <button type="button" disabled={headerState.busy} className="block w-full rounded px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800" onClick={event=>{event.currentTarget.closest('details')?.removeAttribute('open');headerState.onPrint();}}>Print active sheet / Save as PDF</button>
-                </div></details>
-                <button type="button" className="rounded border px-2 py-1 text-xs" disabled={headerState.busy || !headerState.online} onClick={headerState.onShare}>Share</button>
-                <details className="relative"><summary className="cursor-pointer px-2 py-1 text-xs">Backup</summary><div className="absolute right-0 top-full z-[80] w-56 rounded border bg-white p-2 text-xs shadow-lg dark:bg-slate-900">{([['csv','Current sheet (.csv)'],['backup','Complete backup (.cestos.json)']] as const).map(([format,label])=><button key={format} type="button" disabled={headerState.busy} className="block w-full px-3 py-2 text-left" onClick={event=>{headerState.onDownload(format);event.currentTarget.closest('details')?.removeAttribute('open');}}>{label}</button>)}<button type="button" className="block w-full px-3 py-2 text-left" onClick={event=>{headerState.onRecover();event.currentTarget.closest('details')?.removeAttribute('open');}}>Recover previous version</button></div></details>
-                <button type="button" disabled={headerState.busy} onClick={headerState.onSaveDevice} className="rounded border border-slate-300 px-2 py-1 text-xs">Save on device</button>
-                <button type="button" disabled={headerState.busy} onClick={headerState.onSave} className="flex items-center gap-1.5 rounded bg-emerald-700 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-800"><Save size={14}/>{headerState.busy?'Working…':headerState.online?'Save to server':'Save offline'}</button>
+                <details className="relative">
+                  <summary className="flex cursor-pointer items-center gap-1.5 rounded border border-slate-300 dark:border-slate-700 px-2.5 py-1 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <Download size={14} />
+                    Export & Backup
+                  </summary>
+                  <div className="absolute right-0 top-full z-[80] mt-1 w-64 rounded-xl border border-slate-200 bg-white p-2 text-xs shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                    <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Downloads & Formats
+                    </div>
+                    <button
+                      type="button"
+                      disabled={headerState.busy}
+                      className="block w-full rounded-lg px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800"
+                      onClick={(event) => {
+                        headerState.onDownload('xlsx');
+                        event.currentTarget.closest('details')?.removeAttribute('open');
+                      }}
+                    >
+                      Download Excel (.xlsx)
+                    </button>
+                    <button
+                      type="button"
+                      disabled={headerState.busy}
+                      className="block w-full rounded-lg px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800"
+                      onClick={(event) => {
+                        headerState.onDownload('backup');
+                        event.currentTarget.closest('details')?.removeAttribute('open');
+                      }}
+                    >
+                      Complete backup (.cestos.json)
+                    </button>
+                    <button
+                      type="button"
+                      disabled={headerState.busy}
+                      className="block w-full rounded-lg px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800"
+                      onClick={(event) => {
+                        headerState.onDownload('csv');
+                        event.currentTarget.closest('details')?.removeAttribute('open');
+                      }}
+                    >
+                      Current sheet values (.csv)
+                    </button>
+                    <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+                    <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Tools & Recovery
+                    </div>
+                    <button
+                      type="button"
+                      disabled={headerState.busy}
+                      className="block w-full rounded-lg px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800"
+                      onClick={(event) => {
+                        event.currentTarget.closest('details')?.removeAttribute('open');
+                        headerState.onPrint();
+                      }}
+                    >
+                      Print active sheet / Save as PDF
+                    </button>
+                    <button
+                      type="button"
+                      disabled={headerState.busy}
+                      className="block w-full rounded-lg px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800"
+                      onClick={(event) => {
+                        headerState.onRecover();
+                        event.currentTarget.closest('details')?.removeAttribute('open');
+                      }}
+                    >
+                      Recover previous version
+                    </button>
+                  </div>
+                </details>
+                <button
+                  type="button"
+                  className="rounded border border-slate-300 dark:border-slate-700 px-2.5 py-1 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  disabled={headerState.busy || !headerState.online}
+                  onClick={headerState.onShare}
+                >
+                  Share
+                </button>
+                <button
+                  type="button"
+                  disabled={headerState.busy}
+                  onClick={headerState.onSave}
+                  className="flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-800 transition"
+                >
+                  <Save size={14} />
+                  {headerState.busy ? 'Working…' : 'Save'}
+                </button>
                 <span className="text-[10px] text-slate-500" title="Open this page online before using it offline. Browser data must be retained.">{headerState.autosaveStatus}</span>
               </div>
             </div>}

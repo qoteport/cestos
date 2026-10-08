@@ -2,6 +2,7 @@
 import {useEffect,useState,FormEvent} from 'react'
 ;import {Eye,EyeOff,LogIn,Loader2} from 'lucide-react'
 ;import {useRouter} from 'next/navigation';
+import {lockOfflineAccess} from '@/lib/offlineAuth';
 import {login,setTokens,apiFetch,clearTokens} from '@/lib/api'
 ;import {useAuth} from '@/components/AuthProvider'
 ;import AppLogo from '@/components/ui/AppLogo';
@@ -59,6 +60,7 @@ export default function LoginForm() {
         setBusy(false);
       } else {
         const data = await login({ organization_id: org, email: email.trim(), password });
+        lockOfflineAccess();
         setTokens(data.access_token, data.refresh_token, remember);
         localStorage.setItem('cestos_organization', org);
         await auth.reload();
@@ -75,7 +77,6 @@ export default function LoginForm() {
         router.replace(portalRoutes[pt] || '/field-portal');
       }
     } catch (e) {
-      clearTokens();
       setError(e instanceof Error ? e.message : 'Unable to sign in.');
       setBusy(false);
     }
@@ -103,6 +104,7 @@ export default function LoginForm() {
             : 'Sign in with the account provided by your administrator.'}
         </p>
 
+        {auth.error && !error && <p role="alert" className="mb-4 text-sm text-amber-700">{auth.error}</p>}
         {error && (
           <p role="alert" className="mb-5 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             {error}
@@ -174,7 +176,7 @@ export default function LoginForm() {
                   onChange={(e) => setRemember(e.target.checked)}
                   className="h-4 w-4 rounded-md border-slate-300 accent-primary cursor-pointer"
                 />
-                Keep me signed in
+                Trust this device (7 days offline)
               </label>
               <button
                 type="button"

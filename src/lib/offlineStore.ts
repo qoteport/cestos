@@ -1,3 +1,4 @@
+import {offlineAccessActive,readTrustedSession} from './offlineAuth';
 const DB_NAME = 'cestos-offline-store';
 const DB_VERSION = 1;
 const OUTBOX = 'outbox';
@@ -125,7 +126,7 @@ export async function clearOfflineStore(): Promise<void> {
 }
 
 export async function currentOfflineScope(token: string | null): Promise<string | null> {
-  if (!token) return 'anonymous';
+  if (!token) return offlineAccessActive() ? readTrustedSession()?.scope || null : 'anonymous';
   try {
     const payload = token.split('.')[1];
     if (!payload) return null;

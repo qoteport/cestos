@@ -1,3 +1,5 @@
+import {lockOfflineAccess} from './offlineAuth';
+export class SessionUnavailableError extends Error {constructor(){super('Session verification is temporarily unavailable. Please retry when connected.');this.name='SessionUnavailableError';}}
 // One token rotation per browser session, including concurrent requests and tabs.
 const ACCESS = 'cestos_access_token';
 const REFRESH = 'cestos_refresh_token';
@@ -20,13 +22,16 @@ export function refreshSession(base: string, failedAccess: string | null): Promi
     if (getAccessToken() && getAccessToken() !== failedAccess) return true;
     const token = getRefreshToken();
     if (!token) return false;
-    const response = await fetch(`${base}/api/v1/auth/refresh`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({refresh_token:token}), cache:'no-store' });
-    if (response.status === 401) { if (getRefreshToken() === token) clearTokens(); return false; }
+    let response: Response;
+    try {response = await fetch(`${base}/api/v1/auth/refresh`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({refresh_token:token}), cache:'no-store' });}catch{throw new SessionUnavailableError();}
+    if (response.status === 401) { if (getRefreshToken() === token) {clearTokens();lockOfflineAccess();} return false; }
+    if(!response.ok)throw new SessionUnavailableError();
     const text = await response.text();
     let data: any = {};
     try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
     if (getRefreshToken() !== token) return !!getAccessToken(); // Logout or a new login won the race.
-    setTokens(data.access_token || '', data.refresh_token || '');
+    if(typeof data.access_token!=='string' || !data.access_token || typeof data.refresh_token!=='string' || !data.refresh_token)throw new SessionUnavailableError();
+    setTokens(data.access_token, data.refresh_token);
     return true;
   };
   const pending = Promise.resolve(typeof navigator !== 'undefined' && navigator.locks ? navigator.locks.request('cestos-session-refresh', rotate) : rotate()).then(value => value).finally(() => { refreshing = null; });
