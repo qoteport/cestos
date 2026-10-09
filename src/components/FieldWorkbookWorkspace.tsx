@@ -1,8 +1,11 @@
 'use client';
+import WorkbookDatabaseWorkspace from './WorkbookDatabaseWorkspace';
+import WorkbookDatabaseReview from './WorkbookDatabaseReview';
 import {useWorkbookFormulaSuggestions} from './WorkbookFormulaSuggestions';
+import {uploadWorkbookMedia} from '@/lib/workbookMediaUpload';
 import WorkbookCellMedia from './WorkbookCellMedia';
 import WorkbookSheetFolders from './WorkbookSheetFolders';
-import {attachmentArchive,pruneAssets,insertMedia,removeMedia,assetUrl,imageMime,type WorkbookAsset} from '@/lib/workbookMedia';
+import {mediaExportSheet,pruneAssets,insertMedia,removeMedia,assetUrl,imageMime,type WorkbookAsset} from '@/lib/workbookMedia';
 import {visibleSheetRows, sortSheet} from '@/lib/workbookOperations';
 import WorkbookTools from './WorkbookTools';
 import {calculateSheet} from '@/lib/workbookFormulas';
@@ -317,6 +320,7 @@ export default function FieldWorkbookWorkspace({
   const [showToolbar, setShowToolbar] = useState(true);
   const [showFormulaBar, setShowFormulaBar] = useState(true);
   const [showSelectionInfo, setShowSelectionInfo] = useState(false);
+  const [databaseReview,setDatabaseReview]=useState<FieldSheet|null>(null);
   const [databaseLoadOpen,setDatabaseLoadOpen]=useState(false);
   const [connectionSheet, setConnectionSheet] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{
@@ -1147,15 +1151,30 @@ export default function FieldWorkbookWorkspace({
       setBusy(false);
     }
   }
-  async function download(format: 'xlsx' | 'csv' | 'backup' | 'attachments' = 'xlsx') {
+  async function uploadPendingMedia() {
+    const current=bookRef.current;if(!current)return;
+    for(const asset of Object.values(current.assets||{})){
+      if(asset.documentId)continue;
+      const uploaded=await uploadWorkbookMedia(asset);
+      const latest=bookRef.current;
+      if(latest?.id===current.id&&latest.assets?.[asset.id])commit({...latest,assets:{...latest.assets,[asset.id]:uploaded}});
+    }
+  }
+  useEffect(()=>{
+    const upload=()=>{void uploadPendingMedia().catch(e=>setNotice(e instanceof Error?e.message:'Media remains available offline. Upload will retry when connected.'));};
+    if(book&&Object.values(book.assets||{}).some(asset=>!asset.documentId)&&navigator.onLine)upload();
+    window.addEventListener('online',upload);return()=>window.removeEventListener('online',upload);
+  },[book?.id,book?.assets]);
+  async function download(format: 'xlsx' | 'csv' | 'backup' = 'xlsx') {
     if (!book) return;
     setBusy(true);
     try {
+      if(format!=='backup')await uploadPendingMedia();
+      if(bookRef.current?.id!==book.id)throw Error('The active workbook changed. Export again from the workbook you want.');
       const name=book.name.replace(/[\\/:*?"<>|]/g, '-');
-      if(format === 'csv') {if(!sheet)return;downloadBlob(new Blob([sheetCsv(sheet)],{type:'text/csv;charset=utf-8'}),`${name}-${sheet.name.replace(/[\\/:*?"<>|]/g,'-')}.csv`);setNotice('Current sheet downloaded as CSV. CSV contains values only, without attachments or folders. Use a Cestos backup to preserve everything.');}
+      if(format === 'csv') {if(!sheet)return;downloadBlob(new Blob([sheetCsv(mediaExportSheet(sheet,bookRef.current?.assets))],{type:'text/csv;charset=utf-8'}),`${name}-${sheet.name.replace(/[\\/:*?"<>|]/g,'-')}.csv`);setNotice('Current sheet downloaded as CSV. Media links are included in the CSV. Use a Cestos backup to preserve offline media and folders.');}
       else if(format === 'backup') downloadBlob(new Blob([JSON.stringify(book)],{type:'application/json'}),`${name}.cestos.json`);
-      else if(format==='attachments')downloadBlob(await attachmentArchive(book),`${name}-attachments.zip`);
-      else {downloadBlob(await exportWorkbook(book), `${name}.xlsx`);if(Object.keys(book.assets||{}).length||book.folders?.length)setNotice('Excel includes supported cell images and attachment notes. Download attachments ZIP for files and videos, or a Cestos backup to preserve media and sheet folders together.');}
+      else {downloadBlob(await exportWorkbook(bookRef.current || book), `${name}.xlsx`);if(Object.keys(book.assets||{}).length||book.folders?.length)setNotice('Excel includes media links. Links require sign-in and document access. Complete backups preserve offline media and sheet folders.');}
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Export failed.');
     } finally {
@@ -1450,6 +1469,7 @@ export default function FieldWorkbookWorkspace({
             ))}
           </div>
         </div>
+        <WorkbookDatabaseWorkspace onOpen={loaded=>activate(loaded,true)}/>
         {modalDialog}
       </section>
     );
@@ -1549,8 +1569,7 @@ export default function FieldWorkbookWorkspace({
         {showToolbar && (ribbonTab==='Data'||ribbonTab==='View') && <WorkbookTools sheet={sheet} selection={selection} onChange={changeSheet} onError={setError} onFind={(r,c)=>{if(sheet.view?.filterText)changeSheet(s=>({...s,view:{...s.view,filterText:''}}));setAnchor({r,c});setEnd({r,c});focus(r,c);}} />}
         {showToolbar && (
           <div className={styles.ribbon}>
-            {ribbonTab==='Insert'&&<button type="button" className={button} onClick={()=>openCellMedia(anchor.r,anchor.c)}><Paperclip size={16}/>Cell media</button>}
-            {ribbonTab==='Insert'&&Object.keys(book.assets||{}).length>0&&<button type="button" className={button} onClick={()=>void download('attachments')}><Download size={16}/>Download attachments</button>}
+            {ribbonTab==='Insert'&&<button type="button" className={button} onClick={()=>openCellMedia(anchor.r,anchor.c)}><Paperclip size={16}/>Insert Media</button>}
             {ribbonTab==='Insert'&&<button type="button" className={button} onClick={()=>setFoldersOpen(true)}><Folder size={16}/>Sheet folders</button>}
             {ribbonTab === 'Data' && <button type="button" className={button} onClick={()=>setDatabaseLoadOpen(true)}><Download size={16}/>Load from database</button>}
             {ribbonTab === 'Data' && <button type="button" className={button} onClick={()=>setConnectionSheet(sheet.id)}><FileSpreadsheet size={16}/>Connect to database table</button>}
@@ -2383,8 +2402,17 @@ export default function FieldWorkbookWorkspace({
 
         {foldersOpen&&<WorkbookSheetFolders book={book} onChange={next=>{commit(next);if(folderFilter!=='*'&&folderFilter!=='unfiled'&&!next.folders?.some(f=>f.id===folderFilter))setFolderFilter('*');}} onSelect={i=>{setFolderFilter('*');setSheetIndex(i);setAnchor({r:0,c:0});setEnd({r:0,c:0});}} onClose={()=>setFoldersOpen(false)}/>}
         {mediaTarget?.bookId===book.id&&<WorkbookCellMedia title={`Cell ${columnName(mediaTarget.c)}${mediaTarget.r+1} attachments`} assets={(book.sheets.find(s=>s.id===mediaTarget.sheetId)?.media?.[`${mediaTarget.r}:${mediaTarget.c}`]||[]).map(id=>book.assets?.[id]).filter((a):a is WorkbookAsset=>!!a)} onClose={()=>setMediaTarget(null)} onAdd={files=>{const current=bookRef.current;if(!current||current.id!==mediaTarget.bookId)throw Error('The active workbook changed. Please choose the cell again.');commit(insertMedia(current,mediaTarget.sheetId,mediaTarget.r,mediaTarget.c,files));}} onRemove={id=>{const current=bookRef.current;if(current&&current.id===mediaTarget.bookId)commit(removeMedia(current,mediaTarget.sheetId,`${mediaTarget.r}:${mediaTarget.c}`,id));}}/>}
-        {databaseLoadOpen && <WorkbookDatabaseLoad existingNames={book.sheets.map(s=>s.name)} onClose={()=>setDatabaseLoadOpen(false)} onLoad={sheets=>{commit({...book,sheets:[...book.sheets,...sheets]});setSheetIndex(book.sheets.length);setAnchor({r:0,c:0});setEnd({r:0,c:0});setDatabaseLoadOpen(false);setNotice(`Loaded ${sheets.reduce((count,s)=>count+s.cells.length-1,0)} records into ${sheets.length} new sheet(s). Edits do not change database records.`);}} />}
-        {sheet.databaseSource && <p className="text-xs text-slate-500">Database snapshot · {new Date(sheet.databaseSource.loadedAt).toLocaleString()} · Part {sheet.databaseSource.part}/{sheet.databaseSource.parts}. Load again to get fresh records in separate sheets.</p>}
+        {databaseLoadOpen && <WorkbookDatabaseLoad existingNames={book.sheets.map(s=>s.name)} onClose={()=>setDatabaseLoadOpen(false)} onLoad={sheets=>{commit({...book,sheets:[...book.sheets,...sheets]});setSheetIndex(book.sheets.length);setAnchor({r:0,c:0});setEnd({r:0,c:0});setDatabaseLoadOpen(false);setNotice(`Loaded ${sheets.reduce((count,s)=>count+s.cells.length-1,0)} records into ${sheets.length} new sheet(s). Review database changes to confirm edits before sending them.`);}} />}
+        {sheet.databaseSource && <div className="flex items-center gap-3 text-xs text-slate-500"><span>Connected table · {sheet.databaseSource.path} · Loaded {new Date(sheet.databaseSource.loadedAt).toLocaleString()} · Edits remain drafts until confirmed.</span>{!onPublish&&<button type="button" className={button} onClick={()=>setDatabaseReview(structuredClone(sheet))}>Review database changes</button>}</div>}
+        {databaseReview&&<WorkbookDatabaseReview sheet={databaseReview} onClose={()=>setDatabaseReview(null)} onSaved={(row,record)=>{
+          const current=bookRef.current;if(!current)return;
+          commit({...current,sheets:current.sheets.map(item=>{if(item.id!==databaseReview.id||!item.databaseSource)return item;
+            const next=structuredClone(item),columns=next.cells[0];
+            next.cells[row]=columns.map((name,c)=>name in record?(record[name]==null?'':String(record[name])):next.cells[row][c]);
+            next.databaseSource={...next.databaseSource!,mode:'update',baseline:{...next.databaseSource!.baseline,[String(record.id)]:Object.fromEntries(columns.map((name,c)=>[name,record[name]??next.cells[row][c]]))}};
+            return next;
+          })});
+        }}/>}
         {connectionSheet && book.sheets.find(s=>s.id===connectionSheet) && <WorkbookDatabaseConnection
           sheet={book.sheets.find(s=>s.id===connectionSheet)!} onClose={()=>setConnectionSheet(null)}
           onIssue={(row,column,message)=>{const index=book.sheets.findIndex(s=>s.id===connectionSheet);setSheetIndex(index);setAnchor({r:row,c:column});setEnd({r:row,c:column});setConnectionSheet(null);setNotice(message);focus(row,column);}}

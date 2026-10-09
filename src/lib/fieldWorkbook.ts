@@ -29,7 +29,7 @@ export type FieldSheet = {
   media?:Record<string,string[]>;
   view?: {freezeRows?:number;freezeColumns?:number;filterColumn?:number;filterText?:string};
   print?: {area?:CellRange;orientation?:'landscape'|'portrait';repeatRows?:number;fit?:'width'|'actual';breakRows?:number[]};
-  databaseSource?: {path:string; loadedAt:string; columns:string[]; part:number; parts:number};
+  databaseSource?: {path:string; loadedAt:string; columns:string[]; part:number; parts:number; mode?:'update'|'insert'; baseline?:Record<string,Record<string,unknown>>};
   connection?: { table: string; mapping: Record<string, number>; headerRow: number; validatedAt?: string; importId?: string; writeMode?: 'insert'; layout?: MappingLayout };
   id: string;
   name: string;
@@ -183,6 +183,7 @@ export function copyWorkbook(book: FieldWorkbook, template = false): FieldWorkbo
   // Copy mapping configuration only, never record identities or prior import state.
   copy.sheets = copy.sheets.map(sheet => ({
     ...sheet,
+    ...(sheet.databaseSource ? {databaseSource:{...sheet.databaseSource,mode:'update' as const,baseline:{}},cells:sheet.cells.map((row,r)=>r?row.map((value,c)=>sheet.cells[0][c]==='id'?'':value):row)} : {}),
     ...(sheet.connection ? {connection: {
       table: sheet.connection.table,
       mapping: {...sheet.connection.mapping},

@@ -85,7 +85,7 @@ export default function WorkbookCellMedia({
           </label>
         )}
         <p className="my-2 text-xs text-slate-500">
-          Attachments are stored in the workbook for offline use. Up to 8 MB per file, 10 per cell
+          Media uploads to the document library and stays cached here for offline use. Excel and CSV exports include secure file links. Up to 8 MB per file, 10 per cell
           and 20 MB per workbook. Download other file types to open them on your device.
         </p>
         {error && (
@@ -119,7 +119,7 @@ export default function WorkbookCellMedia({
                 <span className="min-w-0 flex-1 break-all text-sm">
                   {a.name}
                   <span className="block text-xs text-slate-500">
-                    {(a.size / 1024).toFixed(0)} KB
+                    {(a.size / 1024).toFixed(0)} KB · {a.documentId ? 'Server link ready' : 'Saved offline · upload pending'}
                   </span>
                 </span>
                 <button

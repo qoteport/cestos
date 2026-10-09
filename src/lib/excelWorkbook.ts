@@ -1,3 +1,4 @@
+import {mediaLink} from './workbookMedia';
 import {WORKBOOK_MAX_ROWS,WORKBOOK_MAX_COLS} from './workbookLimits';
 import {calculateSheet} from './workbookFormulas';
 import { typedCellValue, cellNumberFormat } from './workbookCellTypes';
@@ -341,13 +342,17 @@ export async function exportStyledWorkbook(book: FieldWorkbook): Promise<Blob> {
         ws.mergeCells(X.utils.encode_range({ s: { r: m.r, c: m.c }, e: { r: m.er, c: m.ec } }));
   }
   // Native workbook backups retain every attachment. Excel embeds supported images;
-  // other attachments are identified in notes and available in the attachment ZIP.
+  // links point to permission-checked document pages.
   for(const sheet of book.sheets){const ws=original.getWorksheet(sheet.name);if(!ws)continue;
     for(const [key,ids] of Object.entries(sheet.media||{})){const [r,c]=key.split(':').map(Number);const assets=ids.map(id=>book.assets?.[id]).filter((a):a is NonNullable<typeof a>=>!!a);
       const embedded=assets.find(a=>['image/png','image/jpeg','image/gif'].includes(a.mime));
       if(embedded){const imageId=original.addImage({base64:embedded.data,extension:embedded.mime.split('/')[1] as 'png'|'jpeg'|'gif'});ws.addImage(imageId,{tl:{col:c,row:r},ext:{width:Math.max(30,sheet.widths[c]-10),height:Math.max(30,sheet.heights[r]-25)},editAs:'oneCell'});}
       const cell=ws.getCell(r+1,c+1);const old=typeof cell.note==='string'?cell.note:cell.note?.texts?.map(t=>t.text||'').join('')||'';
-      cell.note=[old,`Workbook attachments: ${assets.map(a=>a.name).join(', ')}. Download the attachments ZIP or use the Cestos backup for all original files.`].filter(Boolean).join('\n');
+      const links=assets.map(a=>{if(!a.documentId)throw Error('Upload media before exporting Excel, or download a complete backup for offline use.');return mediaLink(a);});
+      const text=String(cell.text||'');
+      if(links.length===1&&!text)cell.value={text:links[0],hyperlink:links[0]};
+      else if(!(cell.value&&typeof cell.value==='object'&&('formula' in cell.value||'sharedFormula' in cell.value)))cell.value=[text,...links].filter(Boolean).join('\n');
+      cell.note=[old,...assets.map((a,i)=>`${a.name}: ${links[i]}`)].filter(Boolean).join('\n');
     }
   }
   original.calcProperties.fullCalcOnLoad = true;

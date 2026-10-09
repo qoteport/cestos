@@ -1,5 +1,5 @@
 import type { FieldWorkbook, FieldSheet } from './fieldWorkbook';
-export type WorkbookAsset = { id: string; name: string; mime: string; size: number; data: string };
+export type WorkbookAsset = { id: string; name: string; mime: string; size: number; data: string; documentId?: string };
 export type SheetFolder = { id: string; name: string };
 export const FILE_LIMIT = 8 * 1024 * 1024,
   MEDIA_LIMIT = 20 * 1024 * 1024;
@@ -116,6 +116,7 @@ export function validateMedia(book: FieldWorkbook) {
       a.size > FILE_LIMIT ||
       typeof a.mime !== 'string' ||
       (!imageMime(a.mime) && !videoMime(a.mime) && a.mime !== 'application/octet-stream') ||
+      (a.documentId !== undefined && (typeof a.documentId !== 'string' || !/^[0-9a-f-]{36}$/i.test(a.documentId))) ||
       typeof a.data !== 'string' ||
       a.data.length !== Math.ceil(a.size / 3) * 4 ||
       !/^[A-Za-z0-9+/]*={0,2}$/.test(a.data) ||
@@ -149,7 +150,7 @@ export function validateMedia(book: FieldWorkbook) {
 }
 export function changeFolder(book: FieldWorkbook, id: string, name: string): FieldWorkbook {
   const text = name.trim();
-  if (!text || text.length > 60) throw Error('Use a folder name of 1–60 characters.');
+  if (!text || text.length > 60) throw Error('Use a folder name of 1Ã¢â‚¬â€œ60 characters.');
   if (book.folders?.some((f) => f.id !== id && f.name.toLowerCase() === text.toLowerCase()))
     throw Error('A folder with this name already exists.');
   return {
@@ -204,4 +205,19 @@ export async function attachmentArchive(book: FieldWorkbook): Promise<Blob> {
   return new Blob([X.CFB.write(archive, { type: 'array', fileType: 'zip' }) as BlobPart], {
     type: 'application/zip',
   });
+}
+
+export function mediaLink(asset:WorkbookAsset):string {
+ if(!asset.documentId)return '';
+ if(!/^[0-9a-f-]{36}$/i.test(asset.documentId))throw Error('Invalid media document ID.');
+ return `${typeof window==='undefined'?'':window.location.origin}/workbook-media?id=${encodeURIComponent(asset.documentId)}`;
+}
+export function mediaExportSheet(sheet:FieldSheet,assets:Record<string,WorkbookAsset>={}):FieldSheet {
+ const cells=sheet.cells.map(row=>[...row]);
+ for(const [key,ids]of Object.entries(sheet.media||{})){
+  const [r,c]=key.split(':').map(Number);
+  const links=ids.map(id=>{const asset=assets[id];if(!asset?.documentId)throw Error('Media is waiting to upload. Connect to the internet before exporting file links, or save a complete backup.');return mediaLink(asset);});
+  cells[r][c]=[cells[r][c],...links].filter(Boolean).join('\n');
+ }
+ return {...sheet,cells};
 }

@@ -11,7 +11,7 @@ export type HeaderState = {
   busy: boolean;
   onLeave: () => void;
   onRename: (newName: string) => void;
-  onDownload: (format?: 'xlsx' | 'csv' | 'backup' | 'attachments') => void;
+  onDownload: (format?: 'xlsx' | 'csv' | 'backup') => void;
   onSaveDevice: () => void;
   onPrint: () => void;
   onRecover: () => void;
@@ -196,7 +196,6 @@ export default function FieldWorkbookDialog({
                     >
                       Current sheet values (.csv)
                     </button>
-                    <button type="button" className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800" disabled={headerState.busy} onClick={event=>{headerState.onDownload('attachments');event.currentTarget.closest('details')?.removeAttribute('open');}}>Cell attachments (.zip)</button>
                     <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
                     <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                       Tools & Recovery

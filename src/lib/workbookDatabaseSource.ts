@@ -26,7 +26,7 @@ export function databaseSheets(source:DatabaseSource, records:Record<string,unkn
       // Offset-aware timestamps remain exact text; never silently discard timezone information.
       for(let r=1;r<sheet.cells.length;r++)sheet.formats![`${r}:${c}`]={dataType};
     });
-    sheet.databaseSource={path:source.id,loadedAt,columns:[...columns],part:page+1,parts:count};
+    sheet.databaseSource={path:source.id,loadedAt,columns:[...columns],part:page+1,parts:count,mode:'update',baseline:Object.fromEntries(rows.filter(row=>row.id!=null).map(row=>[String(row.id),Object.fromEntries(columns.map(column=>[column,row[column]??null]))]))};
     return sheet;
   });
 }
