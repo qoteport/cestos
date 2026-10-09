@@ -15,8 +15,14 @@ import {
   Calculator,
   Clock,
   Sparkles,
+  Calendar,
+  CalendarDays,
+  ChevronDown,
+  ArrowDown,
+  ArrowRight,
 } from 'lucide-react';
 import { sortSheet, replaceSheetText } from '@/lib/workbookOperations';
+import { autofillRange, type FillMode } from '@/lib/workbookConvenience';
 import type { FieldSheet, CellRange } from '@/lib/fieldWorkbook';
 import SearchableSelect from './SearchableSelect';
 
@@ -37,6 +43,7 @@ export default function WorkbookTools({
   const [replace, setReplace] = useState('');
   const [matchCase, setMatchCase] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
+  const [fillMenuOpen, setFillMenuOpen] = useState(false);
   const printTrigger = useRef<HTMLButtonElement>(null);
   const printDialog = useRef<HTMLDivElement>(null);
 
@@ -106,6 +113,111 @@ export default function WorkbookTools({
           <ArrowUpZA size={14} className="text-slate-500 dark:text-slate-400" />
           <span>Sort Z–A</span>
         </button>
+      </div>
+
+      <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
+
+      {/* Fill Options group */}
+      <div className="relative">
+        <button
+          type="button"
+          className={control}
+          title="Autofill options (series, dates, weekdays, months, years)"
+          onClick={() => setFillMenuOpen(!fillMenuOpen)}
+        >
+          <Sparkles size={14} className="text-emerald-600 dark:text-emerald-400" />
+          <span>Fill Options</span>
+          <ChevronDown size={12} className="text-slate-400" />
+        </button>
+
+        {fillMenuOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setFillMenuOpen(false)} />
+            <div className="absolute left-0 top-full mt-1 z-50 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900 text-xs text-slate-700 dark:text-slate-200">
+              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Autofill Options
+              </div>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                onClick={() => {
+                  setFillMenuOpen(false);
+                  try { onChange((s) => autofillRange(s, selection, 'down', 'series')); } catch (err: any) { onError(err.message); }
+                }}
+              >
+                <Sparkles size={14} className="text-emerald-600 dark:text-emerald-400" />
+                <span>Fill Series / Pattern</span>
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                onClick={() => {
+                  setFillMenuOpen(false);
+                  try { onChange((s) => autofillRange(s, selection, 'down', 'days')); } catch (err: any) { onError(err.message); }
+                }}
+              >
+                <Calendar size={14} className="text-blue-500" />
+                <span>Fill Days</span>
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                onClick={() => {
+                  setFillMenuOpen(false);
+                  try { onChange((s) => autofillRange(s, selection, 'down', 'weekdays')); } catch (err: any) { onError(err.message); }
+                }}
+              >
+                <CalendarDays size={14} className="text-indigo-500" />
+                <span>Fill Weekdays (Skip Weekends)</span>
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                onClick={() => {
+                  setFillMenuOpen(false);
+                  try { onChange((s) => autofillRange(s, selection, 'down', 'months')); } catch (err: any) { onError(err.message); }
+                }}
+              >
+                <Calendar size={14} className="text-purple-500" />
+                <span>Fill Months</span>
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                onClick={() => {
+                  setFillMenuOpen(false);
+                  try { onChange((s) => autofillRange(s, selection, 'down', 'years')); } catch (err: any) { onError(err.message); }
+                }}
+              >
+                <Calendar size={14} className="text-amber-500" />
+                <span>Fill Years</span>
+              </button>
+              <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                onClick={() => {
+                  setFillMenuOpen(false);
+                  try { onChange((s) => autofillRange(s, selection, 'down', 'copy')); } catch (err: any) { onError(err.message); }
+                }}
+              >
+                <ArrowDown size={14} className="text-slate-400" />
+                <span>Fill Down (Copy)</span>
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                onClick={() => {
+                  setFillMenuOpen(false);
+                  try { onChange((s) => autofillRange(s, selection, 'right', 'copy')); } catch (err: any) { onError(err.message); }
+                }}
+              >
+                <ArrowRight size={14} className="text-slate-400" />
+                <span>Fill Right (Copy)</span>
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />

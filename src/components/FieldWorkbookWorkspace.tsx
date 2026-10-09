@@ -31,6 +31,9 @@ import {
   ArrowDown,
   ArrowRight,
   ListPlus,
+  Calendar,
+  CalendarDays,
+  Sparkles,
   Lock,
   Unlock,
   ArrowUpDown,
@@ -2554,28 +2557,64 @@ export default function FieldWorkbookWorkspace({
                 type="button"
                 className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 title="Copy the first selected row down (undo available)"
-                onClick={() => { setGridContextMenu(null); changeSheet((s) => autofillRange(s, selection, 'down')); }}
+                onClick={() => { setGridContextMenu(null); changeSheet((s) => autofillRange(s, selection, 'down', 'copy')); }}
               >
                 <ArrowDown size={14} className="text-slate-500" />
-                Fill down
+                Fill down (copy)
               </button>
               <button
                 type="button"
                 className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 title="Copy the first selected column right (undo available)"
-                onClick={() => { setGridContextMenu(null); changeSheet((s) => autofillRange(s, selection, 'right')); }}
+                onClick={() => { setGridContextMenu(null); changeSheet((s) => autofillRange(s, selection, 'right', 'copy')); }}
               >
                 <ArrowRight size={14} className="text-slate-500" />
-                Fill right
+                Fill right (copy)
               </button>
               <button
                 type="button"
                 className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                title="Extend starting numbers or ISO dates down selection"
-                onClick={() => { setGridContextMenu(null); changeSheet((s) => autofillRange(s, selection, 'down', true)); }}
+                title="Extend starting numbers, dates, or text patterns down selection"
+                onClick={() => { setGridContextMenu(null); changeSheet((s) => autofillRange(s, selection, 'down', 'series')); }}
               >
-                <ListPlus size={14} className="text-slate-500" />
-                Fill series
+                <Sparkles size={14} className="text-emerald-600 dark:text-emerald-400" />
+                Fill series / pattern
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                title="Fill incrementing daily dates down selection"
+                onClick={() => { setGridContextMenu(null); changeSheet((s) => autofillRange(s, selection, 'down', 'days')); }}
+              >
+                <Calendar size={14} className="text-blue-500" />
+                Fill days
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                title="Fill weekdays down selection (skipping Saturday & Sunday)"
+                onClick={() => { setGridContextMenu(null); changeSheet((s) => autofillRange(s, selection, 'down', 'weekdays')); }}
+              >
+                <CalendarDays size={14} className="text-indigo-500" />
+                Fill weekdays (skip weekends)
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                title="Fill incrementing monthly dates down selection"
+                onClick={() => { setGridContextMenu(null); changeSheet((s) => autofillRange(s, selection, 'down', 'months')); }}
+              >
+                <Calendar size={14} className="text-purple-500" />
+                Fill months
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                title="Fill incrementing yearly dates down selection"
+                onClick={() => { setGridContextMenu(null); changeSheet((s) => autofillRange(s, selection, 'down', 'years')); }}
+              >
+                <Calendar size={14} className="text-amber-500" />
+                Fill years
               </button>
 
               {/* Freeze Rows & Columns Section */}
