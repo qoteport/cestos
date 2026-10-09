@@ -209,7 +209,7 @@ export function computeSmartSeriesValue(
   second: string | undefined,
   offset: number,
   mode: FillMode = 'auto'
-): string {
+): string | null {
   if (mode === 'copy') return first;
 
   const numeric = /^-?\d+(\.\d+)?$/;

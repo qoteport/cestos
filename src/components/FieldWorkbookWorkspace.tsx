@@ -209,7 +209,7 @@ const GridCell = memo(function GridCell({
         data-cell={`${r}:${c}`}
         aria-label={`${columnName(c)}${r + 1}`}
         aria-selected={selected}
-        list={value.startsWith('=') ? undefined : list}
+        list={value.trim() !== '' || value.startsWith('=') ? undefined : list}
         type={active && editing && picker !== 'text' && compatible ? picker : 'text'}
         step={kind === 'time' || kind === 'datetime' ? 1 : undefined}
         inputMode={['number','currency','percent'].includes(kind || '') ? 'decimal' : undefined}
@@ -2212,7 +2212,7 @@ export default function FieldWorkbookWorkspace({
                             c <= (fillPreview || selection).ec
                           }
                           list={
-                            r > 0 && suggestions[c]?.length
+                            r > 0 && !value?.trim() && suggestions[c]?.length
                               ? `wb-suggest-${sheet.id}-${c}`
                               : undefined
                           }
