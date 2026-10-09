@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useEffect, useState } from 'react';
 import { loadWorkbookCatalog } from '@/lib/workbookCatalog';
 import { apiFetch } from '@/lib/api';
@@ -12,7 +12,6 @@ import {
   Plus,
   RefreshCw,
   Search,
-  Link2,
   Lock,
   Unlock,
   X,
@@ -21,7 +20,7 @@ import {
 } from 'lucide-react';
 
 const fresh = { cacheResponse: false, cacheOfflineRead: false, memoryCache: false, queueWhenOffline: false };
-const control = 'rounded-lg border px-3 py-1.5 text-xs font-medium disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors';
+const control = 'rounded-lg border px-2.5 py-1.5 text-xs font-medium disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors';
 
 export default function WorkbookDatabaseWorkspace({ onOpen }: { onOpen: (book: FieldWorkbook) => void }) {
   const [sources, setSources] = useState<WorkspaceSource[]>([]);
@@ -86,7 +85,7 @@ export default function WorkbookDatabaseWorkspace({ onOpen }: { onOpen: (book: F
             Database tables
           </h3>
           <p className="mt-0.5 text-xs text-slate-500">
-            Tables available through your account. Sheet edits are drafts until you review and confirm each record.
+            {sources.length} tables · Online database connections together. Sheet edits are drafts until you review and confirm each record.
           </p>
         </div>
         <div className="flex min-w-0 flex-1 items-center gap-2 sm:max-w-xl">
@@ -94,7 +93,7 @@ export default function WorkbookDatabaseWorkspace({ onOpen }: { onOpen: (book: F
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               aria-label="Search database tables"
-              placeholder="Search tables..."
+              placeholder="Search tables in this catalog…"
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="w-full rounded-lg border bg-transparent pl-9 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20"
@@ -112,7 +111,7 @@ export default function WorkbookDatabaseWorkspace({ onOpen }: { onOpen: (book: F
         </div>
       </header>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-slate-50/60 px-4 py-3 dark:bg-slate-950/30">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-slate-50/60 px-4 py-2.5 dark:bg-slate-950/30">
         <label className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
           <input
             type="checkbox"
@@ -123,20 +122,20 @@ export default function WorkbookDatabaseWorkspace({ onOpen }: { onOpen: (book: F
           Also open accessible related tables (all visible records)
         </label>
         <span className="text-xs text-slate-500 font-medium">
-          {sources.length} table{sources.length === 1 ? '' : 's'} connected
+          {filteredSources.length} of {sources.length} tables
         </span>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="p-0">
         {notice && (
-          <div role="status" className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
+          <div role="status" className="m-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
             <CheckCircle2 size={16} className="shrink-0 text-emerald-600" />
             {notice}
           </div>
         )}
 
         {error && (
-          <div role="alert" className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
+          <div role="alert" className="m-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
             <AlertCircle size={16} className="shrink-0 text-red-600" />
             {error}
           </div>
@@ -161,66 +160,73 @@ export default function WorkbookDatabaseWorkspace({ onOpen }: { onOpen: (book: F
           </div>
         )}
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {filteredSources.map(source => (
-            <div
-              key={source.id}
-              className="flex flex-col justify-between rounded-xl border bg-white p-4 transition-all hover:border-slate-300 hover:shadow-sm dark:bg-slate-900 dark:border-slate-800 dark:hover:border-slate-700"
-            >
-              <div>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <TableProperties size={18} className="shrink-0 text-emerald-600" />
-                    <h4 className="font-semibold text-sm truncate text-slate-900 dark:text-slate-100">{source.name}</h4>
-                  </div>
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0 ${
-                      source.update
-                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-                        : 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
-                    }`}
+        {filteredSources.length > 0 && (
+          <div className="divide-y border-b dark:border-slate-800">
+            {filteredSources.map(source => (
+              <div
+                key={source.id}
+                className="group flex flex-wrap items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+              >
+                <TableProperties size={19} className="shrink-0 text-emerald-600" />
+
+                <div className="min-w-0 flex-1">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    title={source.name}
+                    className="text-left font-medium text-sm text-slate-900 dark:text-slate-100 hover:text-emerald-600 dark:hover:text-emerald-400 truncate block"
+                    onClick={() => void open(source)}
                   >
-                    {source.update ? <Unlock size={10} /> : <Lock size={10} />}
+                    {source.name}
+                  </button>
+                  <span className="block text-[11px] text-slate-500 mt-0.5">
+                    {source.columns.length} columns · {source.relations?.length || 0} relations ·{' '}
                     {source.update ? 'Editable' : 'View only'}
                   </span>
                 </div>
 
-                <div className="my-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-                  <span>{source.columns.length} columns</span>
-                  <span>•</span>
-                  <span className="flex items-center gap-1">
-                    <Link2 size={12} />
-                    {source.relations?.length || 0} relation{source.relations?.length === 1 ? '' : 's'}
-                  </span>
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold shrink-0 ${
+                    source.update
+                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+                      : 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
+                  }`}
+                >
+                  {source.update ? <Unlock size={10} /> : <Lock size={10} />}
+                  {source.update ? 'Editable' : 'View only'}
+                </span>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition-colors flex items-center gap-1.5 disabled:opacity-40"
+                    disabled={busy}
+                    onClick={() => void open(source)}
+                  >
+                    <FileSpreadsheet size={14} />
+                    View
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`${control} flex items-center gap-1`}
+                    disabled={busy || !source.create}
+                    title={!source.create ? 'No supported create action for this account' : undefined}
+                    onClick={() => setCreating(source)}
+                  >
+                    <Plus size={14} />
+                    New record
+                  </button>
                 </div>
               </div>
-
-              <div className="flex items-center gap-2 pt-3 border-t border-slate-100 dark:border-slate-800/60">
-                <button
-                  type="button"
-                  className="flex-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40"
-                  disabled={busy}
-                  onClick={() => void open(source)}
-                >
-                  <FileSpreadsheet size={14} />
-                  View as sheets
-                </button>
-
-                <button
-                  type="button"
-                  className={`${control} flex items-center gap-1`}
-                  disabled={busy || !source.create}
-                  title={!source.create ? 'No supported create action for this account' : undefined}
-                  onClick={() => setCreating(source)}
-                >
-                  <Plus size={14} />
-                  New record
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      <footer className="flex items-center justify-between p-3 text-xs text-slate-500">
+        <span>{filteredSources.length} tables available</span>
+      </footer>
 
       {creating && (
         <NewDatabaseRecord
