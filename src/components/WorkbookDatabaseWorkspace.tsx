@@ -85,7 +85,7 @@ export default function WorkbookDatabaseWorkspace({ onOpen }: { onOpen: (book: F
             Database tables
           </h3>
           <p className="mt-0.5 text-xs text-slate-500">
-            {sources.length} tables · Online database connections together. Sheet edits are drafts until you review and confirm each record.
+            {sources.length} table{sources.length === 1 ? '' : 's'}
           </p>
         </div>
         <div className="flex min-w-0 flex-1 items-center gap-2 sm:max-w-xl">

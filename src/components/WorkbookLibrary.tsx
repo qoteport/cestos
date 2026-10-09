@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Folder,
@@ -406,7 +406,7 @@ export default function WorkbookLibrary({
       <header className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
         <div>
           <h3 className="font-semibold">Saved workbooks & templates</h3>
-          <p className="text-xs text-slate-500">{rows.length} files · Online and device copies together</p>
+          <p className="text-xs text-slate-500">{rows.length} file{rows.length === 1 ? '' : 's'}</p>
         </div>
         <div className="flex min-w-0 flex-1 items-center gap-2 sm:max-w-xl">
           <input
