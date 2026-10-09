@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api';
@@ -103,7 +103,7 @@ export default function EquipmentMaintenanceScheduleModal({ assets, employees, p
             disabled={busy}
             className="flex-1 sm:flex-none rounded-xl bg-orange-600 px-4 py-2 font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition text-xs sm:text-sm shadow-xs"
           >
-            {busy ? 'Creating schedule…' : 'Create & dispatch maintenance schedule'}
+            {busy ? 'Creating schedule...' : 'Create & dispatch maintenance schedule'}
           </button>
         </div>
       }

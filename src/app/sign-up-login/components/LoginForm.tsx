@@ -1,4 +1,4 @@
- 'use client';
+﻿ 'use client';
 import {loginDestination} from '@/lib/loginDestination';
 import {useEffect,useState,FormEvent} from 'react'
 ;import {Eye,EyeOff,LogIn,Loader2} from 'lucide-react'
@@ -195,7 +195,7 @@ export default function LoginForm() {
 
           <button disabled={busy} className="btn-primary w-full justify-center py-3 rounded-full font-bold shadow-md hover:shadow-lg transition-all">
             {busy ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />}
-            {busy ? 'Signing in…' : token ? 'Save password' : 'Sign in'}
+            {busy ? 'Signing in...' : token ? 'Save password' : 'Sign in'}
           </button>
         </form>
         <p className="text-xs text-muted-foreground mt-6">

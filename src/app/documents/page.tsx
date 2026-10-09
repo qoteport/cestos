@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
 import {
@@ -614,7 +614,7 @@ export default function DocumentsPage() {
               </div>
             </div>
             {textLoading ? (
-              <p role="status">Loading text…</p>
+              <p role="status">Loading text...</p>
             ) : text.length ? (
               <div className="space-y-5">
                 {text.map((chunk, i) => (
@@ -773,7 +773,7 @@ function UploadModal({
             Cancel
           </button>
           <button disabled={busy || !files.length} className="btn-primary">
-            {busy ? 'Uploading…' : 'Upload documents'}
+            {busy ? 'Uploading...' : 'Upload documents'}
           </button>
         </div>
       </form>
@@ -920,7 +920,7 @@ function ManageModal({
             Cancel
           </button>
           <button className="btn-primary" disabled={busy}>
-            {busy ? 'Saving…' : 'Save changes'}
+            {busy ? 'Saving...' : 'Save changes'}
           </button>
         </div>
       </form>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { apiFetch, ApiError } from '@/lib/api';
 import type { FieldSheet } from '@/lib/fieldWorkbook';
@@ -132,7 +132,7 @@ export default function WorkbookMappingAssistant({
         disabled={busy || !online || !sample.value?.cells.length}
         onClick={() => void ask()}
       >
-        {busy ? 'Analysing sheet…' : 'Ask mapping assistant'}
+        {busy ? 'Analysing sheet...' : 'Ask mapping assistant'}
       </button>
       {!online && (
         <p className="my-2 text-sm">

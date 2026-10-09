@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { ArrowLeft, ArrowRight, Building2, FileText, Loader2, ShoppingCart, Upload, X, Zap, Sparkles, CheckCircle2, AlertTriangle } from 'lucide-react';
@@ -259,7 +259,7 @@ export default function FinanceCommandCenterModal({ onClose, onDraftReady, allow
                       <Loader2 className="h-12 w-12 animate-spin text-violet-600" />
                       <Zap size={18} className="absolute fill-amber-500 text-amber-500 animate-pulse" />
                     </div>
-                    <p className="font-bold text-foreground text-base">Reading document & parsing fields…</p>
+                    <p className="font-bold text-foreground text-base">Reading document & parsing fields...</p>
                     <p className="mt-1 text-xs text-muted-foreground max-w-sm mx-auto">
                       Analyzing text structure and populating values. All extracted fields will remain fully editable in the draft form.
                     </p>

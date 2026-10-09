@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useEffect, useState } from 'react';
 import { apiFetch, ApiError } from '@/lib/api';
 import type { FieldWorkbook } from '@/lib/fieldWorkbook';
@@ -152,7 +152,7 @@ export default function WorkbookShareDialog({
             disabled={busy || days < 1 || days > 90 || (edit && !emails.trim())}
             onClick={() => void create()}
           >
-            {busy ? 'Creating…' : 'Create share link'}
+            {busy ? 'Creating...' : 'Create share link'}
           </button>
           <button type="button" className="rounded border px-3 py-1" onClick={onClose}>
             Close

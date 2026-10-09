@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
@@ -73,7 +73,7 @@ export default function FieldConsumables({ projectId, logDate, onBusyChange, onD
     <div className="flex items-center justify-between gap-2"><h4 className="font-bold">Consumables used — {logDate || 'Select a date'}</h4>
       <button type="button" className="btn-secondary text-xs" disabled={busy || loading} onClick={() => setVersion(v => v + 1)}>Refresh</button></div>
     {error && <p role="alert" className="text-destructive whitespace-pre-wrap">{error}</p>}
-    {loading ? <p role="status">Loading consumables…</p> : rows.length ? <div className="overflow-x-auto"><table className="w-full text-xs"><thead><tr className="text-left"><th>Item</th><th>Quantity</th><th>Issue</th><th>Status</th></tr></thead><tbody>
+    {loading ? <p role="status">Loading consumables...</p> : rows.length ? <div className="overflow-x-auto"><table className="w-full text-xs"><thead><tr className="text-left"><th>Item</th><th>Quantity</th><th>Issue</th><th>Status</th></tr></thead><tbody>
       {rows.map(row => <tr key={row.id}><td className="py-2">{row.item_name}</td><td>{row.quantity} {row.unit || row.unit_of_measure || 'PCS'}</td><td>{row.document_number}</td><td>{row.status === 'DRAFT' ? 'Awaiting approval' : row.status}</td></tr>)}
     </tbody></table></div> : <p className="text-muted-foreground">No consumables logged for this date.</p>}
     <fieldset disabled={busy || loading || !projectId || !logDate} className="space-y-3">
@@ -144,7 +144,7 @@ export default function FieldConsumables({ projectId, logDate, onBusyChange, onD
         <button type="button" className="btn-secondary" disabled={lines.length === 1} onClick={() => { setLines(old => old.filter((_, i) => i !== index)); setSubmissionId(''); }} aria-label={`Remove consumable ${index + 1}`}>Remove</button>
       </div>)}
       <div className="flex gap-2"><button type="button" className="btn-secondary" onClick={() => { setLines(old => [...old, { item_id: '', quantity: '1' }]); setSubmissionId(''); }}>Add item</button>
-        <button type="button" className="btn-primary" onClick={save}>{busy ? 'Saving…' : 'Save consumables'}</button></div>
+        <button type="button" className="btn-primary" onClick={save}>{busy ? 'Saving...' : 'Save consumables'}</button></div>
     </fieldset>
   </section>;
 }

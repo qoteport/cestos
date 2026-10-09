@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useApiDataRefresh } from '@/lib/apiDataRefresh';
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
@@ -549,7 +549,7 @@ export default function FieldPurchaseOrdersPanel({
                   Cancel
                 </button>
                 <button type="submit" disabled={busy} className="rounded-xl bg-orange-600 px-5 py-2 text-xs font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto shadow-xs">
-                  {busy ? 'Submitting…' : 'Submit for Review'}
+                  {busy ? 'Submitting...' : 'Submit for Review'}
                 </button>
               </div>
             </div>
@@ -920,7 +920,7 @@ export default function FieldPurchaseOrdersPanel({
                 Cancel
               </button>
               <button type="submit" disabled={receivingBusy || selectedReceiptItemIds.length === 0 || selectedReceiptItemIds.some((id) => Number(receiptQuantities[id]) <= 0)} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 transition disabled:opacity-50 flex-1 sm:flex-initial">
-                {receivingBusy ? 'Saving…' : <><PackageCheck size={14} />Save Goods Receipt</>}
+                {receivingBusy ? 'Saving...' : <><PackageCheck size={14} />Save Goods Receipt</>}
               </button>
             </div>
           </form>

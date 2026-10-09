@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api';
@@ -122,8 +122,8 @@ function MaintenanceAssessmentReportWizardForm({ saveImportFiles,
     label: [employee.first_name, employee.last_name].filter(Boolean).join(' ') || employee.name || 'Employee',
     sublabel: employee.position_name || employee.job_title || employee.employee_number || '',
   }));
-  const projectOptions = [{ value: '__CUSTOM__', label: 'Enter a custom project nameâ€¦' }, ...projects.map((project) => ({ value: String(project.id), label: project.name || project.project_name || project.project_number }))];
-  const preparerOptions = [{ value: '__CUSTOM__', label: 'Enter a custom preparerâ€¦' }, ...employeeOptions];
+  const projectOptions = [{ value: '__CUSTOM__', label: 'Enter a custom project name...' }, ...projects.map((project) => ({ value: String(project.id), label: project.name || project.project_name || project.project_number }))];
+  const preparerOptions = [{ value: '__CUSTOM__', label: 'Enter a custom preparer...' }, ...employeeOptions];
   const sectionHeadingClass = mode === 'FREE_FLOW'
     ? 'bg-[#184877] px-2 py-1 text-center text-[11px] font-bold text-white'
     : 'border-b pb-2 text-sm font-bold';
@@ -283,7 +283,7 @@ function MaintenanceAssessmentReportWizardForm({ saveImportFiles,
                     <button type="button" className="text-primary underline" onClick={() => { patchRow(sectionKey, index, 'asset_id', ''); patchRow(sectionKey, index, column.key, ''); }}>Choose registered equipment</button>
                   </div> : <SearchableSelect
                     className={mode === 'FREE_FLOW' ? 'rounded-none' : ''}
-                    options={[{ value: '__CUSTOM__', label: `Enter custom ${column.label.toLowerCase()}â€¦` }, ...assetOptions]}
+                    options={[{ value: '__CUSTOM__', label: `Enter custom ${column.label.toLowerCase()}...` }, ...assetOptions]}
                     value={row.asset_id || ''}
                     onChange={(value) => {
                       if (value === '__CUSTOM__') { patchRow(sectionKey, index, 'asset_id', '__CUSTOM__'); patchRow(sectionKey, index, column.key, ''); return; }
@@ -396,7 +396,7 @@ function MaintenanceAssessmentReportWizardForm({ saveImportFiles,
 
   const footer = <div className="flex w-full items-center justify-between gap-2">
     {mode === 'ASSISTED' && step > 0 ? <button type="button" className="btn-secondary rounded-xl text-xs" onClick={() => setStep(step - 1)}>Back</button> : <span />}
-    <div className="flex items-center gap-2">{mode === 'ASSISTED' && step < steps.length - 1 && <button type="button" className="btn-primary rounded-xl text-xs" onClick={() => setStep(step + 1)}>Next</button>}<button type="button" className="btn-primary rounded-xl text-xs" onClick={() => void save()} disabled={saving}>{saving ? 'Savingâ€¦' : record?.id ? 'Save changes' : 'Save assessment'}</button></div>
+    <div className="flex items-center gap-2">{mode === 'ASSISTED' && step < steps.length - 1 && <button type="button" className="btn-primary rounded-xl text-xs" onClick={() => setStep(step + 1)}>Next</button>}<button type="button" className="btn-primary rounded-xl text-xs" onClick={() => void save()} disabled={saving}>{saving ? 'Saving...' : record?.id ? 'Save changes' : 'Save assessment'}</button></div>
   </div>;
 
   return <Modal title={`${record?.id ? 'Edit' : 'New'} Maintenance Assessment Report`} onClose={onClose} className="sm:!h-[90vh] sm:!max-h-[90vh] sm:!max-w-6xl" footer={footer}>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import WorkCompletionDetails from './WorkCompletionDetails';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -930,12 +930,12 @@ const assetEditOp = {
                 ],
                 [
                   'Fuel logged',
-                  metrics.loading ? '…' : metrics.error ? '—' : (metrics.data?.fuel_litres ?? 0),
+                  metrics.loading ? '...' : metrics.error ? '—' : (metrics.data?.fuel_litres ?? 0),
                   'Litres · all recorded logs',
                 ],
                 [
                   'Open maintenance',
-                  metrics.loading ? '…' : metrics.error ? '—' : activeMaintenance,
+                  metrics.loading ? '...' : metrics.error ? '—' : activeMaintenance,
                   'Open or in progress',
                 ],
                 [
@@ -1939,7 +1939,7 @@ const assetEditOp = {
                         Cancel
                       </button>
                       <button disabled={subSubmitting} className="btn-primary text-xs">
-                        {subSubmitting ? 'Saving Sub-Entry…' : 'Save Dip Reading'}
+                        {subSubmitting ? 'Saving Sub-Entry...' : 'Save Dip Reading'}
                       </button>
                     </div>
                   </form>
@@ -2256,7 +2256,7 @@ const assetEditOp = {
                       Cancel
                     </button>
                     <button disabled={logFileBusy} className="btn-primary text-xs">
-                      {logFileBusy ? 'Uploading…' : 'Upload'}
+                      {logFileBusy ? 'Uploading...' : 'Upload'}
                     </button>
                   </div>
                 </form>

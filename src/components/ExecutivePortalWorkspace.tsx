@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import IncidentDetailModal from './IncidentDetailModal';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import SearchableSelect from './SearchableSelect';
@@ -1762,7 +1762,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                               dataKey="name"
                               tick={{ fontSize: 10 }}
                               width={110}
-                              tickFormatter={(v) => (String(v).length > 18 ? String(v).slice(0, 16) + '…' : String(v))}
+                              tickFormatter={(v) => (String(v).length > 18 ? String(v).slice(0, 16) + '...' : String(v))}
                             />
                             <Tooltip formatter={(val: any) => [`$${Number(val).toLocaleString()}`, 'Total Cost']} />
                             <Bar dataKey="totalCost" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
@@ -1790,7 +1790,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                               dataKey="name"
                               tick={{ fontSize: 10 }}
                               width={110}
-                              tickFormatter={(v) => (String(v).length > 18 ? String(v).slice(0, 16) + '…' : String(v))}
+                              tickFormatter={(v) => (String(v).length > 18 ? String(v).slice(0, 16) + '...' : String(v))}
                             />
                             <Tooltip formatter={(val: any) => [`${Number(val)} times`, 'Purchase Frequency']} />
                             <Bar dataKey="frequency" fill="#10b981" radius={[0, 4, 4, 0]} />
@@ -1818,7 +1818,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                               dataKey="vendor"
                               tick={{ fontSize: 10 }}
                               width={110}
-                              tickFormatter={(v) => (String(v).length > 18 ? String(v).slice(0, 16) + '…' : String(v))}
+                              tickFormatter={(v) => (String(v).length > 18 ? String(v).slice(0, 16) + '...' : String(v))}
                             />
                             <Tooltip formatter={(val: any) => [`$${Number(val).toLocaleString()}`, 'Vendor Spend']} />
                             <Bar dataKey="totalCost" fill="#f59e0b" radius={[0, 4, 4, 0]} />
@@ -2434,7 +2434,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                                   <PackageCheck size={14} />
                                 </button>}
                                 {String(po.status).toUpperCase() === 'WAITING_APPROVAL' && <button type="button" disabled={!!approvingPoId} onClick={() => void approvePurchaseOrder(po)} className="px-2 py-1 rounded-lg bg-emerald-600 text-white font-bold text-[11px] hover:bg-emerald-700 disabled:opacity-50" title="Approve purchase order">
-                                  <CheckCircle2 size={12} className="inline mr-1" />{approvingPoId === String(po.id) ? 'Approving…' : 'Approve'}
+                                  <CheckCircle2 size={12} className="inline mr-1" />{approvingPoId === String(po.id) ? 'Approving...' : 'Approve'}
                                 </button>}
                                 </div>
                               </td>
@@ -2931,7 +2931,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
                 )}
                 {String(selectedPO.status).toUpperCase() === 'WAITING_APPROVAL' && (
                   <button type="button" disabled={!!approvingPoId} onClick={() => void approvePurchaseOrder(selectedPO)} className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 disabled:opacity-50">
-                    <CheckCircle2 size={14} className="inline mr-1.5" />{approvingPoId === String(selectedPO.id) ? 'Approving…' : 'Approve Purchase Order'}
+                    <CheckCircle2 size={14} className="inline mr-1.5" />{approvingPoId === String(selectedPO.id) ? 'Approving...' : 'Approve Purchase Order'}
                   </button>
                 )}
                 <button
@@ -3023,7 +3023,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
               </div>
               <div className="flex justify-end gap-2 border-t border-slate-200 dark:border-slate-800 pt-3">
                 <button type="button" onClick={() => setEditingPO(null)} className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold">Cancel</button>
-                <button type="submit" disabled={poActionBusy} className="px-5 py-2 bg-indigo-600 text-white font-bold rounded-xl text-xs hover:bg-indigo-700 disabled:opacity-50">{poActionBusy ? 'Saving…' : 'Save changes'}</button>
+                <button type="submit" disabled={poActionBusy} className="px-5 py-2 bg-indigo-600 text-white font-bold rounded-xl text-xs hover:bg-indigo-700 disabled:opacity-50">{poActionBusy ? 'Saving...' : 'Save changes'}</button>
               </div>
             </form>
           </div>
@@ -3089,7 +3089,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
               })()}
               <div className="flex justify-end gap-2 border-t border-slate-200 dark:border-slate-800 pt-3">
                 <button type="button" onClick={() => setReceivingPO(null)} className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold">Cancel</button>
-                <button type="submit" disabled={poActionBusy || selectedReceiptItemIds.length === 0 || selectedReceiptItemIds.every((itemId) => !(Number(receiptQuantities[itemId]) > 0))} className="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 disabled:opacity-50">{poActionBusy ? 'Saving…' : selectedReceiptItemIds.length ? `Record receipt for ${selectedReceiptItemIds.length} line${selectedReceiptItemIds.length === 1 ? '' : 's'}` : 'Select items to receive'}</button>
+                <button type="submit" disabled={poActionBusy || selectedReceiptItemIds.length === 0 || selectedReceiptItemIds.every((itemId) => !(Number(receiptQuantities[itemId]) > 0))} className="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 disabled:opacity-50">{poActionBusy ? 'Saving...' : selectedReceiptItemIds.length ? `Record receipt for ${selectedReceiptItemIds.length} line${selectedReceiptItemIds.length === 1 ? '' : 's'}` : 'Select items to receive'}</button>
               </div>
             </form>
           </div>

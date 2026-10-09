@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -553,7 +553,7 @@ function ResourceList({ resource, readOnly }: { resource: string; readOnly?: boo
                   className="input-field max-w-lg"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder={'Search ' + label.toLowerCase() + '…'}
+                  placeholder={'Search ' + label.toLowerCase() + '...'}
                 />
                 <button className="btn-secondary">
                   <Search size={16} />
@@ -991,7 +991,7 @@ function ResourceList({ resource, readOnly }: { resource: string; readOnly?: boo
                 </p>
               )}
               <button disabled={busy} className="btn-primary">
-                {busy ? 'Processing…' : title(pending)}
+                {busy ? 'Processing...' : title(pending)}
               </button>
             </form>
           )}

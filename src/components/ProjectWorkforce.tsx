@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
@@ -165,7 +165,7 @@ function AssignSupervisorModal({
             <input
               type="text"
               className="input-field text-xs pl-8 py-1.5"
-              placeholder="Search team members…"
+              placeholder="Search team members..."
               value={empSearch}
               onChange={(e) => setEmpSearch(e.target.value)}
             />
@@ -217,7 +217,7 @@ function AssignSupervisorModal({
             className="btn-primary text-xs"
             disabled={busy || !auth.can('employees.assign') || !selectedEmpIds.length}
           >
-            {busy ? 'Assigning…' : `Assign supervisor to ${selectedEmpIds.length} employee${selectedEmpIds.length !== 1 ? 's' : ''}`}
+            {busy ? 'Assigning...' : `Assign supervisor to ${selectedEmpIds.length} employee${selectedEmpIds.length !== 1 ? 's' : ''}`}
           </button>
         </div>
       </form>
@@ -437,7 +437,7 @@ export function TransferEmployeeModal({
               className="btn-primary text-xs"
               disabled={busy || !permitted || !destination || destination === current?.project_id}
             >
-              {busy ? 'Saving…' : current ? 'Transfer employee' : 'Assign employee'}
+              {busy ? 'Saving...' : current ? 'Transfer employee' : 'Assign employee'}
             </button>
           </div>
         </form>
@@ -606,8 +606,8 @@ export default function ProjectWorkforce({
                   Transfer to another project
                 </button>
               )}
-              {auth.can('employees.assign') && hasDirectReports && <button type="button" className="btn-secondary text-xs inline-flex items-center gap-1" disabled={inspectingEmployeeId === String(e.id)} onClick={() => void inspectSupervisorRemoval(e)}><ShieldOff size={13} />{inspectingEmployeeId === String(e.id) ? 'Loading…' : 'Remove as supervisor'}</button>}
-              {auth.can('employees.assign') && <button type="button" className="btn-secondary text-xs inline-flex items-center gap-1 text-red-700" disabled={inspectingEmployeeId === String(e.id)} onClick={() => void inspectAssignmentRemoval(e)}><UserMinus size={13} />{inspectingEmployeeId === String(e.id) ? 'Loading…' : 'Remove from project'}</button>}
+              {auth.can('employees.assign') && hasDirectReports && <button type="button" className="btn-secondary text-xs inline-flex items-center gap-1" disabled={inspectingEmployeeId === String(e.id)} onClick={() => void inspectSupervisorRemoval(e)}><ShieldOff size={13} />{inspectingEmployeeId === String(e.id) ? 'Loading...' : 'Remove as supervisor'}</button>}
+              {auth.can('employees.assign') && <button type="button" className="btn-secondary text-xs inline-flex items-center gap-1 text-red-700" disabled={inspectingEmployeeId === String(e.id)} onClick={() => void inspectAssignmentRemoval(e)}><UserMinus size={13} />{inspectingEmployeeId === String(e.id) ? 'Loading...' : 'Remove from project'}</button>}
             </div>
           </div>
         );
@@ -625,7 +625,7 @@ export default function ProjectWorkforce({
         <div className="space-y-4">
           <p className="text-sm text-slate-700">This will end <b>{display(assignmentToRemove.employee)}</b>’s active assignment to this project effective today. Their employee record and assignment history will remain available.</p>
           {removalError && <p role="alert" className="border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{removalError}</p>}
-          <div className="flex justify-end gap-2"><button type="button" disabled={removalBusy} className="btn-secondary text-xs" onClick={() => { setAssignmentToRemove(null); setRemovalError(''); }}>Cancel</button><button type="button" disabled={removalBusy} className="inline-flex items-center gap-1 bg-red-700 px-3 py-2 text-xs font-bold text-white hover:bg-red-800 disabled:opacity-50" onClick={() => void confirmAssignmentRemoval()}><UserMinus size={14} />{removalBusy ? 'Removing…' : 'Remove from project'}</button></div>
+          <div className="flex justify-end gap-2"><button type="button" disabled={removalBusy} className="btn-secondary text-xs" onClick={() => { setAssignmentToRemove(null); setRemovalError(''); }}>Cancel</button><button type="button" disabled={removalBusy} className="inline-flex items-center gap-1 bg-red-700 px-3 py-2 text-xs font-bold text-white hover:bg-red-800 disabled:opacity-50" onClick={() => void confirmAssignmentRemoval()}><UserMinus size={14} />{removalBusy ? 'Removing...' : 'Remove from project'}</button></div>
         </div>
       </Modal>}
 
@@ -633,7 +633,7 @@ export default function ProjectWorkforce({
         <div className="space-y-4">
           {supervisorToRemove.reports.length ? <><p className="text-sm text-slate-700">This clears <b>{display(supervisorToRemove.employee)}</b> as the designated supervisor for these active project assignments. Their own project assignment and employee profile will remain unchanged.</p><div className="max-h-64 divide-y overflow-y-auto border border-slate-200">{supervisorToRemove.reports.map((assignment) => { const member = employees.find((item) => String(item.id) === String(assignment.employee_id)); return <div key={assignment.id} className="px-3 py-2 text-sm"><span className="font-semibold">{member ? display(member) : assignment.employee_name || 'Team member'}</span><span className="ml-2 text-xs text-slate-500">{assignment.assignment_number || ''}</span></div>; })}</div></> : <p className="text-sm text-slate-700">{display(supervisorToRemove.employee)} has no active project assignments currently designated to them as supervisor.</p>}
           {removalError && <p role="alert" className="border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{removalError}</p>}
-          <div className="flex justify-end gap-2"><button type="button" disabled={removalBusy} className="btn-secondary text-xs" onClick={() => { setSupervisorToRemove(null); setRemovalError(''); }}>Close</button>{supervisorToRemove.reports.length > 0 && <button type="button" disabled={removalBusy} className="inline-flex items-center gap-1 bg-red-700 px-3 py-2 text-xs font-bold text-white hover:bg-red-800 disabled:opacity-50" onClick={() => void confirmSupervisorRemoval()}><ShieldOff size={14} />{removalBusy ? 'Removing…' : 'Remove supervisor designation'}</button>}</div>
+          <div className="flex justify-end gap-2"><button type="button" disabled={removalBusy} className="btn-secondary text-xs" onClick={() => { setSupervisorToRemove(null); setRemovalError(''); }}>Close</button>{supervisorToRemove.reports.length > 0 && <button type="button" disabled={removalBusy} className="inline-flex items-center gap-1 bg-red-700 px-3 py-2 text-xs font-bold text-white hover:bg-red-800 disabled:opacity-50" onClick={() => void confirmSupervisorRemoval()}><ShieldOff size={14} />{removalBusy ? 'Removing...' : 'Remove supervisor designation'}</button>}</div>
         </div>
       </Modal>}
 
@@ -643,7 +643,7 @@ export default function ProjectWorkforce({
           <input
             aria-label="Search employees"
             className="input-field mb-4"
-            placeholder="Search employees…"
+            placeholder="Search employees..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />

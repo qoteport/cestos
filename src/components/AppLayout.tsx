@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
@@ -74,7 +74,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <AppLogo size={80} className="animate-pulse" />
           <div className="flex items-center gap-2.5 text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            <span>Restoring your workspace…</span>
+            <span>Restoring your workspace...</span>
           </div>
         </div>
       </main>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useRef, useState } from 'react';
 import { apiFetch } from '@/lib/api';
@@ -20,12 +20,12 @@ function EquipmentRow({ data, setData, assets, mode }: { data: any; setData: (va
   const [customStatus, setCustomStatus] = useState(Boolean(data.status && !statusOptions.includes(data.status)));
   const [customPriority, setCustomPriority] = useState(Boolean(data.priority && !priorityOptions.includes(data.priority)));
   const set = (key: string, value: any) => setData((old: any) => ({ ...old, [key]: value }));
-  const assetOptions = [{ value: '__CUSTOM__', label: 'Enter a custom equipment name…' }, ...assets.map((a) => ({ value: String(a.id), label: a.name || a.asset_name || a.asset_number || 'Equipment', sublabel: a.asset_number || '' }))];
+  const assetOptions = [{ value: '__CUSTOM__', label: 'Enter a custom equipment name...' }, ...assets.map((a) => ({ value: String(a.id), label: a.name || a.asset_name || a.asset_number || 'Equipment', sublabel: a.asset_number || '' }))];
   const input = (key: string, label: string) => <label key={key} className="block space-y-1.5"><span className="block text-xs font-semibold text-slate-700">{label}{key === 'equipment' ? ' *' : ''}</span>{['open_defects', 'action_required', 'remarks'].includes(key) ? <textarea className={`input-field min-h-24 w-full border-slate-300 focus-visible:ring-2 focus-visible:ring-[#184877] ${mode === 'FREE_FLOW' ? 'rounded-none' : 'rounded-xl'}`} value={data[key] || ''} onChange={(e) => set(key, e.target.value)} /> : <input className={`input-field w-full border-slate-300 focus-visible:ring-2 focus-visible:ring-[#184877] ${mode === 'FREE_FLOW' ? 'rounded-none' : 'rounded-xl'}`} value={data[key] || ''} onChange={(e) => set(key, e.target.value)} />}</label>;
   const equipmentControl = customEquipment ? <div className="space-y-1"><input className="input-field w-full rounded-xl" value={data.equipment || ''} placeholder="Enter equipment name" onChange={(e) => set('equipment', e.target.value)} /><button type="button" className="text-primary underline" onClick={() => { setCustomEquipment(false); set('equipment', ''); set('unit_number', ''); set('asset_id', null); }}>Choose registered equipment</button></div> : <SearchableSelect options={assetOptions} value={data.asset_id || ''} onChange={(value, option) => { if (value === '__CUSTOM__') { setCustomEquipment(true); set('asset_id', null); set('equipment', ''); set('unit_number', ''); } else { const asset = assets.find((a) => String(a.id) === String(value)); set('asset_id', value); set('equipment', option?.label || ''); set('unit_number', asset?.asset_number || asset?.unit_number || ''); set('equipment_type', asset?.category || asset?.asset_type || asset?.equipment_type || data.equipment_type || ''); } }} placeholder="Search equipment or enter custom" />;
   const choice = (key: 'status' | 'priority', label: string, choices: string[], isCustom: boolean, setCustom: (value: boolean) => void) => {
     const options = [
-      { value: '__CUSTOM__', label: `Enter a custom ${label.toLowerCase()}â€¦` },
+      { value: '__CUSTOM__', label: `Enter a custom ${label.toLowerCase()}...` },
       ...choices.map((c) => ({ value: c, label: c })),
     ];
     return (
@@ -77,7 +77,7 @@ function EquipmentRegisterWizardForm({ saveImportFiles, projectId, assets, recor
     let completed = 0;
     try {
       for (const [index, row] of rows.entries()) {
-        setProgress(`Saving ${index + 1} of ${rows.length}…`);
+        setProgress(`Saving ${index + 1} of ${rows.length}...`);
         const id = savedIds.current[index] || row.id;
         const saved = await apiFetch<any>(id ? `/api/v1/equipment-register/${id}` : '/api/v1/equipment-register', { method: id ? 'PATCH' : 'POST', body: JSON.stringify({ ...row, project_id: projectId || null, asset_id: row.asset_id || null, priority: row.priority || 'MEDIUM' }) });
         savedIds.current[index] = saved.id;
@@ -88,7 +88,7 @@ function EquipmentRegisterWizardForm({ saveImportFiles, projectId, assets, recor
     } catch (e: any) { setError(`${completed} of ${rows.length} entries completed. ${e?.message || 'Could not save equipment register.'} Save again to retry; saved entries will be updated.`); }
     finally { setSaving(false); setProgress(''); }
   }
-  return <Modal title={`${record?.id ? 'Edit' : 'New'} equipment register`} onClose={onClose} className="sm:!h-[90vh] sm:!max-h-[90vh] sm:!max-w-5xl" footer={<div className="flex w-full justify-between gap-2"><span className="text-xs text-slate-500">{rows.length} equipment {rows.length === 1 ? 'entry' : 'entries'} · Required fields are marked *</span><button type="button" className="btn-primary rounded-xl bg-[#184877]" onClick={() => void save()} disabled={saving}>{saving ? progress || 'Saving…' : rows.length > 1 ? `Save all ${rows.length} entries` : record?.id ? 'Save changes' : 'Save register entry'}</button></div>}>
+  return <Modal title={`${record?.id ? 'Edit' : 'New'} equipment register`} onClose={onClose} className="sm:!h-[90vh] sm:!max-h-[90vh] sm:!max-w-5xl" footer={<div className="flex w-full justify-between gap-2"><span className="text-xs text-slate-500">{rows.length} equipment {rows.length === 1 ? 'entry' : 'entries'} · Required fields are marked *</span><button type="button" className="btn-primary rounded-xl bg-[#184877]" onClick={() => void save()} disabled={saving}>{saving ? progress || 'Saving...' : rows.length > 1 ? `Save all ${rows.length} entries` : record?.id ? 'Save changes' : 'Save register entry'}</button></div>}>
     <div className="space-y-4 text-sm">
       <div className="flex border-b" role="tablist" aria-label="Equipment register form mode">{(['FREE_FLOW', 'ASSISTED'] as const).map((value) => <button key={value} type="button" role="tab" aria-selected={mode === value} onClick={() => setMode(value)} className={`border-b-2 px-4 py-2 text-xs font-bold uppercase tracking-wide ${mode === value ? 'border-[#184877] text-[#184877]' : 'border-transparent text-muted-foreground'}`}>{value === 'FREE_FLOW' ? 'Free flow' : 'Assisted'}</button>)}</div>
       {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-red-800">{error}</div>}

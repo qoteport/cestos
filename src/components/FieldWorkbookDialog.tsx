@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { createContext, useContext, useEffect, useRef, useState, useMemo, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
@@ -242,7 +242,7 @@ export default function FieldWorkbookDialog({
                   className="flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-800 transition"
                 >
                   <Save size={14} />
-                  {headerState.busy ? 'Working…' : 'Save'}
+                  {headerState.busy ? 'Working...' : 'Save'}
                 </button>
                 <span className="text-[10px] text-slate-500" title="Open this page online before using it offline. Browser data must be retained.">{headerState.autosaveStatus}</span>
               </div>

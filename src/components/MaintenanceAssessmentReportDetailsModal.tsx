@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { Modal } from './DataUI';
@@ -87,7 +87,7 @@ export default function MaintenanceAssessmentReportDetailsModal({
         <h3 className="flex items-center gap-2 bg-[#184877] px-3 py-2 font-bold text-white"><Paperclip size={14} /> Attachments</h3>
         <div className="space-y-2 p-3">
           {fileError && <p role="alert" className="text-xs text-red-700">{fileError}</p>}
-          {attachmentsLoading ? <p className="text-xs text-slate-500">Loading attachments…</p> : attachments.length ? attachments.map((file: any) => <div key={file.id} className="flex flex-wrap items-center justify-between gap-2 border border-slate-300 bg-[#f4f7fb] px-3 py-2 rounded-lg"><span className="min-w-0 flex-1 truncate text-xs font-semibold" title={file.file_name || file.title}>{file.file_name || file.title || 'Attachment'}</span><div className="flex gap-2 no-print"><button type="button" disabled={fileBusy !== null} onClick={() => void openAttachment(file)} className="inline-flex items-center gap-1 bg-[#184877] px-2.5 py-1.5 text-xs font-bold text-white rounded-lg disabled:opacity-50"><Eye size={13} /> View</button><button type="button" disabled={fileBusy !== null} onClick={() => void openAttachment(file, true)} className="inline-flex items-center gap-1 border border-slate-400 px-2.5 py-1.5 text-xs font-bold rounded-lg disabled:opacity-50"><Download size={13} /> Download</button></div></div>) : <p className="text-xs text-slate-500">No files attached to this report.</p>}
+          {attachmentsLoading ? <p className="text-xs text-slate-500">Loading attachments...</p> : attachments.length ? attachments.map((file: any) => <div key={file.id} className="flex flex-wrap items-center justify-between gap-2 border border-slate-300 bg-[#f4f7fb] px-3 py-2 rounded-lg"><span className="min-w-0 flex-1 truncate text-xs font-semibold" title={file.file_name || file.title}>{file.file_name || file.title || 'Attachment'}</span><div className="flex gap-2 no-print"><button type="button" disabled={fileBusy !== null} onClick={() => void openAttachment(file)} className="inline-flex items-center gap-1 bg-[#184877] px-2.5 py-1.5 text-xs font-bold text-white rounded-lg disabled:opacity-50"><Eye size={13} /> View</button><button type="button" disabled={fileBusy !== null} onClick={() => void openAttachment(file, true)} className="inline-flex items-center gap-1 border border-slate-400 px-2.5 py-1.5 text-xs font-bold rounded-lg disabled:opacity-50"><Download size={13} /> Download</button></div></div>) : <p className="text-xs text-slate-500">No files attached to this report.</p>}
         </div>
       </section>
       <style jsx global>{`

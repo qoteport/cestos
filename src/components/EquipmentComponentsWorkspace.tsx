@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -261,7 +261,7 @@ export default function EquipmentComponentsWorkspace() {
         <div className="card p-4 space-y-1.5 border-l-4 border-l-primary">
           <span className="text-xs font-semibold text-muted-foreground block">Total Components</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-foreground">{loading ? '…' : totalCount}</span>
+            <span className="text-2xl font-extrabold text-foreground">{loading ? '...' : totalCount}</span>
             <Truck size={18} className="text-primary opacity-80" />
           </div>
           <p className="text-[11px] text-muted-foreground">Registered equipment sub-components</p>
@@ -270,7 +270,7 @@ export default function EquipmentComponentsWorkspace() {
         <div className="card p-4 space-y-1.5 border-l-4 border-l-emerald-500">
           <span className="text-xs font-semibold text-muted-foreground block">Installed & Active</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-emerald-700">{loading ? '…' : installedCount}</span>
+            <span className="text-2xl font-extrabold text-emerald-700">{loading ? '...' : installedCount}</span>
             <CheckCircle size={18} className="text-emerald-600" />
           </div>
           <p className="text-[11px] text-muted-foreground">Currently in active service</p>
@@ -279,7 +279,7 @@ export default function EquipmentComponentsWorkspace() {
         <div className="card p-4 space-y-1.5 border-l-4 border-l-amber-500">
           <span className="text-xs font-semibold text-muted-foreground block">In Repair / Overhaul</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-amber-700">{loading ? '…' : maintenanceCount}</span>
+            <span className="text-2xl font-extrabold text-amber-700">{loading ? '...' : maintenanceCount}</span>
             <Wrench size={18} className="text-amber-600" />
           </div>
           <p className="text-[11px] text-muted-foreground">Under repair or maintenance</p>
@@ -288,7 +288,7 @@ export default function EquipmentComponentsWorkspace() {
         <div className="card p-4 space-y-1.5 border-l-4 border-l-slate-400">
           <span className="text-xs font-semibold text-muted-foreground block">Replaced / Removed</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-slate-700">{loading ? '…' : replacedCount}</span>
+            <span className="text-2xl font-extrabold text-slate-700">{loading ? '...' : replacedCount}</span>
             <ShieldAlert size={18} className="text-slate-500" />
           </div>
           <p className="text-[11px] text-muted-foreground">Retired or decommissioned components</p>

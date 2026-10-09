@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { Modal } from './DataUI';
@@ -60,7 +60,7 @@ export default function FieldEquipmentDetails({ asset, projectId, onClose }: { a
           className={kind === value ? 'btn-primary' : 'btn-secondary'} onClick={() => { setKind(value); setPage(1); }}>
           {{ maintenance: 'Maintenance records', fuel: 'Fuel logs', meter: 'Meter readings' }[value]}</button>)}
       </div>
-      {loading ? <p role="status">Loading records…</p> : error
+      {loading ? <p role="status">Loading records...</p> : error
         ? <button className="btn-secondary" onClick={() => setRetry(value => value + 1)}>Retry records</button>
         : <div className="overflow-x-auto"><table className="w-full text-left text-xs">
           <thead><tr>{columns[kind].map(key => <th key={key} className="p-2 border-b capitalize">{key.replace(/_/g, ' ')}</th>)}</tr></thead>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { apiFetch } from '@/lib/api';
@@ -28,8 +28,8 @@ function ActionTrackerWizardForm({ saveImportFiles, projectId, assets, employees
   const [customPriority, setCustomPriority] = useState(Boolean(record?.priority && !['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].includes(record.priority)));
   const [saving, setSaving] = useState(false); const [error, setError] = useState('');
   const set = (key: string, value: any) => setData((old: any) => ({ ...old, [key]: value }));
-  const assetOptions = [{ value: '__CUSTOM__', label: 'Enter a custom equipment / areaâ€¦' }, ...assets.map((a) => ({ value: String(a.id), label: a.name || a.asset_name || a.asset_number || 'Equipment', sublabel: a.asset_number || '' }))];
-  const employeeOptions = [{ value: '__CUSTOM__', label: 'Enter a custom responsible personâ€¦' }, ...employees.map((e) => ({ value: String(e.id), label: [e.first_name, e.last_name].filter(Boolean).join(' ') || e.name || 'Employee', sublabel: e.employee_number || e.position_name || '' }))];
+  const assetOptions = [{ value: '__CUSTOM__', label: 'Enter a custom equipment / area...' }, ...assets.map((a) => ({ value: String(a.id), label: a.name || a.asset_name || a.asset_number || 'Equipment', sublabel: a.asset_number || '' }))];
+  const employeeOptions = [{ value: '__CUSTOM__', label: 'Enter a custom responsible person...' }, ...employees.map((e) => ({ value: String(e.id), label: [e.first_name, e.last_name].filter(Boolean).join(' ') || e.name || 'Employee', sublabel: e.employee_number || e.position_name || '' }))];
   async function save() {
     if (!data.action_date || !String(data.equipment_area || '').trim() || !String(data.issue_finding || '').trim()) { setError('Date, Equipment / Area, and Issue / Finding are required.'); return; }
     setSaving(true); setError('');
@@ -41,14 +41,14 @@ function ActionTrackerWizardForm({ saveImportFiles, projectId, assets, employees
     finally { setSaving(false); }
   }
   const priorityOptions = [
-    { value: '__CUSTOM__', label: 'Enter a custom priorityâ€¦' },
+    { value: '__CUSTOM__', label: 'Enter a custom priority...' },
     { value: 'LOW', label: 'LOW' },
     { value: 'MEDIUM', label: 'MEDIUM' },
     { value: 'HIGH', label: 'HIGH' },
     { value: 'CRITICAL', label: 'CRITICAL' },
   ];
   const statusOptions = [
-    { value: '__CUSTOM__', label: 'Enter a custom statusâ€¦' },
+    { value: '__CUSTOM__', label: 'Enter a custom status...' },
     { value: 'OPEN', label: 'OPEN' },
     { value: 'IN_PROGRESS', label: 'IN PROGRESS' },
     { value: 'COMPLETED', label: 'COMPLETED' },
@@ -150,7 +150,7 @@ function ActionTrackerWizardForm({ saveImportFiles, projectId, assets, employees
   );
   const assistedEquipment = customEquipment ? <div className="space-y-1"><input className="input-field w-full rounded-xl" value={data.equipment_area || ''} placeholder="Enter equipment or area" onChange={(e) => set('equipment_area', e.target.value)} /><button type="button" className="text-primary underline" onClick={() => { setCustomEquipment(false); set('equipment_area', ''); set('asset_id', ''); }}>Choose registered equipment</button></div> : <SearchableSelect options={assetOptions} value={data.asset_id || ''} onChange={(value, option) => { if (value === '__CUSTOM__') { setCustomEquipment(true); set('asset_id', null); set('equipment_area', ''); } else { set('asset_id', value); set('equipment_area', option?.label || ''); } }} placeholder="Search equipment or enter custom" />;
   const assistedResponsible = customResponsible ? <div className="space-y-1"><input className="input-field w-full rounded-xl" value={data.responsible_name || ''} placeholder="Enter responsible person" onChange={(e) => set('responsible_name', e.target.value)} /><button type="button" className="text-primary underline" onClick={() => { setCustomResponsible(false); set('responsible_name', ''); }}>Choose an employee</button></div> : <SearchableSelect options={employeeOptions} value={data.responsible_employee_id || ''} onChange={(value, option) => { if (value === '__CUSTOM__') { setCustomResponsible(true); set('responsible_employee_id', null); set('responsible_name', ''); } else { set('responsible_employee_id', value); set('responsible_name', option?.label || ''); } }} placeholder="Search employees or enter custom" />;
-  return <Modal title={`${record?.id ? 'Edit' : 'New'} action tracker`} onClose={onClose} className="sm:!h-[90vh] sm:!max-h-[90vh] sm:!max-w-5xl" footer={<div className="flex w-full justify-between gap-2"><span className="text-xs text-slate-500">Required fields are marked *</span><button type="button" className="btn-primary inline-flex items-center gap-2 rounded-xl bg-[#184877]" onClick={() => void save()} disabled={saving}>{saving ? 'Savingâ€¦' : record?.id ? 'Save changes' : 'Save action'}</button></div>}>
+  return <Modal title={`${record?.id ? 'Edit' : 'New'} action tracker`} onClose={onClose} className="sm:!h-[90vh] sm:!max-h-[90vh] sm:!max-w-5xl" footer={<div className="flex w-full justify-between gap-2"><span className="text-xs text-slate-500">Required fields are marked *</span><button type="button" className="btn-primary inline-flex items-center gap-2 rounded-xl bg-[#184877]" onClick={() => void save()} disabled={saving}>{saving ? 'Saving...' : record?.id ? 'Save changes' : 'Save action'}</button></div>}>
     <div className="space-y-4 text-sm"><div className="flex border-b" role="tablist" aria-label="Action tracker form mode">{(['FREE_FLOW', 'ASSISTED'] as const).map((v) => <button key={v} type="button" role="tab" aria-selected={mode === v} onClick={() => setMode(v)} className={`border-b-2 px-4 py-2 text-xs font-bold uppercase tracking-wide ${mode === v ? 'border-[#184877] text-[#184877]' : 'border-transparent text-muted-foreground'}`}>{v === 'ASSISTED' ? 'Assisted' : 'Free flow'}</button>)}</div>{error && <div role="alert" className="border border-red-200 bg-red-50 p-3 text-red-800 rounded-xl">{error}</div>}<section className={`overflow-hidden border border-slate-900 ${mode === 'FREE_FLOW' ? 'rounded-none' : 'rounded-2xl'}`}><h3 className="bg-[#184877] px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-white">Action details</h3><div className={`grid gap-x-5 gap-y-4 p-4 md:grid-cols-2 ${mode === 'FREE_FLOW' ? 'bg-slate-100' : 'bg-white'}`}>{mode === 'ASSISTED' ? <>{input('action_date', 'Date')}<label className="block space-y-1.5"><span className="block text-xs font-semibold text-slate-700">Equipment / Area *</span>{assistedEquipment}</label>{input('issue_finding', 'Issue / Finding')}{input('action_taken', 'Action Taken')}{input('parts_required', 'Parts Required')}<label className="block space-y-1.5"><span className="block text-xs font-semibold text-slate-700">Responsible</span>{assistedResponsible}</label>{input('priority', 'Priority')}{input('status', 'Status')}{input('completion_date', 'Completion Date')}{input('remarks', 'Remarks')}</> : fields.map(([key, label]) => input(key, label))}</div></section></div>
   </Modal>;
 }

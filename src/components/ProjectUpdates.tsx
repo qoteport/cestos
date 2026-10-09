@@ -1,4 +1,4 @@
-import { Download, Eye, Pencil } from 'lucide-react';
+﻿import { Download, Eye, Pencil } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import { openUniversalFileViewer } from '@/lib/fileViewer';
@@ -279,7 +279,7 @@ function ReportForm({
             Cancel
           </button>
           <button className="btn-primary" disabled={busy}>
-            {busy ? 'Saving update…' : initial ? 'Save changes' : 'Submit update'}
+            {busy ? 'Saving update...' : initial ? 'Save changes' : 'Submit update'}
           </button>
         </div>
       </form>

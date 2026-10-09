@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api';
@@ -397,7 +397,7 @@ export default function CommandCenterMaintenanceCsvModal({ onClose, initialKind 
             <div className="flex items-end gap-2"><button type="button" onClick={downloadTemplate} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 px-3.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition shadow-xs"><Download size={15} />Download template</button><label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-[#184877] px-4 text-xs font-bold text-white hover:bg-[#123f68] transition shadow-xs"><Upload size={15} />Upload CSV<input type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => void loadCsv(event.target.files?.[0])} /></label></div>
           </div>
           <div className="rounded-2xl border-l-4 border-blue-500 border-y border-r border-blue-200 bg-blue-50/80 dark:bg-blue-950/40 p-4 text-xs text-blue-950 dark:text-blue-200 shadow-xs"><b>CSV format:</b> Use the template headers; nested form fields use dot notation (for example <code>job_control.equipment</code>). Array/object fields accept JSON in one quoted cell. The importer also recognizes the two-week assessment report, Equipment Register, Action Tracker, and PM Tracker column layouts.</div>
-          {loading && <div className="flex items-center gap-2 text-xs font-medium text-slate-500 rounded-xl p-3 bg-slate-50 dark:bg-slate-800"><Loader2 className="animate-spin text-blue-600" size={16} />Loading project and employee options…</div>}
+          {loading && <div className="flex items-center gap-2 text-xs font-medium text-slate-500 rounded-xl p-3 bg-slate-50 dark:bg-slate-800"><Loader2 className="animate-spin text-blue-600" size={16} />Loading project and employee options...</div>}
           {error && <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700 dark:bg-red-950/40 dark:text-red-300 shadow-xs">{error}</p>}
           {fileName && <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200"><FileSpreadsheet size={17} className="text-emerald-600" />{fileName}<span className="font-normal text-slate-500">· {rows.length} rows · {incompleteRows} awaiting review</span></div>}
           {rows.length > 0 && <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">

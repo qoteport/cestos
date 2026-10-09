@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
@@ -216,7 +216,7 @@ export default function EmployeeTimesheetsWorkspace({
     const [year, month] = (formPeriod || currentMonth()).split('-').map(Number);
     return new Date(year, month, 0).getDate();
   }, [formPeriod]);
-  const employeeOptions = useMemo(() => [{ value: CUSTOM_EMPLOYEE_VALUE, label: 'Enter a custom employee name…' }, ...employees.map((employee) => ({
+  const employeeOptions = useMemo(() => [{ value: CUSTOM_EMPLOYEE_VALUE, label: 'Enter a custom employee name...' }, ...employees.map((employee) => ({
     value: String(employee.id),
     label: [employee.first_name, employee.middle_name, employee.last_name].filter(Boolean).join(' ') || 'Employee',
     sublabel: employee.employee_number || '',
@@ -368,7 +368,7 @@ export default function EmployeeTimesheetsWorkspace({
               />
             </div>
           </div>
-          {sourceCsvRow && <button type="button" onClick={() => void viewSourceFile(sourceCsvRow)} disabled={attachmentBusy === sourceCsvRow.id} className="mb-0.5 inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><Paperclip size={15} />{attachmentBusy === sourceCsvRow.id ? 'Opening source…' : 'Source File'}</button>}
+          {sourceCsvRow && <button type="button" onClick={() => void viewSourceFile(sourceCsvRow)} disabled={attachmentBusy === sourceCsvRow.id} className="mb-0.5 inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"><Paperclip size={15} />{attachmentBusy === sourceCsvRow.id ? 'Opening source...' : 'Source File'}</button>}
           {canReport && <button type="button" onClick={openNew} className={`mb-0.5 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 ${colors.action}`}><Plus size={16} /> Log time sheet</button>}
         </div>
       </div>
@@ -382,7 +382,7 @@ export default function EmployeeTimesheetsWorkspace({
 
       <div className={`${fullView ? 'fixed inset-2 z-[90] flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:inset-4' : 'overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900'}`} role={fullView ? 'dialog' : undefined} aria-modal={fullView || undefined} aria-label={fullView ? 'Monthly time sheet full view' : undefined}>
         {fullView && <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900"><div><p className="text-sm font-bold text-slate-900 dark:text-white">Monthly time sheet</p><p className="text-xs text-slate-500">{period || currentMonth()}</p></div><button type="button" onClick={() => setFullView(false)} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800" aria-label="Exit full view"><Minimize2 size={15} /> Exit full view</button></div>}
-        {loading ? <div role="status" className="p-8 text-center text-sm text-slate-500">Loading time sheet…</div> : (
+        {loading ? <div role="status" className="p-8 text-center text-sm text-slate-500">Loading time sheet...</div> : (
           <div className={`${fullView ? 'min-h-0 flex-1 overflow-auto' : 'max-h-[70vh] overflow-auto'}`}>
             <table className="min-w-max border-separate border-spacing-0 text-left text-xs">
               <thead className="text-[10px] font-extrabold uppercase tracking-wide">
@@ -448,7 +448,7 @@ export default function EmployeeTimesheetsWorkspace({
                   <div className="mt-1">
                     {customEmployee
                       ? <div className="flex gap-2"><input autoFocus value={employeeName} onChange={(event) => setEmployeeName(event.target.value)} placeholder="Enter employee name" maxLength={200} className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white" /><button type="button" onClick={() => { setCustomEmployee(false); setEmployeeName(''); }} className="shrink-0 rounded-lg border border-slate-300 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Select employee</button></div>
-                      : <SearchableSelect value={employeeId} onChange={(value) => { if (value === CUSTOM_EMPLOYEE_VALUE) { setCustomEmployee(true); setEmployeeId(''); } else setEmployeeId(value); }} options={employeeOptions} placeholder="Search employee…" disabled={Boolean(editing)} searchable />}
+                      : <SearchableSelect value={employeeId} onChange={(value) => { if (value === CUSTOM_EMPLOYEE_VALUE) { setCustomEmployee(true); setEmployeeId(''); } else setEmployeeId(value); }} options={employeeOptions} placeholder="Search employee..." disabled={Boolean(editing)} searchable />}
                   </div>
                 </label>
                 <div className="text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -504,7 +504,7 @@ export default function EmployeeTimesheetsWorkspace({
                 <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Cancel</button>
                 {savedForAnother
                   ? <button type="button" onClick={() => { formScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); setSavedForAnother(false); }} className={`rounded-lg px-4 py-2 text-sm font-bold text-white ${colors.action}`}>Log another</button>
-                  : <button type="submit" disabled={saving} className={`rounded-lg px-4 py-2 text-sm font-bold text-white disabled:opacity-60 ${colors.action}`}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Save time sheet'}</button>}
+                  : <button type="submit" disabled={saving} className={`rounded-lg px-4 py-2 text-sm font-bold text-white disabled:opacity-60 ${colors.action}`}>{saving ? 'Saving...' : editing ? 'Save changes' : 'Save time sheet'}</button>}
               </div>
             </form>
           </div>

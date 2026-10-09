@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import WorkbookMappingAssistant from './WorkbookMappingAssistant';
 import { createContext, useContext, useCallback, useEffect, useMemo, useState } from 'react';
 import { apiFetch, ApiError } from '@/lib/api';
@@ -317,7 +317,7 @@ export default function WorkbookDatabaseConnection({
                   setResult(null);
                   update({ fields: {} });
                 }}
-                placeholder={busy ? 'Loading tables…' : 'Select database table'}
+                placeholder={busy ? 'Loading tables...' : 'Select database table'}
               />
             </div>
             <button

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Folder,
@@ -413,7 +413,7 @@ export default function WorkbookLibrary({
             aria-label="Search workbooks"
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Search files in this folder…"
+            placeholder="Search files in this folder..."
             className="min-w-0 flex-1 rounded-lg border bg-transparent px-3 py-2 text-sm"
           />
           <button type="button" className={control} disabled={loading} onClick={onRefresh}>
@@ -454,7 +454,7 @@ export default function WorkbookLibrary({
 
           <input
             aria-label="Search workbook folders"
-            placeholder="Search folders…"
+            placeholder="Search folders..."
             value={folderSearch}
             onChange={e => setFolderSearch(e.target.value)}
             className="w-full rounded-lg border bg-transparent p-2 text-xs"
@@ -551,7 +551,7 @@ export default function WorkbookLibrary({
           </div>
 
           {error && <p role="alert" className="p-3 text-sm text-red-600">{error}</p>}
-          {loading && <p role="status" className="p-3 text-xs text-slate-500">Refreshing files…</p>}
+          {loading && <p role="status" className="p-3 text-xs text-slate-500">Refreshing files...</p>}
 
           {!visible.length && (
             <p className="p-8 text-center text-sm text-slate-500">
@@ -727,7 +727,7 @@ export default function WorkbookLibrary({
                   autoFocus
                   value={folderModal.name}
                   onChange={e => setFolderModal({ ...folderModal, name: e.target.value })}
-                  placeholder="Enter folder name…"
+                  placeholder="Enter folder name..."
                   className="w-full rounded-lg border bg-transparent p-2 text-xs outline-none focus:ring-2 focus:ring-emerald-500/20"
                 />
               </div>
@@ -803,7 +803,7 @@ export default function WorkbookLibrary({
                 <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   aria-label="Search destination folders"
-                  placeholder="Search destination folders…"
+                  placeholder="Search destination folders..."
                   value={moveSearchQuery}
                   onChange={e => setMoveSearchQuery(e.target.value)}
                   className="w-full rounded-lg border bg-transparent pl-8 pr-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-emerald-500/20"

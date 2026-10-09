@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 
@@ -82,7 +82,7 @@ export function PurchaseOrderCategoryField({
       options={[
         { value: '', label: 'No category' },
         ...PURCHASE_ORDER_CATEGORIES.map((item) => ({ value: item.value, label: item.label })),
-        { value: CUSTOM, label: 'Custom…' },
+        { value: CUSTOM, label: 'Custom...' },
       ]}
       className={className}
       ariaLabel="Purchase order category"

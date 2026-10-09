@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useEffect, useState } from 'react';
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import useAppFeedback from './useAppFeedback';
@@ -25,7 +25,7 @@ export default function WorkCompletionDetails({ work, fieldPortal = false }: { w
   }, [path, retry, work.completed_at, notify]);
   return <section className="border rounded-lg p-4 space-y-3 text-sm" aria-label="Work completion records">
     <h3 className="font-bold">Completion notes & documents</h3>
-    {loading ? <p role="status">Loading completion records…</p> : failed
+    {loading ? <p role="status">Loading completion records...</p> : failed
       ? <button type="button" className="btn-secondary" onClick={() => setRetry(value => value + 1)}>Retry completion records</button>
       : <>
         {data?.completed_at && <p className="text-xs text-muted-foreground">Completed {new Date(data.completed_at).toLocaleString()}</p>}

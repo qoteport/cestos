@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -235,7 +235,7 @@ export default function EquipmentDefectsWorkspace() {
         <div className="card p-4 space-y-1.5 border-l-4 border-l-primary">
           <span className="text-xs font-semibold text-muted-foreground block">Total Defects Logged</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-foreground">{loading ? '…' : totalDefects}</span>
+            <span className="text-2xl font-extrabold text-foreground">{loading ? '...' : totalDefects}</span>
             <AlertTriangle size={18} className="text-primary opacity-80" />
           </div>
           <p className="text-[11px] text-muted-foreground">Reported equipment faults</p>
@@ -244,7 +244,7 @@ export default function EquipmentDefectsWorkspace() {
         <div className="card p-4 space-y-1.5 border-l-4 border-l-rose-500">
           <span className="text-xs font-semibold text-muted-foreground block">Critical Grounding Faults</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-rose-700">{loading ? '…' : criticalCount}</span>
+            <span className="text-2xl font-extrabold text-rose-700">{loading ? '...' : criticalCount}</span>
             <ShieldAlert size={18} className="text-rose-600" />
           </div>
           <p className="text-[11px] text-muted-foreground">Requires immediate fleet grounding</p>
@@ -253,7 +253,7 @@ export default function EquipmentDefectsWorkspace() {
         <div className="card p-4 space-y-1.5 border-l-4 border-l-amber-500">
           <span className="text-xs font-semibold text-muted-foreground block">Open Defects</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-amber-700">{loading ? '…' : openCount}</span>
+            <span className="text-2xl font-extrabold text-amber-700">{loading ? '...' : openCount}</span>
             <Clock size={18} className="text-amber-600" />
           </div>
           <p className="text-[11px] text-muted-foreground">Pending maintenance resolution</p>
@@ -262,7 +262,7 @@ export default function EquipmentDefectsWorkspace() {
         <div className="card p-4 space-y-1.5 border-l-4 border-l-emerald-500">
           <span className="text-xs font-semibold text-muted-foreground block">Resolved & Closed</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-emerald-700">{loading ? '…' : resolvedCount}</span>
+            <span className="text-2xl font-extrabold text-emerald-700">{loading ? '...' : resolvedCount}</span>
             <CheckCircle size={18} className="text-emerald-600" />
           </div>
           <p className="text-[11px] text-muted-foreground">Repairs completed & signed off</p>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -141,7 +141,7 @@ export default function EquipmentMeterReadingsWorkspace() {
         <div className="card p-4 space-y-1.5 border-l-4 border-l-primary">
           <span className="text-xs font-semibold text-muted-foreground block">Total Meter Entries</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-foreground">{loading ? '…' : totalReadings}</span>
+            <span className="text-2xl font-extrabold text-foreground">{loading ? '...' : totalReadings}</span>
             <Gauge size={18} className="text-primary opacity-80" />
           </div>
           <p className="text-[11px] text-muted-foreground">Logged meter readings across fleet</p>
@@ -150,7 +150,7 @@ export default function EquipmentMeterReadingsWorkspace() {
         <div className="card p-4 space-y-1.5 border-l-4 border-l-indigo-500">
           <span className="text-xs font-semibold text-muted-foreground block">Hours Meter Logs</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-indigo-700">{loading ? '…' : hoursCount}</span>
+            <span className="text-2xl font-extrabold text-indigo-700">{loading ? '...' : hoursCount}</span>
             <Clock size={18} className="text-indigo-600" />
           </div>
           <p className="text-[11px] text-muted-foreground">Engine & machinery operating hours</p>
@@ -159,7 +159,7 @@ export default function EquipmentMeterReadingsWorkspace() {
         <div className="card p-4 space-y-1.5 border-l-4 border-l-teal-500">
           <span className="text-xs font-semibold text-muted-foreground block">Odometer Distance Logs</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-teal-700">{loading ? '…' : odometerCount}</span>
+            <span className="text-2xl font-extrabold text-teal-700">{loading ? '...' : odometerCount}</span>
             <Activity size={18} className="text-teal-600" />
           </div>
           <p className="text-[11px] text-muted-foreground">Vehicle Odometer distance logs (KM / Miles)</p>

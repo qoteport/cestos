@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -164,7 +164,7 @@ export function ProjectRegister({
         Search projects
         <input
           type="search"
-          placeholder="Name, number or contract…"
+          placeholder="Name, number or contract..."
           className="input-field mt-1 w-full"
           value={search}
           onChange={(e) => {

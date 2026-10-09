@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useEffect, useState } from 'react';
 import { loadWorkbookCatalog } from '@/lib/workbookCatalog';
 import { apiFetch } from '@/lib/api';
@@ -94,7 +94,7 @@ export default function WorkbookDatabaseWorkspace({ onOpen }: { onOpen: (book: F
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               aria-label="Search database tables"
-              placeholder="Search tables…"
+              placeholder="Search tables..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="w-full rounded-lg border bg-transparent pl-9 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20"
@@ -145,7 +145,7 @@ export default function WorkbookDatabaseWorkspace({ onOpen }: { onOpen: (book: F
         {busy && !sources.length && (
           <div role="status" className="p-8 text-center text-xs text-slate-500">
             <RefreshCw size={20} className="mx-auto mb-2 animate-spin text-emerald-600" />
-            Loading database tables…
+            Loading database tables...
           </div>
         )}
 
@@ -316,7 +316,7 @@ function NewDatabaseRecord({ source, onClose, onCreated }: { source: WorkspaceSo
                 disabled={busy || submitted}
                 onClick={() => void save()}
               >
-                {busy ? 'Saving…' : 'Confirm create record'}
+                {busy ? 'Saving...' : 'Confirm create record'}
               </button>
             </div>
           </div>

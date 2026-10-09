@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState } from 'react';
 import { ArrowRight, Truck, CheckCircle2 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
@@ -246,7 +246,7 @@ export default function AssetAssignmentModal({
             disabled={busy || projects.loading || !!projects.error}
             className="btn-primary rounded-xl text-xs w-full sm:w-auto shadow-xs"
           >
-            {busy ? 'Saving…' : transfer ? 'Confirm transfer' : 'Confirm assignment'}
+            {busy ? 'Saving...' : transfer ? 'Confirm transfer' : 'Confirm assignment'}
           </button>
         </div>
       </form>

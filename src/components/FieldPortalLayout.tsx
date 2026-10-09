@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { hasSupervisorRole, canOpenFieldTab } from '@/lib/fieldPortalAccess';
 
 import React, { useState, useEffect } from 'react';
@@ -93,7 +93,7 @@ export default function FieldPortalLayout({
       >
         <div className="flex items-center gap-3">
           <RefreshCw className="h-5 w-5 animate-spin text-primary" />
-          <span>Opening Field Operations Portal…</span>
+          <span>Opening Field Operations Portal...</span>
         </div>
       </main>
     );

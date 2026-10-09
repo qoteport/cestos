@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -148,11 +148,11 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
   }, [category, payName, payeeId, payees, manualAmount]);
 
   const itemOptions = useMemo(() => [
-    { value: '__CUSTOM__', label: 'Create a new item…' },
+    { value: '__CUSTOM__', label: 'Create a new item...' },
     ...inventory.map((item) => ({ value: String(item.id), label: `${item.name || item.item_name || 'Inventory item'}${item.code ? ` · ${item.code}` : ''}`, sublabel: `Unit: ${item.unit_of_measure || item.unit || 'PCS'}` })),
   ], [inventory]);
   const payeeOptions = useMemo(() => [
-    { value: '__NEW__', label: 'Add a new payee…' },
+    { value: '__NEW__', label: 'Add a new payee...' },
     ...payees.map((payee) => ({ value: String(payee.id), label: payee.name, sublabel: [payee.phone, payee.bank_account_details].filter(Boolean).join(' · ') })),
   ], [payees]);
   const calculatedTotal = items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unit_cost) || 0), 0);
@@ -251,7 +251,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
                     else setPurchaseOrderId(value);
                   }}
                   options={purchaseOrders.map((po) => ({ value: String(po.id), label: `${po.po_number} · ${po.currency} ${Number(po.total_amount || 0).toLocaleString()}` }))}
-                  placeholder="Link an approved purchase order…"
+                  placeholder="Link an approved purchase order..."
                 />
                 {purchaseOrderId && <p className="mt-1 font-normal text-slate-500">Purchase order items are prefilled. Update quantities, descriptions, and unit costs from the invoice; the linked purchase order will sync when you submit.</p>}
               </label>
@@ -363,7 +363,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
           {/* Sticky Footer */}
           <div className="sticky bottom-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 p-3.5 sm:px-6 sm:py-4 shrink-0 flex flex-row items-center justify-end gap-2 sm:gap-3 z-10">
             <button type="button" onClick={onClose} className="rounded-xl border px-4 py-2 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition w-full sm:w-auto">Cancel</button>
-            <button type="submit" disabled={busy} className="rounded-xl bg-orange-600 px-5 py-2 font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto shadow-xs">{busy ? 'Submitting…' : 'Submit expense to Finance'}</button>
+            <button type="submit" disabled={busy} className="rounded-xl bg-orange-600 px-5 py-2 font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto shadow-xs">{busy ? 'Submitting...' : 'Submit expense to Finance'}</button>
           </div>
         </form>
       </section>

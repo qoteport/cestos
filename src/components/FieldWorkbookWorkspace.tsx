@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import WorkbookSyncPanel from './WorkbookSyncPanel';
 import WorkbookLibrary from './WorkbookLibrary';
 import WorkbookDatabaseWorkspace from './WorkbookDatabaseWorkspace';
@@ -364,7 +364,7 @@ export default function FieldWorkbookWorkspace({
   const resizeCleanup = useRef<() => void>(() => {});
   useEffect(() => () => resizeCleanup.current(), []);
   const gridRef = useRef<HTMLDivElement>(null);
-  const [autosaveStatus,setAutosaveStatus]=useState('Preparing autosave…');
+  const [autosaveStatus,setAutosaveStatus]=useState('Preparing autosave...');
   const [recoveryVersions,setRecoveryVersions]=useState<DeviceWorkbook[] | null>(null);
   const [deviceBooks, setDeviceBooks] = useState<DeviceWorkbook[]>([]);
   const editorId=useRef(crypto.randomUUID());
@@ -407,7 +407,7 @@ export default function FieldWorkbookWorkspace({
   const setTabsState = headerContext.setTabsState;
 
   const libraryRun = useRef(0);
-  const [offlineLibraryStatus, setOfflineLibraryStatus] = useState('Preparing offline library…');
+  const [offlineLibraryStatus, setOfflineLibraryStatus] = useState('Preparing offline library...');
   const loadLibrary = useCallback(async () => {
     const run = ++libraryRun.current;
     const current = () => run === libraryRun.current;
@@ -545,7 +545,7 @@ export default function FieldWorkbookWorkspace({
   useEffect(()=>{
     if(!book || storageReady!==storageKey)return;
     let active=true;
-    setAutosaveStatus('Saving on device…');
+    setAutosaveStatus('Saving on device...');
     void (async()=>{
       try {const open = sessions.map(item => item.book.id === book.id ? book : item.book);if (!open.some(item => item.id === book.id)) open.push(book);for (const item of open) {validateWorkbook(item);await saveDeviceWorkbook(storageKey,item,undefined,{id:editorId.current,baseline:editorBaselines.current.get(item.id) || item});if(!onPublish && (item.id===book.id?dirty:sessions.find(session=>session.book.id===item.id)?.dirty))await queueWorkbookSync(storageKey,item);}const rows=await listDeviceWorkbooks(storageKey);if(active){setDeviceBooks(rows);setAutosaveStatus('Autosaved on device');}}
       catch(e) {if(active){setAutosaveStatus('Device save needs attention');setError(e instanceof Error?e.message:'Autosave failed — download a backup');}}
@@ -1416,7 +1416,7 @@ export default function FieldWorkbookWorkspace({
           </div>
         </header>
         {feedback}
-        {busy && <p role="status">Opening workbook…</p>}
+        {busy && <p role="status">Opening workbook...</p>}
         <WorkbookSyncPanel scope={storageKey} entries={syncEntries} status={offlineLibraryStatus} onOpen={source=>activate(source,true)} onResolved={async(id,next)=>{setSessions(items=>items.filter(item=>item.book.id!==id));setDeviceBooks(await listDeviceWorkbooks(storageKey));setSyncEntries(await listWorkbookSync(storageKey));if(next)activate(next,false);setNotice('Workbook sync choice saved.');}}/>
         <WorkbookLibrary scope={storageKey} documents={latest} devices={deviceBooks} busy={busy} loading={loading} onRefresh={()=>void loadLibrary()}
           onOpen={(doc,item)=>{if(item){if(item.book.template)activate(copyWorkbook(item.book,false),true);else if(sessions.some(session=>session.book.id===item.book.id))switchWorkbook(item.book.id);else activate(validateWorkbook(item.book),true);}else if(doc)void openDocument(doc,doc.tags.includes('workbook-template'));}}
@@ -1860,7 +1860,7 @@ export default function FieldWorkbookWorkspace({
               </button>
               <button
                 type="button"
-                title="Add template sheets…"
+                title="Add template sheets..."
                 aria-label="Add template sheets"
                 className={iconButton}
                 disabled={book.sheets.length >= 30}
@@ -2737,7 +2737,7 @@ export default function FieldWorkbookWorkspace({
                       });
                     }}
                   >
-                    Column width…
+                    Column width...
                   </button>
                 </>
               )}
@@ -2798,7 +2798,7 @@ export default function FieldWorkbookWorkspace({
                       });
                     }}
                   >
-                    Row height…
+                    Row height...
                   </button>
                 </>
               )}

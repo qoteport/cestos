@@ -1,9 +1,9 @@
-'use client';
+﻿'use client';
 import IncidentDetailModal from './IncidentDetailModal';
 import FuelAllocationImportModal from './FuelAllocationImportModal';
 import FieldWorkbookDialog from './FieldWorkbookDialog';
 import dynamic from 'next/dynamic';
-const FieldWorkbookWorkspace = dynamic(() => import('./FieldWorkbookWorkspace'), { ssr: false, loading: () => <p className="p-6 text-sm text-slate-500">Opening workbooks…</p> });
+const FieldWorkbookWorkspace = dynamic(() => import('./FieldWorkbookWorkspace'), { ssr: false, loading: () => <p className="p-6 text-sm text-slate-500">Opening workbooks...</p> });
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
@@ -3393,7 +3393,7 @@ Signed: Field Operations Administration
                                   dataKey="name"
                                   tick={{ fontSize: 10 }}
                                   width={110}
-                                  tickFormatter={(v) => (String(v).length > 18 ? String(v).slice(0, 16) + '…' : String(v))}
+                                  tickFormatter={(v) => (String(v).length > 18 ? String(v).slice(0, 16) + '...' : String(v))}
                                 />
                                 <Tooltip
                                   contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', borderRadius: '8px', border: 'none', color: '#fff', fontSize: '12px' }}
@@ -3432,7 +3432,7 @@ Signed: Field Operations Administration
                                   dataKey="name"
                                   tick={{ fontSize: 10 }}
                                   width={110}
-                                  tickFormatter={(v) => (String(v).length > 18 ? String(v).slice(0, 16) + '…' : String(v))}
+                                  tickFormatter={(v) => (String(v).length > 18 ? String(v).slice(0, 16) + '...' : String(v))}
                                 />
                                 <Tooltip
                                   contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', borderRadius: '8px', border: 'none', color: '#fff', fontSize: '12px' }}
@@ -3471,7 +3471,7 @@ Signed: Field Operations Administration
                                   dataKey="vendor"
                                   tick={{ fontSize: 10 }}
                                   width={110}
-                                  tickFormatter={(v) => (String(v).length > 18 ? String(v).slice(0, 16) + '…' : String(v))}
+                                  tickFormatter={(v) => (String(v).length > 18 ? String(v).slice(0, 16) + '...' : String(v))}
                                 />
                                 <Tooltip
                                   contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', borderRadius: '8px', border: 'none', color: '#fff', fontSize: '12px' }}

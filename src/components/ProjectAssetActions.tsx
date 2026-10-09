@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState } from 'react';
 import { Plus, Truck } from 'lucide-react';
 import { useAuth } from './AuthProvider';
@@ -61,7 +61,7 @@ export default function ProjectAssetActions({
           <input
             aria-label="Find asset"
             className="input-field mb-4"
-            placeholder="Search equipment…"
+            placeholder="Search equipment..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />

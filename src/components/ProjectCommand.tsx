@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -47,7 +47,7 @@ export default function ProjectCommand({
   );
   const d = detail.data;
 
-  if (!ready) return <p role="status" className="p-8 text-center text-muted-foreground">Loading project command center…</p>;
+  if (!ready) return <p role="status" className="p-8 text-center text-muted-foreground">Loading project command center...</p>;
 
   // If no project selected in URL, render the clean project selector register
   if (!id) {

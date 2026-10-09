@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { Calendar, Eye } from 'lucide-react';
@@ -89,7 +89,7 @@ export default function FieldTeamLeaveRequests({ projectId, search }: { projectI
         <div className="text-sm p-4">
           <button type="button" className="underline" onClick={() => setVersion((value) => value + 1)}>Retry loading team leave requests</button>
         </div>
-      ) : loading ? <p role="status" className="text-sm text-muted-foreground">Loading team leave requests…</p> : (
+      ) : loading ? <p role="status" className="text-sm text-muted-foreground">Loading team leave requests...</p> : (
         <div className="border rounded-xl bg-card overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="bg-muted/50 text-xs uppercase"><tr>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { createPortal } from 'react-dom';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -1541,7 +1541,7 @@ Signed: Finance & Procurement Administration
       <main className="min-h-screen flex items-center justify-center bg-background pb-24 md:pb-6" role="status">
         <div className="flex items-center gap-3 text-muted-foreground">
           <RefreshCw className="h-5 w-5 animate-spin text-violet-600" />
-          <span>Opening Finance Portal…</span>
+          <span>Opening Finance Portal...</span>
         </div>
       </main>
     );
@@ -1732,7 +1732,7 @@ Signed: Finance & Procurement Administration
       return (
         <div className="flex items-center justify-center py-20 text-muted-foreground gap-3">
           <RefreshCw className="h-5 w-5 animate-spin text-violet-600" />
-          <span>Loading Finance Portal data…</span>
+          <span>Loading Finance Portal data...</span>
         </div>
       );
     }
@@ -2947,7 +2947,7 @@ Signed: Finance & Procurement Administration
                               dataKey="name"
                               tick={{ fontSize: 10 }}
                               width={110}
-                              tickFormatter={(v) => (String(v).length > 18 ? String(v).slice(0, 16) + '…' : String(v))}
+                              tickFormatter={(v) => (String(v).length > 18 ? String(v).slice(0, 16) + '...' : String(v))}
                             />
                             <Tooltip formatter={(val: any) => [`$${Number(val).toLocaleString()}`, 'Total Cost']} />
                             <Bar dataKey="totalCost" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
@@ -2975,7 +2975,7 @@ Signed: Finance & Procurement Administration
                               dataKey="name"
                               tick={{ fontSize: 10 }}
                               width={110}
-                              tickFormatter={(v) => (String(v).length > 18 ? String(v).slice(0, 16) + '…' : String(v))}
+                              tickFormatter={(v) => (String(v).length > 18 ? String(v).slice(0, 16) + '...' : String(v))}
                             />
                             <Tooltip formatter={(val: any) => [`${Number(val)} times`, 'Purchase Frequency']} />
                             <Bar dataKey="frequency" fill="#10b981" radius={[0, 4, 4, 0]} />
@@ -3003,7 +3003,7 @@ Signed: Finance & Procurement Administration
                               dataKey="vendor"
                               tick={{ fontSize: 10 }}
                               width={110}
-                              tickFormatter={(v) => (String(v).length > 18 ? String(v).slice(0, 16) + '…' : String(v))}
+                              tickFormatter={(v) => (String(v).length > 18 ? String(v).slice(0, 16) + '...' : String(v))}
                             />
                             <Tooltip formatter={(val: any) => [`$${Number(val).toLocaleString()}`, 'Vendor Spend']} />
                             <Bar dataKey="totalCost" fill="#f59e0b" radius={[0, 4, 4, 0]} />

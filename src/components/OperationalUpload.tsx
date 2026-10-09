@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState } from 'react';
 import { Upload } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
@@ -103,7 +103,7 @@ export default function OperationalUpload({
             Cancel
           </button>
           <button disabled={busy || !file} className="btn-primary text-xs">
-            {busy ? 'Uploading…' : uploaded ? 'Retry' : 'Upload file'}
+            {busy ? 'Uploading...' : uploaded ? 'Retry' : 'Upload file'}
           </button>
         </div>
       </form>

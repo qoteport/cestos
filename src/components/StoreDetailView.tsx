@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Building2, Package, FileText, Plus, Upload, Download, AlertTriangle, Boxes, DollarSign,  } from 'lucide-react';
@@ -394,7 +394,7 @@ export default function StoreDetailView({ storeId }: { storeId: string }) {
                 Cancel
               </button>
               <button disabled={uploadBusy} className="btn-primary">
-                {uploadBusy ? 'Uploading…' : 'Upload File'}
+                {uploadBusy ? 'Uploading...' : 'Upload File'}
               </button>
             </div>
           </form>

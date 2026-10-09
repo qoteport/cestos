@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState } from 'react';
 import { Paperclip, Download, Trash2, Upload, X } from 'lucide-react';
 import {
@@ -70,7 +70,7 @@ export default function WorkbookCellMedia({
         {onAdd && (
           <label className="my-4 flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed p-5 text-sm">
             <Upload size={18} />
-            {busy ? 'Adding files…' : 'Add images, files or videos'}
+            {busy ? 'Adding files...' : 'Add images, files or videos'}
             <input
               aria-label="Attach files to cell"
               type="file"

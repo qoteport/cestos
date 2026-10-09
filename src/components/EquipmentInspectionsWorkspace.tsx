@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -130,7 +130,7 @@ export default function EquipmentInspectionsWorkspace() {
         <div className="card p-4 space-y-1.5 border-l-4 border-l-primary">
           <span className="text-xs font-semibold text-muted-foreground block">Total Inspections</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-foreground">{loading ? '…' : totalInspections}</span>
+            <span className="text-2xl font-extrabold text-foreground">{loading ? '...' : totalInspections}</span>
             <ShieldCheck size={18} className="text-primary opacity-80" />
           </div>
           <p className="text-[11px] text-muted-foreground">Logged safety check records</p>
@@ -139,7 +139,7 @@ export default function EquipmentInspectionsWorkspace() {
         <div className="card p-4 space-y-1.5 border-l-4 border-l-emerald-500">
           <span className="text-xs font-semibold text-muted-foreground block">Passed Inspections</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-emerald-700">{loading ? '…' : passedCount}</span>
+            <span className="text-2xl font-extrabold text-emerald-700">{loading ? '...' : passedCount}</span>
             <CheckCircle size={18} className="text-emerald-600" />
           </div>
           <p className="text-[11px] text-muted-foreground">Certified fit for deployment</p>
@@ -148,7 +148,7 @@ export default function EquipmentInspectionsWorkspace() {
         <div className="card p-4 space-y-1.5 border-l-4 border-l-rose-500">
           <span className="text-xs font-semibold text-muted-foreground block">Failed / Defect Checks</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-rose-700">{loading ? '…' : failedCount}</span>
+            <span className="text-2xl font-extrabold text-rose-700">{loading ? '...' : failedCount}</span>
             <AlertTriangle size={18} className="text-rose-600" />
           </div>
           <p className="text-[11px] text-muted-foreground">Inspections requiring corrective action</p>

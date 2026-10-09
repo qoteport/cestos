@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import {useEffect,useState,useRef} from 'react';
 import {apiFetch,ApiError} from '@/lib/api';
 import {databaseSheets,loadDatabaseRecords,type DatabaseSource} from '@/lib/workbookDatabaseSource';
@@ -29,7 +29,7 @@ export default function WorkbookDatabaseLoad({existingNames,onClose,onLoad}:{exi
    {selected && <><p className="my-3 text-sm">Columns ({columns.length}/100). Records are split across sheets with up to 1,999 records each.</p><div className="grid max-h-64 grid-cols-2 gap-2 overflow-auto">{selected.columns.map(column=><label key={column.name} className="flex items-center gap-2 text-sm"><input type="checkbox" disabled={busy || (!columns.includes(column.name)&&columns.length>=100)} checked={columns.includes(column.name)} onChange={e=>setColumns(previous=>e.target.checked?[...previous,column.name]:previous.filter(name=>name!==column.name))}/>{column.name}</label>)}</div></>}
    {error && <div className="my-3 text-sm text-red-600"><p role="alert">{error}</p>{!sources.length && <button type="button" className="mt-2 underline" disabled={busy} onClick={()=>setRetry(value=>value+1)}>Retry loading tables</button>}</div>}
    {progress && <p role="status" className="my-3 text-sm">{progress}</p>}
-   <button type="button" className="btn-primary mt-4" disabled={busy || !selected || !columns.length || existingNames.length>=30} onClick={()=>void load()}>{busy?'Loading…':'Load into new sheets'}</button>
+   <button type="button" className="btn-primary mt-4" disabled={busy || !selected || !columns.length || existingNames.length>=30} onClick={()=>void load()}>{busy?'Loading...':'Load into new sheets'}</button>
    <p className="mt-3 text-xs text-slate-500">An internet connection is needed to fetch fresh records. Your existing sheets will not be replaced.</p>
   </section>
  </div>;

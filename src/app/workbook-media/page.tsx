@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import {useEffect,useState} from 'react';
 import {useAuth} from '@/components/AuthProvider';
 import {apiFetch,apiFetchBlob,downloadBlob} from '@/lib/api';
@@ -13,5 +13,5 @@ export default function WorkbookMediaPage(){
   const kind=types[ext]||'application/octet-stream';url=URL.createObjectURL(new Blob([blob],{type:kind}));
   if(live)setFile({name:metadata.file_name,url,blob,kind});else URL.revokeObjectURL(url);
  }catch(e){if(live)setError(e instanceof Error?e.message:'Media is unavailable or you do not have access.');}})();return()=>{live=false;if(url)URL.revokeObjectURL(url);};},[user]);
- return <main className="mx-auto max-w-4xl space-y-4 p-6"><h1 className="text-xl font-bold">{file?.name||'Workbook media'}</h1>{loading?<p>Checking access…</p>:!user?<p><a className="underline" href="/sign-up-login">Sign in</a>, then reopen this media link. Document permissions apply.</p>:error?<p role="alert">{error}</p>:!file?<p>Loading media…</p>:<>{file.kind.startsWith('image/')?<img className="max-h-[75vh] max-w-full object-contain" src={file.url} alt={file.name}/>:file.kind.startsWith('video/')?<video className="max-h-[75vh] max-w-full" src={file.url} controls/>:<p>Download this file to open it on your device.</p>}<button type="button" className="rounded border px-4 py-2" onClick={()=>downloadBlob(file.blob,file.name)}>Download file</button></>}</main>;
+ return <main className="mx-auto max-w-4xl space-y-4 p-6"><h1 className="text-xl font-bold">{file?.name||'Workbook media'}</h1>{loading?<p>Checking access...</p>:!user?<p><a className="underline" href="/sign-up-login">Sign in</a>, then reopen this media link. Document permissions apply.</p>:error?<p role="alert">{error}</p>:!file?<p>Loading media...</p>:<>{file.kind.startsWith('image/')?<img className="max-h-[75vh] max-w-full object-contain" src={file.url} alt={file.name}/>:file.kind.startsWith('video/')?<video className="max-h-[75vh] max-w-full" src={file.url} controls/>:<p>Download this file to open it on your device.</p>}<button type="button" className="rounded border px-4 py-2" onClick={()=>downloadBlob(file.blob,file.name)}>Download file</button></>}</main>;
 }

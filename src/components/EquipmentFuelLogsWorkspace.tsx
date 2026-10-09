@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -264,7 +264,7 @@ export default function EquipmentFuelLogsWorkspace() {
         <div className="card p-4 space-y-1.5 border-l-4 border-l-primary">
           <span className="text-xs font-semibold text-muted-foreground block">Total Fuel Consumed</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-foreground">{loading ? '…' : `${totalLitres.toLocaleString()} L`}</span>
+            <span className="text-2xl font-extrabold text-foreground">{loading ? '...' : `${totalLitres.toLocaleString()} L`}</span>
             <Fuel size={18} className="text-primary opacity-80" />
           </div>
           <p className="text-[11px] text-muted-foreground">Across all recorded refilling logs</p>
@@ -273,7 +273,7 @@ export default function EquipmentFuelLogsWorkspace() {
         <div className="card p-4 space-y-1.5 border-l-4 border-l-emerald-500">
           <span className="text-xs font-semibold text-muted-foreground block">Total Fuel Expenditure</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-emerald-700">{loading ? '…' : `$${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}</span>
+            <span className="text-2xl font-extrabold text-emerald-700">{loading ? '...' : `$${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}</span>
             <DollarSign size={18} className="text-emerald-600" />
           </div>
           <p className="text-[11px] text-muted-foreground">Total cost of fuel refilled</p>
@@ -282,7 +282,7 @@ export default function EquipmentFuelLogsWorkspace() {
         <div className="card p-4 space-y-1.5 border-l-4 border-l-amber-500">
           <span className="text-xs font-semibold text-muted-foreground block">Detected Fuel Anomalies</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-amber-800">{loading ? '…' : anomalyCount}</span>
+            <span className="text-2xl font-extrabold text-amber-800">{loading ? '...' : anomalyCount}</span>
             <AlertTriangle size={18} className="text-amber-600" />
           </div>
           <p className="text-[11px] text-muted-foreground">Spikes or rate variances</p>
@@ -291,7 +291,7 @@ export default function EquipmentFuelLogsWorkspace() {
         <div className="card p-4 space-y-1.5 border-l-4 border-l-teal-500">
           <span className="text-xs font-semibold text-muted-foreground block">Total Refilling Logs</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-teal-700">{loading ? '…' : totalEntries}</span>
+            <span className="text-2xl font-extrabold text-teal-700">{loading ? '...' : totalEntries}</span>
             <Activity size={18} className="text-teal-600" />
           </div>
           <p className="text-[11px] text-muted-foreground">Fuel delivery & dip check records</p>

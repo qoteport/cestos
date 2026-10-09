@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import WorkCompletionDetails from './WorkCompletionDetails';
 
 import React, { useState, useEffect } from 'react';
@@ -198,7 +198,7 @@ export default function EquipmentMaintenanceWorkspace() {
         >
           <span className="text-xs font-semibold text-muted-foreground block">Upcoming Works (30 Days)</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-blue-700">{loading ? '…' : upcomingJobs.length}</span>
+            <span className="text-2xl font-extrabold text-blue-700">{loading ? '...' : upcomingJobs.length}</span>
             <Calendar size={18} className="text-blue-600" />
           </div>
           <p className="text-[11px] text-muted-foreground">Scheduled & preventive maintenance due</p>
@@ -210,7 +210,7 @@ export default function EquipmentMaintenanceWorkspace() {
         >
           <span className="text-xs font-semibold text-muted-foreground block">Overdue Maintenance</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-rose-700">{loading ? '…' : overdueJobs.length}</span>
+            <span className="text-2xl font-extrabold text-rose-700">{loading ? '...' : overdueJobs.length}</span>
             <AlertCircle size={18} className="text-rose-600" />
           </div>
           <p className="text-[11px] text-muted-foreground">Passed target scheduled dates</p>
@@ -219,7 +219,7 @@ export default function EquipmentMaintenanceWorkspace() {
         <div className="card p-4 space-y-1.5 border-l-4 border-l-amber-500">
           <span className="text-xs font-semibold text-muted-foreground block">In Progress Jobs</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-amber-700">{loading ? '…' : inProgressCount}</span>
+            <span className="text-2xl font-extrabold text-amber-700">{loading ? '...' : inProgressCount}</span>
             <Clock size={18} className="text-amber-600" />
           </div>
           <p className="text-[11px] text-muted-foreground">Tasks currently undergoing service</p>
@@ -228,7 +228,7 @@ export default function EquipmentMaintenanceWorkspace() {
         <div className="card p-4 space-y-1.5 border-l-4 border-l-emerald-500">
           <span className="text-xs font-semibold text-muted-foreground block">Completed Maintenance</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-emerald-700">{loading ? '…' : completedCount}</span>
+            <span className="text-2xl font-extrabold text-emerald-700">{loading ? '...' : completedCount}</span>
             <CheckCircle size={18} className="text-emerald-600" />
           </div>
           <p className="text-[11px] text-muted-foreground">Successfully closed & verified tasks</p>

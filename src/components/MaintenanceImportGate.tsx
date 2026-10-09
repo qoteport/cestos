@@ -1,4 +1,4 @@
- 'use client';
+﻿ 'use client';
 
 import { useRef, useState, type ReactNode } from 'react';
 import { apiFetch } from '@/lib/api';
@@ -74,7 +74,7 @@ export default function MaintenanceImportGate({ kind, record, assets = [], emplo
         <span className="mb-4 block text-xs text-slate-500">Supports .csv, .xlsx, .xls spreadsheets</span>
         <input type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={busy} onChange={(event) => { const source = event.target.files?.[0]; event.target.value = ''; if (source) void upload(source); }} className="block w-full max-w-md mx-auto text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#184877] file:text-white hover:file:bg-[#113456] file:cursor-pointer transition-colors shadow-sm" />
       </label>
-      {busy && <p role="status">Reading file and checking worksheetsâ€¦</p>}
+      {busy && <p role="status">Reading file and checking worksheets...</p>}
       {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
       {selected && <section className="space-y-3 rounded-xl border bg-muted/30 p-4">
         <p className="text-sm font-semibold">{file?.name}</p>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect, useState } from 'react';
 import { Bell, CheckCircle2, Share2, Plus, RefreshCw, Search, Filter, Wrench, Package, Users, FolderKanban, Clock, Mail, ShieldAlert, Play, Trash2, Pencil, ExternalLink } from 'lucide-react';
@@ -522,7 +522,7 @@ export default function NotificationWorkspace({
           >
             <input
               className="input-field text-xs max-w-md"
-              placeholder="Search notifications message context…"
+              placeholder="Search notifications message context..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -977,7 +977,7 @@ export default function NotificationWorkspace({
                   className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary/90 disabled:opacity-50"
                 >
                   {forwardingBusy
-                    ? 'Forwarding…'
+                    ? 'Forwarding...'
                     : `Forward Notification (${forwardTargetUserIds.length})`}
                 </button>
               </div>
@@ -1291,7 +1291,7 @@ export default function NotificationWorkspace({
               </button>
               <button disabled={schedBusy} className="btn-primary text-xs">
                 {schedBusy
-                  ? (editingSchedule ? 'Updating Schedule…' : 'Creating Schedule…')
+                  ? (editingSchedule ? 'Updating Schedule...' : 'Creating Schedule...')
                   : (editingSchedule ? 'Update Notification Schedule' : 'Save Notification Schedule')}
               </button>
             </div>

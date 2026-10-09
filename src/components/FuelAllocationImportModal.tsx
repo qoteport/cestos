@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -285,7 +285,7 @@ export default function FuelAllocationImportModal({
             '';
       for (const [index, row] of rows.entries()) {
         if (saved.current.has(row.key) || row.savedId) continue;
-        setProgress(`Logging ${index + 1} of ${rows.length}…`);
+        setProgress(`Logging ${index + 1} of ${rows.length}...`);
         const notes = [
           row.equipment ? `Equipment as reported: ${row.equipment}` : '',
           row.meter ? `Km / Hrs: ${row.meter}` : '',
@@ -461,7 +461,7 @@ export default function FuelAllocationImportModal({
                     value={siteId}
                     disabled={siteLoading || Boolean(deliveryId)}
                     onChange={setSiteId}
-                    placeholder={siteLoading ? 'Loading sites…' : 'Select project site'}
+                    placeholder={siteLoading ? 'Loading sites...' : 'Select project site'}
                   />
                 </label>
                 <label className="flex flex-col gap-1.5 text-xs font-semibold sm:col-span-2">
@@ -545,7 +545,7 @@ export default function FuelAllocationImportModal({
                           options={assetOptions}
                           value={row.assetId}
                           onChange={(id) => match(row.key, id)}
-                          placeholder="Match equipment name or unit number…"
+                          placeholder="Match equipment name or unit number..."
                         />
                         {!row.assetId && (
                           <span className="text-amber-700">
@@ -639,7 +639,7 @@ export default function FuelAllocationImportModal({
                   setError('');
                 }}
               >
-                {busy ? 'Reading…' : 'Continue'}
+                {busy ? 'Reading...' : 'Continue'}
               </button>
             ) : (
               <button
@@ -647,7 +647,7 @@ export default function FuelAllocationImportModal({
                 className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
                 onClick={() => void save()}
               >
-                {busy ? progress || 'Saving source…' : `Log ${rows.length - savedCount} entries`}
+                {busy ? progress || 'Saving source...' : `Log ${rows.length - savedCount} entries`}
               </button>
             )}
           </div>

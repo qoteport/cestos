@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api';
@@ -56,7 +56,7 @@ async function createPmPdf(data: any) {
   ctx.scale(1.5, 1.5); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 850, 1200); const left = 34; const width = 782; let y = 26;
   const text = (value: any) => value == null || value === '' ? 'â€”' : Array.isArray(value) ? value.join(', ') : String(value);
   const section = (title: string) => { ctx.fillStyle = '#184877'; ctx.fillRect(left, y, width, 20); ctx.fillStyle = '#fff'; ctx.font = 'bold 10px Arial'; ctx.textAlign = 'center'; ctx.fillText(title, left + width / 2, y + 14); y += 20; };
-  const line = (label: string, value: any, height = 20) => { ctx.fillStyle = '#dbe7f4'; ctx.fillRect(left, y, 190, height); ctx.strokeStyle = '#777'; ctx.strokeRect(left, y, 190, height); ctx.fillStyle = '#111'; ctx.font = 'bold 8px Arial'; ctx.textAlign = 'left'; ctx.fillText(label, left + 4, y + 13); ctx.fillStyle = '#fff'; ctx.fillRect(left + 190, y, width - 190, height); ctx.strokeRect(left + 190, y, width - 190, height); ctx.font = '8px Arial'; const v = text(value); ctx.fillText(v.length > 115 ? `${v.slice(0, 112)}â€¦` : v, left + 194, y + 13); y += height; };
+  const line = (label: string, value: any, height = 20) => { ctx.fillStyle = '#dbe7f4'; ctx.fillRect(left, y, 190, height); ctx.strokeStyle = '#777'; ctx.strokeRect(left, y, 190, height); ctx.fillStyle = '#111'; ctx.font = 'bold 8px Arial'; ctx.textAlign = 'left'; ctx.fillText(label, left + 4, y + 13); ctx.fillStyle = '#fff'; ctx.fillRect(left + 190, y, width - 190, height); ctx.strokeRect(left + 190, y, width - 190, height); ctx.font = '8px Arial'; const v = text(value); ctx.fillText(v.length > 115 ? `${v.slice(0, 112)}...` : v, left + 194, y + 13); y += height; };
   const box = (label: string, value: any, height = 42) => { line(label, '', 18); ctx.strokeRect(left, y, width, height); ctx.font = '8px Arial'; ctx.fillStyle = '#111'; const words = text(value).split(/\s+/); let current = ''; let top = y + 12; for (const word of words) { const next = current ? `${current} ${word}` : word; if (ctx.measureText(next).width > width - 12) { ctx.fillText(current, left + 5, top); current = word; top += 11; if (top > y + height - 3) break; } else current = next; } if (current && top <= y + height - 3) ctx.fillText(current, left + 5, top); y += height; };
   ctx.fillStyle = '#111'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center'; ctx.fillText('MAINTENANCE CONTROL â€” PREVENTIVE MAINTENANCE JOB CARD', 425, y); y += 22;
   ctx.font = 'italic 8px Arial'; ctx.fillText('Controlled PM record â€¢ Inspect â†’ Service â†’ Measure â†’ Verify â†’ Release', 425, y); y += 12;
@@ -303,14 +303,14 @@ function PreventiveMaintenanceWizardForm({ saveImportFiles,
     value: String(asset.id),
     label: asset.name || asset.asset_number || asset.id,
     sublabel: [asset.asset_number, asset.make, asset.model].filter(Boolean).join(' Â· '),
-  })), { value: '__CUSTOM__', label: 'Enter custom equipmentâ€¦', sublabel: '' }];
+  })), { value: '__CUSTOM__', label: 'Enter custom equipment...', sublabel: '' }];
   const siteOptions = [
     ...sites.map((site) => ({ value: String(site.id), label: site.name || site.site_name || site.code })),
-    { value: '__CUSTOM__', label: 'Enter a custom locationâ€¦' },
+    { value: '__CUSTOM__', label: 'Enter a custom location...' },
   ];
   const workOrderOptions = [
     ...workOrders.map((order) => ({ value: String(order.id), label: `${order.wo_number || order.title || 'Work order'}${order.status ? ` Â· ${String(order.status).replaceAll('_', ' ')}` : ''}` })),
-    { value: '__CUSTOM__', label: 'Enter a work order numberâ€¦' },
+    { value: '__CUSTOM__', label: 'Enter a work order number...' },
   ];
   const workOrderItemOptions = inventoryItems.map((item) => ({ value: String(item.id), label: `${item.name} [Code: ${item.code || 'ITEM'}]`, sublabel: `Unit: ${item.unit_of_measure || 'PCS'}` }));
   async function createWorkOrder() {
@@ -393,7 +393,7 @@ function PreventiveMaintenanceWizardForm({ saveImportFiles,
               disabled={saving || (!assetId && !(isCustomEquipment && customEquipment.trim()))}
               onClick={save}
             >
-              {saving ? 'Savingâ€¦' : 'Save Job Card'}
+              {saving ? 'Saving...' : 'Save Job Card'}
             </button>
           )}
         </div>
@@ -440,8 +440,8 @@ function PreventiveMaintenanceWizardForm({ saveImportFiles,
           <div className="space-y-1"><label className="block font-medium">Location</label>{control.location === '__CUSTOM__' ? <><input autoFocus value={customLocation} onChange={(event) => setCustomLocation(event.target.value)} placeholder="Enter location" className="w-full border rounded-lg p-2 bg-background" /><button type="button" className="text-primary underline" onClick={() => { setCustomLocation(''); setControl({ ...control, location: '', site_location_id: '' }); }}>Choose a project location</button></> : <SearchableSelect value={control.site_location_id} onChange={(value) => { if (value === '__CUSTOM__') { setCustomLocation(''); setControl({ ...control, site_location_id: '', location: '__CUSTOM__' }); return; } setControl({ ...control, site_location_id: value, location: '' }); }} options={siteOptions} placeholder="Search project locations..." />}</div>
           {controlInput('hour_meter_km', 'Hour Meter / KM')}
 
-          <div className="space-y-1"><label className="block font-medium">Technician / Team</label>{control.technician_team === '__CUSTOM__' ? <><input autoFocus value={customTechnician} onChange={(event) => setCustomTechnician(event.target.value)} placeholder="Enter technician or team" className="w-full border rounded-lg p-2 bg-background" /><button type="button" className="text-primary underline" onClick={() => { setCustomTechnician(''); setControl({ ...control, technician_team: '', technician_employee_id: '' }); }}>Choose an employee</button></> : <SearchableSelect value={control.technician_employee_id} onChange={(value) => { if (value === '__CUSTOM__') { setCustomTechnician(''); setControl({ ...control, technician_employee_id: '', technician_team: '__CUSTOM__' }); return; } const employee = employees.find((row) => String(row.id) === value); setControl({ ...control, technician_employee_id: value, technician_team: nameOf(employee || {}) }); }} options={[{ value: '__CUSTOM__', label: 'Enter a custom technicianâ€¦' }, ...technicianOptions]} placeholder="Search Operations mechanics and electricians..." />}</div>
-          <div className="space-y-1"><label className="block font-medium">Work Order No.</label>{control.work_order_no === '__CUSTOM__' ? <><input autoFocus value={customWorkOrder} onChange={(event) => setCustomWorkOrder(event.target.value)} placeholder="Enter a custom work order number" className="w-full border rounded-lg p-2 bg-background" /><button type="button" className="text-primary underline" onClick={() => { setCustomWorkOrder(''); setControl({ ...control, work_order_id: '', work_order_no: '' }); }}>Choose an existing work order</button></> : <SearchableSelect value={control.work_order_id || ''} onChange={(value) => { if (value === '__CUSTOM__') { setCustomWorkOrder(''); setControl({ ...control, work_order_id: '', work_order_no: '__CUSTOM__' }); return; } const order = workOrders.find((row) => String(row.id) === value); setCustomWorkOrder(''); setControl({ ...control, work_order_id: value, work_order_no: order?.wo_number || order?.title || '' }); }} options={assetId ? workOrderOptions : [{ value: '__CUSTOM__', label: 'Enter a custom work order numberâ€¦' }]} placeholder={assetId ? 'Search work orders for this equipment...' : 'Select or enter a work order number...'} />}{assetId && <button type="button" onClick={() => { setWorkOrderError(''); setShowCreateWorkOrder(true); }} className="btn-secondary w-full">Create Work Order</button>}{!assetId && <small className="text-muted-foreground">Select equipment to choose an existing order or create a linked one.</small>}{assetId && <small className="text-muted-foreground">You can enter a custom number or create a linked work order.</small>}</div>
+          <div className="space-y-1"><label className="block font-medium">Technician / Team</label>{control.technician_team === '__CUSTOM__' ? <><input autoFocus value={customTechnician} onChange={(event) => setCustomTechnician(event.target.value)} placeholder="Enter technician or team" className="w-full border rounded-lg p-2 bg-background" /><button type="button" className="text-primary underline" onClick={() => { setCustomTechnician(''); setControl({ ...control, technician_team: '', technician_employee_id: '' }); }}>Choose an employee</button></> : <SearchableSelect value={control.technician_employee_id} onChange={(value) => { if (value === '__CUSTOM__') { setCustomTechnician(''); setControl({ ...control, technician_employee_id: '', technician_team: '__CUSTOM__' }); return; } const employee = employees.find((row) => String(row.id) === value); setControl({ ...control, technician_employee_id: value, technician_team: nameOf(employee || {}) }); }} options={[{ value: '__CUSTOM__', label: 'Enter a custom technician...' }, ...technicianOptions]} placeholder="Search Operations mechanics and electricians..." />}</div>
+          <div className="space-y-1"><label className="block font-medium">Work Order No.</label>{control.work_order_no === '__CUSTOM__' ? <><input autoFocus value={customWorkOrder} onChange={(event) => setCustomWorkOrder(event.target.value)} placeholder="Enter a custom work order number" className="w-full border rounded-lg p-2 bg-background" /><button type="button" className="text-primary underline" onClick={() => { setCustomWorkOrder(''); setControl({ ...control, work_order_id: '', work_order_no: '' }); }}>Choose an existing work order</button></> : <SearchableSelect value={control.work_order_id || ''} onChange={(value) => { if (value === '__CUSTOM__') { setCustomWorkOrder(''); setControl({ ...control, work_order_id: '', work_order_no: '__CUSTOM__' }); return; } const order = workOrders.find((row) => String(row.id) === value); setCustomWorkOrder(''); setControl({ ...control, work_order_id: value, work_order_no: order?.wo_number || order?.title || '' }); }} options={assetId ? workOrderOptions : [{ value: '__CUSTOM__', label: 'Enter a custom work order number...' }]} placeholder={assetId ? 'Search work orders for this equipment...' : 'Select or enter a work order number...'} />}{assetId && <button type="button" onClick={() => { setWorkOrderError(''); setShowCreateWorkOrder(true); }} className="btn-secondary w-full">Create Work Order</button>}{!assetId && <small className="text-muted-foreground">Select equipment to choose an existing order or create a linked one.</small>}{assetId && <small className="text-muted-foreground">You can enter a custom number or create a linked work order.</small>}</div>
           {controlInput('start_time', 'Start Time', 'time')}
           {controlInput('finish_time', 'Finish Time', 'time')}
         </div>
@@ -479,7 +479,7 @@ function PreventiveMaintenanceWizardForm({ saveImportFiles,
               disabled={creatingWorkOrder}
               onClick={createWorkOrder}
             >
-              {creatingWorkOrder ? 'Dispatching Work Orderâ€¦' : 'Create & Dispatch Work Order'}
+              {creatingWorkOrder ? 'Dispatching Work Order...' : 'Create & Dispatch Work Order'}
             </button>
           </div>
         }

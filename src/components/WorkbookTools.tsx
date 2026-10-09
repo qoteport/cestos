@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { sortSheet, replaceSheetText } from '@/lib/workbookOperations';
@@ -79,7 +79,7 @@ export default function WorkbookTools({
       <input
         className={control}
         aria-label="Filter selected column"
-        placeholder="Filter selected column…"
+        placeholder="Filter selected column..."
         value={sheet.view?.filterColumn === selection.c ? sheet.view?.filterText || '' : ''}
         onChange={(e) => {
           if (
@@ -124,14 +124,14 @@ export default function WorkbookTools({
       <input
         aria-label="Find text"
         className={control}
-        placeholder="Find…"
+        placeholder="Find..."
         value={find}
         onChange={(e) => setFind(e.target.value)}
       />
       <input
         aria-label="Replacement text"
         className={control}
-        placeholder="Replace with…"
+        placeholder="Replace with..."
         value={replace}
         onChange={(e) => setReplace(e.target.value)}
       />

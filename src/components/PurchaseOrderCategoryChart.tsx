@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useMemo } from 'react';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -33,7 +33,7 @@ export default function PurchaseOrderCategoryChart({ orders, color = '#4f46e5' }
                 dataKey="category"
                 tick={{ fontSize: 10 }}
                 width={110}
-                tickFormatter={(v) => (String(v).length > 20 ? String(v).slice(0, 18) + '…' : String(v))}
+                tickFormatter={(v) => (String(v).length > 20 ? String(v).slice(0, 18) + '...' : String(v))}
               />
               <Tooltip formatter={(val: any) => [`${Number(val)} orders`, 'Purchase Orders']} />
               <Bar dataKey="count" name="Purchase orders" fill={color} radius={[0, 4, 4, 0]} />

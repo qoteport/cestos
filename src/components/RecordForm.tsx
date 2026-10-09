@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useEffect, useId, FormEvent } from 'react';
 import Link from 'next/link';
 import { Info } from 'lucide-react';
@@ -313,7 +313,7 @@ function SupplierInput({
         value={value || ''}
         required={required}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Type or select supplier name…"
+        placeholder="Type or select supplier name..."
       />
       <datalist id={listId}>
         {suppliers.map((s) => (
@@ -448,11 +448,11 @@ function ProjectTypeInput({
             onChange(val);
           }
         }}
-        placeholder="Select Project Type…"
+        placeholder="Select Project Type..."
         options={[
-          { value: '', label: 'Select Project Type…' },
+          { value: '', label: 'Select Project Type...' },
           ...types.map((t) => ({ value: t, label: t })),
-          { value: '__ADD_NEW__', label: '+ Add New Project Type…' },
+          { value: '__ADD_NEW__', label: '+ Add New Project Type...' },
         ]}
         searchable={false}
         ariaLabel="Project Type"
@@ -464,7 +464,7 @@ function ProjectTypeInput({
             value={customVal}
             required={required}
             autoFocus
-            placeholder="Type new project type name…"
+            placeholder="Type new project type name..."
             onChange={(e) => {
               setCustomVal(e.target.value);
               onChange(e.target.value);
@@ -511,7 +511,7 @@ function DrillTypeInput({
         value={value || ''}
         required={required}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Select or type drill type…"
+        placeholder="Select or type drill type..."
       />
       <datalist id={listId}>
         {types.map((t) => (
@@ -859,7 +859,7 @@ function Reference({
               {supplierCreateError && <p className="text-xs text-red-700">{supplierCreateError}</p>}
               <div className="flex justify-end gap-2">
                 <button type="button" className="btn-secondary text-xs" onClick={() => { setShowCreateSupplier(false); setSupplierCreateError(''); }} disabled={supplierSaving}>Cancel</button>
-                <button type="button" className="btn-primary text-xs" onClick={() => void createSupplier()} disabled={supplierSaving || !supplierDraft.name.trim()}>{supplierSaving ? 'Saving…' : 'Save supplier'}</button>
+                <button type="button" className="btn-primary text-xs" onClick={() => void createSupplier()} disabled={supplierSaving || !supplierDraft.name.trim()}>{supplierSaving ? 'Saving...' : 'Save supplier'}</button>
               </div>
             </div>
           )}
@@ -1100,9 +1100,9 @@ function Fields({
             value={val || ''}
             required={required.includes(key)}
             onChange={(v) => set(v)}
-            placeholder="Select…"
+            placeholder="Select..."
             options={[
-              { value: '', label: 'Select…' },
+              { value: '', label: 'Select...' },
               ...s.enum.map((v: string) => ({
                 value: v,
                 label: title(v.toLowerCase()),
@@ -1657,7 +1657,7 @@ export default function RecordForm({
               onClick={() => void deleteAssignment()}
               className="btn-secondary rounded-xl text-xs text-red-700 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30 transition"
             >
-              {deleteBusy ? 'Cancelling…' : 'Delete Assignment'}
+              {deleteBusy ? 'Cancelling...' : 'Delete Assignment'}
             </button>
           ) : (
             <span className="hidden sm:inline" />
@@ -1676,7 +1676,7 @@ export default function RecordForm({
               disabled={busy}
               className="btn-primary rounded-xl text-xs flex-1 sm:flex-initial shadow-xs"
             >
-              {busy ? 'Saving…' : 'Save Record'}
+              {busy ? 'Saving...' : 'Save Record'}
             </button>
           </div>
         </div>

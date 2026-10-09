@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { hasSupervisorRole, canOpenFieldTab } from '@/lib/fieldPortalAccess';
 
 import React, { useState, useEffect } from 'react';
@@ -2690,7 +2690,7 @@ export default function FieldPortalWorkspace() {
                               className="text-center py-6 text-muted-foreground italic"
                             >
                               {shiftsLoading
-                                ? 'Loading shift production reports…'
+                                ? 'Loading shift production reports...'
                                 : shiftsError
                                   ? 'Shift reports could not be loaded.'
                                   : 'No shift production reports logged for the selected project.'}
@@ -3832,7 +3832,7 @@ export default function FieldPortalWorkspace() {
                 <div className="space-y-3">
                   {leaveLoading && (
                     <p role="status" className="text-muted-foreground">
-                      Loading leave requests…
+                      Loading leave requests...
                     </p>
                   )}
                   {!leaveLoading && !leaveError && myLeaveRequests.length === 0 && (
@@ -3893,7 +3893,7 @@ export default function FieldPortalWorkspace() {
                 <div className="space-y-3">
                   {timeLogsLoading && (
                     <p role="status" className="text-muted-foreground text-xs">
-                      Loading time logs…
+                      Loading time logs...
                     </p>
                   )}
                   {!timeLogsLoading && myTimeLogs.length === 0 && (
@@ -5512,7 +5512,7 @@ export default function FieldPortalWorkspace() {
                 disabled={leaveSubmitting}
                 className="px-4 py-2 bg-primary text-primary-foreground font-bold rounded-lg hover:bg-primary/90 transition"
               >
-                {leaveSubmitting ? 'Submitting…' : 'Submit Leave Request'}
+                {leaveSubmitting ? 'Submitting...' : 'Submit Leave Request'}
               </button>
             </div>
           </form>
@@ -5673,7 +5673,7 @@ export default function FieldPortalWorkspace() {
                 name="tl_notes"
                 rows={3}
                 className="w-full border rounded-lg p-2 bg-background resize-y"
-                placeholder="e.g. Drill rig maintenance, shift operations, site inspection…"
+                placeholder="e.g. Drill rig maintenance, shift operations, site inspection..."
               />
             </div>
 
@@ -5690,7 +5690,7 @@ export default function FieldPortalWorkspace() {
                 disabled={timeLogBusy}
                 className="px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition"
               >
-                {timeLogBusy ? 'Logging…' : 'Log Time'}
+                {timeLogBusy ? 'Logging...' : 'Log Time'}
               </button>
             </div>
           </form>
