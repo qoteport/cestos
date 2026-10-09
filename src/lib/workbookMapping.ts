@@ -1,6 +1,6 @@
 import type { FieldSheet } from './fieldWorkbook';
 import { calculateSheet, referencePosition } from './workbookFormulas';
-export type MappingField = { kind: 'column' | 'row' | 'cell' | 'block'; r: number; c: number };
+export type MappingField = { kind: 'column' | 'row' | 'cell' | 'block' | 'constant'; r: number; c: number; value?: string };
 export type MappingLayout = {
   version: 1;
   mode: 'rows' | 'columns' | 'form' | 'blocks';
@@ -90,7 +90,7 @@ export function assertLayout(sheet: FieldSheet, l: MappingLayout, allowReview = 
   )
     throw Error('The mapping range is outside this sheet.');
   for (const f of Object.values(l.fields)) {
-    if (!f || (f.kind as string) === 'none') continue;
+    if (!f || (f.kind as string) === 'none' || f.kind === 'constant') continue;
     if (
       f.kind !== 'cell' &&
       f.kind !==
@@ -176,7 +176,7 @@ export function extractMapping(sheet: FieldSheet, l: MappingLayout) {
   const fields = Object.keys(l.fields).filter(
     (name) => l.fields[name] && (l.fields[name].kind as string) !== 'none'
   );
-  if (l.mode !== 'form' && fields.length && !Object.values(l.fields).some((f) => f.kind !== 'cell'))
+  if (l.mode !== 'form' && fields.length && !Object.values(l.fields).some((f) => f.kind !== 'cell' && f.kind !== 'constant'))
     throw Error('Map a value from each record, or choose Single form for fixed cells only.');
   if (!fields.length) throw Error('Map at least one database field.');
   const calculated = calculateSheet(sheet),
@@ -190,6 +190,10 @@ export function extractMapping(sheet: FieldSheet, l: MappingLayout) {
     const places: Record<string, { r: number; c: number }> = {};
     const values = fields.map((name) => {
       const f = l.fields[name];
+      if (f.kind === 'constant') {
+        places[name] = { r: 0, c: 0 };
+        return f.value ?? '';
+      }
       let r = f.r,
         c = f.c;
       if (f.kind === 'column') r = index;
@@ -201,9 +205,9 @@ export function extractMapping(sheet: FieldSheet, l: MappingLayout) {
       places[name] = p;
       return calculated[p.r][p.c];
     });
-    // Fixed report metadata alone must not produce records for empty detail rows.
+    // Fixed report metadata and constant values alone must not produce records for empty detail rows.
     const variable = fields
-      .map((name, i) => (l.fields[name].kind !== 'cell' ? i : -1))
+      .map((name, i) => (l.fields[name].kind !== 'cell' && l.fields[name].kind !== 'constant' ? i : -1))
       .filter((i) => i >= 0);
     const active = variable.length ? variable : fields.map((_, i) => i);
     if (active.some((i) => values[i].trim())) {

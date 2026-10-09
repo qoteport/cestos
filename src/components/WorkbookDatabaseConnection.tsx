@@ -59,6 +59,130 @@ function CellInput({
     />
   );
 }
+function DatabaseRecordPicker({
+  fieldName,
+  value,
+  tables,
+  disabled,
+  onChange,
+}: {
+  fieldName: string;
+  value: string;
+  tables: MappingTable[];
+  disabled?: boolean;
+  onChange: (value: string) => void;
+}) {
+  const [selectedTableId, setSelectedTableId] = useState(() => {
+    const base = fieldName.replace(/_ids?$/, '').replace(/_/g, '').toLowerCase();
+    const match = tables.find((t) => {
+      const tn = t.name.replace(/_/g, '').toLowerCase();
+      const tid = t.id.split('/').pop()?.replace(/_/g, '').toLowerCase() || '';
+      return tn.includes(base) || base.includes(tn) || tid.includes(base) || base.includes(tid);
+    });
+    return match?.id || tables[0]?.id || '';
+  });
+
+  const [records, setRecords] = useState<{ value: string; label: string }[]>([]);
+  const [loadingRecords, setLoadingRecords] = useState(false);
+  const [manual, setManual] = useState(false);
+
+  useEffect(() => {
+    if (!selectedTableId || manual) return;
+    let active = true;
+    setLoadingRecords(true);
+    const policy = { cacheResponse: true, cacheOfflineRead: true, memoryCache: true };
+    void (async () => {
+      try {
+        const res = await apiFetch<any>(
+          selectedTableId.includes('?') ? selectedTableId : `${selectedTableId}?page_size=100`,
+          {},
+          true,
+          policy
+        );
+        if (!active) return;
+        const items = Array.isArray(res) ? res : res?.items || [];
+        const opts = items.map((row: any) => {
+          const id = String(row.id || row.key || row.code || '');
+          const name = String(row.name || row.title || row.display_name || row.fleet_number || row.asset_number || row.full_name || id);
+          const sub = row.code || row.asset_number || row.job_title || row.status || '';
+          return {
+            value: id,
+            label: `${name}${sub ? ` (${sub})` : ''}`,
+          };
+        });
+        setRecords(opts);
+      } catch {
+        if (active) setRecords([]);
+      } finally {
+        if (active) setLoadingRecords(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [selectedTableId, manual]);
+
+  if (manual) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs">
+        <input
+          type="text"
+          className={input}
+          placeholder="Enter constant value / ID"
+          value={value}
+          disabled={disabled}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        <button
+          type="button"
+          className="text-xs text-blue-600 underline whitespace-nowrap"
+          onClick={() => setManual(false)}
+        >
+          Select record
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1 text-xs min-w-56">
+      <div className="flex items-center gap-1">
+        <span className="text-slate-500 text-[11px] shrink-0">Table:</span>
+        <div className="min-w-0 flex-1">
+          <SearchableSelect
+            ariaLabel={`Table for ${fieldName}`}
+            value={selectedTableId}
+            disabled={disabled}
+            options={tables.map((t) => ({ value: t.id, label: t.name }))}
+            onChange={(tId) => setSelectedTableId(tId)}
+          />
+        </div>
+      </div>
+      <div className="flex items-center gap-1">
+        <span className="text-slate-500 text-[11px] shrink-0">Record:</span>
+        <div className="min-w-0 flex-1">
+          <SearchableSelect
+            ariaLabel={`Record for ${fieldName}`}
+            value={value}
+            disabled={disabled || loadingRecords}
+            placeholder={loadingRecords ? 'Loading records...' : 'Select database record'}
+            options={records}
+            onChange={(recId) => onChange(recId)}
+          />
+        </div>
+        <button
+          type="button"
+          title="Switch to manual text input"
+          className="text-[11px] text-slate-500 underline shrink-0 ml-1"
+          onClick={() => setManual(true)}
+        >
+          Custom
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function WorkbookDatabaseConnection({
   sheet,
   onClose,
@@ -531,6 +655,7 @@ export default function WorkbookDatabaseConnection({
                                       ? [{ value: 'block', label: 'Cell in each form block' }]
                                       : []),
                                 { value: 'cell', label: 'Fixed cell / report value' },
+                                { value: 'constant', label: 'Fixed database record / constant' },
                               ]}
                               onChange={(value) =>
                                 setField(
@@ -541,6 +666,7 @@ export default function WorkbookDatabaseConnection({
                                         kind: value as MappingField['kind'],
                                         r: layout.mode === 'blocks' ? layout.start : 0,
                                         c: f?.c ?? (index < headers.length ? index : 0),
+                                        value: f?.value ?? '',
                                       }
                                 )
                               }
@@ -572,6 +698,16 @@ export default function WorkbookDatabaseConnection({
                                         r: kind === 'column' ? 0 : Number(v),
                                         c: kind === 'column' ? Number(v) : 0,
                                       })
+                                }
+                              />
+                            ) : kind === 'constant' ? (
+                              <DatabaseRecordPicker
+                                fieldName={field.name}
+                                value={f?.value || ''}
+                                tables={tables}
+                                disabled={busy}
+                                onChange={(val) =>
+                                  setField(field.name, { kind: 'constant', r: 0, c: 0, value: val })
                                 }
                               />
                             ) : f && (f.kind as string) !== 'none' ? (
