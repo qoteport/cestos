@@ -24,7 +24,8 @@ self.addEventListener('fetch', (event) => {
         cache = await caches.open(STATIC_CACHE);
         cached = await cache.match(request);
       } catch { /* Fall through to the network if cache access is unavailable. */ }
-      if (cached && self.navigator.onLine === false) return cached;
+      // Next static assets have versioned URLs: use the device copy immediately.
+      if (cached) return cached;
       try {
         const response = await fetch(request);
         if (response.ok && cache) await cache.put(request, response.clone()).catch(() => {});

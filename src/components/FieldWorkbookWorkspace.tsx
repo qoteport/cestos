@@ -1,8 +1,8 @@
 'use client';
 import styles from './FieldWorkbookWorkspace.module.css';
 import { workbookShortcut } from '@/lib/workbookShortcuts';
-import {printSheet, autofillRange, commonColumnValues} from '@/lib/workbookConvenience';
-import {readDeviceSession, saveDeviceSession, saveDeviceWorkbook, listDeviceWorkbooks, deviceRevisions, sheetCsv, type DeviceWorkbook} from '@/lib/workbookDevice';
+import {dragFill, printSheet, autofillRange, commonColumnValues} from '@/lib/workbookConvenience';
+import {readDeviceLibrary, saveDeviceLibrary, readDeviceWorkbook, readDeviceSession, saveDeviceSession, saveDeviceWorkbook, listDeviceWorkbooks, deviceRevisions, sheetCsv, type DeviceWorkbook} from '@/lib/workbookDevice';
 import WorkbookShareDialog from './WorkbookShareDialog';
 import WorkbookDatabaseConnection from './WorkbookDatabaseConnection';
 import SearchableSelect from './SearchableSelect';
@@ -103,7 +103,9 @@ const GridCell = memo(function GridCell({
   onNavigate,
   onPaste,
   onContextMenu,
+  onFill,
 }: {
+  onFill?: (event: React.PointerEvent) => void;
   value: string;
   r: number;
   c: number;
@@ -153,7 +155,7 @@ const GridCell = memo(function GridCell({
         aria-label={`${columnName(c)}${r + 1}`}
         aria-selected={selected}
         list={list}
-        type={picker !== 'text' && compatible ? picker : 'text'}
+        type={active && editing && picker !== 'text' && compatible ? picker : 'text'}
         step={kind === 'time' || kind === 'datetime' ? 1 : undefined}
         inputMode={['number','currency','percent'].includes(kind || '') ? 'decimal' : undefined}
         value={editing ? value : displayCellValue(value, appearance || {})}
@@ -208,6 +210,11 @@ const GridCell = memo(function GridCell({
           }
         }}
       />
+      {active && picker !== 'text' && !compatible && <label className="absolute right-1 top-0 z-10 rounded bg-white p-1 text-xs text-emerald-700 dark:bg-slate-800" onPointerDown={e=>e.stopPropagation()}>
+        Choose {kind === 'datetime' ? 'date & time' : kind}
+        <input aria-label={`Choose ${kind} for ${columnName(c)}${r+1}`} type={picker} value="" step={1} className="block w-36" onChange={e=>{if(e.target.value)onValue(r,c,e.target.value);}} />
+      </label>}
+      {onFill && <button type="button" aria-label="Drag to autofill" title="Drag to fill cells. Select two numbers or dates to extend a series; hold Ctrl to copy." onPointerDown={onFill} className="absolute -bottom-1 -right-1 z-20 h-3 w-3 cursor-crosshair border-2 border-white bg-emerald-700 p-0" />}
     </td>
   );
 });
@@ -319,7 +326,19 @@ export default function FieldWorkbookWorkspace({
   const setHeaderState = headerContext?.setHeaderState;
   const setTabsState = headerContext.setTabsState;
 
+  const libraryRun = useRef(0);
+  const [offlineLibraryStatus, setOfflineLibraryStatus] = useState('Preparing offline library…');
   const loadLibrary = useCallback(async () => {
+    const run = ++libraryRun.current;
+    const current = () => run === libraryRun.current;
+    try {
+      const [cached, books] = await Promise.all([readDeviceLibrary<Document>(storageKey), listDeviceWorkbooks(storageKey)]);
+      if (!current()) return;
+      if (cached) setDocuments(cached);
+      setDeviceBooks(books);
+      setOfflineLibraryStatus(`${books.length} workbooks available on this device`);
+    } catch {if (current()) setOfflineLibraryStatus('Device storage unavailable — download backups to keep your work.');}
+    if (!current()) return;
     if(!navigator.onLine) {setLoading(false);return;}
     setLoading(true);
     try {
@@ -332,19 +351,53 @@ export default function FieldWorkbookWorkspace({
           true,
           { bypassMemoryRead: true }
         );
+        if (!current()) return;
         all.push(...result.items);
         if (all.length >= result.total || !result.items.length) break;
         page++;
       }
+      if (!current()) return;
       setDocuments(all);
+      await saveDeviceLibrary(storageKey, all);
+      const newest = new Map<string, Document>();
+      for (const doc of all) {
+        const id = doc.tags.find(tag => tag.startsWith('wb-')) || doc.id;
+        const previous = newest.get(id);
+        if (!previous || doc.created_at > previous.created_at) newest.set(id, doc);
+      }
+      let completed = 0, failed = 0;
+      for (const doc of newest.values()) {
+        if (!current()) return;
+        setOfflineLibraryStatus(`Saving workbooks offline: ${completed}/${newest.size}${failed ? ` · ${failed} need retry` : ''}`);
+        try {
+          const id = doc.tags.find(tag => tag.startsWith('wb-'))?.slice(3);
+          const cached = id ? await readDeviceWorkbook(storageKey, id) : undefined;
+          if (!cached || (cached.remoteVersion && cached.remoteVersion !== doc.id)) {
+            const source = validateWorkbook(JSON.parse(await (await apiFetchBlob(`/api/v1/documents/${doc.id}/download`)).text()));
+            if (!current()) return;
+            await saveDeviceWorkbook(storageKey, {...source, createdAt: source.createdAt || doc.created_at}, doc.id);
+          }
+          completed++;
+        } catch { failed++; }
+        const savedBooks = await listDeviceWorkbooks(storageKey);
+        if (current()) setDeviceBooks(savedBooks);
+      }
+      if (current()) setOfflineLibraryStatus(failed
+        ? `${completed}/${newest.size} workbooks available offline · ${failed} downloads failed. Refresh to retry.`
+        : `All ${newest.size} saved workbooks and templates are available offline.`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load saved workbooks.');
+      if (current()) setOfflineLibraryStatus('Server unavailable. Your device workbooks are ready; reconnect and refresh to download missing files.');
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
-  }, []);
+  }, [storageKey]);
   useEffect(() => {
+    setDocuments([]);
     void loadLibrary();
+    const refresh = () => { void loadLibrary(); };
+    window.addEventListener('online', refresh);
+    void navigator.storage?.persist?.().catch(() => {});
+    return () => {libraryRun.current++; window.removeEventListener('online', refresh);};
   }, [loadLibrary]);
   useEffect(() => {
     let active = true;
@@ -383,12 +436,12 @@ export default function FieldWorkbookWorkspace({
     if(!book || storageReady!==storageKey)return;
     let active=true;
     setAutosaveStatus('Saving on device…');
-    const timer=setTimeout(()=>{void (async()=>{
-      try {validateWorkbook(book);await saveDeviceWorkbook(storageKey,book);const rows=await listDeviceWorkbooks(storageKey);if(active){setDeviceBooks(rows);setAutosaveStatus('Autosaved on device');}}
+    void (async()=>{
+      try {const open = sessions.map(item => item.book.id === book.id ? book : item.book);if (!open.some(item => item.id === book.id)) open.push(book);for (const item of open) {validateWorkbook(item);await saveDeviceWorkbook(storageKey,item);}const rows=await listDeviceWorkbooks(storageKey);if(active){setDeviceBooks(rows);setAutosaveStatus('Autosaved on device');}}
       catch {if(active)setAutosaveStatus('Autosave failed — download a backup');}
-    })();},1000);
-    return ()=>{active=false;clearTimeout(timer);};
-  },[book,storageKey,storageReady]);
+    })();
+    return ()=>{active=false;};
+  },[book,sessions,storageKey,storageReady]);
   useEffect(() => {
     if (!dirty && !sessions.some(item => item.book.id !== book?.id && item.dirty)) return;
     const guard = (event: BeforeUnloadEvent) => {event.preventDefault();};
@@ -536,6 +589,41 @@ export default function FieldWorkbookWorkspace({
     window.addEventListener('pointermove', move, { passive: false });
     window.addEventListener('pointerup', finish);
     window.addEventListener('pointercancel', finish);
+  }
+  const [fillPreview, setFillPreview] = useState<CellRange | null>(null);
+  const fillCleanup = useRef<() => void>(() => {});
+  useEffect(() => () => fillCleanup.current(), []);
+  function beginFill(event: React.PointerEvent) {
+    if (event.button !== 0 || !sheet || busy) return;
+    event.preventDefault(); event.stopPropagation();
+    const seed = {...selection};
+    let target = seed, vertical = true;
+    fillCleanup.current();
+    const move = (e: PointerEvent) => {
+      e.preventDefault();
+      const viewport=gridRef.current;
+      if (!viewport) return;
+      const box=viewport.getBoundingClientRect();
+      viewport.scrollBy(e.clientX>box.right-30?24:e.clientX<box.left+48?-24:0,e.clientY>box.bottom-30?24:e.clientY<box.top+36?-24:0);
+      const cell=document.elementFromPoint(e.clientX,e.clientY)?.closest<HTMLElement>('[data-grid-cell]');
+      if (!cell) return;
+      const [r,c]=cell.dataset.gridCell!.split(':').map(Number);
+      const dr=Math.max(seed.r-r,r-seed.er,0), dc=Math.max(seed.c-c,c-seed.ec,0);
+      vertical=dr>=dc;
+      target=vertical?{...seed,r:Math.min(seed.r,r),er:Math.max(seed.er,r)}:{...seed,c:Math.min(seed.c,c),ec:Math.max(seed.ec,c)};
+      setFillPreview(target);
+    };
+    const cleanup=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',finish);window.removeEventListener('pointercancel',cancel);window.removeEventListener('keydown',escape);setFillPreview(null);};
+    const cancel=()=>cleanup();
+    const escape=(e: KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();cleanup();}};
+    const finish=(e: PointerEvent)=>{
+      cleanup();
+      if (target.r===seed.r && target.c===seed.c && target.er===seed.er && target.ec===seed.ec) return;
+      changeSheet(s=>dragFill(s,seed,target,vertical,e.ctrlKey||e.metaKey));
+      setAnchor({r:target.r,c:target.c});setEnd({r:target.er,c:target.ec});
+    };
+    fillCleanup.current=cleanup;
+    window.addEventListener('pointermove',move,{passive:false});window.addEventListener('pointerup',finish);window.addEventListener('pointercancel',cancel);window.addEventListener('keydown',escape);
   }
   const selectionCleanup = useRef<() => void>(() => {});
   useEffect(() => () => selectionCleanup.current(), []);
@@ -702,7 +790,7 @@ export default function FieldWorkbookWorkspace({
     return next;
   }
   function restoreSession(target: WorkbookSession) {
-    resizeCleanup.current();selectionCleanup.current();
+    resizeCleanup.current();selectionCleanup.current();fillCleanup.current();
     setBook(target.book);bookRef.current=target.book;setDirty(target.dirty);
     setSheetIndex(target.sheetIndex);setAnchor(target.anchor);setEnd(target.end);setUndo(target.undo);setRedo(target.redo);
     lastEdit.current='';setContextMenu(null);setGridContextMenu(null);setConnectionSheet(null);setShowHistory(false);setTemplatePicker(false);setError('');setNotice('');
@@ -740,8 +828,9 @@ export default function FieldWorkbookWorkspace({
     setBusy(true);
     setError('');
     try {
-      const blob = await apiFetchBlob(`/api/v1/documents/${doc.id}/download`);
-      const source = validateWorkbook(JSON.parse(await blob.text()));
+      const cached = !restoreVersion && id ? await readDeviceWorkbook(storageKey, id) : undefined;
+      const source = cached ? validateWorkbook(cached.book) : validateWorkbook(JSON.parse(await (await apiFetchBlob(`/api/v1/documents/${doc.id}/download`)).text()));
+      if (!cached && !restoreVersion) await saveDeviceWorkbook(storageKey, source, doc.id);
       const next = asTemplate ? copyWorkbook(source) : {...source, createdAt: source.createdAt || doc.created_at};
       if (asTemplate) next.name = source.name.replace(/ template$/i, '');
       activate(next, asTemplate);
@@ -754,12 +843,17 @@ export default function FieldWorkbookWorkspace({
   async function copyDocument(doc: Document) {
     setBusy(true); setError('');
     try {
-      const source = validateWorkbook(JSON.parse(await (await apiFetchBlob(`/api/v1/documents/${doc.id}/download`)).text()));
+      const id = doc.tags.find(tag => tag.startsWith('wb-'))?.slice(3);
+      const cached = id ? await readDeviceWorkbook(storageKey, id) : undefined;
+      const source = cached ? validateWorkbook(cached.book) : validateWorkbook(JSON.parse(await (await apiFetchBlob(`/api/v1/documents/${doc.id}/download`)).text()));
       const copy = copyWorkbook(source, source.template);
       const baseName=source.name.slice(0,240);
-      let suffix=1; const names=new Set(latest.map(d=>d.title.toLowerCase()));
+      let suffix=1; const names=new Set([...latest.map(d=>d.title.toLowerCase()), ...deviceBooks.map(item=>item.book.name.toLowerCase())]);
       while(names.has(`${baseName}-${suffix}`.toLowerCase())) suffix++;
       copy.name=`${baseName}-${suffix}`;
+      await saveDeviceWorkbook(storageKey, copy);
+      setDeviceBooks(await listDeviceWorkbooks(storageKey));
+      if (!navigator.onLine) {activate(copy,true);setNotice('Copy saved on this device. Save to the server when connected.');return;}
       const form=new FormData();
       form.append('file',new File([JSON.stringify(copy)],`${copy.id}.cestos.json`,{type:'application/json'}));
       form.append('title',copy.name.slice(0,250)); form.append('category','Field Workbooks');
@@ -1113,8 +1207,9 @@ export default function FieldWorkbookWorkspace({
         {busy && <p role="status">Opening workbook…</p>}
         <div className="rounded border border-slate-200 bg-white p-4 dark:bg-slate-900">
           <h3 className="font-semibold">Saved on this device</h3>
-          <p className="my-2 text-xs text-slate-500">Available without internet in this browser profile. Device saves are separate from server saves. Keep a downloaded backup before clearing browser data.</p>
-          {!deviceBooks.length && <p className="text-sm text-slate-500">Open a workbook and choose Save on device.</p>}
+          <p role="status" className="my-2 text-xs text-slate-500">{offlineLibraryStatus}</p>
+          <p className="my-2 text-xs text-slate-500">Workbooks are saved automatically on this device. Local edits are preserved during server refreshes. Keep an Excel or workbook backup before clearing browser data.</p>
+          {!deviceBooks.length && <p className="text-sm text-slate-500">Your saved workbooks will download automatically when connected. You can also create or import a workbook offline.</p>}
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{deviceBooks.filter(item=>item.book.name.toLowerCase().includes(search.toLowerCase())).map(item=><div key={item.key} className="rounded border p-3"><p className="font-semibold">{item.book.name}</p><p className="my-2 text-xs text-slate-500">{item.book.template?'Template · ':''}{new Date(item.savedAt).toLocaleString()}</p><button type="button" className={button} disabled={busy} onClick={()=>{if(item.book.template)activate(copyWorkbook(item.book,false),true);else if(sessions.some(session=>session.book.id===item.book.id))switchWorkbook(item.book.id);else activate(validateWorkbook(item.book),true);}}>{item.book.template?'Use template':'Open workbook'}</button><button type="button" className={`${button} ml-2`} disabled={busy} onClick={()=>{activate(copyWorkbook(item.book,false),true);}}>Copy</button></div>)}</div>
         </div>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -1132,9 +1227,8 @@ export default function FieldWorkbookWorkspace({
           </button>
           </div>
         </div>
-        {loading ? (
-          <p role="status">Loading saved files…</p>
-        ) : (
+        {loading && <p role="status">Refreshing saved files and preparing offline copies…</p>}
+        {(
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {latest
               .filter((d) => d.title.toLowerCase().includes(search.toLowerCase()))
@@ -1478,9 +1572,7 @@ export default function FieldWorkbookWorkspace({
             />
 
             <div className="flex items-center gap-1" hidden={ribbonTab!=='Home'}>
-              <button type="button" className={button} title="Copy the first selected row down (undo available)" onClick={()=>changeSheet(s=>autofillRange(s,selection,'down'))}>Fill down</button>
-              <button type="button" className={button} title="Copy the first selected column right (undo available)" onClick={()=>changeSheet(s=>autofillRange(s,selection,'right'))}>Fill right</button>
-              <button type="button" className={button} title="Extend two starting numbers or ISO dates down the selection" onClick={()=>changeSheet(s=>autofillRange(s,selection,'down',true))}>Fill series</button>
+
             </div>
             {/* Merge & Selection Group */}
             <div className="flex items-center gap-1" hidden={!["Home", "Insert"].includes(ribbonTab)}>
@@ -1892,11 +1984,12 @@ export default function FieldWorkbookWorkspace({
                           appearance={cellFormat(sheet, r, c)}
                           {...cellFormat(sheet, r, c)}
                           active={anchor.r === r && anchor.c === c}
+                          onFill={!merge && r===selection.er && c===selection.ec ? beginFill : undefined}
                           selected={
-                            r >= selection.r &&
-                            r <= selection.er &&
-                            c >= selection.c &&
-                            c <= selection.ec
+                            r >= (fillPreview || selection).r &&
+                            r <= (fillPreview || selection).er &&
+                            c >= (fillPreview || selection).c &&
+                            c <= (fillPreview || selection).ec
                           }
                           list={
                             r > 0 && suggestions[c]?.length
@@ -2204,6 +2297,9 @@ export default function FieldWorkbookWorkspace({
               <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-500" aria-label="Selected cell range">
                 Selection: {columnName(selection.c)}{selection.r + 1}:{columnName(selection.ec)}{selection.er + 1}
               </div>
+              <button type="button" className={button} title="Copy the first selected row down (undo available)" onClick={()=>changeSheet(s=>autofillRange(s,selection,'down'))}>Fill down</button>
+              <button type="button" className={button} title="Copy the first selected column right (undo available)" onClick={()=>changeSheet(s=>autofillRange(s,selection,'right'))}>Fill right</button>
+              <button type="button" className={button} title="Extend two starting numbers or ISO dates down the selection" onClick={()=>changeSheet(s=>autofillRange(s,selection,'down',true))}>Fill series</button>
                   {(selection.r !== selection.er || selection.c !== selection.ec) && (
                     <button
                       type="button"

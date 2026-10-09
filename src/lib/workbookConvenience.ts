@@ -126,3 +126,35 @@ export function printSheet(sheet: FieldSheet, workbookName: string) {
   frame.contentWindow?.addEventListener('afterprint', remove, { once: true });
   window.setTimeout(remove, 120000);
 }
+
+/** Extend a seed block, preserving it and copying styles; two numeric/date seeds form a series. */
+export function dragFill(sheet: FieldSheet, seed: CellRange, target: CellRange, vertical: boolean, copyOnly = false): FieldSheet {
+  if (target.r < 0 || target.c < 0 || target.er >= sheet.cells.length || target.ec >= sheet.widths.length)
+    throw new Error('Fill must stay within the sheet.');
+  if (sheet.merges.some(m => !(m.er < target.r || m.r > target.er || m.ec < target.c || m.c > target.ec)))
+    throw new Error('Unmerge these cells before using autofill.');
+  const next = {...sheet, cells: sheet.cells.map(row => [...row]), formats: {...sheet.formats}};
+  const length = vertical ? seed.er-seed.r+1 : seed.ec-seed.c+1;
+  for (let r=target.r;r<=target.er;r++) for (let c=target.c;c<=target.ec;c++) {
+    if (r>=seed.r && r<=seed.er && c>=seed.c && c<=seed.ec) continue;
+    const offset = vertical ? r-seed.r : c-seed.c;
+    const cycle = ((offset % length)+length)%length;
+    const sr = vertical ? seed.r+cycle : r, sc = vertical ? c : seed.c+cycle;
+    let value = sheet.cells[sr][sc];
+    if (!copyOnly && length === 2) {
+      const first = sheet.cells[seed.r+(vertical?0:r-seed.r)][seed.c+(vertical?c-seed.c:0)];
+      const second = sheet.cells[seed.r+(vertical?1:r-seed.r)][seed.c+(vertical?c-seed.c:1)];
+      if (/^-?\d+(\.\d+)?$/.test(first) && /^-?\d+(\.\d+)?$/.test(second))
+        value = String(Number((Number(first)+(Number(second)-Number(first))*offset).toFixed(10)));
+      else if (/^\d{4}-\d{2}-\d{2}$/.test(first) && /^\d{4}-\d{2}-\d{2}$/.test(second)) {
+        const a=Date.parse(first+'T00:00:00Z'), b=Date.parse(second+'T00:00:00Z');
+        if (Number.isFinite(a) && Number.isFinite(b) && new Date(a).toISOString().slice(0,10)===first && new Date(b).toISOString().slice(0,10)===second)
+          value = new Date(a+(b-a)*offset).toISOString().slice(0,10);
+      }
+    }
+    next.cells[r][c]=value;
+    const format=sheet.formats?.[`${sr}:${sc}`];
+    if(format) next.formats[`${r}:${c}`]={...format}; else delete next.formats[`${r}:${c}`];
+  }
+  return next;
+}

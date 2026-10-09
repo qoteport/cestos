@@ -27,10 +27,10 @@ async function transact<T>(store: string, mode: IDBTransactionMode, run: (store:
   });
 }
 export type DeviceSession = {openBooks: {book: FieldWorkbook; dirty: boolean}[]; activeId: string | null};
-export type DeviceWorkbook = {key: string; scope: string; book: FieldWorkbook; savedAt: string};
+export type DeviceWorkbook = {key: string; scope: string; book: FieldWorkbook; savedAt: string; remoteVersion?: string};
 export const readDeviceSession = (scope: string) => transact<DeviceSession | undefined>('sessions', 'readonly', store => store.get(scope));
 export const saveDeviceSession = (scope: string, session: DeviceSession) => transact('sessions', 'readwrite', store => store.put(session, scope));
-export async function saveDeviceWorkbook(scope: string, book: FieldWorkbook) {
+export async function saveDeviceWorkbook(scope: string, book: FieldWorkbook, remoteVersion?: string) {
   const db=await openDatabase();
   await new Promise<void>((resolve,reject)=>{
     const tx=db.transaction(['workbooks','revisions'],'readwrite');
@@ -39,12 +39,14 @@ export async function saveDeviceWorkbook(scope: string, book: FieldWorkbook) {
     const request=books.get(key);
     request.onsuccess=()=>{
       const previous=request.result as DeviceWorkbook | undefined;
-      if(previous && JSON.stringify(previous.book)===JSON.stringify(book))return;
+      // Never overwrite a locally edited workbook during background downloads.
+      if (remoteVersion && previous && !previous.remoteVersion) return;
+      if(previous && JSON.stringify(previous.book)===JSON.stringify(book) && (!remoteVersion || previous.remoteVersion === remoteVersion))return;
       if(previous) {
         const read=revisions.get(key);
         read.onsuccess=()=>revisions.put({key,items:[previous,...(read.result?.items || [])].slice(0,5)});
       }
-      books.put({key,scope,book,savedAt:new Date().toISOString()} satisfies DeviceWorkbook);
+      books.put({key,scope,book,savedAt:new Date().toISOString(), ...(remoteVersion ? {remoteVersion} : {})} satisfies DeviceWorkbook);
     };
     tx.oncomplete=()=>resolve();tx.onabort=tx.onerror=()=>reject(tx.error || new Error('Device autosave failed. Download a backup.'));
   });
@@ -72,3 +74,7 @@ export function sheetCsv(sheet: FieldSheet): string {
   };
   return '\ufeff' + rows.map(row => row.slice(0,lastColumn+1).map(quote).join(',')).join('\r\n');
 }
+
+export const readDeviceLibrary = <T>(scope: string) => transact<T[] | undefined>('sessions', 'readonly', store => store.get(`library:${scope}`));
+export const saveDeviceLibrary = <T>(scope: string, documents: T[]) => transact('sessions', 'readwrite', store => store.put(documents, `library:${scope}`));
+export const readDeviceWorkbook = (scope: string, id: string) => transact<DeviceWorkbook | undefined>('workbooks', 'readonly', store => store.get(JSON.stringify([scope,id])));
