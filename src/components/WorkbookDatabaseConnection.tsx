@@ -337,13 +337,6 @@ export default function WorkbookDatabaseConnection({
           )}
           {selected && (
             <>
-              <WorkbookMappingAssistant
-                sheet={sheet}
-                table={selected}
-                layout={layout}
-                online={online && !offline && !cached && !busy && !pendingInputs}
-                onApply={(next) => update(next)}
-              />
               <fieldset disabled={busy} className="my-4 space-y-3 rounded border p-3">
                 <legend className="px-1 font-semibold">1. Sheet layout</legend>
                 <SearchableSelect
@@ -481,6 +474,109 @@ export default function WorkbookDatabaseConnection({
                   </div>
                 )}
               </fieldset>
+              <details open={!!pick} className="my-3 rounded border p-3">
+                <summary className="cursor-pointer font-medium">
+                  Inspect sheet / select header rows
+                </summary>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <strong>
+                      {pick ? `Pick a cell for ${pick}` : 'Select row labels to toggle header rows'}
+                    </strong>
+                    <button type="button" className={input} onClick={() => setPick(null)}>
+                      Done
+                    </button>
+                    <button
+                      type="button"
+                      disabled={page === 0}
+                      onClick={() => setPage((p) => p - 1)}
+                    >
+                      ↑ Rows
+                    </button>
+                    <button
+                      type="button"
+                      disabled={(page + 1) * 12 >= sheet.cells.length}
+                      onClick={() => setPage((p) => p + 1)}
+                    >
+                      ↓ Rows
+                    </button>
+                    <button
+                      type="button"
+                      disabled={columnPage === 0}
+                      onClick={() => setColumnPage((p) => p - 1)}
+                    >
+                      ← Columns
+                    </button>
+                    <button
+                      type="button"
+                      disabled={(columnPage + 1) * 8 >= sheet.widths.length}
+                      onClick={() => setColumnPage((p) => p + 1)}
+                    >
+                      Columns →
+                    </button>
+                  </div>
+                  <div className="overflow-auto">
+                    <table className="my-2 text-xs">
+                      <tbody>
+                        {sheet.cells.slice(page * 12, page * 12 + 12).map((row, i) => (
+                          <tr key={i}>
+                            <th className="border p-2">
+                              <button
+                                type="button"
+                                disabled={layout.mode !== 'rows' || busy}
+                                aria-pressed={layout.headerRows.includes(page * 12 + i)}
+                                className={
+                                  layout.headerRows.includes(page * 12 + i)
+                                    ? 'font-bold text-blue-600'
+                                    : ''
+                                }
+                                onClick={() => {
+                                  const r = page * 12 + i;
+                                  update({
+                                    headerRows: layout.headerRows.includes(r)
+                                      ? layout.headerRows.filter((h) => h !== r)
+                                      : [...layout.headerRows, r].sort((a, b) => a - b),
+                                  });
+                                }}
+                              >
+                                Row {page * 12 + i + 1}
+                                {layout.headerRows.includes(page * 12 + i) ? ' · Header' : ''}
+                              </button>
+                            </th>
+                            {row.slice(columnPage * 8, columnPage * 8 + 8).map((value, j) => {
+                              const r = page * 12 + i,
+                                c = columnPage * 8 + j;
+                              return (
+                                <td key={j} className="border">
+                                  <button
+                                    type="button"
+                                    className="min-h-12 min-w-24 p-2 text-left hover:bg-blue-100"
+                                    onClick={() => {
+                                      if (!pick) return;
+                                      setField(pick, {
+                                        kind:
+                                          layout.fields[pick]?.kind === 'block' ? 'block' : 'cell',
+                                        r,
+                                        c,
+                                      });
+                                      setPick(null);
+                                    }}
+                                  >
+                                    <span className="block text-slate-500">
+                                      {cellAddress(r, c)}
+                                    </span>
+                                    {value.slice(0, 70) || '—'}
+                                  </button>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </details>
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold">2. Map database fields</h4>
                 <button
@@ -612,109 +708,6 @@ export default function WorkbookDatabaseConnection({
                   </tbody>
                 </table>
               </div>
-              <details open={!!pick} className="my-3 rounded border p-3">
-                <summary className="cursor-pointer font-medium">
-                  Inspect sheet / select header rows
-                </summary>
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <strong>
-                      {pick ? `Pick a cell for ${pick}` : 'Select row labels to toggle header rows'}
-                    </strong>
-                    <button type="button" className={input} onClick={() => setPick(null)}>
-                      Done
-                    </button>
-                    <button
-                      type="button"
-                      disabled={page === 0}
-                      onClick={() => setPage((p) => p - 1)}
-                    >
-                      ↑ Rows
-                    </button>
-                    <button
-                      type="button"
-                      disabled={(page + 1) * 12 >= sheet.cells.length}
-                      onClick={() => setPage((p) => p + 1)}
-                    >
-                      ↓ Rows
-                    </button>
-                    <button
-                      type="button"
-                      disabled={columnPage === 0}
-                      onClick={() => setColumnPage((p) => p - 1)}
-                    >
-                      ← Columns
-                    </button>
-                    <button
-                      type="button"
-                      disabled={(columnPage + 1) * 8 >= sheet.widths.length}
-                      onClick={() => setColumnPage((p) => p + 1)}
-                    >
-                      Columns →
-                    </button>
-                  </div>
-                  <div className="overflow-auto">
-                    <table className="my-2 text-xs">
-                      <tbody>
-                        {sheet.cells.slice(page * 12, page * 12 + 12).map((row, i) => (
-                          <tr key={i}>
-                            <th className="border p-2">
-                              <button
-                                type="button"
-                                disabled={layout.mode !== 'rows' || busy}
-                                aria-pressed={layout.headerRows.includes(page * 12 + i)}
-                                className={
-                                  layout.headerRows.includes(page * 12 + i)
-                                    ? 'font-bold text-blue-600'
-                                    : ''
-                                }
-                                onClick={() => {
-                                  const r = page * 12 + i;
-                                  update({
-                                    headerRows: layout.headerRows.includes(r)
-                                      ? layout.headerRows.filter((h) => h !== r)
-                                      : [...layout.headerRows, r].sort((a, b) => a - b),
-                                  });
-                                }}
-                              >
-                                Row {page * 12 + i + 1}
-                                {layout.headerRows.includes(page * 12 + i) ? ' · Header' : ''}
-                              </button>
-                            </th>
-                            {row.slice(columnPage * 8, columnPage * 8 + 8).map((value, j) => {
-                              const r = page * 12 + i,
-                                c = columnPage * 8 + j;
-                              return (
-                                <td key={j} className="border">
-                                  <button
-                                    type="button"
-                                    className="min-h-12 min-w-24 p-2 text-left hover:bg-blue-100"
-                                    onClick={() => {
-                                      if (!pick) return;
-                                      setField(pick, {
-                                        kind:
-                                          layout.fields[pick]?.kind === 'block' ? 'block' : 'cell',
-                                        r,
-                                        c,
-                                      });
-                                      setPick(null);
-                                    }}
-                                  >
-                                    <span className="block text-slate-500">
-                                      {cellAddress(r, c)}
-                                    </span>
-                                    {value.slice(0, 70) || '—'}
-                                  </button>
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </details>
               <h4 className="mt-4 font-semibold">3. Extracted records</h4>
               {extraction.error && (
                 <p role="alert" className="my-2 text-amber-700">
