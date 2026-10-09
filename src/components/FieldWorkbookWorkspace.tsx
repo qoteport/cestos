@@ -5,7 +5,6 @@ import WorkbookDatabaseReview from './WorkbookDatabaseReview';
 import {useWorkbookFormulaSuggestions} from './WorkbookFormulaSuggestions';
 import {uploadWorkbookMedia} from '@/lib/workbookMediaUpload';
 import WorkbookCellMedia from './WorkbookCellMedia';
-import WorkbookSheetFolders from './WorkbookSheetFolders';
 import {mediaExportSheet,pruneAssets,insertMedia,removeMedia,assetUrl,imageMime,type WorkbookAsset} from '@/lib/workbookMedia';
 import {visibleSheetRows, sortSheet} from '@/lib/workbookOperations';
 import WorkbookTools from './WorkbookTools';
@@ -297,9 +296,7 @@ export default function FieldWorkbookWorkspace({
   const [book, setBook] = useState<FieldWorkbook | null>(null);
   const [sheetIndex, setSheetIndex] = useState(0);
   const [mediaTarget,setMediaTarget]=useState<{bookId:string;sheetId:string;r:number;c:number}|null>(null);
-  const [foldersOpen,setFoldersOpen]=useState(false);
-  const [folderFilter,setFolderFilter]=useState('*');
-  useEffect(()=>{setFolderFilter('*');setMediaTarget(null);setFoldersOpen(false);},[book?.id]);
+  useEffect(()=>{setMediaTarget(null);},[book?.id]);
   const dragSelection = useRef<{ kind: 'cell' | 'row' | 'column'; start: Point } | null>(null);
   const [anchor, setAnchor] = useState<Point>({ r: 0, c: 0 });
   const [end, setEnd] = useState<Point>({ r: 0, c: 0 });
@@ -1203,7 +1200,7 @@ export default function FieldWorkbookWorkspace({
       const name=book.name.replace(/[\\/:*?"<>|]/g, '-');
       if(format === 'csv') {if(!sheet)return;downloadBlob(new Blob([sheetCsv(mediaExportSheet(sheet,bookRef.current?.assets))],{type:'text/csv;charset=utf-8'}),`${name}-${sheet.name.replace(/[\\/:*?"<>|]/g,'-')}.csv`);setNotice('Current sheet downloaded as CSV. Media links are included in the CSV. Use a Cestos backup to preserve offline media and folders.');}
       else if(format === 'backup') downloadBlob(new Blob([JSON.stringify(book)],{type:'application/json'}),`${name}.cestos.json`);
-      else {downloadBlob(await exportWorkbook(bookRef.current || book), `${name}.xlsx`);if(Object.keys(book.assets||{}).length||book.folders?.length)setNotice('Excel includes media links. Links require sign-in and document access. Complete backups preserve offline media and sheet folders.');}
+      else {downloadBlob(await exportWorkbook(bookRef.current || book), `${name}.xlsx`);if(Object.keys(book.assets||{}).length||book.folders?.length)setNotice('Excel includes media links. Links require sign-in and document access. Complete backups preserve offline media. Workbook folders are managed in Your workspace.');}
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Export failed.');
     } finally {
@@ -1559,94 +1556,11 @@ export default function FieldWorkbookWorkspace({
         {showToolbar && (ribbonTab==='Data'||ribbonTab==='View') && <WorkbookTools sheet={sheet} selection={selection} onChange={changeSheet} onError={setError} onFind={(r,c)=>{if(sheet.view?.filterText)changeSheet(s=>({...s,view:{...s.view,filterText:''}}));setAnchor({r,c});setEnd({r,c});focus(r,c);}} />}
         {showToolbar && (
           <div className={styles.ribbon}>
-            {ribbonTab==='Insert'&&<button type="button" className={button} onClick={()=>openCellMedia(anchor.r,anchor.c)}><Paperclip size={16}/>Insert Media</button>}
-            {ribbonTab==='Insert'&&<button type="button" className={button} onClick={()=>setFoldersOpen(true)}><Folder size={16}/>Sheet folders</button>}
             {ribbonTab === 'Data' && <button type="button" className={button} onClick={()=>setDatabaseLoadOpen(true)}><Download size={16}/>Load from database</button>}
             {ribbonTab === 'Data' && <button type="button" className={button} onClick={()=>setConnectionSheet(sheet.id)}><FileSpreadsheet size={16}/>Connect to database table</button>}
             {ribbonTab === 'View' && <p className="text-xs text-slate-500">Shortcuts: Ctrl/Cmd+S save · Ctrl/Cmd+Z undo · Ctrl/Cmd+Shift+Z or Ctrl+Y redo · Ctrl/Cmd+B/I/U bold/italic/underline · Ctrl/Cmd+D/R fill down/right · Ctrl/Cmd+A select all cells · Shift+Space select rows · Ctrl+Space select columns · Ctrl/Cmd+Home first cell · Delete clear selected range. Tab/Enter move cells; Shift+Arrow extends selection. Formatting and selection shortcuts apply inside the grid.</p>}
-            {ribbonTab === 'Folders' && (
-              <div className="flex flex-wrap items-center gap-3 py-1 w-full">
-                <button type="button" className={button} onClick={() => setFoldersOpen(true)}>
-                  <Folder size={16} />
-                  Manage sheet folders
-                </button>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-slate-500">Filter:</span>
-                  <div className="w-52">
-                    <SearchableSelect
-                      ariaLabel="Show sheet folder"
-                      value={folderFilter}
-                      options={[
-                        { value: '*', label: 'All sheets' },
-                        { value: 'unfiled', label: 'Unfiled sheets' },
-                        ...(book.folders || []).map((f) => ({
-                          value: f.id,
-                          label: `${f.name} (${book.sheets.filter((s) => s.folderId === f.id).length})`,
-                        })),
-                      ]}
-                      onChange={(value) => {
-                        setFolderFilter(value || '*');
-                        const first = book.sheets.findIndex(
-                          (s) => value === '*' || !value || (value === 'unfiled' ? !s.folderId : s.folderId === value)
-                        );
-                        if (first >= 0) {
-                          setSheetIndex(first);
-                          setAnchor({ r: 0, c: 0 });
-                          setEnd({ r: 0, c: 0 });
-                        }
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5 border-l border-slate-200 pl-3 dark:border-slate-800">
-                  {[
-                    { id: '*', name: 'All sheets', count: book.sheets.length },
-                    { id: 'unfiled', name: 'Unfiled', count: book.sheets.filter((s) => !s.folderId).length },
-                    ...(book.folders || []).map((f) => ({
-                      id: f.id,
-                      name: f.name,
-                      count: book.sheets.filter((s) => s.folderId === f.id).length,
-                    })),
-                  ].map((f) => {
-                    const active = folderFilter === f.id;
-                    return (
-                      <button
-                        key={f.id}
-                        type="button"
-                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ${
-                          active
-                            ? 'bg-emerald-600 text-white shadow-xs'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
-                        }`}
-                        onClick={() => {
-                          setFolderFilter(f.id);
-                          const first = book.sheets.findIndex(
-                            (s) => f.id === '*' || !f.id || (f.id === 'unfiled' ? !s.folderId : s.folderId === f.id)
-                          );
-                          if (first >= 0) {
-                            setSheetIndex(first);
-                            setAnchor({ r: 0, c: 0 });
-                            setEnd({ r: 0, c: 0 });
-                          }
-                        }}
-                      >
-                        <span>{f.name}</span>
-                        <span
-                          className={`rounded-full px-1.5 py-0.2 text-[10px] ${
-                            active ? 'bg-emerald-700 text-emerald-100' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
-                          }`}
-                        >
-                          {f.count}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="ml-auto text-xs text-slate-500">
-                  Active sheet: <strong className="font-bold text-slate-900 dark:text-white">{sheet.name}</strong>
-                </div>
-              </div>
-            )}
+            {ribbonTab==='Insert'&&<button type="button" className={button} onClick={()=>openCellMedia(anchor.r,anchor.c)}><Paperclip size={16}/>Insert Media</button>}
+            {ribbonTab === 'Folders' && <button type="button" className={button} onClick={leave}><Folder size={16}/>Manage workbook folders</button>}
             {/* Undo / Redo Group */}
             <div className="flex items-center gap-1" hidden={!["Home"].includes(ribbonTab)}>
               <button
@@ -2410,7 +2324,6 @@ export default function FieldWorkbookWorkspace({
             className="flex max-w-full items-center gap-1 overflow-auto"
           >
             {book.sheets.map((s, i) =>
-              folderFilter!=='*'&&(folderFilter==='unfiled'?!!s.folderId:s.folderId!==folderFilter)?null:
               editingSheetIndex === i ? (
                 <input
                   key={s.id}
@@ -2462,7 +2375,7 @@ export default function FieldWorkbookWorkspace({
             onClick={() => {
               let n = book.sheets.length + 1;
               while (book.sheets.some((s) => s.name === `Sheet ${n}`)) n++;
-              commit({ ...book, sheets: [...book.sheets, {...makeSheet(`Sheet ${n}`),folderId:book.folders?.some(f=>f.id===folderFilter)?folderFilter:undefined}] });
+              commit({ ...book, sheets: [...book.sheets, makeSheet(`Sheet ${n}`)] });
               setSheetIndex(book.sheets.length);
               setAnchor({ r: 0, c: 0 });
               setEnd({ r: 0, c: 0 });
@@ -2473,7 +2386,6 @@ export default function FieldWorkbookWorkspace({
           </button>
         </div>
 
-        {foldersOpen&&<WorkbookSheetFolders book={book} onChange={next=>{commit(next);if(folderFilter!=='*'&&folderFilter!=='unfiled'&&!next.folders?.some(f=>f.id===folderFilter))setFolderFilter('*');}} onSelect={i=>{setFolderFilter('*');setSheetIndex(i);setAnchor({r:0,c:0});setEnd({r:0,c:0});}} onClose={()=>setFoldersOpen(false)}/>}
         {mediaTarget?.bookId===book.id&&<WorkbookCellMedia title={`Cell ${columnName(mediaTarget.c)}${mediaTarget.r+1} attachments`} assets={(book.sheets.find(s=>s.id===mediaTarget.sheetId)?.media?.[`${mediaTarget.r}:${mediaTarget.c}`]||[]).map(id=>book.assets?.[id]).filter((a):a is WorkbookAsset=>!!a)} onClose={()=>setMediaTarget(null)} onAdd={files=>{const current=bookRef.current;if(!current||current.id!==mediaTarget.bookId)throw Error('The active workbook changed. Please choose the cell again.');commit(insertMedia(current,mediaTarget.sheetId,mediaTarget.r,mediaTarget.c,files));}} onRemove={id=>{const current=bookRef.current;if(current&&current.id===mediaTarget.bookId)commit(removeMedia(current,mediaTarget.sheetId,`${mediaTarget.r}:${mediaTarget.c}`,id));}}/>}
         {databaseLoadOpen && <WorkbookDatabaseLoad existingNames={book.sheets.map(s=>s.name)} onClose={()=>setDatabaseLoadOpen(false)} onLoad={sheets=>{commit({...book,sheets:[...book.sheets,...sheets]});setSheetIndex(book.sheets.length);setAnchor({r:0,c:0});setEnd({r:0,c:0});setDatabaseLoadOpen(false);setNotice(`Loaded ${sheets.reduce((count,s)=>count+s.cells.length-1,0)} records into ${sheets.length} new sheet(s). Review database changes to confirm edits before sending them.`);}} />}
         {sheet.databaseSource && <div className="flex items-center gap-3 text-xs text-slate-500"><span>Connected table · {sheet.databaseSource.path} · Loaded {new Date(sheet.databaseSource.loadedAt).toLocaleString()} · Edits remain drafts until confirmed.</span>{!onPublish&&<button type="button" className={button} onClick={()=>setDatabaseReview(structuredClone(sheet))}>Review database changes</button>}</div>}
@@ -2505,7 +2417,6 @@ export default function FieldWorkbookWorkspace({
               style={{ top: Math.max(8, Math.min(contextMenu.y - 132, window.innerHeight - 148)), left: Math.max(8, Math.min(contextMenu.x, window.innerWidth - 264)), maxHeight: 'calc(100dvh - 16px)', maxWidth: 'calc(100vw - 16px)', overflowY: 'auto', width: 256 }}
               className="fixed z-50 min-w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
             >
-              <button type="button" className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs hover:bg-slate-100" onClick={()=>{setFoldersOpen(true);setContextMenu(null);}}><Folder size={14}/>Move to folder…</button>
               <button type="button" className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-slate-100 dark:hover:bg-slate-800"
                 onClick={()=>{setConnectionSheet(book.sheets[contextMenu.sheetIndex].id);setContextMenu(null);}}>Connect to Database Table</button>
               <button
