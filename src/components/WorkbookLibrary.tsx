@@ -140,6 +140,20 @@ export default function WorkbookLibrary({
     return () => window.removeEventListener('click', handleClick);
   }, []);
 
+  const openContextMenu = (e: React.MouseEvent, f: { id: string; name: string; parentId?: string }) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const x = Math.max(10, Math.min(e.clientX, (typeof window !== 'undefined' ? window.innerWidth : 1000) - 200));
+    const y = Math.max(10, Math.min(e.clientY, (typeof window !== 'undefined' ? window.innerHeight : 1000) - 200));
+    setContextMenu({
+      x,
+      y,
+      folderId: f.id,
+      folderName: f.name,
+      parentId: f.parentId,
+    });
+  };
+
   const rows = useMemo(() => {
     const map = new Map<string, { id: string; name: string; date: string; template: boolean; doc?: Document; device?: DeviceWorkbook }>();
     for (const doc of documents) {
@@ -273,17 +287,7 @@ export default function WorkbookLibrary({
                   : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
               }`}
               style={{ paddingLeft: depth * 12 + 4 }}
-              onContextMenu={e => {
-                e.preventDefault();
-                e.stopPropagation();
-                setContextMenu({
-                  x: e.clientX,
-                  y: e.clientY,
-                  folderId: f.id,
-                  folderName: f.name,
-                  parentId: f.parentId,
-                });
-              }}
+              onContextMenu={e => openContextMenu(e, f)}
             >
               <button
                 type="button"
@@ -294,6 +298,7 @@ export default function WorkbookLibrary({
                   setFolder(f.id);
                   setExpanded(ids => (open ? ids.filter(id => id !== f.id) : [...ids, f.id]));
                 }}
+                onContextMenu={e => openContextMenu(e, f)}
               >
                 {children ? open ? <ChevronDown size={14} /> : <ChevronRight size={14} /> : <Folder size={14} />}
               </button>
@@ -305,6 +310,7 @@ export default function WorkbookLibrary({
                   setFolder(f.id);
                   setExpanded(ids => (ids.includes(f.id) ? ids.filter(id => id !== f.id) : [...ids, f.id]));
                 }}
+                onContextMenu={e => openContextMenu(e, f)}
               >
                 {f.name}
               </button>
@@ -490,10 +496,6 @@ export default function WorkbookLibrary({
               {tree()}
             </nav>
           )}
-
-          <p className="text-[11px] leading-relaxed text-slate-500 border-t pt-3">
-            Right-click any folder for options. Folders are saved offline on this device.
-          </p>
         </aside>
 
         <div className="min-w-0">
@@ -625,72 +627,82 @@ export default function WorkbookLibrary({
         </div>
       </div>
 
-      {/* Right-Click Context Menu */}
+      {/* Right-Click Context Menu Overlay & Popover */}
       {contextMenu && (
-        <div
-          className="fixed z-[100] w-48 rounded-xl border bg-white p-1.5 shadow-xl dark:bg-slate-900 dark:border-slate-800"
-          style={{ top: contextMenu.y, left: contextMenu.x }}
-          onClick={e => e.stopPropagation()}
-        >
-          <div className="px-2 py-1 text-[11px] font-semibold text-slate-400 border-b dark:border-slate-800 truncate">
-            {contextMenu.folderName}
+        <>
+          <div
+            className="fixed inset-0 z-[99] bg-transparent"
+            onClick={() => setContextMenu(null)}
+            onContextMenu={e => {
+              e.preventDefault();
+              setContextMenu(null);
+            }}
+          />
+          <div
+            className="fixed z-[100] w-48 rounded-xl border bg-white p-1.5 shadow-xl dark:bg-slate-900 dark:border-slate-800"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-2 py-1 text-[11px] font-semibold text-slate-400 border-b dark:border-slate-800 truncate">
+              {contextMenu.folderName}
+            </div>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+              onClick={() => {
+                setFolder(contextMenu.folderId);
+                setContextMenu(null);
+              }}
+            >
+              <FolderOpen size={14} className="text-emerald-600" />
+              View workbooks
+            </button>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+              onClick={() => {
+                setFolderModal({
+                  open: true,
+                  mode: 'create',
+                  parentId: contextMenu.folderId,
+                  name: '',
+                });
+                setContextMenu(null);
+              }}
+            >
+              <Plus size={14} className="text-blue-600" />
+              Create subfolder
+            </button>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+              onClick={() => {
+                setFolderModal({
+                  open: true,
+                  mode: 'rename',
+                  folderId: contextMenu.folderId,
+                  parentId: contextMenu.parentId,
+                  name: contextMenu.folderName,
+                });
+                setContextMenu(null);
+              }}
+            >
+              <Pencil size={14} className="text-amber-600" />
+              Rename folder
+            </button>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+              onClick={() => {
+                setDeletingFolder({ id: contextMenu.folderId, name: contextMenu.folderName });
+                setContextMenu(null);
+              }}
+            >
+              <Trash2 size={14} />
+              Delete folder
+            </button>
           </div>
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
-            onClick={() => {
-              setFolder(contextMenu.folderId);
-              setContextMenu(null);
-            }}
-          >
-            <FolderOpen size={14} className="text-emerald-600" />
-            View workbooks
-          </button>
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
-            onClick={() => {
-              setFolderModal({
-                open: true,
-                mode: 'create',
-                parentId: contextMenu.folderId,
-                name: '',
-              });
-              setContextMenu(null);
-            }}
-          >
-            <Plus size={14} className="text-blue-600" />
-            Create subfolder
-          </button>
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
-            onClick={() => {
-              setFolderModal({
-                open: true,
-                mode: 'rename',
-                folderId: contextMenu.folderId,
-                parentId: contextMenu.parentId,
-                name: contextMenu.folderName,
-              });
-              setContextMenu(null);
-            }}
-          >
-            <Pencil size={14} className="text-amber-600" />
-            Rename folder
-          </button>
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
-            onClick={() => {
-              setDeletingFolder({ id: contextMenu.folderId, name: contextMenu.folderName });
-              setContextMenu(null);
-            }}
-          >
-            <Trash2 size={14} />
-            Delete folder
-          </button>
-        </div>
+        </>
       )}
 
       {/* Create / Rename Folder Modal */}
@@ -771,7 +783,7 @@ export default function WorkbookLibrary({
         </div>
       )}
 
-      {/* Enhanced Move Workbook Dialog (Hierarchical Tree Selector & Search) */}
+      {/* Enhanced Move Workbook Dialog */}
       {moving && (
         <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-4">
           <section
@@ -811,7 +823,6 @@ export default function WorkbookLibrary({
               </div>
 
               <div className="max-h-60 overflow-y-auto rounded-lg border bg-slate-50/50 p-2 space-y-1 dark:bg-slate-950/40">
-                {/* Root Option: Unfiled */}
                 <div
                   className={`flex items-center gap-1.5 rounded-lg py-1.5 px-2 cursor-pointer transition-colors ${
                     moveSelectedFolderId === ''
@@ -824,7 +835,6 @@ export default function WorkbookLibrary({
                   <span className="text-xs font-medium">Unfiled (Root level)</span>
                 </div>
 
-                {/* Tree nodes */}
                 {renderMoveTree()}
               </div>
             </div>
