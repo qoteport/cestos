@@ -2048,7 +2048,7 @@ export default function FieldWorkbookWorkspace({
               id="workbook-cell-value"
               rows={1}
               aria-label="Selected cell value"
-              className="block min-h-8 min-w-0 flex-1 resize-y border-0 bg-transparent px-0 py-1 text-sm leading-6 outline-none focus:ring-0"
+              className="block min-h-8 min-w-0 flex-1 resize-none !border-0 bg-transparent px-0 py-1 text-sm leading-6 !outline-none focus:!outline-none focus-visible:!outline-none focus:!ring-0 focus-visible:!ring-0 !shadow-none"
               value={sheet.cells[anchor.r]?.[anchor.c] || ''}
               maxLength={32767}
               onChange={(e) => onValue(anchor.r, anchor.c, e.target.value)}
