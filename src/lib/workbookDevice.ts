@@ -41,6 +41,7 @@ export async function saveDeviceSession(scope:string,session:DeviceSession) {
     tx.oncomplete=()=>resolve();tx.onerror=tx.onabort=()=>reject(tx.error || new Error('Could not save workbook session.'));
   });
 }
+export class DeviceWorkbookConflict extends Error {constructor(public workbook?:FieldWorkbook){super('Another tab changed this workbook. Your version was preserved in recovery history. Choose a version below.');this.name='DeviceWorkbookConflict';}}
 export async function saveDeviceWorkbook(scope: string, book: FieldWorkbook, remoteVersion?: string, editor?: {id:string; baseline:FieldWorkbook}) {
   const db=await openDatabase();
   await new Promise<void>((resolve,reject)=>{
@@ -70,7 +71,7 @@ export async function saveDeviceWorkbook(scope: string, book: FieldWorkbook, rem
       books.put({key,scope,book,...(editor?{editorId:editor.id}:{}),baseVersion:remoteVersion || previous?.remoteVersion || previous?.baseVersion,savedAt:new Date().toISOString(), ...(remoteVersion ? {remoteVersion} : {})} satisfies DeviceWorkbook);
     };
     };
-    tx.oncomplete=()=>conflict?reject(new Error('Another tab changed this workbook. Your version was preserved in recovery history. Download it or save a new copy before continuing.')):resolve();tx.onabort=tx.onerror=()=>reject(tx.error || new Error('Device autosave failed. Download a backup.'));
+    tx.oncomplete=()=>conflict?reject(new DeviceWorkbookConflict(book)):resolve();tx.onabort=tx.onerror=()=>reject(tx.error || new Error('Device autosave failed. Download a backup.'));
   });
 }
 export async function deviceRevisions(scope:string,id:string):Promise<DeviceWorkbook[]> {

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import WorkbookMappingAssistant from './WorkbookMappingAssistant';
 import { createContext, useContext, useCallback, useEffect, useMemo, useState } from 'react';
 import { apiFetch, ApiError } from '@/lib/api';
@@ -274,23 +274,23 @@ export default function WorkbookDatabaseConnection({
         >
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold">Connect to Database Table</h3>
-            <button type="button" onClick={onClose}>
+            <button
+              type="button"
+              className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors"
+              onClick={onClose}
+            >
               Close
             </button>
           </div>
-          <p className="my-2 text-sm">
-            Map {sheet.name} without changing its layout. Select a table, describe where records
-            live, then review the extracted records.
+          <p className="my-1.5 text-xs text-slate-600 dark:text-slate-400">
+            Map <span className="font-semibold text-slate-800 dark:text-slate-200">{sheet.name}</span> to a database table to preview extracted records.
           </p>
-          <p className="mb-3 rounded bg-amber-50 p-2 text-sm text-amber-950">
-            Mappings and previews only. Saving does not create or update database records.
-            Relationship fields use record IDs. Workbook copies retain the layout for a separate
-            future import.
-          </p>
+          <div className="mb-3 inline-flex items-center gap-1.5 rounded-md bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 text-xs font-medium text-amber-800 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/40">
+            <span>Mapping preview only · No database changes made</span>
+          </div>
           {(cached || !online || offline) && (
-            <p className="my-2 text-sm">
-              Saved table definitions are available offline. Reconnect to check current permissions
-              and database constraints.
+            <p className="my-2 text-xs text-slate-500 dark:text-slate-400">
+              Offline mode: Saved table definitions available. Reconnect to verify current permissions.
             </p>
           )}
           {error && (
