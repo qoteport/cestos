@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import WorkbookRecordPreview from './WorkbookRecordPreview';
 import WorkbookSyncPanel from './WorkbookSyncPanel';
 import WorkbookLibrary from './WorkbookLibrary';
@@ -15,7 +15,7 @@ import styles from './FieldWorkbookWorkspace.module.css';
 import { workbookShortcut } from '@/lib/workbookShortcuts';
 import {dragFill, printSheet, autofillRange, commonColumnValues} from '@/lib/workbookConvenience';
 import {syncWorkbooks} from '@/lib/workbookSync';
-import {queueWorkbookSync, listWorkbookSync, removeWorkbookSync, deleteDeviceWorkbook, type WorkbookSyncEntry, readDeviceLibrary, saveDeviceLibrary, readDeviceWorkbook, readDeviceSession, saveDeviceSession, saveDeviceWorkbook, listDeviceWorkbooks, deviceRevisions, sheetCsv, type DeviceWorkbook} from '@/lib/workbookDevice';
+import {DeviceWorkbookConflict,queueWorkbookSync, listWorkbookSync, removeWorkbookSync, deleteDeviceWorkbook, type WorkbookSyncEntry, readDeviceLibrary, saveDeviceLibrary, readDeviceWorkbook, readDeviceSession, saveDeviceSession, saveDeviceWorkbook, listDeviceWorkbooks, deviceRevisions, sheetCsv, type DeviceWorkbook} from '@/lib/workbookDevice';
 import WorkbookShareDialog from './WorkbookShareDialog';
 import WorkbookDatabaseLoad from './WorkbookDatabaseLoad';
 import WorkbookDatabaseConnection from './WorkbookDatabaseConnection';
@@ -226,7 +226,7 @@ const GridCell = memo(function GridCell({
           ].join(' '),
           minHeight: appearance ? 0 : undefined,
         }}
-        title={value}
+        title={/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(value) ? undefined : value}
         onFocus={() => { setEditing(true); onSelect(r, c, false); }}
         onBlur={() => {setEditing(false);formula.dismiss();}}
         onMouseDown={(event) => {
@@ -320,6 +320,7 @@ export default function FieldWorkbookWorkspace({
   const [showToolbar, setShowToolbar] = useState(true);
   const [showFormulaBar, setShowFormulaBar] = useState(true);
   const [showSelectionInfo, setShowSelectionInfo] = useState(false);
+  const [deviceConflict,setDeviceConflict]=useState<FieldWorkbook|null>(null);
   const [databaseReview,setDatabaseReview]=useState<FieldSheet|null>(null);
   const [databaseLoadOpen,setDatabaseLoadOpen]=useState(false);
   const [connectionSheet, setConnectionSheet] = useState<string | null>(null);
@@ -548,8 +549,8 @@ export default function FieldWorkbookWorkspace({
     let active=true;
     setAutosaveStatus('Saving on device...');
     void (async()=>{
-      try {const open = sessions.map(item => item.book.id === book.id ? book : item.book);if (!open.some(item => item.id === book.id)) open.push(book);for (const item of open) {validateWorkbook(item);await saveDeviceWorkbook(storageKey,item,undefined,{id:editorId.current,baseline:editorBaselines.current.get(item.id) || item});if(!onPublish && (item.id===book.id?dirty:sessions.find(session=>session.book.id===item.id)?.dirty))await queueWorkbookSync(storageKey,item);}const rows=await listDeviceWorkbooks(storageKey);if(active){setDeviceBooks(rows);setAutosaveStatus('Autosaved on device');}}
-      catch(e) {if(active){setAutosaveStatus('Device save needs attention');setError(e instanceof Error?e.message:'Autosave failed — download a backup');}}
+      try {const open = sessions.map(item => item.book.id === book.id ? book : item.book);if (!open.some(item => item.id === book.id)) open.push(book);for (const item of open) {validateWorkbook(item);await saveDeviceWorkbook(storageKey,item,undefined,{id:editorId.current,baseline:editorBaselines.current.get(item.id) || item});editorBaselines.current.set(item.id,item);if(!onPublish && (item.id===book.id?dirty:sessions.find(session=>session.book.id===item.id)?.dirty))await queueWorkbookSync(storageKey,item);}const rows=await listDeviceWorkbooks(storageKey);if(active){setDeviceBooks(rows);setAutosaveStatus('Autosaved on device');}}
+      catch(e) {if(active){if(e instanceof DeviceWorkbookConflict)setDeviceConflict(e.workbook || bookRef.current);setAutosaveStatus(e instanceof DeviceWorkbookConflict?'Saved in device recovery · review needed':'Device save needs attention');setError(e instanceof Error?e.message:'Autosave failed — download a backup');}}
     })();
     return ()=>{active=false;};
   },[book,sessions,dirty,storageKey,storageReady,onPublish]);
@@ -946,6 +947,7 @@ export default function FieldWorkbookWorkspace({
   }
   function activate(next: FieldWorkbook, isDirty: boolean) {
     next={...next,createdAt:next.createdAt || new Date().toISOString()};
+    editorBaselines.current.set(next.id,structuredClone(next));
     const open=stashCurrent();
     const session=freshSession(next,isDirty);
     setSessions(open.some(item=>item.book.id===next.id) ? open.map(item=>item.book.id===next.id ? session : item) : [...open,session]);
@@ -1038,13 +1040,14 @@ export default function FieldWorkbookWorkspace({
     const saved = asTemplate ? {...copyWorkbook(book,true),name:templateName.trim() || `${book.name} template`} : book;
     validateWorkbook(saved);
     await saveDeviceWorkbook(storageKey,saved,undefined,{id:editorId.current,baseline:editorBaselines.current.get(saved.id) || saved});
+    editorBaselines.current.set(saved.id,saved);
     setDeviceBooks(await listDeviceWorkbooks(storageKey));
     return saved;
   }
   async function saveDeviceOnly() {
     setBusy(true);setError('');
     try {await saveToDevice();setNotice('Workbook saved on this device.');}
-    catch(e){setError(e instanceof Error?e.message:'Device save failed. Download a backup.');}
+    catch(e){if(e instanceof DeviceWorkbookConflict)setDeviceConflict(e.workbook || bookRef.current);setError(e instanceof Error?e.message:'Device save failed. Download a backup.');}
     finally{setBusy(false);}
   }
   async function save(asTemplate = false) {
@@ -1060,6 +1063,11 @@ export default function FieldWorkbookWorkspace({
       if(onPublish && !asTemplate && book.id===initialWorkbook?.id) {await onPublish(book);setDirty(false);setNotice('Shared workbook saved successfully.');return;}
       const saved=deviceSaved || book;
       await queueWorkbookSync(storageKey,saved);
+      if(!asTemplate&&!onPublish&&sheet?.databaseSource){
+        setDatabaseReview(structuredClone(sheet));
+        setNotice('Workbook draft saved. Review and confirm database changes in the dialog.');
+        return;
+      }
       setTemplatePicker(false);
       await syncWorkbooks(storageKey);
       const entries=await listWorkbookSync(storageKey);setSyncEntries(entries);
@@ -1072,7 +1080,8 @@ export default function FieldWorkbookWorkspace({
         setNotice(entry?.state==='conflict' ? 'Your local workbook is safe. A newer server version exists; review the conflict in the library.' : 'Workbook saved on this device. It will sync automatically when the connection and server are ready.');
       }
     } catch (e) {
-      setError(`Server save failed. Your device copy is available if the device save completed. ${e instanceof Error ? e.message : ''}`);
+      if(e instanceof DeviceWorkbookConflict){setDeviceConflict(e.workbook || bookRef.current);setError('Your draft is saved in device recovery. Another tab has a newer device version. Choose how to continue.');}
+      else setError(`Save did not complete. ${e instanceof Error ? e.message : 'Download a backup to keep your work.'}`);
     } finally {
       setBusy(false);
     }
@@ -1233,8 +1242,25 @@ export default function FieldWorkbookWorkspace({
     }
   }, [book, dirty, busy, online, offlineToolsReady, autosaveStatus, setHeaderState, leave, commit, download, save]);
 
+  async function resolveDeviceConflict(refreshLatest:boolean){
+    if(!deviceConflict)return;setBusy(true);setError('');
+    try{
+      const current=bookRef.current?.id===deviceConflict.id?bookRef.current:deviceConflict;
+      const copy=copyWorkbook(current,current.template);copy.name=`${current.name} — local recovery`;
+      await saveDeviceWorkbook(storageKey,copy);
+      if(refreshLatest){
+        const latest=await readDeviceWorkbook(storageKey,current.id);
+        if(!latest)throw Error('The latest device version is unavailable. Your work is saved as a local recovery workbook.');
+        // Refresh from the other tab without overwriting it or bypassing its conflict check.
+        activate(validateWorkbook(latest.book),false);
+        setNotice('Latest device version opened. Your previous work is saved as a separate local recovery workbook.');
+      }else {activate(copy,true);setNotice('Your version is saved as a new workbook on this device.');}
+      setDeviceBooks(await listDeviceWorkbooks(storageKey));setDeviceConflict(null);
+    }catch(e){setError(e instanceof Error?e.message:'Could not save recovery copy. Download a backup before continuing.');}finally{setBusy(false);}
+  }
   const feedback = (
     <div className="fixed bottom-6 right-6 z-50 flex max-w-md flex-col gap-2 pointer-events-none">
+      {deviceConflict&&<section role="alert" className="pointer-events-auto max-w-md rounded-xl border border-amber-300 bg-white p-4 text-slate-900 shadow-xl dark:bg-slate-900 dark:text-white"><h4 className="text-sm font-semibold">Device copy needs review</h4><p className="my-2 text-xs">Your draft was saved in recovery history. Refreshing preserves your work as a separate workbook before opening the latest device copy.</p><div className="flex flex-wrap gap-2"><button type="button" className={button} disabled={busy} onClick={()=>void resolveDeviceConflict(true)}>Refresh latest · preserve mine</button><button type="button" className={button} disabled={busy} onClick={()=>void resolveDeviceConflict(false)}>Save mine as new workbook</button><button type="button" className={button} disabled={busy} onClick={()=>void download('backup')}>Download backup</button></div></section>}
       {error && (
         <div
           role="alert"
@@ -2376,7 +2402,6 @@ export default function FieldWorkbookWorkspace({
 
         {mediaTarget?.bookId===book.id&&<WorkbookCellMedia title={`Cell ${columnName(mediaTarget.c)}${mediaTarget.r+1} attachments`} assets={(book.sheets.find(s=>s.id===mediaTarget.sheetId)?.media?.[`${mediaTarget.r}:${mediaTarget.c}`]||[]).map(id=>book.assets?.[id]).filter((a):a is WorkbookAsset=>!!a)} onClose={()=>setMediaTarget(null)} onAdd={files=>{const current=bookRef.current;if(!current||current.id!==mediaTarget.bookId)throw Error('The active workbook changed. Please choose the cell again.');commit(insertMedia(current,mediaTarget.sheetId,mediaTarget.r,mediaTarget.c,files));}} onRemove={id=>{const current=bookRef.current;if(current&&current.id===mediaTarget.bookId)commit(removeMedia(current,mediaTarget.sheetId,`${mediaTarget.r}:${mediaTarget.c}`,id));}}/>}
         {databaseLoadOpen && <WorkbookDatabaseLoad existingNames={book.sheets.map(s=>s.name)} onClose={()=>setDatabaseLoadOpen(false)} onLoad={sheets=>{commit({...book,sheets:[...book.sheets,...sheets]});setSheetIndex(book.sheets.length);setAnchor({r:0,c:0});setEnd({r:0,c:0});setDatabaseLoadOpen(false);setNotice(`Loaded ${sheets.reduce((count,s)=>count+s.cells.length-1,0)} records into ${sheets.length} new sheet(s). Review database changes to confirm edits before sending them.`);}} />}
-        {sheet.databaseSource && <div className="flex items-center gap-3 text-xs text-slate-500"><span>Connected table · {sheet.databaseSource.path} · Loaded {new Date(sheet.databaseSource.loadedAt).toLocaleString()} · Edits remain drafts until confirmed.</span>{!onPublish&&<button type="button" className={button} onClick={()=>setDatabaseReview(structuredClone(sheet))}>Review database changes</button>}</div>}
         <WorkbookRecordPreview key={`${storageKey}:${sheet.id}`} sheet={sheet} grid={gridRef}/>
         {databaseReview&&<WorkbookDatabaseReview sheet={databaseReview} onClose={()=>setDatabaseReview(null)} onSaved={(row,record)=>{
           const current=bookRef.current;if(!current)return;
@@ -2490,16 +2515,22 @@ export default function FieldWorkbookWorkspace({
             />
             <div
               style={{
-                top: Math.min(
-                  gridContextMenu.y,
-                  typeof window !== 'undefined' ? window.innerHeight - 450 : gridContextMenu.y
+                top: Math.max(
+                  8,
+                  Math.min(
+                    gridContextMenu.y,
+                    typeof window !== 'undefined' ? window.innerHeight - 420 : gridContextMenu.y
+                  )
                 ),
-                left: Math.min(
-                  gridContextMenu.x,
-                  typeof window !== 'undefined' ? window.innerWidth - 270 : gridContextMenu.x
+                left: Math.max(
+                  8,
+                  Math.min(
+                    gridContextMenu.x,
+                    typeof window !== 'undefined' ? window.innerWidth - 270 : gridContextMenu.x
+                  )
                 ),
               }}
-              className="fixed z-50 max-h-[calc(100dvh-16px)] overflow-y-auto w-64 rounded-xl border border-slate-200 bg-white p-1.5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 text-xs font-medium text-slate-700 dark:text-slate-200"
+              className="fixed z-50 max-h-[75dvh] sm:max-h-[80dvh] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden w-64 rounded-xl border border-slate-200 bg-white p-1.5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 text-xs font-medium text-slate-700 dark:text-slate-200"
             >
               <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500" aria-label="Selected cell range">
                 Selection: {columnName(selection.c)}{selection.r + 1}:{columnName(selection.ec)}{selection.er + 1}
