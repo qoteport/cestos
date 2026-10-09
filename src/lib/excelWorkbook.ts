@@ -16,6 +16,7 @@ export function originalBytes(base64: string): Uint8Array {
 export function sheetSnapshot(sheet: FieldSheet): string {
   return JSON.stringify({
     name: sheet.name,
+    media:sheet.media,
     view: sheet.view,
     print: sheet.print,
     cells: sheet.cells,
@@ -338,6 +339,16 @@ export async function exportStyledWorkbook(book: FieldWorkbook): Promise<Blob> {
     if (mergeChanged)
       for (const m of sheet.merges)
         ws.mergeCells(X.utils.encode_range({ s: { r: m.r, c: m.c }, e: { r: m.er, c: m.ec } }));
+  }
+  // Native workbook backups retain every attachment. Excel embeds supported images;
+  // other attachments are identified in notes and available in the attachment ZIP.
+  for(const sheet of book.sheets){const ws=original.getWorksheet(sheet.name);if(!ws)continue;
+    for(const [key,ids] of Object.entries(sheet.media||{})){const [r,c]=key.split(':').map(Number);const assets=ids.map(id=>book.assets?.[id]).filter((a):a is NonNullable<typeof a>=>!!a);
+      const embedded=assets.find(a=>['image/png','image/jpeg','image/gif'].includes(a.mime));
+      if(embedded){const imageId=original.addImage({base64:embedded.data,extension:embedded.mime.split('/')[1] as 'png'|'jpeg'|'gif'});ws.addImage(imageId,{tl:{col:c,row:r},ext:{width:Math.max(30,sheet.widths[c]-10),height:Math.max(30,sheet.heights[r]-25)},editAs:'oneCell'});}
+      const cell=ws.getCell(r+1,c+1);const old=typeof cell.note==='string'?cell.note:cell.note?.texts?.map(t=>t.text||'').join('')||'';
+      cell.note=[old,`Workbook attachments: ${assets.map(a=>a.name).join(', ')}. Download the attachments ZIP or use the Cestos backup for all original files.`].filter(Boolean).join('\n');
+    }
   }
   original.calcProperties.fullCalcOnLoad = true;
   return new Blob([(await original.xlsx.writeBuffer()) as BlobPart], { type: MIME });

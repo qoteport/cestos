@@ -1,4 +1,6 @@
 'use client';
+import WorkbookCellMedia from '@/components/WorkbookCellMedia';
+import type {WorkbookAsset} from '@/lib/workbookMedia';
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch, downloadBlob } from '@/lib/api';
 import { useAuth } from '@/components/AuthProvider';
@@ -23,6 +25,7 @@ export default function SharedWorkbookPage() {
     [editing, setEditing] = useState(false),
     [sheet, setSheet] = useState(0);
   const revision = useRef(0);
+  const [mediaKey,setMediaKey]=useState<string|null>(null);
   useEffect(() => {
     setToken(location.hash.slice(1));
   }, []);
@@ -120,7 +123,7 @@ export default function SharedWorkbookPage() {
             disabled={!active}
             onClick={() => {
               try {
-                if (active && book) printSheet(active, book.name);
+                if (active && book) printSheet(active, book.name,book.assets);
               } catch (e) {
                 setError(e instanceof Error ? e.message : 'Print failed');
               }
@@ -159,17 +162,19 @@ export default function SharedWorkbookPage() {
               <button
                 key={s.id}
                 className={`rounded border px-3 py-1 ${sheet === i ? 'bg-emerald-100' : ''}`}
-                onClick={() => setSheet(i)}
+                onClick={() => {setSheet(i);setMediaKey(null);}}
               >
-                {s.name}
+                {book.folders?.find(f=>f.id===s.folderId)?.name ? `${book.folders.find(f=>f.id===s.folderId)!.name} / ` : ''}{s.name}
               </button>
             ))}
           </nav>
+          {!!Object.keys(active.media||{}).length&&<div className="my-3 flex flex-wrap gap-2" aria-label="Sheet attachments">{Object.entries(active.media||{}).filter(([,ids])=>ids.length).map(([key,ids])=><button key={key} type="button" className="rounded border px-3 py-1 text-sm" onClick={()=>setMediaKey(key)}>Attachments · row {Number(key.split(':')[0])+1}, column {Number(key.split(':')[1])+1} ({ids.length})</button>)}</div>}
+          {mediaKey&&<WorkbookCellMedia title="Shared cell attachments" assets={(active.media?.[mediaKey]||[]).map(id=>book.assets?.[id]).filter((a):a is WorkbookAsset=>!!a)} onClose={()=>setMediaKey(null)}/>}
           <iframe
             title="Read-only worksheet"
             sandbox=""
             className="h-[75vh] w-full border bg-white"
-            srcDoc={printableSheetHtml(active, book.name)}
+            srcDoc={printableSheetHtml(active, book.name,book.assets)}
           />
         </>
       )}

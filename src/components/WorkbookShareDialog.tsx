@@ -86,7 +86,7 @@ export default function WorkbookShareDialog({
         <h3 className="text-lg font-bold">Share workbook</h3>
         <p className="my-3 text-sm">
           Create a separate shared copy of the visible sheets. Anyone with the link can view it.
-          Original Excel attachments, hidden sheets and database mappings are excluded. Later
+          Cell attachments on visible sheets are included. The original Excel file, hidden sheets and database mappings are excluded. Later
           changes to this local workbook do not automatically change the shared copy.
         </p>
         <label className="my-3 flex items-center gap-2 text-sm">

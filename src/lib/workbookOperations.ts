@@ -37,6 +37,7 @@ export function sortSheet(
       sheet.cells[r].map((value) => translateFormula(value, index - r, 0))
     ),
     ...(sheet.connection?.layout?{connection:{...sheet.connection,validatedAt:undefined,layout:{...sheet.connection.layout,needsReview:true}}}:{}),
+    media:Object.fromEntries(Object.entries(sheet.media||{}).map(([key,ids])=>{const [r,c]=key.split(':').map(Number);return [`${positions.get(r)}:${c}`,ids];})),
     heights: order.map((r) => sheet.heights[r]),
     rowOrigins: sheet.rowOrigins ? order.map(r => sheet.rowOrigins![r]) : undefined,
     formats,

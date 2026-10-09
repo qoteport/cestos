@@ -1,3 +1,4 @@
+import {imageMime,assetUrl,type WorkbookAsset} from './workbookMedia';
 import {calculateSheet,translateFormula} from './workbookFormulas';
 import type { FieldSheet, CellRange } from './fieldWorkbook';
 import { displayCellValue } from './workbookCellTypes';
@@ -18,6 +19,7 @@ export function autofillRange(
     ...sheet,
     cells: sheet.cells.map((row) => [...row]),
     formats: { ...sheet.formats },
+    media:{...sheet.media},
   };
   const length = direction === 'down' ? range.er - range.r + 1 : range.ec - range.c + 1;
   const lanes = direction === 'down' ? range.ec - range.c + 1 : range.er - range.r + 1;
@@ -54,6 +56,7 @@ export function autofillRange(
           ? String(Number((Number(first) + (Number(second) - Number(first)) * index).toFixed(10)))
           : new Date(date1 + (date2 - date1) * index).toISOString().slice(0, 10)
         : translateFormula(first,tr-r,tc-c);
+      if(sheet.media?.[`${r}:${c}`])next.media[`${tr}:${tc}`]=[...sheet.media[`${r}:${c}`]];else delete next.media[`${tr}:${tc}`];
       if (sheet.formats?.[`${r}:${c}`])
         next.formats[`${tr}:${tc}`] = { ...sheet.formats[`${r}:${c}`] };
       else delete next.formats[`${tr}:${tc}`];
@@ -92,7 +95,7 @@ const escape = (value: string) =>
     /[&<>"']/g,
     (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!
   );
-export function printableSheetHtml(sheet: FieldSheet, workbookName: string): string {
+export function printableSheetHtml(sheet: FieldSheet, workbookName: string, assets:Record<string,WorkbookAsset>={}): string {
   if (sheet.previewLimited)
     throw new Error('This sheet is partially loaded. Export Excel to print every row.');
   const area=sheet.print?.area || {r:0,c:0,er:sheet.cells.length-1,ec:sheet.widths.length-1};
@@ -106,7 +109,7 @@ export function printableSheetHtml(sheet: FieldSheet, workbookName: string): str
     const m=sheet.merges.find(m=>r>=m.r&&r<=m.er&&c>=m.c&&c<=m.ec);if(m&&(r!==m.r||c!==m.c))return '';
     const f={bold:!sheet.imported&&r===0,...sheet.formats?.[`${r}:${c}`]};
     const css=`font-weight:${f.bold?'bold':'normal'};font-style:${f.italic?'italic':'normal'};text-align:${['left','center','right'].includes(f.align||'')?f.align:'left'};color:${/^#[0-9a-f]{6}$/i.test(f.color||'')?f.color:'#000'};background:${/^#[0-9a-f]{6}$/i.test(f.background||'')?f.background:'#fff'};`;
-    return `<td ${m?`rowspan="${m.er-m.r+1}" colspan="${m.ec-m.c+1}"`:''} style="${css}">${escape(displayCellValue(computed[r][c],f))||'&nbsp;'}</td>`;
+    return `<td ${m?`rowspan="${m.er-m.r+1}" colspan="${m.ec-m.c+1}"`:''} style="${css}">${escape(displayCellValue(computed[r][c],f))||'&nbsp;'}${(sheet.media?.[`${r}:${c}`]||[]).map(id=>assets[id]).filter(Boolean).map(a=>imageMime(a.mime)?`<img src="${assetUrl(a)}" alt="${escape(a.name)}" style="display:block;max-width:100%;max-height:120px">`:`<div>${escape(a.name)}</div>`).join('')}</td>`;
   }).join('')}</tr>`;
   const breaks=(sheet.print?.breakRows||[]).filter(r=>r>area.r&&r<=area.er);
   if(sheet.merges.some(m=>breaks.some(r=>m.r<r&&m.er>=r)|| (m.r<area.r+repeat&&m.er>=area.r+repeat)))throw new Error('A page break or repeated-header boundary crosses a merged cell. Adjust print setup.');
@@ -116,8 +119,8 @@ export function printableSheetHtml(sheet: FieldSheet, workbookName: string): str
   const tables=sections.map((section,index)=>`<table style="${index?'break-before:page;':''}width:${fit?'100%':total+'px'}"><colgroup>${widths.map(w=>`<col style="width:${fit?100*w/total+'%':w+'px'};${w===0?'display:none':''}">`).join('')}</colgroup>${headings.length?`<thead>${headings.map(rowHtml).join('')}</thead>`:''}<tbody>${section.map(rowHtml).join('')}</tbody></table>`).join('');
   return `<!doctype html><html><head><meta charset="utf-8"><title>${escape(workbookName+' — '+sheet.name)}</title><style>@page{size:${sheet.print?.orientation==='portrait'?'portrait':'landscape'};margin:12mm}body{font:11px Arial;color:#000}h1{font-size:16px}table{border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}td{border:1px solid #777;padding:4px;white-space:pre-wrap;overflow-wrap:anywhere;vertical-align:middle;print-color-adjust:exact}tr{break-inside:avoid}</style></head><body><h1>${escape(workbookName)} — ${escape(sheet.name)}</h1>${tables}</body></html>`;
 }
-export function printSheet(sheet: FieldSheet, workbookName: string) {
-  const html = printableSheetHtml(sheet, workbookName);
+export function printSheet(sheet: FieldSheet, workbookName: string, assets:Record<string,WorkbookAsset>={}) {
+  const html = printableSheetHtml(sheet, workbookName,assets);
   const frame = document.createElement('iframe');
   frame.title = 'Print active worksheet';
   frame.style.cssText = 'position:fixed;width:0;height:0;border:0';
@@ -138,7 +141,7 @@ export function dragFill(sheet: FieldSheet, seed: CellRange, target: CellRange, 
     throw new Error('Fill must stay within the sheet.');
   if (sheet.merges.some(m => !(m.er < target.r || m.r > target.er || m.ec < target.c || m.c > target.ec)))
     throw new Error('Unmerge these cells before using autofill.');
-  const next = {...sheet, cells: sheet.cells.map(row => [...row]), formats: {...sheet.formats}};
+  const next = {...sheet, cells: sheet.cells.map(row => [...row]), formats: {...sheet.formats},media:{...sheet.media}};
   const length = vertical ? seed.er-seed.r+1 : seed.ec-seed.c+1;
   for (let r=target.r;r<=target.er;r++) for (let c=target.c;c<=target.ec;c++) {
     if (r>=seed.r && r<=seed.er && c>=seed.c && c<=seed.ec) continue;
@@ -158,6 +161,7 @@ export function dragFill(sheet: FieldSheet, seed: CellRange, target: CellRange, 
       }
     }
     next.cells[r][c]=translateFormula(value,r-sr,c-sc);
+    if(sheet.media?.[`${sr}:${sc}`])next.media[`${r}:${c}`]=[...sheet.media[`${sr}:${sc}`]];else delete next.media[`${r}:${c}`];
     const format=sheet.formats?.[`${sr}:${sc}`];
     if(format) next.formats[`${r}:${c}`]={...format}; else delete next.formats[`${r}:${c}`];
   }

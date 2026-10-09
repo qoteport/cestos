@@ -1,5 +1,9 @@
 'use client';
-import {visibleSheetRows} from '@/lib/workbookOperations';
+import {useWorkbookFormulaSuggestions} from './WorkbookFormulaSuggestions';
+import WorkbookCellMedia from './WorkbookCellMedia';
+import WorkbookSheetFolders from './WorkbookSheetFolders';
+import {attachmentArchive,pruneAssets,insertMedia,removeMedia,assetUrl,imageMime,type WorkbookAsset} from '@/lib/workbookMedia';
+import {visibleSheetRows, sortSheet} from '@/lib/workbookOperations';
 import WorkbookTools from './WorkbookTools';
 import {calculateSheet} from '@/lib/workbookFormulas';
 import styles from './FieldWorkbookWorkspace.module.css';
@@ -16,7 +20,15 @@ import { displayCellValue } from '@/lib/workbookCellTypes';
 
 import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Paperclip,
+  Folder,
   ArrowLeft,
+  ArrowDown,
+  ArrowRight,
+  ListPlus,
+  Lock,
+  Unlock,
+  ArrowUpDown,
   Bold,
   Italic,
   AlignLeft,
@@ -86,6 +98,19 @@ type Document = { id: string; title: string; tags: string[]; created_at: string 
 type Point = { r: number; c: number };
 type WorkbookSession = {book: FieldWorkbook; dirty: boolean; sheetIndex: number; anchor: Point; end: Point; undo: FieldWorkbook[]; redo: FieldWorkbook[]; scrollTop: number; scrollLeft: number};
 const freshSession = (book: FieldWorkbook, dirty = false): WorkbookSession => ({book, dirty, sheetIndex:0, anchor:{r:0,c:0}, end:{r:0,c:0}, undo:[], redo:[], scrollTop:0, scrollLeft:0});
+function formatWorkbookCardDate(dateVal: string | number | Date | null | undefined): string {
+  if (!dateVal) return '';
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return String(dateVal);
+  return d.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
 const button =
   'inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700';
 const iconButton = `${button} h-10 w-10 shrink-0 !p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2`;
@@ -112,7 +137,13 @@ const GridCell = memo(function GridCell({
   onFill,
   calculated,
   sticky,
+  mediaIds,
+  mediaAssets,
+  onMedia,
 }: {
+  mediaIds?:string[];
+  mediaAssets?:Record<string,WorkbookAsset>;
+  onMedia?:(r:number,c:number)=>void;
   calculated?: string;
   sticky?: React.CSSProperties;
   onFill?: (event: React.PointerEvent) => void;
@@ -134,7 +165,10 @@ const GridCell = memo(function GridCell({
   onPaste: (r: number, c: number, text: string) => void;
   onContextMenu?: (r: number, c: number, event: React.MouseEvent) => void;
 }) {
+  const attachments=mediaIds?.map(id=>mediaAssets?.[id]).filter((a):a is WorkbookAsset=>!!a);
   const [editing, setEditing] = useState(false);
+  const formulaInput=useRef<HTMLInputElement>(null);
+  const formula=useWorkbookFormulaSuggestions(formulaInput,value,active&&editing,next=>onValue(r,c,next));
   const kind = appearance?.dataType;
   const picker = kind === 'datetime' ? 'datetime-local' : kind === 'date' || kind === 'time' ? kind : 'text';
   // Keep incompatible existing values visible until the user explicitly replaces them.
@@ -162,10 +196,12 @@ const GridCell = memo(function GridCell({
       className={`relative border border-slate-200 p-0 dark:border-slate-700 ${selected ? 'bg-emerald-50 dark:bg-emerald-950' : header ? 'bg-slate-100 dark:bg-slate-800' : 'bg-white dark:bg-slate-900'} `}
     >
       <input
+        ref={formulaInput}
+        {...formula.aria}
         data-cell={`${r}:${c}`}
         aria-label={`${columnName(c)}${r + 1}`}
         aria-selected={selected}
-        list={list}
+        list={value.startsWith('=') ? undefined : list}
         type={active && editing && picker !== 'text' && compatible ? picker : 'text'}
         step={kind === 'time' || kind === 'datetime' ? 1 : undefined}
         inputMode={['number','currency','percent'].includes(kind || '') ? 'decimal' : undefined}
@@ -174,6 +210,7 @@ const GridCell = memo(function GridCell({
         autoComplete="off"
         className={`h-full min-h-[32px] w-full min-w-0 bg-transparent px-2 py-1 text-sm text-slate-900 !border-0 !outline-none !ring-0 !ring-offset-0 !shadow-none focus:!outline-none focus-visible:!outline-none dark:text-slate-100 ${bold ? 'font-bold' : 'font-normal'} ${italic ? 'italic' : ''}`}
         style={{
+          paddingTop:attachments?.length&&imageMime(attachments[0].mime)?56:undefined,
           textAlign: align,
           fontFamily: appearance?.fontName,
           fontSize: appearance?.fontSize ? `${appearance.fontSize}pt` : undefined,
@@ -186,7 +223,7 @@ const GridCell = memo(function GridCell({
         }}
         title={value}
         onFocus={() => { setEditing(true); onSelect(r, c, false); }}
-        onBlur={() => setEditing(false)}
+        onBlur={() => {setEditing(false);formula.dismiss();}}
         onMouseDown={(event) => {
           if (event.button !== 0) {
             event.preventDefault();
@@ -201,8 +238,9 @@ const GridCell = memo(function GridCell({
           event.preventDefault();
           onContextMenu?.(r, c, event);
         }}
-        onChange={(event) => onValue(r, c, event.target.value)}
+        onChange={(event) => {onValue(r, c, event.target.value);formula.changed(event.currentTarget);}}
         onKeyDown={(event) => {
+          if(formula.onKeyDown(event))return;
           if (
             (event.key === 'Tab' && !event.ctrlKey && !event.metaKey) ||
             event.key === 'Enter' ||
@@ -221,6 +259,8 @@ const GridCell = memo(function GridCell({
           }
         }}
       />
+      {formula.popup}
+      {!!attachments?.length&&<button type="button" aria-label={`Attachments for ${columnName(c)}${r+1}`} onPointerDown={e=>e.stopPropagation()} onClick={()=>onMedia?.(r,c)} className="absolute right-1 top-1 z-10 flex max-w-[65%] items-center gap-1 rounded border bg-white/95 p-1 text-xs text-slate-700 shadow-sm dark:bg-slate-800 dark:text-slate-100">{imageMime(attachments[0].mime)?<img src={assetUrl(attachments[0])} alt={attachments[0].name} className="h-12 w-16 object-contain"/>:<Paperclip size={14}/>}<span>{attachments.length}</span></button>}
       {active && picker !== 'text' && !compatible && <label className="absolute right-1 top-0 z-10 rounded bg-white p-1 text-xs text-emerald-700 dark:bg-slate-800" onPointerDown={e=>e.stopPropagation()}>
         Choose {kind === 'datetime' ? 'date & time' : kind}
         <input aria-label={`Choose ${kind} for ${columnName(c)}${r+1}`} type={picker} value="" step={1} className="block w-36" onChange={e=>{if(e.target.value)onValue(r,c,e.target.value);}} />
@@ -252,6 +292,10 @@ export default function FieldWorkbookWorkspace({
   const [ribbonTab, setRibbonTab] = useState('Home');
   const [book, setBook] = useState<FieldWorkbook | null>(null);
   const [sheetIndex, setSheetIndex] = useState(0);
+  const [mediaTarget,setMediaTarget]=useState<{bookId:string;sheetId:string;r:number;c:number}|null>(null);
+  const [foldersOpen,setFoldersOpen]=useState(false);
+  const [folderFilter,setFolderFilter]=useState('*');
+  useEffect(()=>{setFolderFilter('*');setMediaTarget(null);setFoldersOpen(false);},[book?.id]);
   const dragSelection = useRef<{ kind: 'cell' | 'row' | 'column'; start: Point } | null>(null);
   const [anchor, setAnchor] = useState<Point>({ r: 0, c: 0 });
   const [end, setEnd] = useState<Point>({ r: 0, c: 0 });
@@ -541,6 +585,7 @@ export default function FieldWorkbookWorkspace({
     });
   }, [documents]);
   const commit = useCallback((next: FieldWorkbook, key = '') => {
+    next=pruneAssets(next);
     const previous = bookRef.current;
     if (!previous) return;
     if(!editorBaselines.current.has(previous.id))editorBaselines.current.set(previous.id,previous);
@@ -692,6 +737,7 @@ export default function FieldWorkbookWorkspace({
     if (!extend) setAnchor({ r, c });
     setEnd({ r, c });
   }, []);
+  const openCellMedia=useCallback((r:number,c:number)=>{const current=bookRef.current,s=current?.sheets[sheetRef.current];if(!current||!s)return;const m=s.merges.find(m=>r>=m.r&&r<=m.er&&c>=m.c&&c<=m.ec);setMediaTarget({bookId:current.id,sheetId:s.id,r:m?.r??r,c:m?.c??c});},[]);
   const focus = useCallback((r: number, c: number) => {
     const current=bookRef.current?.sheets[sheetRef.current];
     if(current && gridRef.current && !gridRef.current.querySelector(`[data-cell="${r}:${c}"]`)) {
@@ -929,17 +975,26 @@ export default function FieldWorkbookWorkspace({
     setCustomModal({
       type: 'confirm',
       title: 'Delete saved workbook?',
-      message: `Are you sure you want to delete “${doc.title}”, all saved versions, and its open tab?`,
+      message: `Are you sure you want to delete “${doc.title}”, all saved versions, offline copies on this device, and its open tab?`,
       confirmLabel: 'Delete workbook',
       confirmVariant: 'danger',
       onConfirm: () => {
         void (async () => {
           setBusy(true); setError('');
           try {
+            await syncWorkbooks(storageKey);
+            const remove = async () => {
             await apiFetch(`/api/v1/documents/${doc.id}/workbook`,{method:'DELETE'},true,{queueWhenOffline:false});
             const deletedId=doc.tags.find(tag=>tag.startsWith('wb-'))?.slice(3);
-            if(deletedId){await removeWorkbookSync(storageKey,deletedId);await deleteDeviceWorkbook(storageKey,deletedId);}
+            if(!deletedId) throw new Error('The server deleted this document, but its workbook ID is missing. Local copies could not be identified safely.');
+            await deleteDeviceWorkbook(storageKey,deletedId);
+            localStorage.removeItem(storageKey);
+            if(bookRef.current?.id===deletedId){setBook(null);bookRef.current=null;setDirty(false);setUndo([]);setRedo([]);}
+            setDeviceBooks(items=>items.filter(item=>item.book.id!==deletedId));
+            setSyncEntries(items=>items.filter(item=>item.book.id!==deletedId));
             setSessions(items=>items.filter(item=>item.book.id!==deletedId));
+            };
+            if(navigator.locks) await navigator.locks.request(`workbook-sync:${storageKey}`,remove); else await remove();
             await loadLibrary(); setNotice('Workbook deleted.');
           } catch(e) {setError(e instanceof Error ? e.message : 'Could not delete workbook.');} finally {setBusy(false);}
         })();
@@ -1092,14 +1147,15 @@ export default function FieldWorkbookWorkspace({
       setBusy(false);
     }
   }
-  async function download(format: 'xlsx' | 'csv' | 'backup' = 'xlsx') {
+  async function download(format: 'xlsx' | 'csv' | 'backup' | 'attachments' = 'xlsx') {
     if (!book) return;
     setBusy(true);
     try {
       const name=book.name.replace(/[\\/:*?"<>|]/g, '-');
-      if(format === 'csv') {if(!sheet)return;downloadBlob(new Blob([sheetCsv(sheet)],{type:'text/csv;charset=utf-8'}),`${name}-${sheet.name.replace(/[\\/:*?"<>|]/g,'-')}.csv`);setNotice('Current sheet downloaded as CSV. CSV contains values only; use Excel or backup for all sheets and formatting.');}
+      if(format === 'csv') {if(!sheet)return;downloadBlob(new Blob([sheetCsv(sheet)],{type:'text/csv;charset=utf-8'}),`${name}-${sheet.name.replace(/[\\/:*?"<>|]/g,'-')}.csv`);setNotice('Current sheet downloaded as CSV. CSV contains values only, without attachments or folders. Use a Cestos backup to preserve everything.');}
       else if(format === 'backup') downloadBlob(new Blob([JSON.stringify(book)],{type:'application/json'}),`${name}.cestos.json`);
-      else downloadBlob(await exportWorkbook(book), `${name}.xlsx`);
+      else if(format==='attachments')downloadBlob(await attachmentArchive(book),`${name}-attachments.zip`);
+      else {downloadBlob(await exportWorkbook(book), `${name}.xlsx`);if(Object.keys(book.assets||{}).length||book.folders?.length)setNotice('Excel includes supported cell images and attachment notes. Download attachments ZIP for files and videos, or a Cestos backup to preserve media and sheet folders together.');}
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Export failed.');
     } finally {
@@ -1119,7 +1175,7 @@ export default function FieldWorkbookWorkspace({
         autosaveStatus,
         onShare: () => setSharing(true),
         onRecover: () => {void deviceRevisions(storageKey,book.id).then(setRecoveryVersions).catch(()=>setError('Could not load device versions.'));},
-        onPrint: () => {try{if(sheet)printSheet(sheet,book.name);}catch(e){setError(e instanceof Error?e.message:'Print failed.');}},
+        onPrint: () => {try{if(sheet)printSheet(sheet,book.name,book.assets);}catch(e){setError(e instanceof Error?e.message:'Print failed.');}},
         onSaveDevice: () => void saveDeviceOnly(),
         online,
         offlineToolsReady,
@@ -1173,7 +1229,7 @@ export default function FieldWorkbookWorkspace({
     </div>
   );
   const closePrompt = closingWorkbook && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-xs">
+          <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-xs">
             <div role="alertdialog" aria-modal="true" aria-label="Close unsaved workbook" className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
               <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400">
                 <AlertTriangle size={24} />
@@ -1207,11 +1263,75 @@ export default function FieldWorkbookWorkspace({
             </div>
           </div>
         );
+  const modalDialog = (customModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-xs">
+            <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+              <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                {customModal.title}
+              </h4>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                {customModal.message}
+              </p>
+              {customModal.type === 'prompt' && (
+                <div className="mt-4">
+                  <input
+                    type={customModal.inputType || 'text'}
+                    min={customModal.min}
+                    max={customModal.max}
+                    value={promptInput}
+                    onChange={(e) => setPromptInput(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/30 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const handler = customModal.onConfirm;
+                        setCustomModal(null);
+                        handler(promptInput);
+                      }
+                    }}
+                  />
+                </div>
+              )}
+              <div className="mt-5 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  className={button}
+                  onClick={() => setCustomModal(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className={`rounded-lg px-3.5 py-2 text-xs font-semibold text-white shadow-xs ${
+                    customModal.type === 'confirm' && customModal.confirmVariant === 'danger'
+                      ? 'bg-red-600 hover:bg-red-700'
+                      : 'bg-emerald-600 hover:bg-emerald-700'
+                  }`}
+                  onClick={() => {
+                    const modal = customModal;
+                    setCustomModal(null);
+                    if (modal.type === 'confirm' || modal.type === 'alert') {
+                      modal.onConfirm();
+                    } else if (modal.type === 'prompt') {
+                      modal.onConfirm(promptInput);
+                    }
+                  }}
+                >
+                  {customModal.type === 'prompt'
+                    ? 'Save'
+                    : customModal.confirmLabel || (customModal.type === 'confirm' ? 'Confirm' : 'OK')}
+                </button>
+              </div>
+            </div>
+          </div>
+        ));
+
   if (!book || !sheet)
     return (
       <section className={`${styles.library} space-y-6 bg-slate-50 p-6 dark:bg-slate-950 sm:p-10`}>
         {sharing && book && <WorkbookShareDialog book={book} onClose={()=>setSharing(false)}/>}
-        {recoveryVersions && <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/40 p-4"><div role="dialog" aria-label="Device recovery versions" className="max-h-[80vh] w-full max-w-lg overflow-auto rounded bg-white p-5 dark:bg-slate-900"><h3 className="font-bold">Device recovery versions</h3><p className="my-2 text-sm">Recent saves plus checkpoints spaced 15 minutes apart (up to 60, within a 50 MB history budget). Recovery opens a new copy so your current workbook remains intact.</p>{!recoveryVersions.length && <p>No older versions yet.</p>}{recoveryVersions.map((item,i)=><button type="button" className="my-1 block w-full rounded border p-2 text-left" key={i} onClick={()=>{activate({...copyWorkbook(validateWorkbook(item.book),false),name:item.book.name+' — recovered'},true);setRecoveryVersions(null);}}>{new Date(item.savedAt).toLocaleString()}</button>)}<button type="button" className={button} onClick={()=>setRecoveryVersions(null)}>Close</button></div></div>}
+        {recoveryVersions && <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/40 p-4"><div role="dialog" aria-label="Device recovery versions" className="max-h-[80vh] w-full max-w-lg overflow-auto rounded bg-white p-5 dark:bg-slate-900"><h3 className="font-bold">Device recovery versions</h3><p className="my-2 text-sm">Recent saves plus checkpoints spaced 15 minutes apart (up to 60, within a 50 MB history budget). Recovery opens a new copy so your current workbook remains intact.</p>{!recoveryVersions.length && <p>No older versions yet.</p>}{recoveryVersions.map((item,i)=><button type="button" className="my-1 block w-full rounded border p-2 text-left" key={i} onClick={()=>{activate({...copyWorkbook(validateWorkbook(item.book),false),name:item.book.name+' — recovered'},true);setRecoveryVersions(null);}}>{formatWorkbookCardDate(item.savedAt)}</button>)}<button type="button" className={button} onClick={()=>setRecoveryVersions(null)}>Close</button></div></div>}
         {closePrompt}
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -1265,7 +1385,7 @@ export default function FieldWorkbookWorkspace({
           <p role="status" className="my-2 text-xs text-slate-500">{offlineLibraryStatus}</p>
           <p className="my-2 text-xs text-slate-500">Workbooks are saved automatically on this device. Local edits are preserved during server refreshes. Keep an Excel or workbook backup before clearing browser data.</p>
           {!deviceBooks.length && <p className="text-sm text-slate-500">Your saved workbooks will download automatically when connected. You can also create or import a workbook offline.</p>}
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{deviceBooks.filter(item=>item.book.name.toLowerCase().includes(search.toLowerCase())).map(item=><div key={item.key} className="rounded border p-3"><p className="font-semibold">{item.book.name}</p><p className="my-2 text-xs text-slate-500">{item.book.template?'Template · ':''}{new Date(item.savedAt).toLocaleString()}</p><button type="button" className={button} disabled={busy} onClick={()=>{if(item.book.template)activate(copyWorkbook(item.book,false),true);else if(sessions.some(session=>session.book.id===item.book.id))switchWorkbook(item.book.id);else activate(validateWorkbook(item.book),true);}}>{item.book.template?'Use template':'Open workbook'}</button><button type="button" className={`${button} ml-2`} disabled={busy} onClick={()=>{activate(copyWorkbook(item.book,false),true);}}>Copy</button></div>)}</div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{deviceBooks.filter(item=>item.book.name.toLowerCase().includes(search.toLowerCase())).map(item=><div key={item.key} className="rounded border p-3"><p className="font-semibold">{item.book.name}</p><p className="my-2 text-xs text-slate-500">{item.book.template?'Template · ':''}{formatWorkbookCardDate(item.savedAt)}</p><button type="button" className={button} disabled={busy} onClick={()=>{if(item.book.template)activate(copyWorkbook(item.book,false),true);else if(sessions.some(session=>session.book.id===item.book.id))switchWorkbook(item.book.id);else activate(validateWorkbook(item.book),true);}}>{item.book.template?'Use template':'Open workbook'}</button><button type="button" className={`${button} ml-2`} disabled={busy} onClick={()=>{activate(copyWorkbook(item.book,false),true);}}>Copy</button></div>)}</div>
         </div>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <h3 className="font-semibold">Saved workbooks & templates</h3>
@@ -1292,7 +1412,7 @@ export default function FieldWorkbookWorkspace({
                   <p className="font-semibold">{doc.title}</p>
                   <p className="my-2 text-xs text-slate-500">
                     {doc.tags.includes('workbook-template') ? 'Template' : 'Workbook'} ·{' '}
-                    {new Date(doc.created_at).toLocaleString()}
+                    {formatWorkbookCardDate(doc.created_at)}
                   </p>
                   <button
                     disabled={busy}
@@ -1330,6 +1450,7 @@ export default function FieldWorkbookWorkspace({
             ))}
           </div>
         </div>
+        {modalDialog}
       </section>
     );
 
@@ -1428,6 +1549,9 @@ export default function FieldWorkbookWorkspace({
         {showToolbar && (ribbonTab==='Data'||ribbonTab==='View') && <WorkbookTools sheet={sheet} selection={selection} onChange={changeSheet} onError={setError} onFind={(r,c)=>{if(sheet.view?.filterText)changeSheet(s=>({...s,view:{...s.view,filterText:''}}));setAnchor({r,c});setEnd({r,c});focus(r,c);}} />}
         {showToolbar && (
           <div className={styles.ribbon}>
+            {ribbonTab==='Insert'&&<button type="button" className={button} onClick={()=>openCellMedia(anchor.r,anchor.c)}><Paperclip size={16}/>Cell media</button>}
+            {ribbonTab==='Insert'&&Object.keys(book.assets||{}).length>0&&<button type="button" className={button} onClick={()=>void download('attachments')}><Download size={16}/>Download attachments</button>}
+            {ribbonTab==='Insert'&&<button type="button" className={button} onClick={()=>setFoldersOpen(true)}><Folder size={16}/>Sheet folders</button>}
             {ribbonTab === 'Data' && <button type="button" className={button} onClick={()=>setDatabaseLoadOpen(true)}><Download size={16}/>Load from database</button>}
             {ribbonTab === 'Data' && <button type="button" className={button} onClick={()=>setConnectionSheet(sheet.id)}><FileSpreadsheet size={16}/>Connect to database table</button>}
             {ribbonTab === 'View' && <p className="text-xs text-slate-500">Shortcuts: Ctrl/Cmd+S save · Ctrl/Cmd+Z undo · Ctrl/Cmd+Shift+Z or Ctrl+Y redo · Ctrl/Cmd+B/I/U bold/italic/underline · Ctrl/Cmd+D/R fill down/right · Ctrl/Cmd+A select all cells · Shift+Space select rows · Ctrl+Space select columns · Ctrl/Cmd+Home first cell · Delete clear selected range. Tab/Enter move cells; Shift+Arrow extends selection. Formatting and selection shortcuts apply inside the grid.</p>}
@@ -1823,7 +1947,7 @@ export default function FieldWorkbookWorkspace({
                     }
                   }}
                 >
-                  {new Date(doc.created_at).toLocaleString()}
+                  {formatWorkbookCardDate(doc.created_at)}
                 </button>
               ))}
             {!documents.some((d) => d.tags.includes(`wb-${book.id}`)) && (
@@ -2047,6 +2171,8 @@ export default function FieldWorkbookWorkspace({
                       if (merge && (merge.r !== r || merge.c !== c)) return null;
                       return (
                         <GridCell
+                          mediaIds={sheet.media?.[`${r}:${c}`]} mediaAssets={book.assets}
+                          onMedia={openCellMedia}
                           key={c}
                           {...{ value, r, c, merge }}
                           calculated={computedCells[r]?.[c]}
@@ -2184,6 +2310,7 @@ export default function FieldWorkbookWorkspace({
               </datalist>
             )
         )}
+        <div style={{order:5}} className="flex shrink-0 items-center gap-2 border-t bg-slate-50 px-3 py-1 dark:bg-slate-900"><button type="button" className={button} onClick={()=>setFoldersOpen(true)}><Folder size={14}/>Folders</button><div className="w-56"><SearchableSelect ariaLabel="Show sheet folder" value={folderFilter} options={[{value:'*',label:'All sheets'},{value:'unfiled',label:'Unfiled'},...(book.folders||[]).map(f=>({value:f.id,label:`${f.name} (${book.sheets.filter(s=>s.folderId===f.id).length})`}))]} onChange={value=>{setFolderFilter(value||'*');const first=book.sheets.findIndex(s=>value==='*'||!value||(value==='unfiled'?!s.folderId:s.folderId===value));if(first>=0){setSheetIndex(first);setAnchor({r:0,c:0});setEnd({r:0,c:0});}}}/></div><span className="truncate text-xs text-slate-500">Active: {sheet.name}</span></div>
         <div className={styles.sheetTabs}>
           <div
             role="tablist"
@@ -2191,6 +2318,7 @@ export default function FieldWorkbookWorkspace({
             className="flex max-w-full items-center gap-1 overflow-auto"
           >
             {book.sheets.map((s, i) =>
+              folderFilter!=='*'&&(folderFilter==='unfiled'?!!s.folderId:s.folderId!==folderFilter)?null:
               editingSheetIndex === i ? (
                 <input
                   key={s.id}
@@ -2242,7 +2370,7 @@ export default function FieldWorkbookWorkspace({
             onClick={() => {
               let n = book.sheets.length + 1;
               while (book.sheets.some((s) => s.name === `Sheet ${n}`)) n++;
-              commit({ ...book, sheets: [...book.sheets, makeSheet(`Sheet ${n}`)] });
+              commit({ ...book, sheets: [...book.sheets, {...makeSheet(`Sheet ${n}`),folderId:book.folders?.some(f=>f.id===folderFilter)?folderFilter:undefined}] });
               setSheetIndex(book.sheets.length);
               setAnchor({ r: 0, c: 0 });
               setEnd({ r: 0, c: 0 });
@@ -2253,6 +2381,8 @@ export default function FieldWorkbookWorkspace({
           </button>
         </div>
 
+        {foldersOpen&&<WorkbookSheetFolders book={book} onChange={next=>{commit(next);if(folderFilter!=='*'&&folderFilter!=='unfiled'&&!next.folders?.some(f=>f.id===folderFilter))setFolderFilter('*');}} onSelect={i=>{setFolderFilter('*');setSheetIndex(i);setAnchor({r:0,c:0});setEnd({r:0,c:0});}} onClose={()=>setFoldersOpen(false)}/>}
+        {mediaTarget?.bookId===book.id&&<WorkbookCellMedia title={`Cell ${columnName(mediaTarget.c)}${mediaTarget.r+1} attachments`} assets={(book.sheets.find(s=>s.id===mediaTarget.sheetId)?.media?.[`${mediaTarget.r}:${mediaTarget.c}`]||[]).map(id=>book.assets?.[id]).filter((a):a is WorkbookAsset=>!!a)} onClose={()=>setMediaTarget(null)} onAdd={files=>{const current=bookRef.current;if(!current||current.id!==mediaTarget.bookId)throw Error('The active workbook changed. Please choose the cell again.');commit(insertMedia(current,mediaTarget.sheetId,mediaTarget.r,mediaTarget.c,files));}} onRemove={id=>{const current=bookRef.current;if(current&&current.id===mediaTarget.bookId)commit(removeMedia(current,mediaTarget.sheetId,`${mediaTarget.r}:${mediaTarget.c}`,id));}}/>}
         {databaseLoadOpen && <WorkbookDatabaseLoad existingNames={book.sheets.map(s=>s.name)} onClose={()=>setDatabaseLoadOpen(false)} onLoad={sheets=>{commit({...book,sheets:[...book.sheets,...sheets]});setSheetIndex(book.sheets.length);setAnchor({r:0,c:0});setEnd({r:0,c:0});setDatabaseLoadOpen(false);setNotice(`Loaded ${sheets.reduce((count,s)=>count+s.cells.length-1,0)} records into ${sheets.length} new sheet(s). Edits do not change database records.`);}} />}
         {sheet.databaseSource && <p className="text-xs text-slate-500">Database snapshot · {new Date(sheet.databaseSource.loadedAt).toLocaleString()} · Part {sheet.databaseSource.part}/{sheet.databaseSource.parts}. Load again to get fresh records in separate sheets.</p>}
         {connectionSheet && book.sheets.find(s=>s.id===connectionSheet) && <WorkbookDatabaseConnection
@@ -2274,6 +2404,7 @@ export default function FieldWorkbookWorkspace({
               style={{ top: Math.max(8, Math.min(contextMenu.y - 132, window.innerHeight - 148)), left: Math.max(8, Math.min(contextMenu.x, window.innerWidth - 264)), maxHeight: 'calc(100dvh - 16px)', maxWidth: 'calc(100vw - 16px)', overflowY: 'auto', width: 256 }}
               className="fixed z-50 min-w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
             >
+              <button type="button" className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs hover:bg-slate-100" onClick={()=>{setFoldersOpen(true);setContextMenu(null);}}><Folder size={14}/>Move to folder…</button>
               <button type="button" className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-slate-100 dark:hover:bg-slate-800"
                 onClick={()=>{setConnectionSheet(book.sheets[contextMenu.sheetIndex].id);setContextMenu(null);}}>Connect to Database Table</button>
               <button
@@ -2360,98 +2491,230 @@ export default function FieldWorkbookWorkspace({
               style={{
                 top: Math.min(
                   gridContextMenu.y,
-                  typeof window !== 'undefined' ? window.innerHeight - 320 : gridContextMenu.y
+                  typeof window !== 'undefined' ? window.innerHeight - 450 : gridContextMenu.y
                 ),
                 left: Math.min(
                   gridContextMenu.x,
-                  typeof window !== 'undefined' ? window.innerWidth - 240 : gridContextMenu.x
+                  typeof window !== 'undefined' ? window.innerWidth - 270 : gridContextMenu.x
                 ),
               }}
-              className="fixed z-50 max-h-[calc(100dvh-16px)] overflow-y-auto min-w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 text-xs font-medium text-slate-700 dark:text-slate-200"
+              className="fixed z-50 max-h-[calc(100dvh-16px)] overflow-y-auto w-64 rounded-xl border border-slate-200 bg-white p-1.5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 text-xs font-medium text-slate-700 dark:text-slate-200"
             >
-              <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-500" aria-label="Selected cell range">
+              <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500" aria-label="Selected cell range">
                 Selection: {columnName(selection.c)}{selection.r + 1}:{columnName(selection.ec)}{selection.er + 1}
               </div>
-              <button type="button" className={button} title="Copy the first selected row down (undo available)" onClick={()=>changeSheet(s=>autofillRange(s,selection,'down'))}>Fill down</button>
-              <button type="button" className={button} title="Copy the first selected column right (undo available)" onClick={()=>changeSheet(s=>autofillRange(s,selection,'right'))}>Fill right</button>
-              <button type="button" className={button} title="Extend two starting numbers or ISO dates down the selection" onClick={()=>changeSheet(s=>autofillRange(s,selection,'down',true))}>Fill series</button>
-                  {(selection.r !== selection.er || selection.c !== selection.ec) && (
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
-                      onClick={() => {
-                        setGridContextMenu(null);
-                        changeSheet((s) => {
-                          const next = mergeCells(s, selection);
-                          setAnchor({ r: selection.r, c: selection.c });
-                          setEnd({ r: selection.r, c: selection.c });
-                          return next;
-                        });
-                      }}
-                    >
-                      <TableCellsMerge size={15} />
-                      Merge cells
-                    </button>
-                  )}
-                  {sheet.merges.some((m) => overlaps(m, selection)) && (
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
-                      onClick={() => {
-                        setGridContextMenu(null);
-                        changeSheet((s) => ({
-                          ...s,
-                          merges: s.merges.filter((m) => !overlaps(m, selection)),
-                        }));
-                      }}
-                    >
-                      <TableCellsSplit size={15} />
-                      Unmerge cells
-                    </button>
-                  )}
+
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                onClick={() => { openCellMedia(selection.r, selection.c); setGridContextMenu(null); }}
+              >
+                <Paperclip size={14} className="text-slate-500" />
+                Insert / manage cell media
+              </button>
+
+              {/* Fill & Auto-series Section */}
+              <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+              <div className="px-2.5 py-0.5 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                Fill & Series
+              </div>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                title="Copy the first selected row down (undo available)"
+                onClick={() => { setGridContextMenu(null); changeSheet((s) => autofillRange(s, selection, 'down')); }}
+              >
+                <ArrowDown size={14} className="text-slate-500" />
+                Fill down
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                title="Copy the first selected column right (undo available)"
+                onClick={() => { setGridContextMenu(null); changeSheet((s) => autofillRange(s, selection, 'right')); }}
+              >
+                <ArrowRight size={14} className="text-slate-500" />
+                Fill right
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                title="Extend starting numbers or ISO dates down selection"
+                onClick={() => { setGridContextMenu(null); changeSheet((s) => autofillRange(s, selection, 'down', true)); }}
+              >
+                <ListPlus size={14} className="text-slate-500" />
+                Fill series
+              </button>
+
+              {/* Freeze Rows & Columns Section */}
+              <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+              <div className="px-2.5 py-0.5 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                Freeze Panes
+              </div>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                onClick={() => {
+                  setGridContextMenu(null);
+                  const freezeR = selection.r + 1;
+                  const freezeC = selection.c + 1;
+                  if (sheet.merges.some((m) => (m.r < freezeR && m.er >= freezeR) || (m.c < freezeC && m.ec >= freezeC))) {
+                    setError('Choose a freeze boundary outside merged cells.');
+                    return;
+                  }
+                  changeSheet((s) => ({ ...s, view: { ...s.view, freezeRows: freezeR, freezeColumns: freezeC } }));
+                }}
+              >
+                <Lock size={14} className="text-slate-500" />
+                Freeze up to {columnName(selection.c)}{selection.r + 1}
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                onClick={() => {
+                  setGridContextMenu(null);
+                  changeSheet((s) => ({ ...s, view: { ...s.view, freezeRows: 1 } }));
+                }}
+              >
+                <Lock size={14} className="text-slate-500" />
+                Freeze top row (Row 1)
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                onClick={() => {
+                  setGridContextMenu(null);
+                  changeSheet((s) => ({ ...s, view: { ...s.view, freezeColumns: 1 } }));
+                }}
+              >
+                <Lock size={14} className="text-slate-500" />
+                Freeze first column (Col A)
+              </button>
+              {((sheet.view?.freezeRows || 0) > 0 || (sheet.view?.freezeColumns || 0) > 0) && (
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  onClick={() => {
+                    setGridContextMenu(null);
+                    changeSheet((s) => ({ ...s, view: { ...s.view, freezeRows: 0, freezeColumns: 0 } }));
+                  }}
+                >
+                  <Unlock size={14} className="text-amber-500" />
+                  Unfreeze all panes
+                </button>
+              )}
+
+              {/* Sort Column Section */}
+              <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+              <div className="px-2.5 py-0.5 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                Sort Column {columnName(selection.c)}
+              </div>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                onClick={() => {
+                  setGridContextMenu(null);
+                  try {
+                    changeSheet((s) => sortSheet(s, selection.c, false));
+                    setNotice(`Sorted Column ${columnName(selection.c)} ascending.`);
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Could not sort column');
+                  }
+                }}
+              >
+                <ArrowUpDown size={14} className="text-slate-500" />
+                Sort A → Z (Ascending)
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                onClick={() => {
+                  setGridContextMenu(null);
+                  try {
+                    changeSheet((s) => sortSheet(s, selection.c, true));
+                    setNotice(`Sorted Column ${columnName(selection.c)} descending.`);
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Could not sort column');
+                  }
+                }}
+              >
+                <ArrowUpDown size={14} className="text-slate-500" />
+                Sort Z → A (Descending)
+              </button>
+
+              {/* Merge & Unmerge Section */}
+              {(selection.r !== selection.er || selection.c !== selection.ec) && (
+                <>
+                  <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    onClick={() => {
+                      setGridContextMenu(null);
+                      changeSheet((s) => {
+                        const next = mergeCells(s, selection);
+                        setAnchor({ r: selection.r, c: selection.c });
+                        setEnd({ r: selection.r, c: selection.c });
+                        return next;
+                      });
+                    }}
+                  >
+                    <TableCellsMerge size={14} className="text-slate-500" />
+                    Merge cells
+                  </button>
+                </>
+              )}
+              {sheet.merges.some((m) => overlaps(m, selection)) && (
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  onClick={() => {
+                    setGridContextMenu(null);
+                    changeSheet((s) => ({
+                      ...s,
+                      merges: s.merges.filter((m) => !overlaps(m, selection)),
+                    }));
+                  }}
+                >
+                  <TableCellsSplit size={14} className="text-slate-500" />
+                  Unmerge cells
+                </button>
+              )}
+
+              {/* Dimension Specific Controls (Column / Row) */}
               {gridContextMenu.type === 'column' && (
                 <>
-                  <div className="px-3 py-1.5 font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[10px]">
-                    Column {columnName(selection.c)}
-                    {selection.c !== selection.ec ? `–${columnName(selection.ec)}` : ''}
+                  <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+                  <div className="px-2.5 py-0.5 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                    Column Controls
                   </div>
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    onClick={() => {
-                      setGridContextMenu(null);
-                      dimension('column', false);
-                    }}
+                    className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    onClick={() => { setGridContextMenu(null); dimension('column', false); }}
                   >
-                    <BetweenVerticalStart size={15} />
+                    <BetweenVerticalStart size={14} className="text-slate-500" />
                     Insert 1 column left
                   </button>
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    onClick={() => {
-                      setGridContextMenu(null);
-                      dimension('column', false, true);
-                    }}
+                    className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    onClick={() => { setGridContextMenu(null); dimension('column', false, true); }}
                   >
-                    <BetweenVerticalEnd size={15} />
+                    <BetweenVerticalEnd size={14} className="text-slate-500" />
                     Insert 1 column right
                   </button>
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
-                    onClick={() => {
-                      setGridContextMenu(null);
-                      dimension('column', true);
-                    }}
+                    className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+                    onClick={() => { setGridContextMenu(null); dimension('column', true); }}
                   >
-                    <Columns2 size={15} />
+                    <Columns2 size={14} />
                     Delete column{selection.c !== selection.ec ? 's' : ''}
                   </button>
-                  <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                     onClick={() => {
                       setGridContextMenu(null);
                       setPromptInput(String(width));
@@ -2477,68 +2740,42 @@ export default function FieldWorkbookWorkspace({
                   >
                     Column width…
                   </button>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    onClick={() => {
-                      setGridContextMenu(null);
-                      changeSheet((s) => ({
-                        ...s,
-                        cells: s.cells.map((row) =>
-                          row.map((cell, c) => (c >= selection.c && c <= selection.ec ? '' : cell))
-                        ),
-                      }));
-                    }}
-                  >
-                    <Eraser size={15} />
-                    Clear contents
-                  </button>
                 </>
               )}
 
               {gridContextMenu.type === 'row' && (
                 <>
-                  <div className="px-3 py-1.5 font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[10px]">
-                    Row {selection.r + 1}
-                    {selection.r !== selection.er ? `–${selection.er + 1}` : ''}
+                  <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+                  <div className="px-2.5 py-0.5 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                    Row Controls
                   </div>
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    onClick={() => {
-                      setGridContextMenu(null);
-                      dimension('row', false);
-                    }}
+                    className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    onClick={() => { setGridContextMenu(null); dimension('row', false); }}
                   >
-                    <BetweenHorizontalStart size={15} />
+                    <BetweenHorizontalStart size={14} className="text-slate-500" />
                     Insert 1 row above
                   </button>
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    onClick={() => {
-                      setGridContextMenu(null);
-                      dimension('row', false, true);
-                    }}
+                    className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    onClick={() => { setGridContextMenu(null); dimension('row', false, true); }}
                   >
-                    <BetweenHorizontalEnd size={15} />
+                    <BetweenHorizontalEnd size={14} className="text-slate-500" />
                     Insert 1 row below
                   </button>
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
-                    onClick={() => {
-                      setGridContextMenu(null);
-                      dimension('row', true);
-                    }}
+                    className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+                    onClick={() => { setGridContextMenu(null); dimension('row', true); }}
                   >
-                    <Rows2 size={15} />
+                    <Rows2 size={14} />
                     Delete row{selection.r !== selection.er ? 's' : ''}
                   </button>
-                  <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                     onClick={() => {
                       setGridContextMenu(null);
                       setPromptInput(String(height));
@@ -2564,250 +2801,114 @@ export default function FieldWorkbookWorkspace({
                   >
                     Row height…
                   </button>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    onClick={() => {
-                      setGridContextMenu(null);
-                      changeSheet((s) => ({
-                        ...s,
-                        cells: s.cells.map((row, r) =>
-                          r >= selection.r && r <= selection.er ? row.map(() => '') : row
-                        ),
-                      }));
-                    }}
-                  >
-                    <Eraser size={15} />
-                    Clear contents
-                  </button>
                 </>
               )}
 
-              {gridContextMenu.type === 'cell' && (
-                <>
-                  <div className="px-3 py-1.5 font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[10px]">
-                    Range {columnName(selection.c)}
-                    {selection.r + 1}
-                    {selection.er !== selection.r || selection.ec !== selection.c
-                      ? `:${columnName(selection.ec)}${selection.er + 1}`
-                      : ''}
-                  </div>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    onClick={() => {
-                      setGridContextMenu(null);
-                      void navigator.clipboard
-                        .writeText(selectionText())
-                        .then(() => setNotice('Selection copied.'))
-                        .catch(() => setError('Clipboard access unavailable.'));
-                    }}
-                  >
-                    <ClipboardCopy size={15} />
-                    Copy selection
-                  </button>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    onClick={() => {
-                      setGridContextMenu(null);
-                      changeSheet((s) => ({
-                        ...s,
-                        cells: s.cells.map((row, r) =>
-                          row.map((cell, c) =>
-                            r >= selection.r &&
-                            r <= selection.er &&
-                            c >= selection.c &&
-                            c <= selection.ec
-                              ? ''
-                              : cell
-                          )
-                        ),
-                      }));
-                    }}
-                  >
-                    <Eraser size={15} />
-                    Clear contents
-                  </button>
-                  <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
-                  <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
-                  <div className="flex items-center justify-between px-2 py-1">
-                    <button
-                      type="button"
-                      title="Bold"
-                      className={`p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 ${cellFormat(sheet, anchor.r, anchor.c).bold ? 'bg-emerald-100 text-emerald-800 font-bold' : ''}`}
-                      onClick={() => {
-                        changeSheet((s) =>
-                          formatCells(s, selection, {
-                            bold: !cellFormat(sheet, anchor.r, anchor.c).bold,
-                          })
-                        );
-                      }}
-                    >
-                      <Bold size={15} />
-                    </button>
-                    <button
-                      type="button"
-                      title="Italic"
-                      className={`p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 ${cellFormat(sheet, anchor.r, anchor.c).italic ? 'bg-emerald-100 text-emerald-800' : ''}`}
-                      onClick={() => {
-                        changeSheet((s) =>
-                          formatCells(s, selection, {
-                            italic: !cellFormat(sheet, anchor.r, anchor.c).italic,
-                          })
-                        );
-                      }}
-                    >
-                      <Italic size={15} />
-                    </button>
-                    <button
-                      type="button"
-                      title="Align left"
-                      className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
-                      onClick={() => {
-                        changeSheet((s) => formatCells(s, selection, { align: 'left' }));
-                      }}
-                    >
-                      <AlignLeft size={15} />
-                    </button>
-                    <button
-                      type="button"
-                      title="Align centre"
-                      className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
-                      onClick={() => {
-                        changeSheet((s) => formatCells(s, selection, { align: 'center' }));
-                      }}
-                    >
-                      <AlignCenter size={15} />
-                    </button>
-                    <button
-                      type="button"
-                      title="Align right"
-                      className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
-                      onClick={() => {
-                        changeSheet((s) => formatCells(s, selection, { align: 'right' }));
-                      }}
-                    >
-                      <AlignRight size={15} />
-                    </button>
-                  </div>
-                  <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    onClick={() => {
-                      setGridContextMenu(null);
-                      dimension('row', false);
-                    }}
-                  >
-                    <BetweenHorizontalStart size={15} />
-                    Insert row above
-                  </button>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    onClick={() => {
-                      setGridContextMenu(null);
-                      dimension('column', false);
-                    }}
-                  >
-                    <BetweenVerticalStart size={15} />
-                    Insert column left
-                  </button>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
-                    onClick={() => {
-                      setGridContextMenu(null);
-                      dimension('row', true);
-                    }}
-                  >
-                    <Rows2 size={15} />
-                    Delete row(s)
-                  </button>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
-                    onClick={() => {
-                      setGridContextMenu(null);
-                      dimension('column', true);
-                    }}
-                  >
-                    <Columns2 size={15} />
-                    Delete column(s)
-                  </button>
-                </>
-              )}
+              {/* Formatting Quick Controls (Bold, Italic, Alignment) */}
+              <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+              <div className="flex items-center justify-between px-1.5 py-1 bg-slate-50 dark:bg-slate-800/50 rounded-md my-0.5">
+                <button
+                  type="button"
+                  title="Bold"
+                  className={`p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${cellFormat(sheet, anchor.r, anchor.c).bold ? 'bg-emerald-100 text-emerald-800 font-bold dark:bg-emerald-950 dark:text-emerald-300' : ''}`}
+                  onClick={() => {
+                    changeSheet((s) =>
+                      formatCells(s, selection, {
+                        bold: !cellFormat(sheet, anchor.r, anchor.c).bold,
+                      })
+                    );
+                  }}
+                >
+                  <Bold size={14} />
+                </button>
+                <button
+                  type="button"
+                  title="Italic"
+                  className={`p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${cellFormat(sheet, anchor.r, anchor.c).italic ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : ''}`}
+                  onClick={() => {
+                    changeSheet((s) =>
+                      formatCells(s, selection, {
+                        italic: !cellFormat(sheet, anchor.r, anchor.c).italic,
+                      })
+                    );
+                  }}
+                >
+                  <Italic size={14} />
+                </button>
+                <button
+                  type="button"
+                  title="Align left"
+                  className="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  onClick={() => {
+                    changeSheet((s) => formatCells(s, selection, { align: 'left' }));
+                  }}
+                >
+                  <AlignLeft size={14} />
+                </button>
+                <button
+                  type="button"
+                  title="Align center"
+                  className="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  onClick={() => {
+                    changeSheet((s) => formatCells(s, selection, { align: 'center' }));
+                  }}
+                >
+                  <AlignCenter size={14} />
+                </button>
+                <button
+                  type="button"
+                  title="Align right"
+                  className="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  onClick={() => {
+                    changeSheet((s) => formatCells(s, selection, { align: 'right' }));
+                  }}
+                >
+                  <AlignRight size={14} />
+                </button>
+              </div>
+
+              {/* Copy & Clear Actions */}
+              <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                onClick={() => {
+                  setGridContextMenu(null);
+                  void navigator.clipboard
+                    .writeText(selectionText())
+                    .then(() => setNotice('Selection copied.'))
+                    .catch(() => setError('Clipboard access unavailable.'));
+                }}
+              >
+                <ClipboardCopy size={14} className="text-slate-500" />
+                Copy selection
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                onClick={() => {
+                  setGridContextMenu(null);
+                  changeSheet((s) => ({
+                    ...s,
+                    cells: s.cells.map((row, r) =>
+                      r >= selection.r && r <= selection.er
+                        ? row.map((cell, c) => (c >= selection.c && c <= selection.ec ? '' : cell))
+                        : row
+                    ),
+                  }));
+                }}
+              >
+                <Eraser size={14} className="text-slate-500" />
+                Clear contents
+              </button>
             </div>
           </>
         )}
 
-        {customModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-xs">
-            <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
-              <h4 className="text-base font-bold text-slate-900 dark:text-white">
-                {customModal.title}
-              </h4>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                {customModal.message}
-              </p>
-              {customModal.type === 'prompt' && (
-                <div className="mt-4">
-                  <input
-                    type={customModal.inputType || 'text'}
-                    min={customModal.min}
-                    max={customModal.max}
-                    value={promptInput}
-                    onChange={(e) => setPromptInput(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/30 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        const handler = customModal.onConfirm;
-                        setCustomModal(null);
-                        handler(promptInput);
-                      }
-                    }}
-                  />
-                </div>
-              )}
-              <div className="mt-5 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  className={button}
-                  onClick={() => setCustomModal(null)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className={`rounded-lg px-3.5 py-2 text-xs font-semibold text-white shadow-xs ${
-                    customModal.type === 'confirm' && customModal.confirmVariant === 'danger'
-                      ? 'bg-red-600 hover:bg-red-700'
-                      : 'bg-emerald-600 hover:bg-emerald-700'
-                  }`}
-                  onClick={() => {
-                    const modal = customModal;
-                    setCustomModal(null);
-                    if (modal.type === 'confirm' || modal.type === 'alert') {
-                      modal.onConfirm();
-                    } else if (modal.type === 'prompt') {
-                      modal.onConfirm(promptInput);
-                    }
-                  }}
-                >
-                  {customModal.type === 'prompt'
-                    ? 'Save'
-                    : customModal.confirmLabel || (customModal.type === 'confirm' ? 'Confirm' : 'OK')}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {modalDialog}
 
         {sharing && book && <WorkbookShareDialog book={book} onClose={()=>setSharing(false)}/>}
-        {recoveryVersions && <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/40 p-4"><div role="dialog" aria-label="Device recovery versions" className="max-h-[80vh] w-full max-w-lg overflow-auto rounded bg-white p-5 dark:bg-slate-900"><h3 className="font-bold">Device recovery versions</h3><p className="my-2 text-sm">Recent saves plus checkpoints spaced 15 minutes apart (up to 60, within a 50 MB history budget). Recovery opens a new copy so your current workbook remains intact.</p>{!recoveryVersions.length && <p>No older versions yet.</p>}{recoveryVersions.map((item,i)=><button type="button" className="my-1 block w-full rounded border p-2 text-left" key={i} onClick={()=>{activate({...copyWorkbook(validateWorkbook(item.book),false),name:item.book.name+' — recovered'},true);setRecoveryVersions(null);}}>{new Date(item.savedAt).toLocaleString()}</button>)}<button type="button" className={button} onClick={()=>setRecoveryVersions(null)}>Close</button></div></div>}
+        {recoveryVersions && <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/40 p-4"><div role="dialog" aria-label="Device recovery versions" className="max-h-[80vh] w-full max-w-lg overflow-auto rounded bg-white p-5 dark:bg-slate-900"><h3 className="font-bold">Device recovery versions</h3><p className="my-2 text-sm">Recent saves plus checkpoints spaced 15 minutes apart (up to 60, within a 50 MB history budget). Recovery opens a new copy so your current workbook remains intact.</p>{!recoveryVersions.length && <p>No older versions yet.</p>}{recoveryVersions.map((item,i)=><button type="button" className="my-1 block w-full rounded border p-2 text-left" key={i} onClick={()=>{activate({...copyWorkbook(validateWorkbook(item.book),false),name:item.book.name+' — recovered'},true);setRecoveryVersions(null);}}>{formatWorkbookCardDate(item.savedAt)}</button>)}<button type="button" className={button} onClick={()=>setRecoveryVersions(null)}>Close</button></div></div>}
         {closePrompt}
 
         {showTemplateModal && (

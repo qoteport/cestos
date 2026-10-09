@@ -7,7 +7,7 @@ function setup({fail,status=0,changeAccount=false,offline=false}={}) {
  const deps={
  './api':{ApiError,getAccessToken:()=>identity,apiFetch:async(path,options)=>{calls.push({path,options});if(path.endsWith('/me')){if(changeAccount)identity='org:other';return {id:'user'};}if(fail)throw new ApiError(status,'Failed');return {version:'new'};}},
  './offlineAuth':{offlineAccessActive:()=>offline,tokenScope:token=>token},
- './workbookDevice':{listWorkbookSync:async()=>entries,finishWorkbookSync:async(...args)=>done.push(args),failWorkbookSync:async(...args)=>failed.push(args)}
+ './workbookDevice':{listWorkbookSync:async()=>entries,finishWorkbookSync:async(...args)=>done.push(args),failWorkbookSync:async(...args)=>failed.push(args),workbookWasDeleted:async()=>false}
  };
  vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/workbookSync.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:api,require:name=>deps[name],navigator:{onLine:true}});
  return {api,calls,done,failed};

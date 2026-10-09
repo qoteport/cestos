@@ -11,7 +11,7 @@ export type HeaderState = {
   busy: boolean;
   onLeave: () => void;
   onRename: (newName: string) => void;
-  onDownload: (format?: 'xlsx' | 'csv' | 'backup') => void;
+  onDownload: (format?: 'xlsx' | 'csv' | 'backup' | 'attachments') => void;
   onSaveDevice: () => void;
   onPrint: () => void;
   onRecover: () => void;
@@ -127,7 +127,7 @@ export default function FieldWorkbookDialog({
                   aria-label="Workbook library"
                   disabled={tabsState?.busy}
                   onClick={tabsState?.onLibrary}
-                  className={`group relative flex items-center justify-center rounded-lg p-1.5 transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-50 active:scale-95 ${
+                  className={`group relative flex items-center justify-center rounded-lg p-1.5 transition-all duration-150 outline-none focus-visible:ring-0 focus-visible:ring-0 disabled:opacity-50 active:scale-95 ${
                     !tabsState?.activeId
                       ? 'bg-emerald-100/90 text-emerald-700 shadow-xs dark:bg-emerald-950 dark:text-emerald-300'
                       : 'text-emerald-800 hover:bg-emerald-100/70 hover:text-emerald-600 dark:text-emerald-300 dark:hover:bg-emerald-950/60 dark:hover:text-emerald-200'
@@ -196,6 +196,7 @@ export default function FieldWorkbookDialog({
                     >
                       Current sheet values (.csv)
                     </button>
+                    <button type="button" className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800" disabled={headerState.busy} onClick={event=>{headerState.onDownload('attachments');event.currentTarget.closest('details')?.removeAttribute('open');}}>Cell attachments (.zip)</button>
                     <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
                     <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                       Tools & Recovery

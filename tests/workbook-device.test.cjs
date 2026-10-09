@@ -6,8 +6,8 @@ const vm=require('node:vm');
 const api={};
 vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/workbookDevice.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{exports:api});
 test('CSV preserves Unicode, quotes, commas, multiline values and empty middle rows',()=>{
- const csv=api.sheetCsv({cells:[['Name','Notes',''],['Éric','A, "quote"\nand line',''],['','',''],['End','',''],['','','']]});
- assert.equal(csv,'\ufeff"Name","Notes"\r\n"Éric","A, ""quote""\nand line"\r\n"",""\r\n"End",""');
+ const csv=api.sheetCsv({cells:[['Name','Notes',''],['Ã‰ric','A, "quote"\nand line',''],['','',''],['End','',''],['','','']]});
+ assert.equal(csv,'\ufeff"Name","Notes"\r\n"Ã‰ric","A, ""quote""\nand line"\r\n"",""\r\n"End",""');
 });
 test('CSV neutralizes formula-like text while preserving negative numbers',()=>{
  assert.equal(api.sheetCsv({cells:[['=1+1','+CMD','@SUM(A1)','-hello','-12.50']]}),'\ufeff"\'=1+1","\'+CMD","\'@SUM(A1)","\'-hello","-12.50"');
@@ -105,3 +105,23 @@ test('another browser tab cannot overwrite newer device edits; its candidate is 
 });
 
 test('frequent saves retain older quarter-hour checkpoints within the history cap',()=>{const end=Date.parse('2026-10-09T12:00:00Z');let history=[];for(let i=0;i<1000;i++)history=api.recoveryCheckpoints([{book:{id:'b',cells:[String(i)]},savedAt:new Date(end+i*60000).toISOString()},...history]);assert.ok(history.length<=60);assert.ok(history.length>40);assert.ok(Date.parse(history.at(-1).savedAt)<end+240*60000);assert.equal(history[0].book.cells[0],'999');assert.equal(history[2].book.cells[0],'997');});
+
+
+test('deletion clears offline copies, recovery, sessions and pending uploads and prevents resurrection',async()=>{
+ const scope='delete-test',book={id:'gone',name:'Delete me',sheets:[]};
+ await storageApi.saveDeviceWorkbook(scope,book);
+ await storageApi.saveDeviceWorkbook(scope,{...book,name:'Changed'});
+ await storageApi.saveDeviceSession(scope,{openBooks:[{book,dirty:true}],activeId:book.id});
+ await storageApi.saveDeviceLibrary(scope,[{id:'doc',tags:['wb-gone']}]);
+ await storageApi.queueWorkbookSync(scope,book);
+ await storageApi.deleteDeviceWorkbook(scope,book.id);
+ await storageApi.saveDeviceWorkbook(scope,book);
+ await storageApi.queueWorkbookSync(scope,book);
+ await storageApi.saveDeviceSession(scope,{openBooks:[{book,dirty:true}],activeId:book.id});
+ assert.equal((await storageApi.listDeviceWorkbooks(scope)).length,0);
+ assert.equal((await storageApi.deviceRevisions(scope,book.id)).length,0);
+ assert.equal((await storageApi.listWorkbookSync(scope)).length,0);
+ assert.equal((await storageApi.readDeviceLibrary(scope)).length,0);
+ const session=await storageApi.readDeviceSession(scope);
+ assert.equal(session.openBooks.length,0);assert.equal(session.activeId,null);
+});

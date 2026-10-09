@@ -1,3 +1,4 @@
+import {validateMedia,type WorkbookAsset,type SheetFolder} from './workbookMedia';
 import {assertLayout, type MappingLayout} from './workbookMapping';
 import {shiftReferences} from './workbookFormulas';
 import {WORKBOOK_MAX_ROWS,WORKBOOK_MAX_COLS} from './workbookLimits';
@@ -24,6 +25,8 @@ export type CellFormat = {
 };
 export type CellRange = { r: number; c: number; er: number; ec: number };
 export type FieldSheet = {
+  folderId?:string;
+  media?:Record<string,string[]>;
   view?: {freezeRows?:number;freezeColumns?:number;filterColumn?:number;filterText?:string};
   print?: {area?:CellRange;orientation?:'landscape'|'portrait';repeatRows?:number;fit?:'width'|'actual';breakRows?:number[]};
   databaseSource?: {path:string; loadedAt:string; columns:string[]; part:number; parts:number};
@@ -43,6 +46,8 @@ export type FieldSheet = {
   columnOrigins?: (number | null)[];
 };
 export type FieldWorkbook = {
+  folders?:SheetFolder[];
+  assets?:Record<string,WorkbookAsset>;
   version: 1;
   createdAt?: string;
   id: string;
@@ -231,6 +236,9 @@ export function mergeCells(sheet: FieldSheet, range: CellRange): FieldSheet {
   for (let r = range.r; r <= range.er; r++)
     for (let c = range.c; c <= range.ec; c++) next.cells[r][c] = '';
   next.cells[range.r][range.c] = values[0] || '';
+  const attachments:string[]=[];for(const [key,ids] of Object.entries(next.media||{})){const [r,c]=key.split(':').map(Number);if(r>=range.r&&r<=range.er&&c>=range.c&&c<=range.ec){attachments.push(...ids);delete next.media![key];}}
+  if(attachments.length>10)throw Error('A merged cell can hold up to 10 attachments.');
+  if(attachments.length)next.media={...next.media,[`${range.r}:${range.c}`]:[...new Set(attachments)]};
   next.merges.push(range);
   return next;
 }
@@ -302,6 +310,7 @@ export function changeDimension(
       next.connection.headerRow += remove ? -1 : 1;
     }
   }
+  if(next.media){const moved:Record<string,string[]>={};for(const [key,ids] of Object.entries(next.media)){let [r,c]=key.split(':').map(Number);const pos=axis==='row'?r:c;const merge=sheet.merges.find(m=>m.r===r&&m.c===c);if(remove&&pos===index){if(!merge||(axis==='row'?merge.er===r:merge.ec===c))continue;}else if(pos>=index){if(axis==='row')r+=remove?-1:1;else c+=remove?-1:1;}moved[`${r}:${c}`]=ids;}next.media=moved;}
   const origins = axis === 'row' ? next.rowOrigins : next.columnOrigins;
   origins?.splice(index, remove ? 1 : 0, ...(remove ? [] : [null]));
   const count = axis === 'row' ? next.cells.length : next.widths.length;
@@ -451,6 +460,7 @@ export function validateWorkbook(value: unknown): FieldWorkbook {
     (!book.source && book.sheets.length > 30)
   )
     throw new Error('This is not a supported Cestos workbook.');
+  validateMedia(book);
   const ids = new Set<string>();
   const names = new Set<string>();
   for (const s of book.sheets) {
@@ -596,7 +606,7 @@ export async function importWorkbook(file: File): Promise<FieldWorkbook> {
   return validateWorkbook(book);
 }
 export async function exportWorkbook(book: FieldWorkbook): Promise<Blob> {
-  if (book.source || book.sheets.some(s => s.view || s.print || s.cells.some(row=>row.some(value=>value.startsWith('='))) || Object.values(s.formats || {}).some(f => f.color || f.background || f.dataType))) return exportStyledWorkbook(book);
+  if (Object.keys(book.assets||{}).length || book.source || book.sheets.some(s => s.view || s.print || s.cells.some(row=>row.some(value=>value.startsWith('='))) || Object.values(s.formats || {}).some(f => f.color || f.background || f.dataType))) return exportStyledWorkbook(book);
   const XLSX = await import('xlsx');
   const output = XLSX.utils.book_new();
   for (const sheet of book.sheets) {

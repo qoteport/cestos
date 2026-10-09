@@ -1,6 +1,6 @@
 import {apiFetch, ApiError, getAccessToken} from './api';
 import {offlineAccessActive,tokenScope} from './offlineAuth';
-import {listWorkbookSync,finishWorkbookSync,failWorkbookSync} from './workbookDevice';
+import {workbookWasDeleted,listWorkbookSync,finishWorkbookSync,failWorkbookSync} from './workbookDevice';
 const running = new Map<string,Promise<void>>();
 export function syncWorkbooks(scope:string):Promise<void> {
   const existing=running.get(scope);if(existing)return existing;
@@ -15,7 +15,7 @@ export function syncWorkbooks(scope:string):Promise<void> {
     } catch{return;}
     for(const entry of await listWorkbookSync(scope)) {
       if(!sameAccount())return;
-      if(entry.state!=='pending')continue;
+      if(entry.state!=='pending' || await workbookWasDeleted(scope,entry.book.id))continue;
       try {
         const result=await apiFetch<{version:string}>('/api/v1/workbook-sync',{method:'POST',body:JSON.stringify({workbook:entry.book,operation_id:entry.operationId,base_version:entry.baseVersion || null})},true,{queueWhenOffline:false,cacheResponse:false,cacheOfflineRead:false});
         if(!result || typeof result.version!=='string' || !result.version)throw new Error('Server did not confirm the workbook version. The save remains queued.');

@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { sortSheet, replaceSheetText } from '@/lib/workbookOperations';
 import type { FieldSheet, CellRange } from '@/lib/fieldWorkbook';
 import SearchableSelect from './SearchableSelect';
@@ -19,6 +20,14 @@ export default function WorkbookTools({
   const [find, setFind] = useState(''),
     [replace, setReplace] = useState(''),
     [matchCase, setMatchCase] = useState(false);
+  const [printOpen, setPrintOpen] = useState(false);
+  const printTrigger = useRef<HTMLButtonElement>(null);
+  const printDialog = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!printOpen) return;
+    printDialog.current?.focus();
+    return () => printTrigger.current?.focus();
+  }, [printOpen]);
   const freeze = (rows: number, cols: number) => {
     if (sheet.merges.some((m) => (m.r < rows && m.er >= rows) || (m.c < cols && m.ec >= cols))) {
       onError('Choose a freeze boundary outside merged cells.');
@@ -165,9 +174,24 @@ export default function WorkbookTools({
       >
         Replace all
       </button>
-      <details className="relative">
-        <summary className={control}>Print setup</summary>
-        <div className="absolute right-0 z-50 w-80 space-y-2 rounded border bg-white p-3 text-slate-900 shadow-xl">
+      <button ref={printTrigger} type="button" className={control} aria-haspopup="dialog" onClick={() => setPrintOpen(true)}>Print setup</button>
+      {printOpen && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 p-4" onClick={event => {if(event.target===event.currentTarget)setPrintOpen(false);}}>
+        <div ref={printDialog} role="dialog" aria-modal="true" aria-labelledby="workbook-print-setup-title" tabIndex={-1}
+          className="max-h-[calc(100dvh-2rem)] w-full max-w-sm space-y-3 overflow-y-auto rounded-xl border bg-white p-5 text-slate-900 shadow-xl dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+          onKeyDown={event => {
+            if(event.key==='Escape'){event.stopPropagation();setPrintOpen(false);}
+            if(event.key==='Tab'){
+              const items=Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex="0"]')).filter(item=>item.getClientRects().length);
+              const first=items[0],last=items[items.length-1];
+              if(event.shiftKey&&(document.activeElement===first||document.activeElement===event.currentTarget)){event.preventDefault();last?.focus();}
+              else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
+            }
+          }}>
+          <div className="flex items-center justify-between gap-4">
+            <h3 id="workbook-print-setup-title" className="font-semibold">Print setup</h3>
+            <button type="button" className={control} onClick={()=>setPrintOpen(false)}>Close</button>
+          </div>
           <button
             type="button"
             className={control}
@@ -250,7 +274,8 @@ export default function WorkbookTools({
             Clear page breaks
           </button>
         </div>
-      </details>
+        </div>, document.body
+      )}
       <span>Formulas: =SUM(A2:A10), =AVERAGE(A2:A10), =HOURS(B2,C2), =(C2-B2)*24</span>
     </div>
   );

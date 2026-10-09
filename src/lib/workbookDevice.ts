@@ -29,14 +29,28 @@ async function transact<T>(store: string, mode: IDBTransactionMode, run: (store:
 export type DeviceSession = {openBooks: {book: FieldWorkbook; dirty: boolean}[]; activeId: string | null};
 export type DeviceWorkbook = {key: string; scope: string; book: FieldWorkbook; savedAt: string; remoteVersion?: string; baseVersion?: string; editorId?: string};
 export const readDeviceSession = (scope: string) => transact<DeviceSession | undefined>('sessions', 'readonly', store => store.get(scope));
-export const saveDeviceSession = (scope: string, session: DeviceSession) => transact('sessions', 'readwrite', store => store.put(session, scope));
+export async function saveDeviceSession(scope:string,session:DeviceSession) {
+  const db=await openDatabase();
+  return new Promise<void>((resolve,reject)=>{
+    const tx=db.transaction('sessions','readwrite'),store=tx.objectStore('sessions');
+    const openBooks:DeviceSession['openBooks']=[];
+    let pending=session.openBooks.length;
+    const save=()=>store.put({...session,openBooks,activeId:openBooks.some(item=>item.book.id===session.activeId)?session.activeId:null},scope);
+    if(!pending)save();
+    for(const item of session.openBooks){const request=store.get(`deleted:${JSON.stringify([scope,item.book.id])}`);request.onsuccess=()=>{if(!request.result)openBooks.push(item);if(!--pending)save();};}
+    tx.oncomplete=()=>resolve();tx.onerror=tx.onabort=()=>reject(tx.error || new Error('Could not save workbook session.'));
+  });
+}
 export async function saveDeviceWorkbook(scope: string, book: FieldWorkbook, remoteVersion?: string, editor?: {id:string; baseline:FieldWorkbook}) {
   const db=await openDatabase();
   await new Promise<void>((resolve,reject)=>{
-    const tx=db.transaction(['workbooks','revisions'],'readwrite');
+    const tx=db.transaction(['workbooks','revisions','sessions'],'readwrite');
     const books=tx.objectStore('workbooks'),revisions=tx.objectStore('revisions');
     let conflict = false;
     const key=JSON.stringify([scope,book.id]);
+    const deleted=tx.objectStore('sessions').get(`deleted:${key}`);
+    deleted.onsuccess=()=>{
+    if(deleted.result)return;
     const request=books.get(key);
     request.onsuccess=()=>{
       const previous=request.result as DeviceWorkbook | undefined;
@@ -55,6 +69,7 @@ export async function saveDeviceWorkbook(scope: string, book: FieldWorkbook, rem
       }
       books.put({key,scope,book,...(editor?{editorId:editor.id}:{}),baseVersion:remoteVersion || previous?.remoteVersion || previous?.baseVersion,savedAt:new Date().toISOString(), ...(remoteVersion ? {remoteVersion} : {})} satisfies DeviceWorkbook);
     };
+    };
     tx.oncomplete=()=>conflict?reject(new Error('Another tab changed this workbook. Your version was preserved in recovery history. Download it or save a new copy before continuing.')):resolve();tx.onabort=tx.onerror=()=>reject(tx.error || new Error('Device autosave failed. Download a backup.'));
   });
 }
@@ -66,7 +81,23 @@ export async function listDeviceWorkbooks(scope: string): Promise<DeviceWorkbook
   const rows = await transact<DeviceWorkbook[]>('workbooks', 'readonly', store => store.getAll());
   return rows.filter(row => row.scope === scope).sort((a,b) => b.savedAt.localeCompare(a.savedAt));
 }
-export const deleteDeviceWorkbook = (scope: string, id: string) => transact('workbooks', 'readwrite', store => store.delete(JSON.stringify([scope,id])));
+export async function deleteDeviceWorkbook(scope:string,id:string) {
+  const db=await openDatabase();
+  await new Promise<void>((resolve,reject)=>{
+    const tx=db.transaction(['workbooks','revisions','sessions'],'readwrite');
+    const key=JSON.stringify([scope,id]),sessions=tx.objectStore('sessions');
+    tx.objectStore('workbooks').delete(key);
+    tx.objectStore('revisions').delete(key);
+    sessions.delete(`sync:${key}`);
+    sessions.put(true,`deleted:${key}`);
+    const session=sessions.get(scope);
+    session.onsuccess=()=>{if(session.result){const value=session.result as DeviceSession;sessions.put({...value,openBooks:value.openBooks.filter(item=>item.book.id!==id),activeId:value.activeId===id?null:value.activeId},scope);}};
+    const library=sessions.get(`library:${scope}`);
+    library.onsuccess=()=>{if(library.result)sessions.put(library.result.filter((doc:{tags?:string[]})=>!doc.tags?.includes(`wb-${id}`)),`library:${scope}`);};
+    tx.oncomplete=()=>resolve();tx.onerror=tx.onabort=()=>reject(tx.error || new Error('Could not remove offline workbook copies.'));
+  });
+}
+export const workbookWasDeleted=(scope:string,id:string)=>transact<boolean | undefined>('sessions','readonly',store=>store.get(`deleted:${JSON.stringify([scope,id])}`));
 
 // CSV represents one sheet's values; workbook backups retain styles and mappings.
 export function sheetCsv(sheet: FieldSheet): string {
@@ -92,8 +123,12 @@ async function updateWorkbookSync(scope:string,id:string, change:(entry:Workbook
   return new Promise<void>((resolve,reject)=>{
     const tx=db.transaction('sessions','readwrite'), store=tx.objectStore('sessions');
     const key=`sync:${JSON.stringify([scope,id])}`;
+    const deleted=store.get(`deleted:${JSON.stringify([scope,id])}`);
+    deleted.onsuccess=()=>{
+    if(deleted.result)return;
     const request=store.get(key);
     request.onsuccess=()=>{const next=change(request.result);if(next)store.put(next,key);};
+    };
     tx.oncomplete=()=>resolve();tx.onerror=tx.onabort=()=>reject(tx.error || new Error('Could not store workbook sync queue'));
   });
 }
