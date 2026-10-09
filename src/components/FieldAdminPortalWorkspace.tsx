@@ -130,7 +130,17 @@ export default function FieldAdminPortalWorkspace() {
   const [filteredFuelDeliveriesPage, setFilteredFuelDeliveriesPage] = React.useState(1);
   const [filteredLeaveRequestsPage, setFilteredLeaveRequestsPage] = React.useState(1);
   const [showPurchasingCharts, setShowPurchasingCharts] = React.useState(false);
-  const [workbooksOpen, setWorkbooksOpen] = useState(false);
+  const [workbooksOpen, setWorkbooksOpenRaw] = useState(false);
+  const setWorkbooksOpen = React.useCallback((val: boolean | ((prev: boolean) => boolean)) => {
+    setWorkbooksOpenRaw(prev => {
+      const next = typeof val === 'function' ? val(prev) : val;
+      try {
+        if (next) localStorage.setItem('cestos-workbooks-open', 'true');
+        else localStorage.removeItem('cestos-workbooks-open');
+      } catch {}
+      return next;
+    });
+  }, []);
   const [activeTab, setActiveTab] = useState<AdminTab>('PROJECTS');
   const [peopleSubTab, setPeopleSubTab] = useState<'EMPLOYEES' | 'TIMESHEETS'>('EMPLOYEES');
   const handledRecordLink = useRef('');
@@ -138,8 +148,9 @@ export default function FieldAdminPortalWorkspace() {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
     if (tab === 'NOTIFICATIONS' || tab === 'EQUIPMENT' || tab === 'PURCHASE_ORDERS' || tab === 'EXPENSES') setActiveTab(tab as AdminTab);
-    if (params.get('workbooks') === 'true' || params.get('workbooks') === '1' || tab === 'WORKBOOKS') {
-      setWorkbooksOpen(true);
+    const storedOpen = typeof window !== 'undefined' && localStorage.getItem('cestos-workbooks-open') === 'true';
+    if (params.get('workbooks') === 'true' || params.get('workbooks') === '1' || tab === 'WORKBOOKS' || storedOpen) {
+      setWorkbooksOpenRaw(true);
     }
   }, []);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

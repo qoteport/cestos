@@ -487,9 +487,28 @@ export default function FieldWorkbookWorkspace({
     setStorageReady('');setBook(null);setSessions([]);setDirty(false);setDeviceBooks([]);
     void (async () => {
       try {
-        const cached = await readDeviceSession(storageKey);
+        let cached = await readDeviceSession(storageKey);
+        if (!cached && storageKey !== 'cestos-field-workbook:') {
+          cached = await readDeviceSession('cestos-field-workbook:');
+        }
         const legacy = !cached ? localStorage.getItem(storageKey) : null;
-        const stored = initialWorkbook ? {openBooks:[{book:initialWorkbook,dirty:false}],activeId:initialWorkbook.id} : cached || (legacy ? JSON.parse(legacy) : null);
+        let stored = initialWorkbook ? {openBooks:[{book:initialWorkbook,dirty:false}],activeId:initialWorkbook.id} : cached || (legacy ? JSON.parse(legacy) : null);
+        
+        if (!stored) {
+          const lastId = localStorage.getItem(`cestos-last-wb-id:${storageKey}`) || localStorage.getItem('cestos-global-last-wb-id');
+          const savedBooks = await listDeviceWorkbooks(storageKey);
+          let candidate = null;
+          if (lastId && savedBooks.length) {
+            candidate = savedBooks.find(b => b.book.id === lastId);
+          }
+          if (!candidate && savedBooks.length) {
+            candidate = savedBooks[0];
+          }
+          if (candidate) {
+            stored = { openBooks: [{ book: candidate.book, dirty: false }], activeId: candidate.book.id };
+          }
+        }
+
         if (!active) return;
         if (stored) {
           const recovered: WorkbookSession[] = stored.openBooks
@@ -511,9 +530,18 @@ export default function FieldWorkbookWorkspace({
     if(storageReady !== storageKey) return;
     const openBooks = sessions.map(item => item.book.id === book?.id ? {book,dirty} : {book:item.book,dirty:item.dirty});
     if(book && !openBooks.some(item=>item.book.id===book.id)) openBooks.push({book,dirty});
-    // IndexedDB transactions preserve write order and avoid localStorage's small quota.
+    
+    if (openBooks.length === 0 && !book) return;
+
     void saveDeviceSession(storageKey,{openBooks,activeId:book?.id || null})
       .catch(() => setError('Device recovery could not be saved. Download a backup to keep your changes.'));
+    
+    if (book?.id) {
+      try {
+        localStorage.setItem(`cestos-last-wb-id:${storageKey}`, book.id);
+        localStorage.setItem('cestos-global-last-wb-id', book.id);
+      } catch {}
+    }
   },[sessions,book,dirty,storageKey,storageReady]);
   useEffect(()=>{
     if(!book || storageReady!==storageKey)return;
