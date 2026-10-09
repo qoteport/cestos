@@ -1,0 +1,4 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
+const api={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/loginDestination.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:api,URLSearchParams});
+test('workbook tabs return to workbooks after login and logout',()=>{assert.equal(api.loginDestination('?next=/workbooks','/field-portal'),'/workbooks');assert.equal(api.loginPageFor('/workbooks'),'/sign-up-login?next=/workbooks');});
+test('ordinary portal logins and unsafe return URLs cannot redirect elsewhere',()=>{for(const query of ['','?next=https://evil.example','?next=//evil.example','?next=/workbooks/../admin'])assert.equal(api.loginDestination(query,'/hr-portal'),'/hr-portal');assert.equal(api.loginPageFor('/field-admin-portal'),'/sign-up-login');});

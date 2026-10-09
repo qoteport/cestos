@@ -1,4 +1,5 @@
 'use client';
+import WorkbookLibrary from './WorkbookLibrary';
 import WorkbookDatabaseWorkspace from './WorkbookDatabaseWorkspace';
 import WorkbookDatabaseReview from './WorkbookDatabaseReview';
 import {useWorkbookFormulaSuggestions} from './WorkbookFormulaSuggestions';
@@ -1418,8 +1419,8 @@ export default function FieldWorkbookWorkspace({
         </header>
         {feedback}
         {busy && <p role="status">Opening workbook…</p>}
-        <div className="rounded border border-slate-200 bg-white p-4 dark:bg-slate-900">
-          <h3 className="font-semibold">Saved on this device</h3>
+        <details className="rounded border border-slate-200 bg-white p-3 dark:bg-slate-900">
+          <summary className="cursor-pointer text-sm font-medium">Offline storage & sync status</summary>
           {syncEntries.filter(entry=>entry.state!=='synced').map(entry=><div key={entry.key} className="my-2 rounded border border-amber-300 p-3 text-sm">
             <p className="font-semibold">{entry.book.name} · {entry.state==='conflict'?'Conflicting server version':entry.state==='blocked'?'Sync needs attention':'Waiting to sync'}</p>
             {entry.error && <p className="mt-1">{entry.error}</p>}
@@ -1432,50 +1433,11 @@ export default function FieldWorkbookWorkspace({
           <p role="status" className="my-2 text-xs text-slate-500">{offlineLibraryStatus}</p>
           <p className="my-2 text-xs text-slate-500">Workbooks are saved automatically on this device. Local edits are preserved during server refreshes. Keep an Excel or workbook backup before clearing browser data.</p>
           {!deviceBooks.length && <p className="text-sm text-slate-500">Your saved workbooks will download automatically when connected. You can also create or import a workbook offline.</p>}
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{deviceBooks.filter(item=>item.book.name.toLowerCase().includes(search.toLowerCase())).map(item=><div key={item.key} className="rounded border p-3"><p className="font-semibold">{item.book.name}</p><p className="my-2 text-xs text-slate-500">{item.book.template?'Template · ':''}{formatWorkbookCardDate(item.savedAt)}</p><button type="button" className={button} disabled={busy} onClick={()=>{if(item.book.template)activate(copyWorkbook(item.book,false),true);else if(sessions.some(session=>session.book.id===item.book.id))switchWorkbook(item.book.id);else activate(validateWorkbook(item.book),true);}}>{item.book.template?'Use template':'Open workbook'}</button><button type="button" className={`${button} ml-2`} disabled={busy} onClick={()=>{activate(copyWorkbook(item.book,false),true);}}>Copy</button></div>)}</div>
-        </div>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <h3 className="font-semibold">Saved workbooks & templates</h3>
-          <div className="flex min-w-0 w-full items-center gap-2 lg:w-auto">
-          <input
-            aria-label="Search workbooks"
-            placeholder="Search saved files…"
-            className="input-field !h-10 min-w-0 flex-1 lg:w-72"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <button className={`${button} h-10 shrink-0`} disabled={loading} onClick={() => void loadLibrary()}>
-            Refresh
-          </button>
-          </div>
-        </div>
-        {loading && <p role="status">Refreshing saved files and preparing offline copies…</p>}
-        {(
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {latest
-              .filter((d) => d.title.toLowerCase().includes(search.toLowerCase()))
-              .map((doc) => (
-                <div key={doc.id} className="group rounded-xl border p-4">
-                  <p className="font-semibold">{doc.title}</p>
-                  <p className="my-2 text-xs text-slate-500">
-                    {doc.tags.includes('workbook-template') ? 'Template' : 'Workbook'} ·{' '}
-                    {formatWorkbookCardDate(doc.created_at)}
-                  </p>
-                  <button
-                    disabled={busy}
-                    className={button}
-                    onClick={() => void openDocument(doc, doc.tags.includes('workbook-template'))}
-                  >
-                    {doc.tags.includes('workbook-template') ? 'Use template' : 'Open workbook'}
-                  </button>
-                  <div className="mt-2 flex gap-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100">
-                    <button className={button} disabled={busy} onClick={() => void copyDocument(doc)}><Copy size={14}/>Copy</button>
-                    <button className={button} disabled={busy} onClick={() => void deleteDocument(doc)}><Trash2 size={14}/>Delete</button>
-                  </div>
-                </div>
-              ))}
-          </div>
-        )}
+        </details>
+        <WorkbookLibrary scope={storageKey} documents={latest} devices={deviceBooks} busy={busy} loading={loading} onRefresh={()=>void loadLibrary()}
+          onOpen={(doc,item)=>{if(item){if(item.book.template)activate(copyWorkbook(item.book,false),true);else if(sessions.some(session=>session.book.id===item.book.id))switchWorkbook(item.book.id);else activate(validateWorkbook(item.book),true);}else if(doc)void openDocument(doc,doc.tags.includes('workbook-template'));}}
+          onCopy={(doc,item)=>{if(item)activate(copyWorkbook(item.book,false),true);else if(doc)void copyDocument(doc);}}
+          onDelete={doc=>void deleteDocument(doc)}/>
         <div>
           <h3 className="mb-3 font-semibold">Ready-to-use templates</h3>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

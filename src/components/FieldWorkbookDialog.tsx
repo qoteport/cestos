@@ -44,8 +44,10 @@ export default function FieldWorkbookDialog({
   open,
   onClose,
   children,
+  standalone = false,
 }: {
   open: boolean;
+  standalone?: boolean;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -91,6 +93,7 @@ export default function FieldWorkbookDialog({
   }, [open]);
 
   function close() {
+    if (standalone) return;
     if (timer.current) return;
     setEntered(false);
     timer.current = setTimeout(
@@ -149,7 +152,7 @@ export default function FieldWorkbookDialog({
                 </div>)}
               </div>
               <button type="button" aria-label="New workbook tab" title="New workbook" disabled={tabsState?.busy} onClick={tabsState?.onNew} className="my-1 rounded px-2 text-slate-600 hover:bg-white dark:hover:bg-slate-800"><Plus size={18}/></button>
-              <button type="button" aria-label="Close workbooks" onClick={close} className="my-1 rounded px-2 text-slate-500 hover:bg-red-100 hover:text-red-700"><X size={18}/></button>
+              {!standalone && <button type="button" aria-label="Close workbooks" onClick={close} className="my-1 rounded px-2 text-slate-500 hover:bg-red-100 hover:text-red-700"><X size={18}/></button>}
             </div>
             {headerState?.book && <div className="flex min-h-10 flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white px-4 dark:border-slate-700 dark:bg-slate-950">
               <div className="flex min-w-0 items-center gap-3"><input aria-label="Workbook name" maxLength={250} value={headerState.book.name} disabled={headerState.busy} onChange={e=>headerState.onRename(e.target.value)} className="min-w-0 max-w-60 rounded border border-transparent bg-transparent px-1 py-0.5 text-xs font-semibold hover:border-slate-300 focus:border-emerald-600 focus:outline-none"/><span className="hidden text-[11px] text-slate-400 sm:inline">{!headerState.online ? 'Offline · ' : ''}{headerState.dirty ? 'Unsaved changes' : 'Saved'} · {headerState.book.sheets.length} {headerState.book.sheets.length === 1 ? 'sheet' : 'sheets'}</span></div>

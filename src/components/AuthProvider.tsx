@@ -1,4 +1,5 @@
  'use client';
+import {loginPageFor} from '@/lib/loginDestination';
 import {createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode} from 'react';
 import {readTrustedSession,rememberVerifiedSession,enterOfflineAccess,exitOfflineAccess,lockOfflineAccess,tokenScope} from '@/lib/offlineAuth';
 import {apiFetch, getMe, getAccessToken, getRefreshToken, clearTokens, logout, UserRead, ApiError} from '@/lib/api';
@@ -75,7 +76,7 @@ export function AuthProvider({children}:{children:ReactNode}) {
   window.addEventListener('online',online);window.addEventListener('offline',unavailable);window.addEventListener('cestos:offline-session-needed',unavailable);window.addEventListener('cestos:session-expired',expired);window.addEventListener('storage',changed);
   return()=>{generation.current++;window.clearInterval(timer);window.removeEventListener('online',online);window.removeEventListener('offline',unavailable);window.removeEventListener('cestos:offline-session-needed',unavailable);window.removeEventListener('cestos:session-expired',expired);window.removeEventListener('storage',changed);};
  },[reload,restoreOffline]);
- const signOut=async()=>{generation.current++;lockOfflineAccess();setOffline(false);try{localStorage.removeItem('cestos_portal_type');localStorage.removeItem('cestos_is_superuser');await logout();}finally{setUser(null);setAccess(null);window.location.assign('/sign-up-login');}};
+ const signOut=async()=>{generation.current++;lockOfflineAccess();setOffline(false);try{localStorage.removeItem('cestos_portal_type');localStorage.removeItem('cestos_is_superuser');await logout();}finally{setUser(null);setAccess(null);window.location.assign(loginPageFor(window.location.pathname));}};
   const can = (code: string) => {
     if (typeof code !== 'string' || !access) return false;
     if(offline && /(users|roles|permissions|organizations|admin|payment|payroll|procurement|invoice|expense|approve|publish|share)/i.test(code))return false;

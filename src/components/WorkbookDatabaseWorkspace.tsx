@@ -1,5 +1,6 @@
 'use client';
 import {useEffect,useState} from 'react';
+import {loadWorkbookCatalog} from '@/lib/workbookCatalog';
 import {apiFetch} from '@/lib/api';
 import {databaseSheets,loadDatabaseRecords} from '@/lib/workbookDatabaseSource';
 import {type WorkspaceSource,type Schema,fieldValue,resolvedSchema} from '@/lib/workbookDatabaseWorkspace';
@@ -8,7 +9,7 @@ const fresh={cacheResponse:false,cacheOfflineRead:false,memoryCache:false,queueW
 const button='rounded-lg border px-3 py-2 text-sm disabled:opacity-40';
 export default function WorkbookDatabaseWorkspace({onOpen}:{onOpen:(book:FieldWorkbook)=>void}) {
  const [sources,setSources]=useState<WorkspaceSource[]>([]),[error,setError]=useState(''),[busy,setBusy]=useState(false),[search,setSearch]=useState(''),[related,setRelated]=useState(true),[creating,setCreating]=useState<WorkspaceSource|null>(null),[notice,setNotice]=useState('');
- async function refresh(){setBusy(true);setError('');try{setSources(await apiFetch<WorkspaceSource[]>('/api/v1/workbook-connections/workspace',{},true,fresh));}catch(e){setError(e instanceof Error?e.message:'Could not load tables');}finally{setBusy(false);}}
+ async function refresh(){setBusy(true);setError('');setNotice('');setSources([]);try{const result=await loadWorkbookCatalog(path=>apiFetch(path,{},true,fresh));setSources(result.sources);setNotice(result.notice);}catch(e){setError(e instanceof Error?e.message:'Could not load tables');}finally{setBusy(false);}}
  useEffect(()=>{void refresh();},[]);
  async function open(source:WorkspaceSource){setBusy(true);setError('');try{
   const selected=[source,...(related?sources.filter(item=>source.relations?.some(relation=>relation.target===item.id)&&item.id!==source.id):[])];

@@ -1,4 +1,5 @@
  'use client';
+import {loginDestination} from '@/lib/loginDestination';
 import {useEffect,useState,FormEvent} from 'react'
 ;import {Eye,EyeOff,LogIn,Loader2} from 'lucide-react'
 ;import {useRouter} from 'next/navigation';
@@ -29,7 +30,7 @@ export default function LoginForm() {
         FIELD_ADMIN: '/field-admin-portal',
         EXECUTIVE: '/executive-portal',
       };
-      router.replace(portalRoutes[pt] || '/field-portal');
+      router.replace(loginDestination(window.location.search,portalRoutes[pt] || '/field-portal'));
       return;
     }
     const hashParams = new URLSearchParams(window.location.hash.slice(1));
@@ -74,7 +75,7 @@ export default function LoginForm() {
           EXECUTIVE: '/executive-portal',
         };
         // Keep spinner showing until the route transition completes
-        router.replace(portalRoutes[pt] || '/field-portal');
+        router.replace(loginDestination(window.location.search,portalRoutes[pt] || '/field-portal'));
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to sign in.');
