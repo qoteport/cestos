@@ -20,6 +20,7 @@ import {
   ChevronDown,
   ArrowDown,
   ArrowRight,
+  Paintbrush,
 } from 'lucide-react';
 import { sortSheet, replaceSheetText } from '@/lib/workbookOperations';
 import { autofillRange, type FillMode } from '@/lib/workbookConvenience';
@@ -32,12 +33,16 @@ export default function WorkbookTools({
   onChange,
   onFind,
   onError,
+  onPaintFormat,
+  paintFormatActive,
 }: {
   sheet: FieldSheet;
   selection: CellRange;
   onChange: (fn: (sheet: FieldSheet) => FieldSheet) => void;
   onFind: (r: number, c: number) => void;
   onError: (message: string) => void;
+  onPaintFormat?: (persistent?: boolean) => void;
+  paintFormatActive?: boolean;
 }) {
   const [find, setFind] = useState('');
   const [replace, setReplace] = useState('');
@@ -89,6 +94,20 @@ export default function WorkbookTools({
       className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800 p-2 text-xs bg-slate-50/50 dark:bg-slate-900/50"
       aria-label="Sheet tools"
     >
+      {/* Paint format */}
+      <button
+        type="button"
+        className={`${control} ${paintFormatActive ? '!bg-emerald-100 !border-emerald-500 !text-emerald-800 dark:!bg-emerald-950 dark:!text-emerald-300 font-semibold ring-2 ring-emerald-500/30' : ''}`}
+        title="Paint format (Click once for single use, double-click for persistent mode)"
+        onClick={() => onPaintFormat?.(false)}
+        onDoubleClick={() => onPaintFormat?.(true)}
+      >
+        <Paintbrush size={14} className={paintFormatActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'} />
+        <span>Paint Format</span>
+        {paintFormatActive && <span className="ml-0.5 text-[9px] uppercase font-bold text-emerald-700 dark:text-emerald-400">ON</span>}
+      </button>
+
+      <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
       {/* Sort group */}
       <div className="flex items-center gap-1">
         <button

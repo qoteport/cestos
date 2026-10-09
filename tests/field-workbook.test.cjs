@@ -202,6 +202,20 @@ test('formatting applies to a range and survives copy and dimension edits', () =
   const removed = api.changeDimension(moved, 'column', 0, true);
   assert.equal(api.cellFormat(removed, 3, 1).italic, true);
 });
+test('copyFormatRange copies formatting from source range to target range without altering target values', () => {
+  const book = api.newWorkbook();
+  const sheet = book.sheets[0];
+  sheet.cells[1][0] = 'SourceVal';
+  sheet.cells[2][0] = 'Target1';
+  sheet.cells[3][0] = 'Target2';
+  const styled = api.formatCells(sheet, { r: 1, c: 0, er: 1, ec: 0 }, { bold: true, italic: true, color: '#ff0000', align: 'center' });
+  const painted = api.copyFormatRange(styled, { r: 1, c: 0, er: 1, ec: 0 }, { r: 2, c: 0, er: 3, ec: 0 });
+  assert.equal(painted.cells[2][0], 'Target1');
+  assert.equal(painted.cells[3][0], 'Target2');
+  assert.equal(api.cellFormat(painted, 2, 0).bold, true);
+  assert.equal(api.cellFormat(painted, 3, 0).color, '#ff0000');
+  assert.equal(api.cellFormat(painted, 3, 0).align, 'center');
+});
 test('Excel export contains font and alignment styles for selected cells', async () => {
   const book = api.newWorkbook();
   book.sheets[0].cells[1][1] = 'Formatted';

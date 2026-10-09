@@ -261,6 +261,24 @@ export function formatCells(sheet: FieldSheet, range: CellRange, format: CellFor
     }
   return { ...sheet, formats };
 }
+export function copyFormatRange(sheet: FieldSheet, source: CellRange, target: CellRange): FieldSheet {
+  const formats = { ...sheet.formats };
+  const srcRows = source.er - source.r + 1;
+  const srcCols = source.ec - source.c + 1;
+  for (let r = target.r; r <= target.er; r++) {
+    for (let c = target.c; c <= target.ec; c++) {
+      const merged = sheet.merges.find((m) => r >= m.r && r <= m.er && c >= m.c && c <= m.ec);
+      const targetKey = merged ? `${merged.r}:${merged.c}` : `${r}:${c}`;
+      const rOffset = (r - target.r) % srcRows;
+      const cOffset = (c - target.c) % srcCols;
+      const srcR = source.r + rOffset;
+      const srcC = source.c + cOffset;
+      const srcFormat = cellFormat(sheet, srcR, srcC);
+      formats[targetKey] = { ...srcFormat };
+    }
+  }
+  return { ...sheet, formats };
+}
 export const tableDesigns = [
   { name: 'Emerald', header: '#065f46', stripe: '#ecfdf5', text: '#064e3b' },
   { name: 'Ocean', header: '#1e40af', stripe: '#eff6ff', text: '#172554' },

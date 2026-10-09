@@ -34,6 +34,7 @@ import {
   Calendar,
   CalendarDays,
   Sparkles,
+  Paintbrush,
   Lock,
   Unlock,
   ArrowUpDown,
@@ -96,6 +97,7 @@ import {
   suggestionsFor,
   validateWorkbook,
   workbookTemplates,
+  copyFormatRange,
   type CellRange,
   type FieldSheet,
   type FieldWorkbook,
@@ -322,6 +324,7 @@ export default function FieldWorkbookWorkspace({
   const [showHistory, setShowHistory] = useState(false);
   const [showToolbar, setShowToolbar] = useState(true);
   const [showFormulaBar, setShowFormulaBar] = useState(true);
+  const [paintFormat, setPaintFormat] = useState<{ source: CellRange; persistent: boolean } | null>(null);
   const [showSelectionInfo, setShowSelectionInfo] = useState(false);
   const [deviceConflict,setDeviceConflict]=useState<FieldWorkbook|null>(null);
   const [databaseReview,setDatabaseReview]=useState<FieldSheet|null>(null);
@@ -768,6 +771,30 @@ export default function FieldWorkbookWorkspace({
   }
   const selectionCleanup = useRef<() => void>(() => {});
   useEffect(() => () => selectionCleanup.current(), []);
+
+  useEffect(() => {
+    if (!paintFormat) return;
+    const same =
+      selection.r === paintFormat.source.r &&
+      selection.c === paintFormat.source.c &&
+      selection.er === paintFormat.source.er &&
+      selection.ec === paintFormat.source.ec;
+    if (!same) {
+      changeSheet((s) => copyFormatRange(s, paintFormat.source, selection));
+      if (!paintFormat.persistent) {
+        setPaintFormat(null);
+      }
+    }
+  }, [selection.r, selection.c, selection.er, selection.ec, paintFormat, changeSheet]);
+
+  useEffect(() => {
+    if (!paintFormat) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPaintFormat(null);
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [paintFormat]);
   const onSelect = useCallback((r: number, c: number, extend: boolean) => {
     if (dragSelection.current) return;
     if (!extend) setAnchor({ r, c });
@@ -1570,7 +1597,20 @@ export default function FieldWorkbookWorkspace({
           </div>
         </div>
 
-        {showToolbar && (ribbonTab==='Data'||ribbonTab==='View') && <WorkbookTools sheet={sheet} selection={selection} onChange={changeSheet} onError={setError} onFind={(r,c)=>{if(sheet.view?.filterText)changeSheet(s=>({...s,view:{...s.view,filterText:''}}));setAnchor({r,c});setEnd({r,c});focus(r,c);}} />}
+        {showToolbar && (ribbonTab==='Data'||ribbonTab==='View') && (
+          <WorkbookTools
+            sheet={sheet}
+            selection={selection}
+            onChange={changeSheet}
+            onError={setError}
+            paintFormatActive={!!paintFormat}
+            onPaintFormat={(persistent = false) => {
+              if (paintFormat && !persistent) setPaintFormat(null);
+              else setPaintFormat({ source: { ...selection }, persistent });
+            }}
+            onFind={(r,c)=>{if(sheet.view?.filterText)changeSheet(s=>({...s,view:{...s.view,filterText:''}}));setAnchor({r,c});setEnd({r,c});focus(r,c);}}
+          />
+        )}
         {showToolbar && (
           <div className={styles.ribbon}>
             {ribbonTab === 'Data' && <button type="button" className={button} onClick={()=>setDatabaseLoadOpen(true)}><Download size={16}/>Load from database</button>}
@@ -1607,6 +1647,22 @@ export default function FieldWorkbookWorkspace({
 
             {/* Text Formatting Group */}
             <div className="flex items-center gap-1" role="group" aria-label="Text formatting" hidden={!["Home"].includes(ribbonTab)}>
+              <button
+                type="button"
+                title="Paint format (Click once for single use, double-click for persistent mode)"
+                aria-label="Paint format"
+                aria-pressed={!!paintFormat}
+                className={`${iconButton} ${paintFormat ? '!border-emerald-600 !bg-emerald-100 !text-emerald-800 dark:!bg-emerald-950 dark:!text-emerald-200 ring-2 ring-emerald-500/30' : ''}`}
+                onClick={() => {
+                  if (paintFormat) setPaintFormat(null);
+                  else setPaintFormat({ source: { ...selection }, persistent: false });
+                }}
+                onDoubleClick={() => {
+                  setPaintFormat({ source: { ...selection }, persistent: true });
+                }}
+              >
+                <Paintbrush size={18} aria-hidden="true" />
+              </button>
               {[
                 {
                   label: 'Bold',
@@ -2538,6 +2594,36 @@ export default function FieldWorkbookWorkspace({
               <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500" aria-label="Selected cell range">
                 Selection: {columnName(selection.c)}{selection.r + 1}:{columnName(selection.ec)}{selection.er + 1}
               </div>
+
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                onClick={() => {
+                  setGridContextMenu(null);
+                  if (paintFormat) {
+                    setPaintFormat(null);
+                  } else {
+                    setPaintFormat({ source: { ...selection }, persistent: false });
+                  }
+                }}
+              >
+                <Paintbrush size={14} className="text-emerald-600 dark:text-emerald-400" />
+                {paintFormat ? 'Cancel paint format' : 'Paint format (copy style)'}
+              </button>
+              {paintFormat && (
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  onClick={() => {
+                    setGridContextMenu(null);
+                    changeSheet((s) => copyFormatRange(s, paintFormat.source, selection));
+                    if (!paintFormat.persistent) setPaintFormat(null);
+                  }}
+                >
+                  <Paintbrush size={14} className="text-emerald-600 dark:text-emerald-400" />
+                  Paste format only
+                </button>
+              )}
 
               <button
                 type="button"
