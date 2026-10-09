@@ -1,4 +1,5 @@
 ﻿'use client';
+import WorkbookRecordPreview from './WorkbookRecordPreview';
 import WorkbookSyncPanel from './WorkbookSyncPanel';
 import WorkbookLibrary from './WorkbookLibrary';
 import WorkbookDatabaseWorkspace from './WorkbookDatabaseWorkspace';
@@ -2376,6 +2377,7 @@ export default function FieldWorkbookWorkspace({
         {mediaTarget?.bookId===book.id&&<WorkbookCellMedia title={`Cell ${columnName(mediaTarget.c)}${mediaTarget.r+1} attachments`} assets={(book.sheets.find(s=>s.id===mediaTarget.sheetId)?.media?.[`${mediaTarget.r}:${mediaTarget.c}`]||[]).map(id=>book.assets?.[id]).filter((a):a is WorkbookAsset=>!!a)} onClose={()=>setMediaTarget(null)} onAdd={files=>{const current=bookRef.current;if(!current||current.id!==mediaTarget.bookId)throw Error('The active workbook changed. Please choose the cell again.');commit(insertMedia(current,mediaTarget.sheetId,mediaTarget.r,mediaTarget.c,files));}} onRemove={id=>{const current=bookRef.current;if(current&&current.id===mediaTarget.bookId)commit(removeMedia(current,mediaTarget.sheetId,`${mediaTarget.r}:${mediaTarget.c}`,id));}}/>}
         {databaseLoadOpen && <WorkbookDatabaseLoad existingNames={book.sheets.map(s=>s.name)} onClose={()=>setDatabaseLoadOpen(false)} onLoad={sheets=>{commit({...book,sheets:[...book.sheets,...sheets]});setSheetIndex(book.sheets.length);setAnchor({r:0,c:0});setEnd({r:0,c:0});setDatabaseLoadOpen(false);setNotice(`Loaded ${sheets.reduce((count,s)=>count+s.cells.length-1,0)} records into ${sheets.length} new sheet(s). Review database changes to confirm edits before sending them.`);}} />}
         {sheet.databaseSource && <div className="flex items-center gap-3 text-xs text-slate-500"><span>Connected table · {sheet.databaseSource.path} · Loaded {new Date(sheet.databaseSource.loadedAt).toLocaleString()} · Edits remain drafts until confirmed.</span>{!onPublish&&<button type="button" className={button} onClick={()=>setDatabaseReview(structuredClone(sheet))}>Review database changes</button>}</div>}
+        <WorkbookRecordPreview key={`${storageKey}:${sheet.id}`} sheet={sheet} grid={gridRef}/>
         {databaseReview&&<WorkbookDatabaseReview sheet={databaseReview} onClose={()=>setDatabaseReview(null)} onSaved={(row,record)=>{
           const current=bookRef.current;if(!current)return;
           commit({...current,sheets:current.sheets.map(item=>{if(item.id!==databaseReview.id||!item.databaseSource)return item;

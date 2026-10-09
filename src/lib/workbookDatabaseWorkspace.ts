@@ -2,7 +2,7 @@ import type {DatabaseSource} from './workbookDatabaseSource';
 import type {FieldSheet} from './fieldWorkbook';
 export type Schema = {type?:string;format?:string;enum?:unknown[];anyOf?:Schema[];$ref?:string;properties?:Record<string,Schema>;required?:string[];$defs?:Record<string,Schema>;title?:string;description?:string};
 export type DatabaseAction={path:string;method:'POST'|'PATCH';schema:Schema};
-export type WorkspaceSource=DatabaseSource & {create?:DatabaseAction;update?:DatabaseAction;relations:{column:string;target:string;targetColumn:string}[]};
+export type WorkspaceSource=DatabaseSource & {detailPath?:string;create?:DatabaseAction;update?:DatabaseAction;relations:{column:string;target:string;targetColumn:string}[]};
 export type RecordChange={row:number;id?:string;values:Record<string,unknown>;before:Record<string,unknown>;action:DatabaseAction};
 export function resolvedSchema(schema:Schema,root:Schema):Schema {
  if(schema.$ref)return root.$defs?.[schema.$ref.split('/').pop()!] || schema;
