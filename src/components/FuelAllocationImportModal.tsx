@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -514,18 +514,6 @@ export default function FuelAllocationImportModal({
                           type={/^\d{2}:\d{2}$/.test(row.time) || !row.time ? 'time' : 'text'}
                           value={row.time}
                           onChange={(e) => update(row.key, 'time', e.target.value)}
-                        />
-                      </label>
-                      <label className="flex flex-col gap-1.5 text-xs font-semibold">
-                        Equipment as reported
-                        <input
-                          className={inputClass}
-                          value={row.equipment}
-                          maxLength={250}
-                          onChange={(e) => {
-                            update(row.key, 'equipment', e.target.value);
-                            update(row.key, 'assetId', '');
-                          }}
                         />
                       </label>
                       <label className="flex flex-col gap-1.5 text-xs font-semibold">

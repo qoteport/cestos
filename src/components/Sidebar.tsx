@@ -232,7 +232,7 @@ export default function Sidebar({
   onToggle: () => void;
 }) {
   const auth = useAuth();
-  const path = usePathname();
+  const path = usePathname() || '';
   const [open, setOpen] = useState<string[]>(
     groups
       .filter(

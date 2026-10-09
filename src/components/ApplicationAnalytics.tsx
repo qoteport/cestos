@@ -3,7 +3,7 @@ import { usePathname } from 'next/navigation';
 export default function ApplicationAnalytics() {
   const pathname = usePathname();
   // Public capability links must not be exposed to third-party analytics scripts.
-  if (pathname.startsWith('/workbook-share')) return null;
+  if (pathname?.startsWith('/workbook-share')) return null;
   return (
     <>
       <script
