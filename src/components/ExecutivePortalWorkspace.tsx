@@ -170,6 +170,7 @@ function StatusBadge({ status }: { status: string }) {
     OPEN: 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300',
     IN_PROGRESS: 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300',
     ON_HOLD: 'bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-300',
+    PARTIALLY_PAID: 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300',
   };
   return (
     <span
@@ -184,9 +185,9 @@ function StatusBadge({ status }: { status: string }) {
 
 function ExpensePaymentBadge({ status }: { status?: string | null }) {
   const value = String(status || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
-  const style = value === 'PAID' ? 'bg-emerald-100 text-emerald-800'
-    : value === 'PARTIALLY_PAID' ? 'bg-blue-100 text-blue-800'
-    : 'bg-amber-100 text-amber-800';
+  const style = value === 'PAID' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
+    : value === 'PARTIALLY_PAID' ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300'
+    : 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300';
   const label = value === 'PAID' ? 'Expense paid'
     : value === 'PARTIALLY_PAID' ? 'Outstanding'
     : value === 'PAYMENT_RECONCILIATION_REQUIRED' ? 'Pending Payment'
@@ -1331,7 +1332,7 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
 
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="!hidden p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="md:hidden p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>

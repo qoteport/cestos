@@ -2,77 +2,799 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch, ApiError } from '@/lib/api';
 import type { FieldSheet } from '@/lib/fieldWorkbook';
-import {useAuth} from './AuthProvider';
-import {readDeviceLibrary, saveDeviceLibrary} from '@/lib/workbookDevice';
+import {
+  defaultLayout,
+  extractMapping,
+  headerNames,
+  suggestFields,
+  cellAddress,
+  parseCellAddress,
+  assertLayout,
+  type MappingLayout,
+  type MappingTable,
+  type MappingField,
+} from '@/lib/workbookMapping';
+import { useAuth } from './AuthProvider';
+import { readDeviceLibrary, saveDeviceLibrary } from '@/lib/workbookDevice';
 import SearchableSelect from './SearchableSelect';
-
-type Table = {id:string;name:string;columns:{name:string;required:boolean;nullable:boolean;type:string;schema:any}[]};
-function mappingError(error: unknown): string {
- if (error instanceof ApiError && error.status === 404) return 'Workbook database mapping is unavailable on this server. The backend needs to be updated or restarted with the workbook mapping routes. Your workbook data has not been changed.';
- return error instanceof Error ? error.message : 'Could not load database mapping. Please retry.';
+function mappingError(error: unknown) {
+  if (error instanceof ApiError && error.status === 404)
+    return 'Database mapping is unavailable on this server. Update the backend, then retry. Your sheet is unchanged.';
+  return error instanceof Error ? error.message : 'Could not load database mapping.';
 }
-const normalize=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]/g,'');
-export default function WorkbookDatabaseConnection({sheet,onClose,onSave,onIssue}:{onIssue:(row:number,column:number,message:string)=>void;sheet:FieldSheet;onClose:()=>void;onSave:(connection:NonNullable<FieldSheet['connection']>)=>void}) {
- const [tables,setTables]=useState<Table[]>([]),[table,setTable]=useState(sheet.connection?.table || ''),[header,setHeader]=useState(sheet.connection?.headerRow || 0);
- const [mapping,setMapping]=useState<Record<string,number>>(sheet.connection?.mapping || {}),[result,setResult]=useState<any>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
- const [retry,setRetry]=useState(0);
- const {user, offline} = useAuth();
- const [cachedCatalog,setCachedCatalog]=useState(false);
- const [online,setOnline]=useState(true);
- useEffect(()=>{const update=()=>{setOnline(navigator.onLine);setRetry(v=>v+1);};update();window.addEventListener('online',update);window.addEventListener('offline',update);return()=>{window.removeEventListener('online',update);window.removeEventListener('offline',update);};},[]);
- useEffect(()=>{let active=true;setBusy(true);setError('');setTables([]);setResult(null);
-  const scope=`workbook-mapping:${user?.id || 'anonymous'}`;
-  void (async()=>{
-   try {
-    const cached=await readDeviceLibrary<Table>(scope).catch(()=>undefined);
-    if(!active)return;
-    if(cached){setTables(cached);setCachedCatalog(true);}
-    if(!navigator.onLine || offline)return;
-    const fresh=await apiFetch<Table[]>('/api/v1/workbook-connections/tables',{},true,{bypassMemoryRead:true,cacheOfflineRead:false,cacheResponse:false});
-    if(!active)return;
-    setTables(fresh);setCachedCatalog(false);
-    try {await saveDeviceLibrary(scope,fresh);} catch {if(active)setError('Table definitions could not be saved on this device.');}
-   } catch(e){if(active){setCachedCatalog(true);setError(mappingError(e));}}
-   finally{if(active)setBusy(false);}
-  })();
-  return()=>{active=false;};
- },[retry,user?.id,offline]);
- useEffect(()=>{setResult(null);},[sheet]);
- const saveDraft=()=>onSave({table,mapping,headerRow:header,writeMode:'insert',importId:sheet.connection?.table===table && sheet.connection.importId ? sheet.connection.importId : crypto.randomUUID()});
-
- const selected=tables.find(t=>t.id===table);
- const headers=sheet.cells[header] || [];
- const duplicates=useMemo(()=>headers.filter((h,i)=>h.trim() && headers.findIndex(other=>normalize(other)===normalize(h))!==i),[headers]);
- function suggest(id:string,row:number) {
-  setTable(id);setHeader(row);setResult(null);
-  const fields=tables.find(t=>t.id===id)?.columns || [];
-  const proposed:Record<string,number>={}; const used=new Set<number>();
-  for(const field of fields) {
-    const aliases=[field.name,field.name.replace(/_number$/,'')];
-    const matches=(sheet.cells[row] || []).map((h,i)=>({h,i})).filter(({h})=>h.trim() && aliases.some(alias=>normalize(h)===normalize(alias)));
-    if(matches.length===1 && !used.has(matches[0].i)){proposed[field.name]=matches[0].i;used.add(matches[0].i);}
+const input = 'rounded border border-slate-300 bg-transparent px-2 py-1 text-sm';
+function CellInput({
+  value,
+  onChange,
+  label,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  label: string;
+}) {
+  const [text, setText] = useState(value);
+  useEffect(() => setText(value), [value]);
+  return (
+    <input
+      className={input}
+      aria-label={label}
+      value={text}
+      placeholder="B4"
+      onChange={(e) => setText(e.target.value)}
+      onBlur={() => onChange(text)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          onChange(text);
+        }
+      }}
+    />
+  );
+}
+export default function WorkbookDatabaseConnection({
+  sheet,
+  onClose,
+  onSave,
+  onIssue,
+}: {
+  sheet: FieldSheet;
+  onClose: () => void;
+  onSave: (connection: NonNullable<FieldSheet['connection']>) => void;
+  onIssue: (r: number, c: number, message: string) => void;
+}) {
+  const { user, offline } = useAuth();
+  const [tables, setTables] = useState<MappingTable[]>([]),
+    [table, setTable] = useState(sheet.connection?.table || ''),
+    [layout, setLayout] = useState(() => defaultLayout(sheet));
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState(''),
+    [retry, setRetry] = useState(0),
+    [cached, setCached] = useState(false),
+    [online, setOnline] = useState(true),
+    [result, setResult] = useState<any>(null);
+  const [pick, setPick] = useState<string | null>(null),
+    [page, setPage] = useState(0),
+    [columnPage, setColumnPage] = useState(0);
+  const selected = tables.find((t) => t.id === table);
+  useEffect(() => {
+    const update = () => {
+      setOnline(navigator.onLine);
+      setRetry((n) => n + 1);
+    };
+    update();
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    return () => {
+      window.removeEventListener('online', update);
+      window.removeEventListener('offline', update);
+    };
+  }, []);
+  useEffect(() => {
+    let active = true;
+    setBusy(true);
+    setError('');
+    setResult(null);
+    setTables([]);
+    setCached(true);
+    const scope = `workbook-mapping:${user?.id || 'anonymous'}`;
+    void (async () => {
+      try {
+        const old = await readDeviceLibrary<MappingTable>(scope).catch(() => undefined);
+        if (!active) return;
+        if (old) setTables(old);
+        if (!navigator.onLine || offline) return;
+        const fresh = await apiFetch<MappingTable[]>(
+          '/api/v1/workbook-connections/tables',
+          {},
+          true,
+          { bypassMemoryRead: true, cacheOfflineRead: false, cacheResponse: false }
+        );
+        if (!active) return;
+        setTables(fresh);
+        setCached(false);
+        await saveDeviceLibrary(scope, fresh);
+      } catch (e) {
+        if (active) setError(mappingError(e));
+      } finally {
+        if (active) setBusy(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [retry, user?.id, offline]);
+  const update = (change: Partial<MappingLayout>) => {
+    setResult(null);
+    setError('');
+    setLayout((l) => ({ ...l, ...change }));
+  };
+  const extraction = useMemo(() => {
+    try {
+      return { data: extractMapping(sheet, layout), error: '' };
+    } catch (e) {
+      return { data: null, error: mappingError(e) };
+    }
+  }, [sheet, layout]);
+  const headers = useMemo(() => headerNames(sheet, layout), [sheet, layout]);
+  const missing =
+    selected?.columns.filter((f) => f.required && !layout.fields[f.name]).map((f) => f.name) || [];
+  const localIssues = extraction.data?.issues || [];
+  const connection = (validated = false): NonNullable<FieldSheet['connection']> => ({
+    table,
+    mapping: {},
+    headerRow: Math.min(...(layout.headerRows.length ? layout.headerRows : [0])),
+    layout,
+    writeMode: 'insert',
+    importId:
+      sheet.connection?.table === table && sheet.connection.importId
+        ? sheet.connection.importId
+        : crypto.randomUUID(),
+    ...(validated ? { validatedAt: new Date().toISOString() } : {}),
+  });
+  const fingerprint = JSON.stringify({ table, layout, sheet, user: user?.id });
+  const save = (validated = false) => {
+    try {
+      assertLayout(sheet, layout);
+      if (validated && result?.fingerprint !== fingerprint)
+        throw Error('The sheet or mapping changed. Validate it again.');
+      if (!selected) throw Error('Select an available table.');
+      onSave(connection(validated));
+    } catch (e) {
+      setError(mappingError(e));
+    }
+  };
+  const setField = (name: string, source?: MappingField) => {
+    const fields = { ...layout.fields };
+    if (source) fields[name] = source;
+    else delete fields[name];
+    update({ fields });
+  };
+  const setAddress = (name: string, value: string, kind: 'cell' | 'block') => {
+    try {
+      const p = parseCellAddress(value);
+      if (p.r >= sheet.cells.length || p.c >= sheet.widths.length)
+        throw Error('Choose a cell inside this sheet.');
+      setField(name, { kind, ...p });
+    } catch (e) {
+      setError(mappingError(e));
+    }
+  };
+  const listNumbers = (text: string, max: number) => {
+    const values = text
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map(Number);
+    if (values.some((n) => !Number.isInteger(n) || n < 1 || n > max))
+      throw Error(`Enter comma-separated numbers from 1 to ${max}.`);
+    return [...new Set(values.map((n) => n - 1))];
+  };
+  const changeMode = (mode: MappingLayout['mode']) => {
+    const next = {
+      ...layout,
+      mode,
+      start:
+        mode === 'rows'
+          ? Math.min(sheet.cells.length - 1, Math.max(0, ...layout.headerRows) + 1)
+          : mode === 'columns'
+            ? Math.min(sheet.widths.length - 1, layout.labelColumn + 1)
+            : 0,
+      end: mode === 'columns' ? sheet.widths.length - 1 : sheet.cells.length - 1,
+      fields: {},
+      needsReview: false,
+    };
+    update(next);
+  };
+  async function validate() {
+    if (!extraction.data || !selected || missing.length || localIssues.length) return;
+    setBusy(true);
+    setError('');
+    setResult(null);
+    try {
+      const response = await apiFetch(
+        '/api/v1/workbook-connections/preview',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            table,
+            mapping: extraction.data.mapping,
+            rows: extraction.data.rows,
+          }),
+        },
+        true,
+        { queueWhenOffline: false }
+      );
+      setResult({ ...(response as object), fingerprint });
+    } catch (e) {
+      setError(mappingError(e));
+    } finally {
+      setBusy(false);
+    }
   }
-  setMapping(proposed);
- }
- async function validate(){if(!navigator.onLine || offline || cachedCatalog){setError('Reconnect and refresh table definitions before server validation. You can save a mapping draft offline.');return;}setBusy(true);setError('');setResult(null);try{setResult(await apiFetch('/api/v1/workbook-connections/preview',{method:'POST',body:JSON.stringify({table,mapping,rows:sheet.cells.slice(header+1)})},true,{queueWhenOffline:false}));}catch(e){setError(mappingError(e));}finally{setBusy(false);}}
- return <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/40 p-4" onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();onClose();}}}>
-  <section role="dialog" aria-modal="true" aria-label="Connect to Database Table" className="max-h-[90dvh] w-full max-w-4xl overflow-auto rounded-xl bg-white p-5 text-slate-900 shadow-xl dark:bg-slate-900 dark:text-slate-100">
-   <div className="flex items-center justify-between gap-3"><h3 className="text-lg font-bold">Connect to Database Table</h3><button type="button" onClick={onClose}>Close</button></div>
-   <p className="my-3 text-sm">Review the column mapping for {sheet.name}. Only tables with supported flat create schemas and your account permissions appear. Relationship fields need record IDs.</p>
-   <p className="mb-3 rounded border border-amber-300 bg-amber-50 p-2 text-sm text-amber-950">Preview only: database imports are not enabled. Saving a mapping stores it in this workbook; it does not create database records.</p>
-   <p className="mb-3 text-sm">Copies retain this mapping and are configured for new records when importing becomes available. Existing records are not update targets.</p>
-   {(cachedCatalog || !online || offline) && <p className="my-3 rounded border p-2 text-sm">Using saved table definitions. You can prepare and save a draft offline. Current permissions, relationships and database constraints will be checked online before validation.</p>}
-   {sheet.connection && !sheet.connection.validatedAt && <p className="my-2 text-sm text-amber-700">This mapping needs validation. Check unmapped fields after changing rows or columns.</p>}
-   {error && <div className="my-3 rounded border border-red-200 bg-red-50 p-3 text-sm dark:bg-red-950"><p role="alert" className="text-red-700 dark:text-red-200">{error}</p><button type="button" disabled={busy} className="mt-2 rounded border border-red-300 px-3 py-1 font-medium" onClick={()=>{setResult(null);setRetry(value=>value+1);}}>Retry connection</button></div>}
-   <div className="grid gap-3 sm:grid-cols-2"><SearchableSelect ariaLabel="Database table" disabled={busy || !tables.length} value={table} options={tables.map(t=>({value:t.id,label:t.name}))} onChange={value=>suggest(value,header)} placeholder={busy?'Loading tables…':'Select database table'}/>
-   <label className="flex items-center gap-2 text-sm">Header row<input type="number" disabled={busy} min={1} max={sheet.cells.length} value={header+1} className="input-field" onChange={e=>suggest(table,Math.max(0,Math.min(sheet.cells.length-1,Number(e.target.value)-1)))}/></label></div>
-   {!busy && !tables.length && !error && <p className="mt-3 text-sm">No supported tables are available for this account.</p>}
-   {duplicates.length>0 && <p role="alert" className="my-2 text-red-600">Duplicate column names: {duplicates.join(', ')}. Rename them before validating.</p>}
-   {selected && <table className="my-4 w-full text-sm"><thead><tr><th className="p-2 text-left">Database column</th><th className="p-2 text-left">Type / rules</th><th className="p-2 text-left">Sheet column</th></tr></thead><tbody>{selected.columns.map(field=><tr key={field.name} className="border-t"><td className="p-2">{field.name}</td><td className="p-2 text-xs">{field.type}{field.required?' · Required':''}{field.nullable?' · Nullable':' · Not null'}</td><td className="p-2"><SearchableSelect disabled={busy} ariaLabel={`Map ${field.name}`} value={mapping[field.name]===undefined?'':String(mapping[field.name])} options={[{value:'',label:'Not mapped'},...headers.map((h,i)=>({value:String(i),label:`${i+1}: ${h || '(blank header)'}`,disabled:!h.trim() || Object.entries(mapping).some(([name,column])=>name!==field.name && column===i)}))]} onChange={value=>{setResult(null);setMapping(old=>{const next={...old};if(value==='')delete next[field.name];else next[field.name]=Number(value);return next;});}}/></td></tr>)}</tbody></table>}
-   <button type="button" disabled={!selected || busy || !!duplicates.length || sheet.previewLimited || !online || offline || cachedCatalog} className="btn-primary" onClick={()=>void validate()}>{busy?'Checking…':'Validate & preview'}</button>
-   <button type="button" disabled={!table || busy || sheet.previewLimited || new Set(Object.values(mapping)).size !== Object.values(mapping).length} className="ml-2 rounded border px-3 py-2 text-sm" onClick={saveDraft}>Save mapping draft</button>
-   {sheet.previewLimited && <p className="text-red-600">This sheet is only partially loaded; database mapping is disabled to avoid missing rows.</p>}
-   {result && <div className="mt-4"><p>{result.count} data rows checked.</p>{result.issues.length>0 ? <ul className="max-h-52 overflow-auto text-sm text-red-600">{result.issues.map((issue:any,i:number)=><li key={i}><button type="button" className="py-1 text-left underline disabled:no-underline" disabled={!issue.row || mapping[issue.field]===undefined} onClick={()=>onIssue(issue.row+header,mapping[issue.field],issue.message)}>Row {issue.row ? issue.row+header+1 : '—'} {issue.field}: {issue.message}</button></li>)}</ul> : <><p className="text-emerald-700">Schema validation passed. Destination-specific business rules will still need checking before an import is enabled.</p><pre className="my-3 max-h-48 overflow-auto rounded bg-slate-100 p-3 text-xs dark:bg-slate-800">{JSON.stringify(result.preview,null,2)}</pre><button type="button" className="btn-primary" onClick={()=>onSave({table,mapping,headerRow:header,validatedAt:new Date().toISOString(),writeMode:'insert',importId:sheet.connection?.table === table && sheet.connection?.importId ? sheet.connection.importId : crypto.randomUUID()})}>Save mapping to workbook</button></>}</div>}
-  </section>
- </div>;
+  const jump = (row: number, field: string, message: string) => {
+    const p = extraction.data?.locations[row - 1]?.[field];
+    if (p) onIssue(p.r, p.c, message);
+  };
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-3"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          e.stopPropagation();
+          onClose();
+        }
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-label="Connect to Database Table"
+        className="max-h-[94dvh] w-full max-w-6xl overflow-auto rounded-xl bg-white p-5 text-slate-900 shadow-xl dark:bg-slate-900 dark:text-slate-100"
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold">Connect to Database Table</h3>
+          <button type="button" onClick={onClose}>
+            Close
+          </button>
+        </div>
+        <p className="my-2 text-sm">
+          Map {sheet.name} without changing its layout. Select a table, describe where records live,
+          then review the extracted records.
+        </p>
+        <p className="mb-3 rounded bg-amber-50 p-2 text-sm text-amber-950">
+          Mappings and previews only. Saving does not create or update database records.
+          Relationship fields use record IDs. Workbook copies retain the layout for a separate
+          future import.
+        </p>
+        {(cached || !online || offline) && (
+          <p className="my-2 text-sm">
+            Saved table definitions are available offline. Reconnect to check current permissions
+            and database constraints.
+          </p>
+        )}
+        {error && (
+          <p role="alert" className="my-2 text-sm text-red-600">
+            {error}
+          </p>
+        )}
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <SearchableSelect
+              ariaLabel="Database table"
+              value={table}
+              disabled={busy}
+              options={tables.map((t) => ({
+                value: t.id,
+                label: t.name,
+                sublabel:
+                  t.validationAvailable === false
+                    ? 'Mapping draft only · no supported create validator'
+                    : 'Schema validation available',
+              }))}
+              onChange={(id) => {
+                setTable(id);
+                setResult(null);
+                update({ fields: {} });
+              }}
+              placeholder={busy ? 'Loading tables…' : 'Select database table'}
+            />
+          </div>
+          <button
+            type="button"
+            className={input}
+            disabled={busy}
+            onClick={() => setRetry((n) => n + 1)}
+          >
+            Refresh tables
+          </button>
+        </div>
+        {!busy && !tables.length && (
+          <p className="my-3 text-sm">
+            No tables were returned. Refresh after the backend update; tables are limited to the
+            application endpoints your account can access.
+          </p>
+        )}
+        {selected && (
+          <>
+            <fieldset disabled={busy} className="my-4 space-y-3 rounded border p-3">
+              <legend className="px-1 font-semibold">1. Sheet layout</legend>
+              <SearchableSelect
+                ariaLabel="Record layout"
+                value={layout.mode}
+                options={[
+                  {
+                    value: 'rows',
+                    label: 'Records down rows — table with one or more header rows',
+                  },
+                  {
+                    value: 'columns',
+                    label: 'Records across columns — field labels down a column',
+                  },
+                  { value: 'form', label: 'Single form — values in individual cells' },
+                  { value: 'blocks', label: 'Repeated forms — one record per block of rows' },
+                ]}
+                onChange={(value) => changeMode(value as MappingLayout['mode'])}
+              />
+              <div className="flex flex-wrap items-center gap-3">
+                {layout.mode === 'rows' && (
+                  <label className="text-sm">
+                    Header rows{' '}
+                    <CellInput
+                      label="Header rows"
+                      value={layout.headerRows.map((r) => r + 1).join(', ')}
+                      onChange={(text) => {
+                        try {
+                          update({ headerRows: listNumbers(text, sheet.cells.length) });
+                        } catch (e) {
+                          setError(mappingError(e));
+                        }
+                      }}
+                    />
+                  </label>
+                )}
+                {layout.mode === 'columns' && (
+                  <label className="text-sm">
+                    Labels in column{' '}
+                    <input
+                      className={input}
+                      type="number"
+                      min={1}
+                      max={sheet.widths.length}
+                      value={layout.labelColumn + 1}
+                      onChange={(e) => update({ labelColumn: Number(e.target.value) - 1 })}
+                    />
+                  </label>
+                )}
+                <label className="text-sm">
+                  First {layout.mode === 'columns' ? 'column' : 'row'}{' '}
+                  <input
+                    className={input}
+                    type="number"
+                    min={1}
+                    max={layout.mode === 'columns' ? sheet.widths.length : sheet.cells.length}
+                    value={layout.start + 1}
+                    onChange={(e) => update({ start: Number(e.target.value) - 1 })}
+                  />
+                </label>
+                <label className="text-sm">
+                  Last {layout.mode === 'columns' ? 'column' : 'row'}{' '}
+                  <input
+                    className={input}
+                    type="number"
+                    min={1}
+                    max={layout.mode === 'columns' ? sheet.widths.length : sheet.cells.length}
+                    value={layout.end + 1}
+                    onChange={(e) => update({ end: Number(e.target.value) - 1 })}
+                  />
+                </label>
+                {layout.mode === 'blocks' && (
+                  <label className="text-sm">
+                    Rows per form{' '}
+                    <input
+                      className={input}
+                      type="number"
+                      min={1}
+                      max={sheet.cells.length}
+                      value={layout.blockSize}
+                      onChange={(e) => update({ blockSize: Number(e.target.value) })}
+                    />
+                  </label>
+                )}
+                {layout.mode !== 'form' && (
+                  <label className="text-sm">
+                    Exclude {layout.mode === 'columns' ? 'columns' : 'rows / block start rows'}{' '}
+                    <CellInput
+                      label="Excluded records"
+                      value={layout.exclude.map((r) => r + 1).join(', ')}
+                      onChange={(text) => {
+                        try {
+                          update({
+                            exclude: listNumbers(
+                              text,
+                              layout.mode === 'columns' ? sheet.widths.length : sheet.cells.length
+                            ),
+                          });
+                        } catch (e) {
+                          setError(mappingError(e));
+                        }
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+              <p className="text-xs text-slate-500">
+                Use exclusions for totals, notes and repeated headings. Empty records are skipped.
+                For repeated forms, map the first block; the same cell positions repeat in each
+                block.
+              </p>
+              {layout.needsReview && (
+                <div className="text-sm text-amber-700">
+                  Rows or columns changed since this mapping was saved. Review every reference.
+                  <button
+                    type="button"
+                    className={`${input} ml-2`}
+                    onClick={() => {
+                      try {
+                        assertLayout(sheet, { ...layout, needsReview: false });
+                        update({ needsReview: false });
+                      } catch (e) {
+                        setError(mappingError(e));
+                      }
+                    }}
+                  >
+                    Confirm reviewed layout
+                  </button>
+                </div>
+              )}
+            </fieldset>
+            <div className="flex items-center justify-between">
+              <h4 className="font-semibold">2. Map database fields</h4>
+              <button
+                type="button"
+                className={input}
+                disabled={busy}
+                onClick={() => update({ fields: suggestFields(sheet, layout, selected) })}
+              >
+                Suggest from labels
+              </button>
+            </div>
+            <div className="my-2 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="p-2 text-left">Database field</th>
+                    <th className="p-2 text-left">Read from</th>
+                    <th className="p-2 text-left">Sheet location</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selected.columns.map((field) => {
+                    const f = layout.fields[field.name];
+                    const kind = f?.kind || 'none';
+                    return (
+                      <tr key={field.name} className="border-t">
+                        <td className="p-2">
+                          {field.name}
+                          <span className="block text-xs text-slate-500">
+                            {field.type}
+                            {field.required ? ' · Required' : ''}
+                            {field.nullable ? ' · Nullable' : ''}
+                          </span>
+                        </td>
+                        <td className="min-w-40 p-2">
+                          <SearchableSelect
+                            ariaLabel={`Source for ${field.name}`}
+                            value={kind}
+                            disabled={busy}
+                            options={[
+                              { value: 'none', label: 'Not mapped' },
+                              ...(layout.mode === 'rows'
+                                ? [{ value: 'column', label: 'Column in each data row' }]
+                                : layout.mode === 'columns'
+                                  ? [{ value: 'row', label: 'Row in each data column' }]
+                                  : layout.mode === 'blocks'
+                                    ? [{ value: 'block', label: 'Cell in each form block' }]
+                                    : []),
+                              { value: 'cell', label: 'Fixed cell / report value' },
+                            ]}
+                            onChange={(value) =>
+                              setField(
+                                field.name,
+                                value === 'none'
+                                  ? undefined
+                                  : {
+                                      kind: value as MappingField['kind'],
+                                      r: layout.mode === 'blocks' ? layout.start : 0,
+                                      c: 0,
+                                    }
+                              )
+                            }
+                          />
+                        </td>
+                        <td className="min-w-60 p-2">
+                          {f && (f.kind === 'column' || f.kind === 'row') ? (
+                            <SearchableSelect
+                              disabled={busy}
+                              ariaLabel={`Map ${field.name}`}
+                              value={String(f.kind === 'column' ? f.c : f.r)}
+                              options={
+                                f.kind === 'column'
+                                  ? headers.map((h, c) => ({
+                                      value: String(c),
+                                      label: `${cellAddress(0, c).replace(/1$/, '')}: ${h || '(no label)'}`,
+                                    }))
+                                  : sheet.cells.map((row, r) => ({
+                                      value: String(r),
+                                      label: `${r + 1}: ${row[layout.labelColumn] || '(no label)'}`,
+                                    }))
+                              }
+                              onChange={(v) =>
+                                setField(field.name, {
+                                  ...f,
+                                  ...(f.kind === 'column' ? { c: Number(v) } : { r: Number(v) }),
+                                })
+                              }
+                            />
+                          ) : f ? (
+                            <div className="flex gap-2">
+                              <CellInput
+                                label={`Cell for ${field.name}`}
+                                value={cellAddress(f.r, f.c)}
+                                onChange={(value) =>
+                                  setAddress(field.name, value, f.kind as 'cell' | 'block')
+                                }
+                              />
+                              <button
+                                type="button"
+                                className={input}
+                                onClick={() => {
+                                  setPick(field.name);
+                                  setPage(Math.floor(f.r / 12));
+                                  setColumnPage(Math.floor(f.c / 8));
+                                }}
+                              >
+                                Pick cell
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <details open={!!pick} className="my-3 rounded border p-3">
+              <summary className="cursor-pointer font-medium">
+                Inspect sheet / select header rows
+              </summary>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <strong>
+                    {pick ? `Pick a cell for ${pick}` : 'Select row labels to toggle header rows'}
+                  </strong>
+                  <button type="button" className={input} onClick={() => setPick(null)}>
+                    Done
+                  </button>
+                  <button type="button" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+                    ↑ Rows
+                  </button>
+                  <button
+                    type="button"
+                    disabled={(page + 1) * 12 >= sheet.cells.length}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    ↓ Rows
+                  </button>
+                  <button
+                    type="button"
+                    disabled={columnPage === 0}
+                    onClick={() => setColumnPage((p) => p - 1)}
+                  >
+                    ← Columns
+                  </button>
+                  <button
+                    type="button"
+                    disabled={(columnPage + 1) * 8 >= sheet.widths.length}
+                    onClick={() => setColumnPage((p) => p + 1)}
+                  >
+                    Columns →
+                  </button>
+                </div>
+                <div className="overflow-auto">
+                  <table className="my-2 text-xs">
+                    <tbody>
+                      {sheet.cells.slice(page * 12, page * 12 + 12).map((row, i) => (
+                        <tr key={i}>
+                          <th className="border p-2">
+                            <button
+                              type="button"
+                              disabled={layout.mode !== 'rows' || busy}
+                              aria-pressed={layout.headerRows.includes(page * 12 + i)}
+                              className={
+                                layout.headerRows.includes(page * 12 + i)
+                                  ? 'font-bold text-blue-600'
+                                  : ''
+                              }
+                              onClick={() => {
+                                const r = page * 12 + i;
+                                update({
+                                  headerRows: layout.headerRows.includes(r)
+                                    ? layout.headerRows.filter((h) => h !== r)
+                                    : [...layout.headerRows, r].sort((a, b) => a - b),
+                                });
+                              }}
+                            >
+                              Row {page * 12 + i + 1}
+                              {layout.headerRows.includes(page * 12 + i) ? ' · Header' : ''}
+                            </button>
+                          </th>
+                          {row.slice(columnPage * 8, columnPage * 8 + 8).map((value, j) => {
+                            const r = page * 12 + i,
+                              c = columnPage * 8 + j;
+                            return (
+                              <td key={j} className="border">
+                                <button
+                                  type="button"
+                                  className="min-h-12 min-w-24 p-2 text-left hover:bg-blue-100"
+                                  onClick={() => {
+                                    if (!pick) return;
+                                    setField(pick, {
+                                      kind:
+                                        layout.fields[pick]?.kind === 'block' ? 'block' : 'cell',
+                                      r,
+                                      c,
+                                    });
+                                    setPick(null);
+                                  }}
+                                >
+                                  <span className="block text-slate-500">{cellAddress(r, c)}</span>
+                                  {value.slice(0, 70) || '—'}
+                                </button>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </details>
+            <h4 className="mt-4 font-semibold">3. Extracted records</h4>
+            {extraction.error && (
+              <p role="alert" className="my-2 text-amber-700">
+                {extraction.error}
+              </p>
+            )}
+            {missing.length > 0 && (
+              <p className="my-2 text-sm text-amber-700">
+                Required fields to map: {missing.join(', ')}
+              </p>
+            )}
+            {extraction.data && (
+              <>
+                <p className="my-2 text-sm">
+                  {extraction.data.rows.length} records extracted. Showing the first 10; click a
+                  value to inspect its source cell.
+                </p>
+                <div className="max-h-64 overflow-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr>
+                        {Object.keys(extraction.data.mapping).map((name) => (
+                          <th key={name} className="border p-2 text-left">
+                            {name}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {extraction.data.rows.slice(0, 10).map((row, i) => (
+                        <tr key={i}>
+                          {row.map((value, j) => {
+                            const name = Object.keys(extraction.data!.mapping)[j],
+                              p = extraction.data!.locations[i][name];
+                            return (
+                              <td key={j} className="border p-2">
+                                <button
+                                  type="button"
+                                  title={`Inspect ${cellAddress(p.r, p.c)}`}
+                                  onClick={() => {
+                                    setPick(name);
+                                    setPage(Math.floor(p.r / 12));
+                                    setColumnPage(Math.floor(p.c / 8));
+                                  }}
+                                >
+                                  {value || '—'}
+                                  <span className="ml-2 text-xs text-slate-400">
+                                    {cellAddress(p.r, p.c)}
+                                  </span>
+                                </button>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+            {localIssues.map((issue, i) => (
+              <p key={i} className="text-sm text-red-600">
+                Record {issue.row} · {issue.field}: {issue.message}
+              </p>
+            ))}
+            {selected.validationAvailable === false && (
+              <p className="my-3 text-sm">
+                This table is available to your account for reading. You can save its mapping, but
+                it has no supported create validator. Required fields and write rules are not yet
+                verified.
+              </p>
+            )}
+            <div className="my-4 flex gap-2">
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={
+                  busy ||
+                  !extraction.data?.rows.length ||
+                  !!missing.length ||
+                  !!localIssues.length ||
+                  !online ||
+                  offline ||
+                  cached ||
+                  selected.validationAvailable === false
+                }
+                onClick={() => void validate()}
+              >
+                Validate against database
+              </button>
+              <button
+                type="button"
+                className={input}
+                disabled={busy || !!extraction.error || sheet.previewLimited}
+                onClick={() => save()}
+              >
+                Save mapping draft
+              </button>
+            </div>
+            {result?.fingerprint === fingerprint && (
+              <div className="rounded border p-3">
+                <p>{result.count} records passed schema parsing.</p>
+                {result.issues?.length ? (
+                  <ul className="max-h-48 overflow-auto text-sm text-red-600">
+                    {result.issues.map((issue: any, i: number) => (
+                      <li key={i}>
+                        <button
+                          type="button"
+                          className="py-1 text-left underline"
+                          onClick={() => jump(issue.row, issue.field, issue.message)}
+                        >
+                          Record {issue.row || '—'} · {issue.field}: {issue.message}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <>
+                    <p className="my-2 text-emerald-700">
+                      Schema and available database checks passed. Destination business rules still
+                      apply before any future import.
+                    </p>
+                    <button type="button" className="btn-primary" onClick={() => save(true)}>
+                      Save validated mapping
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </section>
+    </div>
+  );
 }

@@ -204,9 +204,9 @@ function StatusBadge({ status }: { status: string }) {
 
 function ExpensePaymentBadge({ status }: { status?: string | null }) {
   const value = String(status || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
-  const style = value === 'PAID' ? 'bg-emerald-100 text-emerald-800'
-    : value === 'PARTIALLY_PAID' ? 'bg-blue-100 text-blue-800'
-    : 'bg-amber-100 text-amber-800';
+  const style = value === 'PAID' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
+    : value === 'PARTIALLY_PAID' ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300'
+    : 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300';
   const label = value === 'PAID' ? 'Expense paid'
     : value === 'PARTIALLY_PAID' ? 'Outstanding'
     : value === 'PAYMENT_RECONCILIATION_REQUIRED' ? 'Pending Payment'
@@ -1830,7 +1830,7 @@ Signed: Finance & Procurement Administration
             </div>
 
             {/* Vendor Summary KPI Cards */}
-            <div className="hidden grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="p-4 bg-card border rounded-2xl shadow-xs space-y-1">
                 <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">Total Vendors</span>
                 <p className="text-2xl font-black text-violet-600 dark:text-violet-400">{vendorAccounts.length}</p>

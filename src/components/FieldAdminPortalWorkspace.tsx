@@ -1945,7 +1945,7 @@ Signed: Field Operations Administration
               </div>
             </button>
 
-            <button className="!hidden p-1.5 text-slate-600" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            <button className="md:hidden p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
               {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
           </div>
@@ -6130,7 +6130,7 @@ Signed: Field Operations Administration
                     {/* Standard Tracker Details Section */}
                     <article data-batch-equipment-details className="space-y-5 text-sm print:text-black">
                       <section className="overflow-hidden border border-slate-900 rounded-none print:rounded-none bg-white dark:bg-slate-950">
-                        <h3 className="bg-[#184877] px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-white">
+                        <h3 className="bg-[#184877] dark:bg-slate-800 px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-white">
                           Record details
                         </h3>
                         <div className="grid grid-cols-1 border-l border-t border-slate-900 sm:grid-cols-2">
@@ -6145,7 +6145,7 @@ Signed: Field Operations Administration
                             ['Remarks', selectedGroupEquipmentItem.remarks || selectedGroupEquipmentItem.description],
                           ].map(([label, value]) => (
                             <div key={label} className="min-w-0 border-b border-r border-slate-900 bg-white dark:bg-slate-950">
-                              <div className="bg-[#dbe7f4] px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-800">
+                              <div className="bg-[#dbe7f4] dark:bg-slate-800 dark:text-slate-200 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-800">
                                 {label}
                               </div>
                               <div className="min-h-12 whitespace-pre-wrap break-words px-3 py-2 text-sm font-medium text-slate-900 dark:text-white">

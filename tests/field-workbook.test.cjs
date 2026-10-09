@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const ts = require('typescript');
 const XLSX = require('xlsx');
+function loadMappingModule(name){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/'+name+'.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,Date,structuredClone,require:n=>loadMappingModule(n.replace('./',''))});return exports;}
 const api = {};
 vm.runInNewContext(
   ts.transpileModule(fs.readFileSync('src/lib/fieldWorkbook.ts', 'utf8'), {
@@ -12,6 +13,7 @@ vm.runInNewContext(
   {
     exports: api,
     require: (name) => {
+      if(name==='./workbookMapping')return loadMappingModule('workbookMapping');
       if (['./workbookLimits','./workbookFormulas'].includes(name)) {
         const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/'+name.slice(2)+'.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,Date});return exports;
       }
@@ -376,3 +378,5 @@ test('new sheet capacity and view/print validation',()=>{assert.equal(api.MAX_RO
 test('Excel export writes live formulas, frozen panes and print settings',async()=>{const b=api.newWorkbook();const s=b.sheets[0];s.cells[1][0]='2';s.cells[2][0]='3';s.cells[3][0]='=SUM(A2:A3)';s.view={freezeRows:1,freezeColumns:1};s.print={area:{r:0,c:0,er:3,ec:2},orientation:'portrait',repeatRows:1,fit:'width',breakRows:[3]};const blob=await api.exportWorkbook(b);const Excel=require('exceljs'),book=new Excel.Workbook();await book.xlsx.load(await blob.arrayBuffer());const ws=book.worksheets[0];assert.equal(ws.getCell('A4').formula,'SUM(A2:A3)');assert.equal(ws.getCell('A4').result,5);assert.equal(ws.views[0].ySplit,1);assert.equal(ws.views[0].xSplit,1);assert.equal(ws.pageSetup.orientation,'portrait');assert.ok(ws.pageSetup.printArea.includes('A1'));assert.equal(ws.pageSetup.printTitlesRow,'1:1');const zip=XLSX.CFB.read(new Uint8Array(await blob.arrayBuffer()),{type:'buffer'});const xml=new TextDecoder().decode(XLSX.CFB.find(zip,'/xl/worksheets/sheet1.xml').content);assert.match(xml,/<rowBreaks[^>]*count="1"/);assert.match(xml,/<brk id="3"/);});
 
 test('exporting reordered imported rows preserves borders, comments and native values',async()=>{const Excel=require('exceljs'),original=new Excel.Workbook(),ws=original.addWorksheet('Data');ws.addRows([['Name','Value'],['Z',2],['A',3]]);ws.getCell('B2').border={bottom:{style:'double'}};ws.getCell('B2').note='Keep me';const b=await api.importWorkbook(new File([await original.xlsx.writeBuffer()],'input.xlsx'));const s=b.sheets[0];s.cells=[s.cells[0],s.cells[2],s.cells[1]];s.heights=[s.heights[0],s.heights[2],s.heights[1]];s.rowOrigins=[1,3,2];s.formats={...s.formats,'1:0':s.formats['2:0'],'1:1':s.formats['2:1'],'2:0':s.formats['1:0'],'2:1':s.formats['1:1']};const out=new Excel.Workbook();await out.xlsx.load(await (await api.exportWorkbook(b)).arrayBuffer());assert.equal(out.worksheets[0].getCell('A3').value,'Z');assert.equal(out.worksheets[0].getCell('B3').value,2);assert.equal(out.worksheets[0].getCell('B3').border.bottom.style,'double');assert.ok(out.worksheets[0].getCell('B3').note);});
+
+test('non-flat mappings survive duplication and require review after structural changes',()=>{const b=api.newWorkbook(),s=b.sheets[0];s.connection={table:'/api/v1/assets',mapping:{},headerRow:0,importId:'original',validatedAt:'before',layout:{version:1,mode:'form',headerRows:[0],labelColumn:0,start:0,end:2,blockSize:1,exclude:[],fields:{name:{kind:'cell',r:1,c:1}}}};const copy=api.copyWorkbook(b);assert.deepEqual(plain(copy.sheets[0].connection.layout),plain(s.connection.layout));assert.notEqual(copy.sheets[0].connection.importId,'original');assert.equal(copy.sheets[0].connection.validatedAt,undefined);const changed=api.changeDimension(s,'row',1,true);assert.equal(changed.connection.layout.needsReview,true);assert.equal(changed.connection.validatedAt,undefined);api.validateWorkbook({...b,sheets:[changed]});});

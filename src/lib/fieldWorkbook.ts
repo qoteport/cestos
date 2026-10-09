@@ -1,3 +1,4 @@
+import {assertLayout, type MappingLayout} from './workbookMapping';
 import {shiftReferences} from './workbookFormulas';
 import {WORKBOOK_MAX_ROWS,WORKBOOK_MAX_COLS} from './workbookLimits';
 import { importStyledWorkbook, exportStyledWorkbook } from './excelWorkbook';
@@ -26,7 +27,7 @@ export type FieldSheet = {
   view?: {freezeRows?:number;freezeColumns?:number;filterColumn?:number;filterText?:string};
   print?: {area?:CellRange;orientation?:'landscape'|'portrait';repeatRows?:number;fit?:'width'|'actual';breakRows?:number[]};
   databaseSource?: {path:string; loadedAt:string; columns:string[]; part:number; parts:number};
-  connection?: { table: string; mapping: Record<string, number>; headerRow: number; validatedAt?: string; importId?: string; writeMode?: 'insert' };
+  connection?: { table: string; mapping: Record<string, number>; headerRow: number; validatedAt?: string; importId?: string; writeMode?: 'insert'; layout?: MappingLayout };
   id: string;
   name: string;
   cells: string[][];
@@ -181,6 +182,7 @@ export function copyWorkbook(book: FieldWorkbook, template = false): FieldWorkbo
       table: sheet.connection.table,
       mapping: {...sheet.connection.mapping},
       headerRow: sheet.connection.headerRow,
+      ...(sheet.connection.layout?{layout:structuredClone(sheet.connection.layout)}:{}),
       importId: uid(),
       writeMode: 'insert' as const,
     }} : {}),
@@ -288,6 +290,7 @@ export function changeDimension(
   const next = structuredClone(sheet);
   if (next.connection) {
     delete next.connection.validatedAt;
+    if(next.connection.layout)next.connection.layout.needsReview=true;
     if (axis === 'column') {
       next.connection.mapping = Object.fromEntries(Object.entries(next.connection.mapping)
         .filter(([, column]) => !remove || column !== index)
@@ -485,6 +488,7 @@ export function validateWorkbook(value: unknown): FieldWorkbook {
     }
     if (s.connection) {
       const link = s.connection;
+      if(link.layout)assertLayout(s,link.layout,true);
       if (typeof link.table !== 'string' || !link.table.startsWith('/api/v1/') ||
           !Number.isInteger(link.headerRow) || link.headerRow < 0 || link.headerRow >= s.cells.length ||
           !link.mapping || typeof link.mapping !== 'object' || Array.isArray(link.mapping) ||

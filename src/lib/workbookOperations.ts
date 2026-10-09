@@ -36,6 +36,7 @@ export function sortSheet(
     cells: order.map((r, index) =>
       sheet.cells[r].map((value) => translateFormula(value, index - r, 0))
     ),
+    ...(sheet.connection?.layout?{connection:{...sheet.connection,validatedAt:undefined,layout:{...sheet.connection.layout,needsReview:true}}}:{}),
     heights: order.map((r) => sheet.heights[r]),
     rowOrigins: sheet.rowOrigins ? order.map(r => sheet.rowOrigins![r]) : undefined,
     formats,
