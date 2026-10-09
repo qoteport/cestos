@@ -1518,7 +1518,7 @@ export default function FieldWorkbookWorkspace({
       <fieldset disabled={busy} className="min-w-0">
         <nav aria-label="Workbook ribbon" className={styles.ribbonTabs}>
           <button type="button" onClick={leave} className={styles.fileTab}>File</button>
-          {['Home','Insert','Data','View'].map(tab=><button type="button" key={tab} aria-pressed={ribbonTab===tab} onClick={()=>{setRibbonTab(tab);setShowToolbar(true);}} className={ribbonTab===tab ? styles.ribbonActive : ''}>{tab}</button>)}
+          {['Home','Insert','Data','View','Folders'].map(tab=><button type="button" key={tab} aria-pressed={ribbonTab===tab} onClick={()=>{setRibbonTab(tab);setShowToolbar(true);}} className={ribbonTab===tab ? styles.ribbonActive : ''}>{tab}</button>)}
           <button type="button" className="!ml-auto" aria-label={showToolbar?'Collapse ribbon':'Expand ribbon'} onClick={()=>setShowToolbar(!showToolbar)}>{showToolbar?<ChevronUp size={14}/>:<ChevronDown size={14}/>}</button>
         </nav>
         <div className={`${styles.viewControls} ${ribbonTab === "View" && showToolbar ? "" : "!hidden"}`}>
@@ -1574,6 +1574,89 @@ export default function FieldWorkbookWorkspace({
             {ribbonTab === 'Data' && <button type="button" className={button} onClick={()=>setDatabaseLoadOpen(true)}><Download size={16}/>Load from database</button>}
             {ribbonTab === 'Data' && <button type="button" className={button} onClick={()=>setConnectionSheet(sheet.id)}><FileSpreadsheet size={16}/>Connect to database table</button>}
             {ribbonTab === 'View' && <p className="text-xs text-slate-500">Shortcuts: Ctrl/Cmd+S save · Ctrl/Cmd+Z undo · Ctrl/Cmd+Shift+Z or Ctrl+Y redo · Ctrl/Cmd+B/I/U bold/italic/underline · Ctrl/Cmd+D/R fill down/right · Ctrl/Cmd+A select all cells · Shift+Space select rows · Ctrl+Space select columns · Ctrl/Cmd+Home first cell · Delete clear selected range. Tab/Enter move cells; Shift+Arrow extends selection. Formatting and selection shortcuts apply inside the grid.</p>}
+            {ribbonTab === 'Folders' && (
+              <div className="flex flex-wrap items-center gap-3 py-1 w-full">
+                <button type="button" className={button} onClick={() => setFoldersOpen(true)}>
+                  <Folder size={16} />
+                  Manage sheet folders
+                </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-500">Filter:</span>
+                  <div className="w-52">
+                    <SearchableSelect
+                      ariaLabel="Show sheet folder"
+                      value={folderFilter}
+                      options={[
+                        { value: '*', label: 'All sheets' },
+                        { value: 'unfiled', label: 'Unfiled sheets' },
+                        ...(book.folders || []).map((f) => ({
+                          value: f.id,
+                          label: `${f.name} (${book.sheets.filter((s) => s.folderId === f.id).length})`,
+                        })),
+                      ]}
+                      onChange={(value) => {
+                        setFolderFilter(value || '*');
+                        const first = book.sheets.findIndex(
+                          (s) => value === '*' || !value || (value === 'unfiled' ? !s.folderId : s.folderId === value)
+                        );
+                        if (first >= 0) {
+                          setSheetIndex(first);
+                          setAnchor({ r: 0, c: 0 });
+                          setEnd({ r: 0, c: 0 });
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5 border-l border-slate-200 pl-3 dark:border-slate-800">
+                  {[
+                    { id: '*', name: 'All sheets', count: book.sheets.length },
+                    { id: 'unfiled', name: 'Unfiled', count: book.sheets.filter((s) => !s.folderId).length },
+                    ...(book.folders || []).map((f) => ({
+                      id: f.id,
+                      name: f.name,
+                      count: book.sheets.filter((s) => s.folderId === f.id).length,
+                    })),
+                  ].map((f) => {
+                    const active = folderFilter === f.id;
+                    return (
+                      <button
+                        key={f.id}
+                        type="button"
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ${
+                          active
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                        }`}
+                        onClick={() => {
+                          setFolderFilter(f.id);
+                          const first = book.sheets.findIndex(
+                            (s) => f.id === '*' || !f.id || (f.id === 'unfiled' ? !s.folderId : s.folderId === f.id)
+                          );
+                          if (first >= 0) {
+                            setSheetIndex(first);
+                            setAnchor({ r: 0, c: 0 });
+                            setEnd({ r: 0, c: 0 });
+                          }
+                        }}
+                      >
+                        <span>{f.name}</span>
+                        <span
+                          className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+                            active ? 'bg-emerald-700 text-emerald-100' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          {f.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="ml-auto text-xs text-slate-500">
+                  Active sheet: <strong className="font-bold text-slate-900 dark:text-white">{sheet.name}</strong>
+                </div>
+              </div>
+            )}
             {/* Undo / Redo Group */}
             <div className="flex items-center gap-1" hidden={!["Home"].includes(ribbonTab)}>
               <button
@@ -2329,7 +2412,7 @@ export default function FieldWorkbookWorkspace({
               </datalist>
             )
         )}
-        <div style={{order:5}} className="flex shrink-0 items-center gap-2 border-t bg-slate-50 px-3 py-1 dark:bg-slate-900"><button type="button" className={button} onClick={()=>setFoldersOpen(true)}><Folder size={14}/>Folders</button><div className="w-56"><SearchableSelect ariaLabel="Show sheet folder" value={folderFilter} options={[{value:'*',label:'All sheets'},{value:'unfiled',label:'Unfiled'},...(book.folders||[]).map(f=>({value:f.id,label:`${f.name} (${book.sheets.filter(s=>s.folderId===f.id).length})`}))]} onChange={value=>{setFolderFilter(value||'*');const first=book.sheets.findIndex(s=>value==='*'||!value||(value==='unfiled'?!s.folderId:s.folderId===value));if(first>=0){setSheetIndex(first);setAnchor({r:0,c:0});setEnd({r:0,c:0});}}}/></div><span className="truncate text-xs text-slate-500">Active: {sheet.name}</span></div>
+
         <div className={styles.sheetTabs}>
           <div
             role="tablist"
