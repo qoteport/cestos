@@ -1,8 +1,13 @@
+import { readFileSync } from 'node:fs';
 import { imageHosts } from './image-hosts.config.mjs';
+
+let buildVersion = '';
+try { buildVersion = JSON.parse(readFileSync(new URL('./public/build-version.json', import.meta.url), 'utf8')).version; } catch {}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   productionBrowserSourceMaps: false,
+  env: { NEXT_PUBLIC_BUILD_VERSION: buildVersion },
   async rewrites() {
     // CESTOS_API_BACKEND_URL takes priority over CESTOS_API_URL (which may be overridden by .env.local to localhost)
     const backend = (process.env.CESTOS_API_BACKEND_URL || process.env.CESTOS_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
@@ -17,7 +22,7 @@ const nextConfig = {
   },
   experimental: {
     // Set the timeout to 2 minutes (120,000 ms) or higher as needed
-    proxyTimeout: 140000, 
+    proxyTimeout: 140000,
   },
   images: {
     remotePatterns: imageHosts,

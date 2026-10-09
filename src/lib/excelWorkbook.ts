@@ -1,3 +1,5 @@
+import {WORKBOOK_MAX_ROWS,WORKBOOK_MAX_COLS} from './workbookLimits';
+import {calculateSheet} from './workbookFormulas';
 import { typedCellValue, cellNumberFormat } from './workbookCellTypes';
 import type { FieldWorkbook, FieldSheet, CellFormat } from './fieldWorkbook';
 import type { Workbook, Worksheet, Cell, Color } from 'exceljs';
@@ -14,6 +16,8 @@ export function originalBytes(base64: string): Uint8Array {
 export function sheetSnapshot(sheet: FieldSheet): string {
   return JSON.stringify({
     name: sheet.name,
+    view: sheet.view,
+    print: sheet.print,
     cells: sheet.cells,
     widths: sheet.widths,
     heights: sheet.heights,
@@ -119,23 +123,24 @@ export async function importStyledWorkbook(file: File): Promise<FieldWorkbook> {
   const X = await import('xlsx');
   const bytes = new Uint8Array(await file.arrayBuffer());
   const original = new Excel.Workbook();
+  original.calcProperties.fullCalcOnLoad=true;
   if (bytes.length) await original.xlsx.load(bytes as any);
   const values = X.read(bytes, { type: 'array', cellStyles: true, raw: true });
   const theme = themeColors(original);
   const sheets: FieldSheet[] = original.worksheets.map((ws) => {
-    const rows = Math.max(1, Math.min(500, ws.rowCount)),
-      cols = Math.max(1, Math.min(50, ws.columnCount));
+    const rows = Math.max(1, Math.min(WORKBOOK_MAX_ROWS, ws.rowCount)),
+      cols = Math.max(1, Math.min(WORKBOOK_MAX_COLS, ws.columnCount));
     const sheet: FieldSheet = {
       id: crypto.randomUUID(),
       name: ws.name,
       imported: true,
       excelId: ws.id,
       hidden: ws.state !== 'visible',
-      previewLimited: ws.rowCount > 500 || ws.columnCount > 50,
+      previewLimited: ws.rowCount > WORKBOOK_MAX_ROWS || ws.columnCount > WORKBOOK_MAX_COLS,
       cells: Array.from({ length: rows }, (_, r) =>
         Array.from({ length: cols }, (_, c) => {
           const cell = values.Sheets[ws.name]?.[X.utils.encode_cell({ r, c })];
-          return cell ? X.utils.format_cell(cell) : '';
+          return cell?.f ? '=' + cell.f : cell ? X.utils.format_cell(cell) : '';
         })
       ),
       widths: Array.from({ length: cols }, (_, c) =>
@@ -184,10 +189,21 @@ export async function importStyledWorkbook(file: File): Promise<FieldWorkbook> {
   };
 }
 function reshape(ws: Worksheet, origins: (number | null)[], count: number, axis: 'row' | 'column') {
+  if(axis==='row') {
+    // Snapshot before moving rows so sorting retains borders, comments and native cell types.
+    const models=Array.from({length:count},(_,i)=>ws.getRow(i+1).model);
+    for(let i=0;i<origins.length;i++) {
+      const source=origins[i]===null?undefined:models[origins[i]!-1];
+      const row=ws.getRow(i+1);
+      if(source)row.model={...source,number:i+1,cells:(source.cells||[]).map(cell=>({...cell,address:String(cell.address).replace(/\d+$/,String(i+1)) as unknown as typeof cell.address}))};
+      else row.model={number:i+1,cells:[],style:{},hidden:false} as typeof row.model;
+    }
+    if(count>origins.length)ws.spliceRows(origins.length+1,count-origins.length);
+    return;
+  }
   const remaining: (number | null)[] = Array.from({ length: count }, (_, i) => i + 1);
   const splice = (position: number, remove: boolean) => {
-    if (axis === 'row') ws.spliceRows(position + 1, remove ? 1 : 0, ...(remove ? [] : [[]]));
-    else ws.spliceColumns(position + 1, remove ? 1 : 0, ...(remove ? [] : [[]]));
+    ws.spliceColumns(position + 1, remove ? 1 : 0, ...(remove ? [] : [[]]));
   };
   for (let i = 0; i < origins.length; i++) {
     if (origins[i] === null) {
@@ -220,12 +236,21 @@ export async function exportStyledWorkbook(book: FieldWorkbook): Promise<Blob> {
   for (const ws of [...original.worksheets])
     if (!retainedIds.has(ws.id)) original.removeWorksheet(ws.id);
   for (const sheet of book.sheets) {
+    const calculated=calculateSheet(sheet);
     const baseline = source.sheets[sheet.id];
     const previous = baseline ? JSON.parse(baseline.snapshot) : null;
     const ws =
       (baseline ? original.getWorksheet(baseline.excelId) : undefined) ||
       original.addWorksheet(sheet.name);
     ws.name = sheet.name;
+    if(sheet.view)ws.views=[{state:'frozen',xSplit:sheet.view.freezeColumns||0,ySplit:sheet.view.freezeRows||0}];
+    if(sheet.print){ws.pageSetup.orientation=sheet.print.orientation||'landscape';ws.pageSetup.fitToPage=sheet.print.fit!=='actual';ws.pageSetup.fitToWidth=1;ws.pageSetup.fitToHeight=0;
+      ws.pageSetup.printArea=sheet.print.area?X.utils.encode_range({s:{r:sheet.print.area.r,c:sheet.print.area.c},e:{r:sheet.print.area.er,c:sheet.print.area.ec}}):'';
+      ws.pageSetup.printTitlesRow=sheet.print.repeatRows?`${(sheet.print.area?.r||0)+1}:${(sheet.print.area?.r||0)+sheet.print.repeatRows}`:'';
+      (ws as Worksheet & {rowBreaks:unknown[]}).rowBreaks=[];
+      for(const row of sheet.print.breakRows||[])if(row>0)ws.getRow(row).addPageBreak();
+    }
+
     if (baseline?.snapshot === sheetSnapshot(sheet)) continue;
     const shapeChanged =
       previous &&
@@ -267,6 +292,7 @@ export async function exportStyledWorkbook(book: FieldWorkbook): Promise<Blob> {
             if (!cell.formula || value !== previous?.cells[originalRow]?.[originalCol]) cell.value = typedCellValue(value, style);
           }
         }
+        if(value.startsWith('='))cell.value={formula:value.slice(1),result:Number.isFinite(Number(calculated[r][c]))?Number(calculated[r][c]):undefined};
         if (style && JSON.stringify(style) !== JSON.stringify(oldStyle)) {
           cell.font = { ...cell.font, bold: style.bold, italic: style.italic };
           if (!previous) {

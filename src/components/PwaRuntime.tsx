@@ -1,12 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { apiFetch, discardOfflineWrite, getOfflineWriteQueue, invalidateMemoryApiCache, retryOfflineWrite, syncOfflineWriteQueue } from '@/lib/api';
 import type { OfflineWrite } from '@/lib/offlineStore';
 import { useAuth } from './AuthProvider';
 import { API_DATA_REFRESHED_EVENT } from '@/lib/apiDataEvents';
 
 export default function PwaRuntime() {
+  const reloadStarted = useRef(false);
+  const lastActivity = useRef(Date.now());
+  const editedControls = useRef(new Set<Element>());
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [availableBuildVersion, setAvailableBuildVersion] = useState('');
@@ -159,6 +162,8 @@ export default function PwaRuntime() {
   useEffect(() => {
     let active = true;
     let checking = false;
+    let runningVersion = process.env.NEXT_PUBLIC_BUILD_VERSION || '';
+    if (process.env.NODE_ENV !== 'production') return;
     const check = async () => {
       if (checking || document.visibilityState === 'hidden' || navigator.onLine === false) return;
       checking = true;
@@ -168,12 +173,8 @@ export default function PwaRuntime() {
         const info = await response.json();
         const next = String(info.version || '');
         if (!next) return;
-        const acknowledged = localStorage.getItem('cestos.pwa.acknowledgedBuildVersion');
-        if (!acknowledged) {
-          localStorage.setItem('cestos.pwa.acknowledgedBuildVersion', next);
-          return;
-        }
-        if (next !== acknowledged && active) {
+        if (!runningVersion) { runningVersion = next; return; }
+        if (next !== runningVersion && active) {
           setAvailableBuildVersion(next);
           setUpdateAvailable(true);
         }
@@ -187,6 +188,50 @@ export default function PwaRuntime() {
     document.addEventListener('visibilitychange', onVisible);
     return () => { active = false; window.clearInterval(timer); window.removeEventListener('online', onVisible); document.removeEventListener('visibilitychange', onVisible); };
   }, []);
+
+  useEffect(() => {
+    const activity = () => { lastActivity.current = Date.now(); };
+    const edit = (event: Event) => {
+      activity();
+      const element = event.target;
+      if (element instanceof Element && element.matches('input,textarea,select,[contenteditable="true"]')) editedControls.current.add(element);
+    };
+    window.addEventListener('pointerdown', activity, true);
+    window.addEventListener('keydown', activity, true);
+    window.addEventListener('input', edit, true);
+    window.addEventListener('change', edit, true);
+    return () => {
+      window.removeEventListener('pointerdown', activity, true);
+      window.removeEventListener('keydown', activity, true);
+      window.removeEventListener('input', edit, true);
+      window.removeEventListener('change', edit, true);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!updateAvailable) return;
+    const attempt = async () => {
+      if (reloadStarted.current || !navigator.onLine || document.visibilityState !== 'visible' || syncingOffline || offlineCacheWarning || Date.now()-lastActivity.current < 15000) return;
+      for (const element of editedControls.current) if (!element.isConnected) editedControls.current.delete(element);
+      // Retain forms until the user saves/closes them; never reload an active editor.
+      if (editedControls.current.size || document.querySelector('dialog[open], [role="dialog"]') || document.activeElement?.matches('input,textarea,select,[contenteditable="true"]')) return;
+      const guard = new Event('beforeunload', {cancelable: true});
+      if (!window.dispatchEvent(guard)) return;
+      try { if (sessionStorage.getItem('cestos.autoReloadAttempt') === availableBuildVersion) return; } catch {}
+      reloadStarted.current = true;
+      try {
+        // Confirm connectivity and that this release is still the deployed version.
+        const response = await fetch(`/build-version.json?t=${Date.now()}`, {cache:'no-store'});
+        if (!response.ok || (await response.json()).version !== availableBuildVersion) {reloadStarted.current=false;return;}
+        if (Date.now()-lastActivity.current < 15000 || editedControls.current.size || !navigator.onLine) {reloadStarted.current=false;return;}
+        if (document.querySelector('dialog[open], [role="dialog"]') || !window.dispatchEvent(new Event('beforeunload', {cancelable:true}))) {reloadStarted.current=false;return;}
+        try {sessionStorage.setItem('cestos.autoReloadAttempt', availableBuildVersion);} catch {}
+        window.location.reload();
+      } catch {reloadStarted.current=false;}
+    };
+    const timer = window.setInterval(() => {void attempt();}, 5000);
+    return () => window.clearInterval(timer);
+  }, [updateAvailable, availableBuildVersion, syncingOffline, offlineCacheWarning]);
 
   useEffect(() => {
     if (!user?.id || !('Notification' in window) || Notification.permission !== 'granted' || localStorage.getItem(`cestos.browserNotifications.enabled.${user.id}`) !== 'true') return;
@@ -254,7 +299,6 @@ export default function PwaRuntime() {
   };
 
   const reloadForUpdate = () => {
-    if (availableBuildVersion) localStorage.setItem('cestos.pwa.acknowledgedBuildVersion', availableBuildVersion);
     window.location.reload();
   };
 
@@ -264,7 +308,7 @@ export default function PwaRuntime() {
   return <>
     {dataRefreshedAt > 0 && <div className="fixed right-4 top-4 z-[2147483646] rounded-full border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-800 shadow-lg dark:border-emerald-900 dark:bg-slate-900 dark:text-emerald-300" role="status" aria-live="polite">Data refreshed</div>}
     {showRuntimeBanner && <div className="fixed bottom-4 left-1/2 z-[2147483646] flex w-[min(94vw,680px)] -translate-x-1/2 flex-wrap items-center justify-between gap-3 border border-slate-300/80 bg-white dark:bg-slate-900 p-3.5 sm:p-4 text-sm text-slate-900 dark:text-slate-100 shadow-2xl rounded-2xl backdrop-blur-md" role="status" aria-live="polite">
-      <span className="min-w-0 flex-1 font-medium">{offlineAccess ? `Offline access · saved data only. Sign-in will be verified before syncing. Available until ${new Date(offlineUntil || 0).toLocaleDateString()}.` : offlineCacheWarning ? 'Some data could not be saved for offline use. Check this device’s available storage, then reload the data.' : !online ? 'Offline mode. Changes are saved on this device and will sync when connected.' : offlineWrites.some((item) => item.state === 'failed') ? `${offlineWrites.filter((item) => item.state === 'failed').length} offline change(s) need attention.` : offlineWrites.length || syncingOffline ? `${offlineWrites.length} change(s) waiting to sync${syncingOffline ? '…' : '.'}` : updateAvailable ? 'A new Cestos version is ready.' : installPrompt ? 'Install Cestos Operations for quick access.' : browserNotificationsEnabled ? 'Browser notifications are enabled.' : 'Get browser alerts for new Cestos notifications.'}</span>
+      <span className="min-w-0 flex-1 font-medium">{offlineAccess ? `Offline access · saved data only. Sign-in will be verified before syncing. Available until ${new Date(offlineUntil || 0).toLocaleDateString()}.` : offlineCacheWarning ? 'Some data could not be saved for offline use. Check this device’s available storage, then reload the data.' : !online ? 'Offline mode. Changes are saved on this device and will sync when connected.' : offlineWrites.some((item) => item.state === 'failed') ? `${offlineWrites.filter((item) => item.state === 'failed').length} offline change(s) need attention.` : offlineWrites.length || syncingOffline ? `${offlineWrites.length} change(s) waiting to sync${syncingOffline ? '…' : '.'}` : updateAvailable ? 'Update ready. The app will reload automatically when idle and your editors are closed.' : installPrompt ? 'Install Cestos Operations for quick access.' : browserNotificationsEnabled ? 'Browser notifications are enabled.' : 'Get browser alerts for new Cestos notifications.'}</span>
       <div className="flex shrink-0 flex-wrap gap-2">
         {offlineWrites.length > 0 && <button type="button" onClick={() => setQueueOpen(true)} className="border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-xl font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition">Offline changes ({offlineWrites.length})</button>}
         {offlineCacheWarning && <button type="button" onClick={() => setOfflineCacheWarning(false)} className="border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition">Dismiss</button>}

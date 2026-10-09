@@ -12,6 +12,10 @@ vm.runInNewContext(
   {
     exports: api,
     require: (name) => {
+      if (['./workbookLimits','./workbookFormulas'].includes(name)) {
+        const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/'+name.slice(2)+'.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,Date});return exports;
+      }
+
       if (name !== './excelWorkbook' && name !== './workbookCellTypes') return require(name);
       const exports = {};
       vm.runInNewContext(
@@ -20,7 +24,7 @@ vm.runInNewContext(
         }).outputText,
         {
           exports,
-          require: name => { if(name !== './workbookCellTypes') return require(name); const result={}; vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/workbookCellTypes.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:result,Date}); return result; },
+          require: name => { if(['./workbookLimits','./workbookFormulas'].includes(name)){const result={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/'+name.slice(2)+'.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:result,Date});return result;} if(name !== './workbookCellTypes') return require(name); const result={}; vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/workbookCellTypes.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:result,Date}); return result; },
           File,
           Blob,
           Uint8Array,
@@ -104,7 +108,7 @@ test('paste expands the grid, preserves blank cells and rejects merged destinati
   assert.equal(s.cells.length, 26);
   assert.equal(s.widths.length, 10);
   assert.equal(s.cells[25][7], '0012');
-  assert.throws(() => api.pasteCells(s, 499, 0, [['a'], ['b']]), /limit/);
+  assert.throws(() => api.pasteCells(s, api.MAX_ROWS-1, 0, [['a'], ['b']]), /limit/);
   s = api.mergeCells(s, { r: 0, c: 0, er: 0, ec: 1 });
   assert.throws(() => api.pasteCells(s, 0, 0, [['a', 'b']]), /Unmerge/);
 });
@@ -169,7 +173,7 @@ test('Excel export round trips sheets, merges, values, widths and heights', asyn
 test('large XLSX sheets retain all data outside the editable preview', async () => {
   const Excel = require('exceljs');
   const source = new Excel.Workbook();
-  source.addWorksheet('Large').getCell('AZ501').value = 'Outside preview';
+  source.addWorksheet('Large').getCell('CW2001').value = 'Outside preview';
   const bytes = await source.xlsx.writeBuffer();
   const book = await api.importWorkbook(new File([bytes], 'large.xlsx'));
   assert.equal(book.sheets[0].previewLimited, true);
@@ -332,3 +336,43 @@ test('row and column deletion preserve complete snapshots for undo', () => {
     assert.equal(original.cells[1][1], 'Keep for undo');
   }
 });
+test('database mappings track inserted and deleted columns and invalidate validation',()=>{
+ const s=api.makeSheet();s.connection={table:'/api/v1/assets',mapping:{name:0,code:2},headerRow:1,validatedAt:'checked',importId:'same-import',writeMode:'insert'};
+ const inserted=api.changeDimension(s,'column',1,false);
+ assert.deepEqual(plain(inserted.connection.mapping),{name:0,code:3});
+ assert.equal(inserted.connection.validatedAt,undefined);
+ assert.equal(inserted.connection.importId,'same-import');
+ const removed=api.changeDimension(inserted,'column',0,true);
+ assert.deepEqual(plain(removed.connection.mapping),{code:2});
+ assert.deepEqual(plain(s.connection.mapping),{name:0,code:2});
+});
+test('header row moves with structure and deleting it clears mappings for review',()=>{
+ const s=api.makeSheet();s.connection={table:'/api/v1/assets',mapping:{name:0},headerRow:1,validatedAt:'checked'};
+ const inserted=api.changeDimension(s,'row',0,false);
+ assert.equal(inserted.connection.headerRow,2);
+ const removed=api.changeDimension(inserted,'row',2,true);
+ assert.deepEqual(plain(removed.connection.mapping),{});
+ assert.equal(removed.connection.headerRow,2);
+ assert.equal(removed.connection.validatedAt,undefined);
+});
+test('data edits invalidate database validation but view-only resizing does not',()=>{
+ const s=api.makeSheet();s.connection={table:'/api/v1/assets',mapping:{name:0},headerRow:0,validatedAt:'checked'};
+ const changed=structuredClone(s);changed.cells[1][0]='New value';
+ assert.equal(api.invalidateMapping(s,changed).connection.validatedAt,undefined);
+ assert.equal(s.connection.validatedAt,'checked');
+ const resized={...s,widths:s.widths.map(w=>w+1)};
+ assert.equal(api.invalidateMapping(s,resized).connection.validatedAt,'checked');
+});
+test('invalid or ambiguous imported database mappings are rejected',()=>{
+ const b=api.newWorkbook();const s=b.sheets[0];
+ for(const connection of [
+  {table:'/api/v1/assets',headerRow:0,mapping:{name:0,code:0}},
+  {table:'/api/v1/assets',headerRow:999,mapping:{}},
+  {table:'/api/v1/assets',headerRow:0,mapping:{name:999}}
+ ]) {s.connection=connection;assert.throws(()=>api.validateWorkbook(b),/Invalid database mapping/);}
+});
+
+test('new sheet capacity and view/print validation',()=>{assert.equal(api.MAX_ROWS,2000);assert.equal(api.MAX_COLS,100);const b=api.newWorkbook();b.sheets[0].view={freezeRows:1,freezeColumns:1};b.sheets[0].print={area:{r:0,c:0,er:2,ec:2},repeatRows:1,breakRows:[2]};api.validateWorkbook(b);b.sheets[0].view.freezeColumns=999;assert.throws(()=>api.validateWorkbook(b),/view settings/);});
+test('Excel export writes live formulas, frozen panes and print settings',async()=>{const b=api.newWorkbook();const s=b.sheets[0];s.cells[1][0]='2';s.cells[2][0]='3';s.cells[3][0]='=SUM(A2:A3)';s.view={freezeRows:1,freezeColumns:1};s.print={area:{r:0,c:0,er:3,ec:2},orientation:'portrait',repeatRows:1,fit:'width',breakRows:[3]};const blob=await api.exportWorkbook(b);const Excel=require('exceljs'),book=new Excel.Workbook();await book.xlsx.load(await blob.arrayBuffer());const ws=book.worksheets[0];assert.equal(ws.getCell('A4').formula,'SUM(A2:A3)');assert.equal(ws.getCell('A4').result,5);assert.equal(ws.views[0].ySplit,1);assert.equal(ws.views[0].xSplit,1);assert.equal(ws.pageSetup.orientation,'portrait');assert.ok(ws.pageSetup.printArea.includes('A1'));assert.equal(ws.pageSetup.printTitlesRow,'1:1');const zip=XLSX.CFB.read(new Uint8Array(await blob.arrayBuffer()),{type:'buffer'});const xml=new TextDecoder().decode(XLSX.CFB.find(zip,'/xl/worksheets/sheet1.xml').content);assert.match(xml,/<rowBreaks[^>]*count="1"/);assert.match(xml,/<brk id="3"/);});
+
+test('exporting reordered imported rows preserves borders, comments and native values',async()=>{const Excel=require('exceljs'),original=new Excel.Workbook(),ws=original.addWorksheet('Data');ws.addRows([['Name','Value'],['Z',2],['A',3]]);ws.getCell('B2').border={bottom:{style:'double'}};ws.getCell('B2').note='Keep me';const b=await api.importWorkbook(new File([await original.xlsx.writeBuffer()],'input.xlsx'));const s=b.sheets[0];s.cells=[s.cells[0],s.cells[2],s.cells[1]];s.heights=[s.heights[0],s.heights[2],s.heights[1]];s.rowOrigins=[1,3,2];s.formats={...s.formats,'1:0':s.formats['2:0'],'1:1':s.formats['2:1'],'2:0':s.formats['1:0'],'2:1':s.formats['1:1']};const out=new Excel.Workbook();await out.xlsx.load(await (await api.exportWorkbook(b)).arrayBuffer());assert.equal(out.worksheets[0].getCell('A3').value,'Z');assert.equal(out.worksheets[0].getCell('B3').value,2);assert.equal(out.worksheets[0].getCell('B3').border.bottom.style,'double');assert.ok(out.worksheets[0].getCell('B3').note);});

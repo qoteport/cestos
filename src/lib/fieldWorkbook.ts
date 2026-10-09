@@ -1,7 +1,13 @@
+import {shiftReferences} from './workbookFormulas';
+import {WORKBOOK_MAX_ROWS,WORKBOOK_MAX_COLS} from './workbookLimits';
 import { importStyledWorkbook, exportStyledWorkbook } from './excelWorkbook';
 export type CellFormat = {
   dataType?: 'general' | 'text' | 'number' | 'currency' | 'percent' | 'date' | 'time' | 'datetime';
   decimals?: number; currency?: string;
+  dateOrder?: 'ymd' | 'dmy' | 'mdy';
+  dateSeparator?: '-' | '/' | '.';
+  timeClock?: '12' | '24';
+  showSeconds?: boolean;
   fontName?: string;
   fontSize?: number;
   color?: string;
@@ -17,6 +23,9 @@ export type CellFormat = {
 };
 export type CellRange = { r: number; c: number; er: number; ec: number };
 export type FieldSheet = {
+  view?: {freezeRows?:number;freezeColumns?:number;filterColumn?:number;filterText?:string};
+  print?: {area?:CellRange;orientation?:'landscape'|'portrait';repeatRows?:number;fit?:'width'|'actual';breakRows?:number[]};
+  databaseSource?: {path:string; loadedAt:string; columns:string[]; part:number; parts:number};
   connection?: { table: string; mapping: Record<string, number>; headerRow: number; validatedAt?: string; importId?: string; writeMode?: 'insert' };
   id: string;
   name: string;
@@ -45,8 +54,8 @@ export type FieldWorkbook = {
     sheets: Record<string, { excelId: number; snapshot: string }>;
   };
 };
-export const MAX_ROWS = 500;
-export const MAX_COLS = 50;
+export const MAX_ROWS = WORKBOOK_MAX_ROWS;
+export const MAX_COLS = WORKBOOK_MAX_COLS;
 const uid = () => crypto.randomUUID();
 export function columnName(index: number): string {
   let name = '';
@@ -184,6 +193,16 @@ export function copyWorkbook(book: FieldWorkbook, template = false): FieldWorkbo
     template,
   };
 }
+/** Validation applies to exact sheet data, never to a later edit. */
+export function invalidateMapping(previous: FieldSheet, next: FieldSheet): FieldSheet {
+  if (!next.connection?.validatedAt) return next;
+  if (JSON.stringify(previous.cells) === JSON.stringify(next.cells) &&
+      JSON.stringify(previous.formats) === JSON.stringify(next.formats) &&
+      JSON.stringify(previous.merges) === JSON.stringify(next.merges)) return next;
+  const connection = {...next.connection};
+  delete connection.validatedAt;
+  return {...next, connection};
+}
 export function rangeBetween(a: { r: number; c: number }, b = a): CellRange {
   return {
     r: Math.min(a.r, b.r),
@@ -267,6 +286,19 @@ export function changeDimension(
 ): FieldSheet {
   if (sheet.previewLimited) throw new Error('Change this large sheet structure in Excel.');
   const next = structuredClone(sheet);
+  if (next.connection) {
+    delete next.connection.validatedAt;
+    if (axis === 'column') {
+      next.connection.mapping = Object.fromEntries(Object.entries(next.connection.mapping)
+        .filter(([, column]) => !remove || column !== index)
+        .map(([field, column]) => [field, column >= index ? column + (remove ? -1 : 1) : column]));
+    } else if (remove && index === next.connection.headerRow) {
+      next.connection.mapping = {};
+      next.connection.headerRow = Math.min(index, next.cells.length - 2);
+    } else if (index <= next.connection.headerRow) {
+      next.connection.headerRow += remove ? -1 : 1;
+    }
+  }
   const origins = axis === 'row' ? next.rowOrigins : next.columnOrigins;
   origins?.splice(index, remove ? 1 : 0, ...(remove ? [] : [null]));
   const count = axis === 'row' ? next.cells.length : next.widths.length;
@@ -286,6 +318,10 @@ export function changeDimension(
     next.cells.forEach((row) => row.splice(index, remove ? 1 : 0, ...(remove ? [] : [''])));
     next.widths.splice(index, remove ? 1 : 0, ...(remove ? [] : [160]));
   }
+  next.cells=next.cells.map(row=>row.map(value=>shiftReferences(value,axis,index,remove)));
+  // Structural edits invalidate positional view/print settings instead of pointing at the wrong cells.
+  if(next.view)next.view={};
+  if(next.print)next.print={orientation:next.print.orientation,fit:next.print.fit};
   next.formats = {};
   for (const [key, format] of Object.entries(sheet.formats || {})) {
     let [r, c] = key.split(':').map(Number);
@@ -431,6 +467,32 @@ export function validateWorkbook(value: unknown): FieldWorkbook {
       !Array.isArray(s.merges)
     )
       throw new Error('Invalid worksheet dimensions.');
+    const integerWithin=(v:unknown,max:number)=>Number.isInteger(v)&&Number(v)>=0&&Number(v)<=max;
+    if(s.view && (typeof s.view!=='object'||Array.isArray(s.view)||
+      (s.view.freezeRows!==undefined&&!integerWithin(s.view.freezeRows,s.cells.length))||
+      (s.view.freezeColumns!==undefined&&!integerWithin(s.view.freezeColumns,s.widths.length))||
+      (s.view.filterColumn!==undefined&&!integerWithin(s.view.filterColumn,s.widths.length-1))||
+      (s.view.filterText!==undefined&&typeof s.view.filterText!=='string')))
+      throw new Error('Invalid worksheet view settings.');
+    if(s.print){const p=s.print,a=p.area;
+      if(typeof p!=='object'||Array.isArray(p)||
+        (p.orientation!==undefined&&!['portrait','landscape'].includes(p.orientation))||
+        (p.fit!==undefined&&!['width','actual'].includes(p.fit))||
+        (p.repeatRows!==undefined&&!integerWithin(p.repeatRows,20))||
+        (p.breakRows!==undefined&&(!Array.isArray(p.breakRows)||p.breakRows.some(r=>!integerWithin(r,s.cells.length-1))))||
+        (a&&(!integerWithin(a.r,s.cells.length-1)||!integerWithin(a.er,s.cells.length-1)||!integerWithin(a.c,s.widths.length-1)||!integerWithin(a.ec,s.widths.length-1)||a.r>a.er||a.c>a.ec)))
+        throw new Error('Invalid worksheet print settings.');
+    }
+    if (s.connection) {
+      const link = s.connection;
+      if (typeof link.table !== 'string' || !link.table.startsWith('/api/v1/') ||
+          !Number.isInteger(link.headerRow) || link.headerRow < 0 || link.headerRow >= s.cells.length ||
+          !link.mapping || typeof link.mapping !== 'object' || Array.isArray(link.mapping) ||
+          Object.values(link.mapping).some(c => !Number.isInteger(c) || c < 0 || c >= s.widths.length) ||
+          new Set(Object.values(link.mapping)).size !== Object.values(link.mapping).length ||
+          (link.writeMode !== undefined && link.writeMode !== 'insert'))
+        throw new Error('Invalid database mapping. Review the connected sheet before importing.');
+    }
     if (s.formats)
       for (const [key, format] of Object.entries(s.formats)) {
         const [r, c] = key.split(':').map(Number);
@@ -530,7 +592,7 @@ export async function importWorkbook(file: File): Promise<FieldWorkbook> {
   return validateWorkbook(book);
 }
 export async function exportWorkbook(book: FieldWorkbook): Promise<Blob> {
-  if (book.source || book.sheets.some(s => Object.values(s.formats || {}).some(f => f.color || f.background || f.dataType))) return exportStyledWorkbook(book);
+  if (book.source || book.sheets.some(s => s.view || s.print || s.cells.some(row=>row.some(value=>value.startsWith('='))) || Object.values(s.formats || {}).some(f => f.color || f.background || f.dataType))) return exportStyledWorkbook(book);
   const XLSX = await import('xlsx');
   const output = XLSX.utils.book_new();
   for (const sheet of book.sheets) {

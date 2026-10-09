@@ -1,15 +1,20 @@
 'use client';
+import {visibleSheetRows} from '@/lib/workbookOperations';
+import WorkbookTools from './WorkbookTools';
+import {calculateSheet} from '@/lib/workbookFormulas';
 import styles from './FieldWorkbookWorkspace.module.css';
 import { workbookShortcut } from '@/lib/workbookShortcuts';
 import {dragFill, printSheet, autofillRange, commonColumnValues} from '@/lib/workbookConvenience';
-import {readDeviceLibrary, saveDeviceLibrary, readDeviceWorkbook, readDeviceSession, saveDeviceSession, saveDeviceWorkbook, listDeviceWorkbooks, deviceRevisions, sheetCsv, type DeviceWorkbook} from '@/lib/workbookDevice';
+import {syncWorkbooks} from '@/lib/workbookSync';
+import {queueWorkbookSync, listWorkbookSync, removeWorkbookSync, deleteDeviceWorkbook, type WorkbookSyncEntry, readDeviceLibrary, saveDeviceLibrary, readDeviceWorkbook, readDeviceSession, saveDeviceSession, saveDeviceWorkbook, listDeviceWorkbooks, deviceRevisions, sheetCsv, type DeviceWorkbook} from '@/lib/workbookDevice';
 import WorkbookShareDialog from './WorkbookShareDialog';
+import WorkbookDatabaseLoad from './WorkbookDatabaseLoad';
 import WorkbookDatabaseConnection from './WorkbookDatabaseConnection';
 import SearchableSelect from './SearchableSelect';
 import WorkbookColorPicker from './WorkbookColorPicker';
 import { displayCellValue } from '@/lib/workbookCellTypes';
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   Bold,
@@ -51,6 +56,7 @@ import {
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import {
   changeDimension,
+  invalidateMapping,
   cellFormat,
   formatCells,
   applyTableDesign,
@@ -104,7 +110,11 @@ const GridCell = memo(function GridCell({
   onPaste,
   onContextMenu,
   onFill,
+  calculated,
+  sticky,
 }: {
+  calculated?: string;
+  sticky?: React.CSSProperties;
   onFill?: (event: React.PointerEvent) => void;
   value: string;
   r: number;
@@ -132,6 +142,7 @@ const GridCell = memo(function GridCell({
   return (
     <td
       style={{
+        ...sticky,
         backgroundColor: appearance?.background || undefined,
         backgroundImage: selected ? "linear-gradient(rgba(16,185,129,.22),rgba(16,185,129,.22))" : undefined,
 
@@ -158,7 +169,7 @@ const GridCell = memo(function GridCell({
         type={active && editing && picker !== 'text' && compatible ? picker : 'text'}
         step={kind === 'time' || kind === 'datetime' ? 1 : undefined}
         inputMode={['number','currency','percent'].includes(kind || '') ? 'decimal' : undefined}
-        value={editing ? value : displayCellValue(value, appearance || {})}
+        value={editing ? value : displayCellValue(calculated ?? value, appearance || {})}
         maxLength={32767}
         autoComplete="off"
         className={`h-full min-h-[32px] w-full min-w-0 bg-transparent px-2 py-1 text-sm text-slate-900 !border-0 !outline-none !ring-0 !ring-offset-0 !shadow-none focus:!outline-none focus-visible:!outline-none dark:text-slate-100 ${bold ? 'font-bold' : 'font-normal'} ${italic ? 'italic' : ''}`}
@@ -262,6 +273,7 @@ export default function FieldWorkbookWorkspace({
   const [showToolbar, setShowToolbar] = useState(true);
   const [showFormulaBar, setShowFormulaBar] = useState(true);
   const [showSelectionInfo, setShowSelectionInfo] = useState(false);
+  const [databaseLoadOpen,setDatabaseLoadOpen]=useState(false);
   const [connectionSheet, setConnectionSheet] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -308,6 +320,9 @@ export default function FieldWorkbookWorkspace({
   const [autosaveStatus,setAutosaveStatus]=useState('Preparing autosave…');
   const [recoveryVersions,setRecoveryVersions]=useState<DeviceWorkbook[] | null>(null);
   const [deviceBooks, setDeviceBooks] = useState<DeviceWorkbook[]>([]);
+  const editorId=useRef(crypto.randomUUID());
+  const editorBaselines=useRef(new Map<string,FieldWorkbook>());
+  const [syncEntries,setSyncEntries]=useState<WorkbookSyncEntry[]>([]);
   const [storageReady, setStorageReady] = useState('');
   const [online, setOnline] = useState(true);
   const [offlineToolsReady, setOfflineToolsReady] = useState(false);
@@ -321,6 +336,24 @@ export default function FieldWorkbookWorkspace({
   const storageKey = `cestos-field-workbook:${storageScope}`;
   const sheet = book?.sheets[sheetIndex];
   const selection = rangeBetween(anchor, end);
+  const [gridScroll,setGridScroll]=useState(0);
+  const computedCells=useMemo(()=>sheet?calculateSheet(sheet):[],[sheet?.cells]);
+  const rowWindow=useMemo(()=>{
+    if(!sheet)return {rows:[] as number[],before:0,after:0};
+    const frozen=Math.min(sheet.view?.freezeRows||0,sheet.cells.length);
+    const visible=visibleSheetRows(sheet,computedCells);
+    const fixed=visible.filter(r=>r<frozen),body=visible.filter(r=>r>=frozen);
+    const offsets=[0];for(const r of body)offsets.push(offsets.at(-1)!+sheet.heights[r]);
+    const firstVisible=offsets.findIndex(height=>height>=Math.max(0,gridScroll-300));
+    let start=Math.max(0,(firstVisible<0?body.length:firstVisible)-1);
+    let end=offsets.findIndex(height=>height>gridScroll+1600);if(end<0)end=body.length;
+    // Render complete merged ranges that cross the viewport boundary.
+    for(const m of sheet.merges){if(m.r<=body[start]&&m.er>=body[start]){const index=body.indexOf(m.r);if(index>=0)start=Math.min(start,index);}if(m.r<=body[Math.max(start,end-1)]&&m.er>=body[Math.max(start,end-1)]){const index=body.indexOf(m.er);if(index>=0)end=Math.max(end,index+1);}}
+    return {rows:[...fixed,...body.slice(start,end)],before:offsets[start],after:offsets.at(-1)!-offsets[end],firstBody:body[start]};
+  },[sheet,computedCells,gridScroll]);
+  const frozenRows=Math.min(sheet?.view?.freezeRows||0,sheet?.cells.length||0);
+  const frozenColumns=Math.min(sheet?.view?.freezeColumns||0,sheet?.widths.length||0);
+
 
   const headerContext = useFieldWorkbookHeader();
   const setHeaderState = headerContext?.setHeaderState;
@@ -401,6 +434,8 @@ export default function FieldWorkbookWorkspace({
   }, [loadLibrary]);
   useEffect(() => {
     let active = true;
+    editorBaselines.current.clear();
+    setSyncEntries([]);
     setStorageReady('');setBook(null);setSessions([]);setDirty(false);setDeviceBooks([]);
     void (async () => {
       try {
@@ -437,11 +472,35 @@ export default function FieldWorkbookWorkspace({
     let active=true;
     setAutosaveStatus('Saving on device…');
     void (async()=>{
-      try {const open = sessions.map(item => item.book.id === book.id ? book : item.book);if (!open.some(item => item.id === book.id)) open.push(book);for (const item of open) {validateWorkbook(item);await saveDeviceWorkbook(storageKey,item);}const rows=await listDeviceWorkbooks(storageKey);if(active){setDeviceBooks(rows);setAutosaveStatus('Autosaved on device');}}
-      catch {if(active)setAutosaveStatus('Autosave failed — download a backup');}
+      try {const open = sessions.map(item => item.book.id === book.id ? book : item.book);if (!open.some(item => item.id === book.id)) open.push(book);for (const item of open) {validateWorkbook(item);await saveDeviceWorkbook(storageKey,item,undefined,{id:editorId.current,baseline:editorBaselines.current.get(item.id) || item});if(!onPublish && (item.id===book.id?dirty:sessions.find(session=>session.book.id===item.id)?.dirty))await queueWorkbookSync(storageKey,item);}const rows=await listDeviceWorkbooks(storageKey);if(active){setDeviceBooks(rows);setAutosaveStatus('Autosaved on device');}}
+      catch(e) {if(active){setAutosaveStatus('Device save needs attention');setError(e instanceof Error?e.message:'Autosave failed — download a backup');}}
     })();
     return ()=>{active=false;};
-  },[book,sessions,storageKey,storageReady]);
+  },[book,sessions,dirty,storageKey,storageReady,onPublish]);
+  useEffect(()=>{
+    if(storageReady!==storageKey || onPublish)return;
+    let active=true;
+    const refresh=async()=>{try {
+      const before=await listWorkbookSync(storageKey);if(active)setSyncEntries(before);
+      await syncWorkbooks(storageKey);
+      const after=await listWorkbookSync(storageKey);if(active)setSyncEntries(after);
+    }catch{/* Device save failures are surfaced by autosave. */}};
+    void refresh();
+    const timer=window.setInterval(()=>{void refresh();},15000);
+    window.addEventListener('online',refresh);
+    return()=>{active=false;window.clearInterval(timer);window.removeEventListener('online',refresh);};
+  },[storageKey,storageReady,onPublish]);
+  useEffect(()=>{
+    if(!book || onPublish)return;
+    setSessions(previous=>{let changed=false;const next=previous.map(session=>{const saved=syncEntries.find(item=>item.book.id===session.book.id);if(session.dirty && saved?.state==='synced' && JSON.stringify(saved.book)===JSON.stringify(session.book)){changed=true;return {...session,dirty:false};}return session;});return changed?next:previous;});
+    const entry=syncEntries.find(item=>item.book.id===book.id);
+    if(!entry)return;
+    if(entry.state==='synced' && JSON.stringify(entry.book)===JSON.stringify(book)) {
+      setDirty(false);setAutosaveStatus('Saved on device · Synced');
+    } else if(entry.state==='conflict')setAutosaveStatus('Saved on device · Conflict: review in library');
+    else if(entry.state==='blocked')setAutosaveStatus('Saved on device · Sync needs attention');
+    else if(entry.state==='pending')setAutosaveStatus('Saved on device · Waiting to sync');
+  },[syncEntries,book,onPublish]);
   useEffect(() => {
     if (!dirty && !sessions.some(item => item.book.id !== book?.id && item.dirty)) return;
     const guard = (event: BeforeUnloadEvent) => {event.preventDefault();};
@@ -484,6 +543,7 @@ export default function FieldWorkbookWorkspace({
   const commit = useCallback((next: FieldWorkbook, key = '') => {
     const previous = bookRef.current;
     if (!previous) return;
+    if(!editorBaselines.current.has(previous.id))editorBaselines.current.set(previous.id,previous);
     if (!key || lastEdit.current !== key) setUndo((history) => [...history.slice(-29), previous]);
     lastEdit.current = key;
     setRedo([]);
@@ -500,7 +560,7 @@ export default function FieldWorkbookWorkspace({
       try {
         const next = {
           ...current,
-          sheets: current.sheets.map((s, i) => (i === sheetRef.current ? transform(s) : s)),
+          sheets: current.sheets.map((s, i) => (i === sheetRef.current ? invalidateMapping(s, transform(s)) : s)),
         };
         commit(next, key);
       } catch (e) {
@@ -633,9 +693,11 @@ export default function FieldWorkbookWorkspace({
     setEnd({ r, c });
   }, []);
   const focus = useCallback((r: number, c: number) => {
-    requestAnimationFrame(() =>
-      gridRef.current?.querySelector<HTMLInputElement>(`[data-cell="${r}:${c}"]`)?.focus()
-    );
+    const current=bookRef.current?.sheets[sheetRef.current];
+    if(current && gridRef.current && !gridRef.current.querySelector(`[data-cell="${r}:${c}"]`)) {
+      gridRef.current.scrollTop=visibleSheetRows(current).filter(row=>row<r).reduce((a,row)=>a+current.heights[row],0);setGridScroll(gridRef.current.scrollTop);
+    }
+    requestAnimationFrame(()=>requestAnimationFrame(()=>gridRef.current?.querySelector<HTMLInputElement>(`[data-cell="${r}:${c}"]`)?.focus()));
   }, []);
   const onNavigate = useCallback(
     (r: number, c: number, key: string, shift: boolean) => {
@@ -662,6 +724,9 @@ export default function FieldWorkbookWorkspace({
       }
       r = Math.max(0, Math.min(s.cells.length - 1, r));
       c = Math.max(0, Math.min(s.widths.length - 1, c));
+      const visible=visibleSheetRows(s),backward=key==='ArrowUp'||((key==='Enter'||key==='Tab')&&shift);
+      if(!visible.includes(r))r=(backward?[...visible].reverse().find(row=>row<r):visible.find(row=>row>r))??(backward?visible[0]:visible.at(-1))??0;
+
       const target = s.merges.find((m) => r >= m.r && r <= m.er && c >= m.c && c <= m.ec);
       if (target) {
         r = target.r;
@@ -716,7 +781,7 @@ export default function FieldWorkbookWorkspace({
     const high = axis === 'row' ? selection.er : selection.ec;
     const indices = index >= low && index <= high ? Array.from({length: high-low+1},(_,i)=>low+i) : [index];
     const sizes = axis === 'row' ? sheet.heights : sheet.widths;
-    const elements = indices.map(i => axis === 'row' ? gridRef.current?.querySelectorAll('tbody tr')[i] : gridRef.current?.querySelectorAll('col')[i+1]);
+    const elements = indices.map(i => axis === 'row' ? gridRef.current?.querySelector(`[data-render-row="${i}"]`) : gridRef.current?.querySelectorAll('col')[i+1]);
     const table = gridRef.current?.querySelector('table');
     const originalTableWidth = 48 + sheet.widths.reduce((a,b)=>a+b,0);
     const move = (e: PointerEvent) => {
@@ -853,13 +918,11 @@ export default function FieldWorkbookWorkspace({
       copy.name=`${baseName}-${suffix}`;
       await saveDeviceWorkbook(storageKey, copy);
       setDeviceBooks(await listDeviceWorkbooks(storageKey));
-      if (!navigator.onLine) {activate(copy,true);setNotice('Copy saved on this device. Save to the server when connected.');return;}
-      const form=new FormData();
-      form.append('file',new File([JSON.stringify(copy)],`${copy.id}.cestos.json`,{type:'application/json'}));
-      form.append('title',copy.name.slice(0,250)); form.append('category','Field Workbooks');
-      form.append('tags',`wb-${copy.id},${copy.template ? 'workbook-template' : 'field-workbook'}`); form.append('visibility','PRIVATE');
-      await apiFetch('/api/v1/documents',{method:'POST',body:form},true,{queueWhenOffline:false});
-      await loadLibrary(); setNotice('Workbook copied successfully.');
+      if (!navigator.onLine) {await queueWorkbookSync(storageKey,copy);activate(copy,true);setNotice('Copy saved on this device. Save to the server when connected.');return;}
+      await queueWorkbookSync(storageKey,copy);
+      await syncWorkbooks(storageKey);
+      setSyncEntries(await listWorkbookSync(storageKey));
+      await loadLibrary();setNotice('Workbook copied and saved on this device. Server sync runs automatically.');
     } catch(e) {setError(e instanceof Error ? e.message : 'Could not copy workbook.');} finally {setBusy(false);}
   }
   async function deleteDocument(doc: Document) {
@@ -875,6 +938,7 @@ export default function FieldWorkbookWorkspace({
           try {
             await apiFetch(`/api/v1/documents/${doc.id}/workbook`,{method:'DELETE'},true,{queueWhenOffline:false});
             const deletedId=doc.tags.find(tag=>tag.startsWith('wb-'))?.slice(3);
+            if(deletedId){await removeWorkbookSync(storageKey,deletedId);await deleteDeviceWorkbook(storageKey,deletedId);}
             setSessions(items=>items.filter(item=>item.book.id!==deletedId));
             await loadLibrary(); setNotice('Workbook deleted.');
           } catch(e) {setError(e instanceof Error ? e.message : 'Could not delete workbook.');} finally {setBusy(false);}
@@ -886,7 +950,7 @@ export default function FieldWorkbookWorkspace({
     if(!book) return;
     const saved = asTemplate ? {...copyWorkbook(book,true),name:templateName.trim() || `${book.name} template`} : book;
     validateWorkbook(saved);
-    await saveDeviceWorkbook(storageKey,saved);
+    await saveDeviceWorkbook(storageKey,saved,undefined,{id:editorId.current,baseline:editorBaselines.current.get(saved.id) || saved});
     setDeviceBooks(await listDeviceWorkbooks(storageKey));
     return saved;
   }
@@ -907,37 +971,19 @@ export default function FieldWorkbookWorkspace({
     try {
       const deviceSaved = await saveToDevice(asTemplate);
       if(onPublish && !asTemplate && book.id===initialWorkbook?.id) {await onPublish(book);setDirty(false);setNotice('Shared workbook saved successfully.');return;}
-      if(!navigator.onLine) {setTemplatePicker(false);setNotice('Saved on this device. Reconnect to sync with server.');return;}
-      const saved = deviceSaved || (asTemplate
-        ? { ...copyWorkbook(book, true), name: templateName.trim() || `${book.name} template` }
-        : { ...book, createdAt: book.createdAt || new Date().toISOString() });
-      validateWorkbook(saved);
-      const form = new FormData();
-      form.append(
-        'file',
-        new File([JSON.stringify(saved)], `${saved.id}.cestos.json`, { type: 'application/json' })
-      );
-      form.append('title', saved.name.slice(0, 250));
-      form.append('category', 'Field Workbooks');
-      form.append(
-        'tags',
-        `wb-${saved.id},${saved.template ? 'workbook-template' : 'field-workbook'}`
-      );
-      form.append('visibility', 'PRIVATE');
-      await apiFetch('/api/v1/documents', { method: 'POST', body: form }, true, {
-        queueWhenOffline: false,
-      });
-      if (!asTemplate) {
-        setDirty(false);
-        lastEdit.current = '';
-      }
+      const saved=deviceSaved || book;
+      await queueWorkbookSync(storageKey,saved);
       setTemplatePicker(false);
-      setNotice(
-        asTemplate
-          ? 'Template saved. Reuse it from the workbook library.'
-          : 'Workbook saved successfully.'
-      );
-      await loadLibrary();
+      await syncWorkbooks(storageKey);
+      const entries=await listWorkbookSync(storageKey);setSyncEntries(entries);
+      const entry=entries.find(item=>item.book.id===saved.id);
+      if(entry?.state==='synced') {
+        if(!asTemplate && JSON.stringify(bookRef.current)===JSON.stringify(saved))setDirty(false);
+        setNotice('Workbook saved successfully and synced.');
+        await loadLibrary();
+      } else {
+        setNotice(entry?.state==='conflict' ? 'Your local workbook is safe. A newer server version exists; review the conflict in the library.' : 'Workbook saved on this device. It will sync automatically when the connection and server are ready.');
+      }
     } catch (e) {
       setError(`Server save failed. Your device copy is available if the device save completed. ${e instanceof Error ? e.message : ''}`);
     } finally {
@@ -1038,7 +1084,7 @@ export default function FieldWorkbookWorkspace({
     try {
       activate(/\.cestos\.json$/i.test(file.name) ? validateWorkbook(JSON.parse(await file.text())) : await importWorkbook(file), true);
       setNotice(
-        'Imported all worksheets. XLSX layout and common formatting are retained; formulas display saved results. Original XLSX retained intact. Advanced Excel features may not display here or survive an edited export.'
+        'Imported all worksheets. XLSX layout and common formatting are retained; basic formulas recalculate locally; unsupported formulas show an error. Original XLSX retained intact. Advanced Excel features may not display here or survive an edited export.'
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not import workbook.');
@@ -1165,7 +1211,7 @@ export default function FieldWorkbookWorkspace({
     return (
       <section className={`${styles.library} space-y-6 bg-slate-50 p-6 dark:bg-slate-950 sm:p-10`}>
         {sharing && book && <WorkbookShareDialog book={book} onClose={()=>setSharing(false)}/>}
-        {recoveryVersions && <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/40 p-4"><div role="dialog" aria-label="Device recovery versions" className="max-h-[80vh] w-full max-w-lg overflow-auto rounded bg-white p-5 dark:bg-slate-900"><h3 className="font-bold">Device recovery versions</h3><p className="my-2 text-sm">The last five saved versions. Recovery opens a new copy so your current workbook remains intact.</p>{!recoveryVersions.length && <p>No older versions yet.</p>}{recoveryVersions.map((item,i)=><button type="button" className="my-1 block w-full rounded border p-2 text-left" key={i} onClick={()=>{activate({...copyWorkbook(validateWorkbook(item.book),false),name:item.book.name+' — recovered'},true);setRecoveryVersions(null);}}>{new Date(item.savedAt).toLocaleString()}</button>)}<button type="button" className={button} onClick={()=>setRecoveryVersions(null)}>Close</button></div></div>}
+        {recoveryVersions && <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/40 p-4"><div role="dialog" aria-label="Device recovery versions" className="max-h-[80vh] w-full max-w-lg overflow-auto rounded bg-white p-5 dark:bg-slate-900"><h3 className="font-bold">Device recovery versions</h3><p className="my-2 text-sm">Recent saves plus checkpoints spaced 15 minutes apart (up to 60, within a 50 MB history budget). Recovery opens a new copy so your current workbook remains intact.</p>{!recoveryVersions.length && <p>No older versions yet.</p>}{recoveryVersions.map((item,i)=><button type="button" className="my-1 block w-full rounded border p-2 text-left" key={i} onClick={()=>{activate({...copyWorkbook(validateWorkbook(item.book),false),name:item.book.name+' — recovered'},true);setRecoveryVersions(null);}}>{new Date(item.savedAt).toLocaleString()}</button>)}<button type="button" className={button} onClick={()=>setRecoveryVersions(null)}>Close</button></div></div>}
         {closePrompt}
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -1207,6 +1253,15 @@ export default function FieldWorkbookWorkspace({
         {busy && <p role="status">Opening workbook…</p>}
         <div className="rounded border border-slate-200 bg-white p-4 dark:bg-slate-900">
           <h3 className="font-semibold">Saved on this device</h3>
+          {syncEntries.filter(entry=>entry.state!=='synced').map(entry=><div key={entry.key} className="my-2 rounded border border-amber-300 p-3 text-sm">
+            <p className="font-semibold">{entry.book.name} · {entry.state==='conflict'?'Conflicting server version':entry.state==='blocked'?'Sync needs attention':'Waiting to sync'}</p>
+            {entry.error && <p className="mt-1">{entry.error}</p>}
+            {entry.state==='conflict' && <div className="mt-2 flex gap-2">
+              <button className={button} onClick={()=>{activate(entry.book,true);}}>Open local version</button>
+              <button className={button} onClick={()=>{void (async()=>{try{const copy=copyWorkbook(entry.book,entry.book.template);copy.name=`${entry.book.name} — recovered copy`;await saveDeviceWorkbook(storageKey,copy);await queueWorkbookSync(storageKey,copy);await removeWorkbookSync(storageKey,entry.book.id);setSyncEntries(await listWorkbookSync(storageKey));activate(copy,true);setSessions(items=>items.filter(item=>item.book.id!==entry.book.id));}catch(e){setError(e instanceof Error?e.message:'Could not preserve copy');}})();}}>Keep local as new workbook</button>
+              <button className={button} onClick={()=>{const doc=latest.find(doc=>doc.tags.includes(`wb-${entry.book.id}`));if(doc)void openDocument(doc,true,true);else setNotice('Refresh the library online to find the server version.');}}>Open server as separate copy</button>
+            </div>}
+          </div>)}
           <p role="status" className="my-2 text-xs text-slate-500">{offlineLibraryStatus}</p>
           <p className="my-2 text-xs text-slate-500">Workbooks are saved automatically on this device. Local edits are preserved during server refreshes. Keep an Excel or workbook backup before clearing browser data.</p>
           {!deviceBooks.length && <p className="text-sm text-slate-500">Your saved workbooks will download automatically when connected. You can also create or import a workbook offline.</p>}
@@ -1283,7 +1338,7 @@ export default function FieldWorkbookWorkspace({
       className={`${styles.editor} min-w-0 max-w-full`}
       onKeyDown={(event) => {
         const target = event.target as HTMLElement;
-        if (event.defaultPrevented || event.nativeEvent.isComposing || customModal || connectionSheet) return;
+        if (event.defaultPrevented || event.nativeEvent.isComposing || customModal || connectionSheet || databaseLoadOpen) return;
         const inGrid = !!gridRef.current?.contains(target);
         // Leave text inputs in dialogs, search, and the formula bar to native editing.
         if (!inGrid && target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return;
@@ -1370,8 +1425,10 @@ export default function FieldWorkbookWorkspace({
           </div>
         </div>
 
+        {showToolbar && (ribbonTab==='Data'||ribbonTab==='View') && <WorkbookTools sheet={sheet} selection={selection} onChange={changeSheet} onError={setError} onFind={(r,c)=>{if(sheet.view?.filterText)changeSheet(s=>({...s,view:{...s.view,filterText:''}}));setAnchor({r,c});setEnd({r,c});focus(r,c);}} />}
         {showToolbar && (
           <div className={styles.ribbon}>
+            {ribbonTab === 'Data' && <button type="button" className={button} onClick={()=>setDatabaseLoadOpen(true)}><Download size={16}/>Load from database</button>}
             {ribbonTab === 'Data' && <button type="button" className={button} onClick={()=>setConnectionSheet(sheet.id)}><FileSpreadsheet size={16}/>Connect to database table</button>}
             {ribbonTab === 'View' && <p className="text-xs text-slate-500">Shortcuts: Ctrl/Cmd+S save · Ctrl/Cmd+Z undo · Ctrl/Cmd+Shift+Z or Ctrl+Y redo · Ctrl/Cmd+B/I/U bold/italic/underline · Ctrl/Cmd+D/R fill down/right · Ctrl/Cmd+A select all cells · Shift+Space select rows · Ctrl+Space select columns · Ctrl/Cmd+Home first cell · Delete clear selected range. Tab/Enter move cells; Shift+Arrow extends selection. Formatting and selection shortcuts apply inside the grid.</p>}
             {/* Undo / Redo Group */}
@@ -1483,6 +1540,15 @@ export default function FieldWorkbookWorkspace({
                 value={cellFormat(sheet, anchor.r, anchor.c).dataType || 'general'}
                 options={['general','text','number','currency','percent','date','time','datetime'].map(type => ({value: type, label: type === 'datetime' ? 'Date & time' : type.charAt(0).toUpperCase()+type.slice(1)}))}
                 onChange={value => changeSheet(s => formatCells(s, selection, {dataType: value as CellFormat['dataType']}))} />
+              {['date','datetime'].includes(cellFormat(sheet, anchor.r, anchor.c).dataType || '') && <>
+                <SearchableSelect ariaLabel="Date order" className="min-w-40" value={cellFormat(sheet,anchor.r,anchor.c).dateOrder || 'ymd'} options={[{value:'dmy',label:'Day / Month / Year'},{value:'mdy',label:'Month / Day / Year'},{value:'ymd',label:'Year / Month / Day'}]} onChange={value=>changeSheet(s=>formatCells(s,selection,{dateOrder:value as CellFormat['dateOrder']}))}/>
+                <SearchableSelect ariaLabel="Date separator" className="min-w-32" value={cellFormat(sheet,anchor.r,anchor.c).dateSeparator || '-'} options={[{value:'-',label:'Dash ( - )'},{value:'/',label:'Slash ( / )'},{value:'.',label:'Dot ( . )'}]} onChange={value=>changeSheet(s=>formatCells(s,selection,{dateSeparator:value as CellFormat['dateSeparator']}))}/>
+              </>}
+              {['time','datetime'].includes(cellFormat(sheet,anchor.r,anchor.c).dataType || '') && <>
+                <SearchableSelect ariaLabel="Time format" className="min-w-36" value={cellFormat(sheet,anchor.r,anchor.c).timeClock || '24'} options={[{value:'24',label:'24-hour (14:30)'},{value:'12',label:'12-hour (02:30 PM)'}]} onChange={value=>changeSheet(s=>formatCells(s,selection,{timeClock:value as CellFormat['timeClock']}))}/>
+                <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={!!cellFormat(sheet,anchor.r,anchor.c).showSeconds} onChange={e=>changeSheet(s=>formatCells(s,selection,{showSeconds:e.target.checked}))}/>Show seconds</label>
+              </>}
+              {['date','time','datetime'].includes(cellFormat(sheet,anchor.r,anchor.c).dataType || '') && <span className="text-xs text-slate-500">Preview: {displayCellValue(cellFormat(sheet,anchor.r,anchor.c).dataType === 'date' ? '2026-10-09' : cellFormat(sheet,anchor.r,anchor.c).dataType === 'time' ? '14:30:45' : '2026-10-09T14:30:45',cellFormat(sheet,anchor.r,anchor.c))}</span>}
               {['number','currency','percent'].includes(cellFormat(sheet, anchor.r, anchor.c).dataType || '') && <>
                 <label className="flex items-center gap-1 text-xs">Decimals<select aria-label="Decimal places" className="input-field !h-10 !w-auto" value={cellFormat(sheet, anchor.r, anchor.c).decimals ?? 2} onChange={e => changeSheet(s => formatCells(s, selection, {decimals:Number(e.target.value)}))}>{[0,1,2,3,4,5,6].map(n=><option key={n} value={n}>{n}</option>)}</select></label>
                 {cellFormat(sheet, anchor.r, anchor.c).dataType === 'currency' && <select aria-label="Currency" className="input-field !h-10 !w-auto" value={cellFormat(sheet, anchor.r, anchor.c).currency || 'USD'} onChange={e => changeSheet(s => formatCells(s, selection, {currency:e.target.value}))}>{['USD','GHS','EUR','GBP','LRD'].map(code=><option key={code}>{code}</option>)}</select>}
@@ -1845,6 +1911,7 @@ export default function FieldWorkbookWorkspace({
         <div className={styles.gridArea}>
           <div
             ref={gridRef}
+            onScroll={event=>setGridScroll(event.currentTarget.scrollTop)}
             tabIndex={0}
             onMouseDownCapture={(event) => {
               // Secondary clicks must not focus an input and collapse the selected range.
@@ -1888,7 +1955,7 @@ export default function FieldWorkbookWorkspace({
                   {sheet.widths.map((_, c) => (
                     <th
                       key={c}
-                      style={{ display: sheet.widths[c] === 0 ? 'none' : undefined }}
+                      style={{ display: sheet.widths[c] === 0 ? 'none' : undefined,position:c<frozenColumns?'sticky':undefined,left:c<frozenColumns?48+sheet.widths.slice(0,c).reduce((a,b)=>a+b,0):undefined,zIndex:c<frozenColumns?30:undefined }}
                       className="relative border bg-slate-100 text-xs font-medium dark:border-slate-700 dark:bg-slate-800"
                       onContextMenu={(event) => {
                         event.preventDefault();
@@ -1928,8 +1995,9 @@ export default function FieldWorkbookWorkspace({
                 </tr>
               </thead>
               <tbody>
-                {sheet.cells.map((row, r) => (
-                  <tr
+                {rowWindow.rows.map((r) => (<Fragment key={r}>
+                  {r===rowWindow.firstBody && rowWindow.before>0 && <tr aria-hidden="true"><td colSpan={sheet.widths.length+1} style={{height:rowWindow.before,padding:0,border:0}}/></tr>}
+                  <tr data-render-row={r}
                     key={r}
                     style={{
                       height: sheet.heights[r],
@@ -1937,6 +2005,7 @@ export default function FieldWorkbookWorkspace({
                     }}
                   >
                     <th
+                      style={r<frozenRows?{top:36+sheet.heights.slice(0,r).reduce((a,b)=>a+b,0),zIndex:20}:undefined}
                       className="sticky left-0 z-10 border bg-slate-100 text-xs font-normal dark:border-slate-700 dark:bg-slate-800"
                       onContextMenu={(event) => {
                         event.preventDefault();
@@ -1972,7 +2041,7 @@ export default function FieldWorkbookWorkspace({
 
                       </span>
                     </th>
-                    {row.map((value, c) => {
+                    {sheet.cells[r].map((value, c) => {
                       if (sheet.widths[c] === 0) return null;
                       const merge = mergeLookup.get(`${r}:${c}`);
                       if (merge && (merge.r !== r || merge.c !== c)) return null;
@@ -1980,6 +2049,8 @@ export default function FieldWorkbookWorkspace({
                         <GridCell
                           key={c}
                           {...{ value, r, c, merge }}
+                          calculated={computedCells[r]?.[c]}
+                          sticky={(r<frozenRows||c<frozenColumns)?{position:'sticky',top:r<frozenRows?36+sheet.heights.slice(0,r).reduce((a,b)=>a+b,0):undefined,left:c<frozenColumns?48+sheet.widths.slice(0,c).reduce((a,b)=>a+b,0):undefined,zIndex:r<frozenRows&&c<frozenColumns?19:15}:undefined}
                           header={!sheet.imported && r === 0}
                           appearance={cellFormat(sheet, r, c)}
                           {...cellFormat(sheet, r, c)}
@@ -2021,8 +2092,9 @@ export default function FieldWorkbookWorkspace({
                         />
                       );
                     })}
-                  </tr>
+                  </tr></Fragment>
                 ))}
+                {rowWindow.after>0 && <tr aria-hidden="true"><td colSpan={sheet.widths.length+1} style={{height:rowWindow.after,padding:0,border:0}}/></tr>}
               </tbody>
             </table>
           </div>
@@ -2181,9 +2253,12 @@ export default function FieldWorkbookWorkspace({
           </button>
         </div>
 
+        {databaseLoadOpen && <WorkbookDatabaseLoad existingNames={book.sheets.map(s=>s.name)} onClose={()=>setDatabaseLoadOpen(false)} onLoad={sheets=>{commit({...book,sheets:[...book.sheets,...sheets]});setSheetIndex(book.sheets.length);setAnchor({r:0,c:0});setEnd({r:0,c:0});setDatabaseLoadOpen(false);setNotice(`Loaded ${sheets.reduce((count,s)=>count+s.cells.length-1,0)} records into ${sheets.length} new sheet(s). Edits do not change database records.`);}} />}
+        {sheet.databaseSource && <p className="text-xs text-slate-500">Database snapshot · {new Date(sheet.databaseSource.loadedAt).toLocaleString()} · Part {sheet.databaseSource.part}/{sheet.databaseSource.parts}. Load again to get fresh records in separate sheets.</p>}
         {connectionSheet && book.sheets.find(s=>s.id===connectionSheet) && <WorkbookDatabaseConnection
           sheet={book.sheets.find(s=>s.id===connectionSheet)!} onClose={()=>setConnectionSheet(null)}
-          onSave={connection=>{commit({...book,sheets:book.sheets.map(s=>s.id===connectionSheet?{...s,connection}:s)});setConnectionSheet(null);setNotice('Mapping added. Save the workbook to retain it. No database records were created.');}} />}
+          onIssue={(row,column,message)=>{const index=book.sheets.findIndex(s=>s.id===connectionSheet);setSheetIndex(index);setAnchor({r:row,c:column});setEnd({r:row,c:column});setConnectionSheet(null);setNotice(message);focus(row,column);}}
+          onSave={connection=>{commit({...book,sheets:book.sheets.map(s=>s.id===connectionSheet?{...s,connection}:s)});setConnectionSheet(null);setNotice(connection.validatedAt ? 'Validated mapping saved in this workbook. No database records were created.' : 'Mapping draft saved in this workbook. Reconnect and validate before importing.');}} />}
 
         {contextMenu && (
           <>
@@ -2732,7 +2807,7 @@ export default function FieldWorkbookWorkspace({
         )}
 
         {sharing && book && <WorkbookShareDialog book={book} onClose={()=>setSharing(false)}/>}
-        {recoveryVersions && <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/40 p-4"><div role="dialog" aria-label="Device recovery versions" className="max-h-[80vh] w-full max-w-lg overflow-auto rounded bg-white p-5 dark:bg-slate-900"><h3 className="font-bold">Device recovery versions</h3><p className="my-2 text-sm">The last five saved versions. Recovery opens a new copy so your current workbook remains intact.</p>{!recoveryVersions.length && <p>No older versions yet.</p>}{recoveryVersions.map((item,i)=><button type="button" className="my-1 block w-full rounded border p-2 text-left" key={i} onClick={()=>{activate({...copyWorkbook(validateWorkbook(item.book),false),name:item.book.name+' — recovered'},true);setRecoveryVersions(null);}}>{new Date(item.savedAt).toLocaleString()}</button>)}<button type="button" className={button} onClick={()=>setRecoveryVersions(null)}>Close</button></div></div>}
+        {recoveryVersions && <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/40 p-4"><div role="dialog" aria-label="Device recovery versions" className="max-h-[80vh] w-full max-w-lg overflow-auto rounded bg-white p-5 dark:bg-slate-900"><h3 className="font-bold">Device recovery versions</h3><p className="my-2 text-sm">Recent saves plus checkpoints spaced 15 minutes apart (up to 60, within a 50 MB history budget). Recovery opens a new copy so your current workbook remains intact.</p>{!recoveryVersions.length && <p>No older versions yet.</p>}{recoveryVersions.map((item,i)=><button type="button" className="my-1 block w-full rounded border p-2 text-left" key={i} onClick={()=>{activate({...copyWorkbook(validateWorkbook(item.book),false),name:item.book.name+' — recovered'},true);setRecoveryVersions(null);}}>{new Date(item.savedAt).toLocaleString()}</button>)}<button type="button" className={button} onClick={()=>setRecoveryVersions(null)}>Close</button></div></div>}
         {closePrompt}
 
         {showTemplateModal && (

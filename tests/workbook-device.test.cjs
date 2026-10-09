@@ -42,7 +42,7 @@ const db = {
 };
 const storageApi={};
 vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/workbookDevice.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{
-  exports:storageApi, indexedDB:{open(){const req={};setImmediate(()=>{req.result=db;req.onupgradeneeded?.();req.onsuccess();});return req;}},Date
+  exports:storageApi, crypto:require('node:crypto').webcrypto, indexedDB:{open(){const req={};setImmediate(()=>{req.result=db;req.onupgradeneeded?.();req.onsuccess();});return req;}},Date
 });
 const workbook = (id,name) => ({version:1,id,name,sheets:[]});
 test('downloaded workbooks persist by account, refresh remotely and retain recovery history', async()=>{
@@ -71,3 +71,37 @@ test('library metadata survives reload independently of open tabs and other acco
   assert.equal((await storageApi.readDeviceLibrary('library-a'))[0].title,'Unopened template');
   assert.equal(await storageApi.readDeviceLibrary('library-b'),undefined);
 });
+
+test('sync queue survives retries, rebases newer edits after acknowledgement, and keeps conflicts',async()=>{
+ const scope='sync-test',first=workbook('w','First');
+ await storageApi.saveDeviceWorkbook(scope,first,'server-1');
+ await storageApi.queueWorkbookSync(scope,first);
+ const sent=(await storageApi.listWorkbookSync(scope))[0];
+ assert.equal(sent.baseVersion,'server-1');
+ await storageApi.queueWorkbookSync(scope,first);
+ assert.equal((await storageApi.listWorkbookSync(scope))[0].operationId,sent.operationId);
+ await storageApi.queueWorkbookSync(scope,workbook('w','Edited while sending'));
+ await storageApi.finishWorkbookSync(sent,'server-2');
+ let next=(await storageApi.listWorkbookSync(scope))[0];
+ assert.equal(next.state,'pending');assert.equal(next.baseVersion,'server-2');
+ assert.equal(next.book.name,'Edited while sending');
+ await storageApi.failWorkbookSync(next,'conflict','Other device edited');
+ await storageApi.queueWorkbookSync(scope,workbook('w','More local edits'));
+ next=(await storageApi.listWorkbookSync(scope))[0];
+ assert.equal(next.state,'conflict');assert.equal(next.book.name,'More local edits');
+ await storageApi.finishWorkbookSync(next,'server-3');
+ assert.equal((await storageApi.listWorkbookSync(scope))[0].state,'synced');
+ await storageApi.removeWorkbookSync(scope,'w');assert.equal((await storageApi.listWorkbookSync(scope)).length,0);
+});
+test('another browser tab cannot overwrite newer device edits; its candidate is recoverable',async()=>{
+ const original=workbook('tab-book','Original');
+ await storageApi.saveDeviceWorkbook('tabs',original,'remote');
+ await storageApi.saveDeviceWorkbook('tabs',workbook('tab-book','First tab edit'),undefined,{id:'tab-1',baseline:original});
+ await assert.rejects(storageApi.saveDeviceWorkbook('tabs',workbook('tab-book','Second tab edit'),undefined,{id:'tab-2',baseline:original}),/Another tab/);
+ assert.equal((await storageApi.readDeviceWorkbook('tabs','tab-book')).book.name,'First tab edit');
+ assert.equal((await storageApi.deviceRevisions('tabs','tab-book'))[0].book.name,'Second tab edit');
+ await storageApi.saveDeviceWorkbook('tabs',workbook('tab-book','First tab continues'),undefined,{id:'tab-1',baseline:original});
+ assert.equal((await storageApi.readDeviceWorkbook('tabs','tab-book')).book.name,'First tab continues');
+});
+
+test('frequent saves retain older quarter-hour checkpoints within the history cap',()=>{const end=Date.parse('2026-10-09T12:00:00Z');let history=[];for(let i=0;i<1000;i++)history=api.recoveryCheckpoints([{book:{id:'b',cells:[String(i)]},savedAt:new Date(end+i*60000).toISOString()},...history]);assert.ok(history.length<=60);assert.ok(history.length>40);assert.ok(Date.parse(history.at(-1).savedAt)<end+240*60000);assert.equal(history[0].book.cells[0],'999');assert.equal(history[2].book.cells[0],'997');});

@@ -27,28 +27,35 @@ async function transact<T>(store: string, mode: IDBTransactionMode, run: (store:
   });
 }
 export type DeviceSession = {openBooks: {book: FieldWorkbook; dirty: boolean}[]; activeId: string | null};
-export type DeviceWorkbook = {key: string; scope: string; book: FieldWorkbook; savedAt: string; remoteVersion?: string};
+export type DeviceWorkbook = {key: string; scope: string; book: FieldWorkbook; savedAt: string; remoteVersion?: string; baseVersion?: string; editorId?: string};
 export const readDeviceSession = (scope: string) => transact<DeviceSession | undefined>('sessions', 'readonly', store => store.get(scope));
 export const saveDeviceSession = (scope: string, session: DeviceSession) => transact('sessions', 'readwrite', store => store.put(session, scope));
-export async function saveDeviceWorkbook(scope: string, book: FieldWorkbook, remoteVersion?: string) {
+export async function saveDeviceWorkbook(scope: string, book: FieldWorkbook, remoteVersion?: string, editor?: {id:string; baseline:FieldWorkbook}) {
   const db=await openDatabase();
   await new Promise<void>((resolve,reject)=>{
     const tx=db.transaction(['workbooks','revisions'],'readwrite');
     const books=tx.objectStore('workbooks'),revisions=tx.objectStore('revisions');
+    let conflict = false;
     const key=JSON.stringify([scope,book.id]);
     const request=books.get(key);
     request.onsuccess=()=>{
       const previous=request.result as DeviceWorkbook | undefined;
+      if(editor && previous && previous.editorId!==editor.id && JSON.stringify(previous.book)!==JSON.stringify(editor.baseline) && JSON.stringify(previous.book)!==JSON.stringify(book)) {
+        conflict=true;
+        const read=revisions.get(key);
+        read.onsuccess=()=>revisions.put({key,items:recoveryCheckpoints([{key,scope,book,savedAt:new Date().toISOString()},...(read.result?.items || [])])});
+        return;
+      }
       // Never overwrite a locally edited workbook during background downloads.
       if (remoteVersion && previous && !previous.remoteVersion) return;
       if(previous && JSON.stringify(previous.book)===JSON.stringify(book) && (!remoteVersion || previous.remoteVersion === remoteVersion))return;
       if(previous) {
         const read=revisions.get(key);
-        read.onsuccess=()=>revisions.put({key,items:[previous,...(read.result?.items || [])].slice(0,5)});
+        read.onsuccess=()=>revisions.put({key,items:recoveryCheckpoints([previous,...(read.result?.items || [])])});
       }
-      books.put({key,scope,book,savedAt:new Date().toISOString(), ...(remoteVersion ? {remoteVersion} : {})} satisfies DeviceWorkbook);
+      books.put({key,scope,book,...(editor?{editorId:editor.id}:{}),baseVersion:remoteVersion || previous?.remoteVersion || previous?.baseVersion,savedAt:new Date().toISOString(), ...(remoteVersion ? {remoteVersion} : {})} satisfies DeviceWorkbook);
     };
-    tx.oncomplete=()=>resolve();tx.onabort=tx.onerror=()=>reject(tx.error || new Error('Device autosave failed. Download a backup.'));
+    tx.oncomplete=()=>conflict?reject(new Error('Another tab changed this workbook. Your version was preserved in recovery history. Download it or save a new copy before continuing.')):resolve();tx.onabort=tx.onerror=()=>reject(tx.error || new Error('Device autosave failed. Download a backup.'));
   });
 }
 export async function deviceRevisions(scope:string,id:string):Promise<DeviceWorkbook[]> {
@@ -78,3 +85,55 @@ export function sheetCsv(sheet: FieldSheet): string {
 export const readDeviceLibrary = <T>(scope: string) => transact<T[] | undefined>('sessions', 'readonly', store => store.get(`library:${scope}`));
 export const saveDeviceLibrary = <T>(scope: string, documents: T[]) => transact('sessions', 'readwrite', store => store.put(documents, `library:${scope}`));
 export const readDeviceWorkbook = (scope: string, id: string) => transact<DeviceWorkbook | undefined>('workbooks', 'readonly', store => store.get(JSON.stringify([scope,id])));
+
+export type WorkbookSyncEntry = {key:string; scope:string; book:FieldWorkbook; operationId:string; baseVersion?:string; state:'pending'|'synced'|'conflict'|'blocked'; error?:string};
+async function updateWorkbookSync(scope:string,id:string, change:(entry:WorkbookSyncEntry | undefined)=>WorkbookSyncEntry | undefined) {
+  const db=await openDatabase();
+  return new Promise<void>((resolve,reject)=>{
+    const tx=db.transaction('sessions','readwrite'), store=tx.objectStore('sessions');
+    const key=`sync:${JSON.stringify([scope,id])}`;
+    const request=store.get(key);
+    request.onsuccess=()=>{const next=change(request.result);if(next)store.put(next,key);};
+    tx.oncomplete=()=>resolve();tx.onerror=tx.onabort=()=>reject(tx.error || new Error('Could not store workbook sync queue'));
+  });
+}
+export async function queueWorkbookSync(scope:string,book:FieldWorkbook) {
+  const device=await readDeviceWorkbook(scope,book.id);
+  await updateWorkbookSync(scope,book.id,previous=>{
+    if(previous && JSON.stringify(previous.book)===JSON.stringify(book))return previous;
+    return {key:`sync:${JSON.stringify([scope,book.id])}`,scope,book,operationId:crypto.randomUUID(),baseVersion:previous?.baseVersion || device?.baseVersion || device?.remoteVersion,
+      state:previous?.state==='conflict'?'conflict':'pending',error:previous?.state==='conflict'?previous.error:undefined};
+  });
+}
+export async function listWorkbookSync(scope:string):Promise<WorkbookSyncEntry[]> {
+  const entries=await transact<any[]>('sessions','readonly',store=>store.getAll());
+  return entries.filter(row=>row?.key?.startsWith('sync:') && row.scope===scope);
+}
+export async function finishWorkbookSync(entry:WorkbookSyncEntry,version:string) {
+  await updateWorkbookSync(entry.scope,entry.book.id,current=>{
+    if(!current)return current;
+    // A newer edit made while uploading stays pending, based on the just-accepted version.
+    return {...current,baseVersion:version,state:current.operationId===entry.operationId?'synced':'pending',error:undefined};
+  });
+}
+export async function failWorkbookSync(entry:WorkbookSyncEntry,state:'conflict'|'blocked'|'pending',error:string) {
+  await updateWorkbookSync(entry.scope,entry.book.id,current=>current?{...current,state,error}:current);
+}
+export async function removeWorkbookSync(scope:string,id:string) {
+  await transact('sessions','readwrite',store=>store.delete(`sync:${JSON.stringify([scope,id])}`));
+}
+
+/** Keep recent undo-level snapshots plus time-spaced checkpoints, with a storage budget. */
+export function recoveryCheckpoints(items:DeviceWorkbook[]):DeviceWorkbook[] {
+  const buckets=new Set<number>();let bytes=0;
+  const result:DeviceWorkbook[]=[];
+  for(let i=0;i<items.length;i++) {
+    const item=items[i],bucket=Math.floor(Date.parse(item.savedAt)/(15*60*1000));
+    if(i>=3&&buckets.has(bucket))continue;
+    const size=JSON.stringify(item.book).length*2;
+    if(result.length && bytes+size>50_000_000)continue;
+    result.push(item);bytes+=size;buckets.add(bucket);
+    if(result.length>=60)break;
+  }
+  return result;
+}
