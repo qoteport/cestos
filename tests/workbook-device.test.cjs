@@ -6,8 +6,8 @@ const vm=require('node:vm');
 const api={};
 vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/workbookDevice.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{exports:api});
 test('CSV preserves Unicode, quotes, commas, multiline values and empty middle rows',()=>{
- const csv=api.sheetCsv({cells:[['Name','Notes',''],['Ã‰ric','A, "quote"\nand line',''],['','',''],['End','',''],['','','']]});
- assert.equal(csv,'\ufeff"Name","Notes"\r\n"Ã‰ric","A, ""quote""\nand line"\r\n"",""\r\n"End",""');
+ const csv=api.sheetCsv({cells:[['Name','Notes',''],['Ãƒâ€°ric','A, "quote"\nand line',''],['','',''],['End','',''],['','','']]});
+ assert.equal(csv,'\ufeff"Name","Notes"\r\n"Ãƒâ€°ric","A, ""quote""\nand line"\r\n"",""\r\n"End",""');
 });
 test('CSV neutralizes formula-like text while preserving negative numbers',()=>{
  assert.equal(api.sheetCsv({cells:[['=1+1','+CMD','@SUM(A1)','-hello','-12.50']]}),'\ufeff"\'=1+1","\'+CMD","\'@SUM(A1)","\'-hello","-12.50"');
@@ -124,4 +124,15 @@ test('deletion clears offline copies, recovery, sessions and pending uploads and
  assert.equal((await storageApi.readDeviceLibrary(scope)).length,0);
  const session=await storageApi.readDeviceSession(scope);
  assert.equal(session.openBooks.length,0);assert.equal(session.activeId,null);
+});
+
+test('keeping the server clears local edits and pending uploads while allowing future saves',async()=>{
+ const scope='replace-test',local={id:'replace',name:'Local',sheets:[]},server={...local,name:'Server'};
+ await storageApi.saveDeviceWorkbook(scope,local);await storageApi.queueWorkbookSync(scope,local);
+ await storageApi.deleteDeviceWorkbook(scope,local.id,false,{book:server,version:'v2'});
+ assert.equal((await storageApi.readDeviceWorkbook(scope,local.id)).book.name,'Server');
+ assert.equal((await storageApi.listWorkbookSync(scope)).length,0);
+ assert.equal(await storageApi.workbookWasDeleted(scope,local.id),undefined);
+ await storageApi.saveDeviceWorkbook(scope,{...server,name:'Next edit'});
+ assert.equal((await storageApi.readDeviceWorkbook(scope,local.id)).book.name,'Next edit');
 });

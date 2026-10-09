@@ -13,6 +13,8 @@ import {
   ChevronDown,
   AlertTriangle,
   X,
+  Search,
+  FolderOpen,
 } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
 import { readDeviceLibrary, saveDeviceLibrary, type DeviceWorkbook } from '@/lib/workbookDevice';
@@ -20,7 +22,7 @@ import { readDeviceLibrary, saveDeviceLibrary, type DeviceWorkbook } from '@/lib
 type Document = { id: string; title: string; tags: string[]; created_at: string };
 type Organization = { folders: { id: string; name: string; parentId?: string }[]; files: Record<string, string> };
 
-const control = 'rounded-lg border px-2 py-1.5 text-xs disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800';
+const control = 'rounded-lg border px-2 py-1.5 text-xs disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors';
 
 export default function WorkbookLibrary({
   scope,
@@ -50,9 +52,27 @@ export default function WorkbookLibrary({
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState('recent');
   const [page, setPage] = useState(1);
-  const [folderName, setFolderName] = useState('');
-  const [editing, setEditing] = useState<string | null>(null);
   const [moving, setMoving] = useState<{ id: string; name: string } | null>(null);
+  const [moveSelectedFolderId, setMoveSelectedFolderId] = useState<string>('');
+  const [moveSearchQuery, setMoveSearchQuery] = useState('');
+
+  // Folder modal state (Create / Rename)
+  const [folderModal, setFolderModal] = useState<{
+    open: boolean;
+    mode: 'create' | 'rename';
+    folderId?: string;
+    parentId?: string;
+    name: string;
+  } | null>(null);
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    folderId: string;
+    folderName: string;
+    parentId?: string;
+  } | null>(null);
 
   // Delete folder confirmation modal state
   const [deletingFolder, setDeletingFolder] = useState<{
@@ -62,7 +82,7 @@ export default function WorkbookLibrary({
 
   const [folderSearch, setFolderSearch] = useState('');
   const [expanded, setExpanded] = useState<string[]>(['root']);
-  const [parentId, setParentId] = useState<string | undefined>();
+  const [moveExpanded, setMoveExpanded] = useState<string[]>(['root']);
 
   const pathFor = (id: string): string => {
     const parts: string[] = [];
@@ -113,6 +133,13 @@ export default function WorkbookLibrary({
     };
   }, [scope]);
 
+  // Close context menu on window click
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
+  }, []);
+
   const rows = useMemo(() => {
     const map = new Map<string, { id: string; name: string; date: string; template: boolean; doc?: Document; device?: DeviceWorkbook }>();
     for (const doc of documents) {
@@ -158,40 +185,40 @@ export default function WorkbookLibrary({
     }
   }
 
-  async function saveFolder() {
-    const name = folderName.trim();
+  async function handleSaveFolderModal() {
+    if (!folderModal) return;
+    const name = folderModal.name.trim();
     if (!name) return;
-    const currentParent = editing
-      ? organization.folders.find(item => item.id === editing)?.parentId
-      : parentId;
+
+    const parentId = folderModal.parentId || undefined;
+    const isRename = folderModal.mode === 'rename';
+    const folderId = folderModal.folderId;
+
     if (
       organization.folders.some(
         f =>
-          f.id !== editing &&
-          f.parentId === currentParent &&
+          f.id !== folderId &&
+          f.parentId === parentId &&
           f.name.toLowerCase() === name.toLowerCase()
       )
     ) {
-      setError('A folder with this name already exists.');
+      setError('A folder with this name already exists in this location.');
       return;
     }
-    const id = editing || crypto.randomUUID();
-    if (
-      await save({
-        ...organization,
-        folders: editing
-          ? organization.folders.map(f => (f.id === id ? { ...f, name } : f))
-          : [...organization.folders, { id, name, parentId: currentParent }],
-      })
-    ) {
-      setFolderName('');
-      setEditing(null);
+
+    const id = isRename && folderId ? folderId : crypto.randomUUID();
+    const updatedFolders = isRename
+      ? organization.folders.map(f => (f.id === id ? { ...f, name, parentId } : f))
+      : [...organization.folders, { id, name, parentId }];
+
+    if (await save({ ...organization, folders: updatedFolders })) {
+      setFolderModal(null);
       setFolder(id);
-      setExpanded(ids => [...ids, 'root', ...(currentParent ? [currentParent] : [])]);
+      setExpanded(ids => [...ids, 'root', ...(parentId ? [parentId] : [])]);
     }
   }
 
-  // Confirm Delete Folder Handlers
+  // Delete Folder Handlers
   const folderFilesToDelete = useMemo(() => {
     if (!deletingFolder) return [];
     const subtreeIds = getSubtreeFolderIds(deletingFolder.id);
@@ -228,6 +255,7 @@ export default function WorkbookLibrary({
     }
   }
 
+  // Tree component for sidebar
   const tree = (parent?: string, depth = 0): React.ReactNode =>
     organization.folders
       .filter(f => f.parentId === parent)
@@ -239,10 +267,23 @@ export default function WorkbookLibrary({
         return (
           <div key={f.id}>
             <div
-              className={`group/item flex items-center gap-1 rounded py-1 px-1 hover:bg-slate-100 dark:hover:bg-slate-800 ${
-                isSelected ? 'bg-emerald-100 dark:bg-emerald-950 font-medium text-emerald-900 dark:text-emerald-200' : ''
+              className={`group/item flex items-center gap-1 rounded py-1 px-1 select-none transition-colors ${
+                isSelected
+                  ? 'bg-emerald-100 dark:bg-emerald-950 font-semibold text-emerald-900 dark:text-emerald-200'
+                  : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
               }`}
               style={{ paddingLeft: depth * 12 + 4 }}
+              onContextMenu={e => {
+                e.preventDefault();
+                e.stopPropagation();
+                setContextMenu({
+                  x: e.clientX,
+                  y: e.clientY,
+                  folderId: f.id,
+                  folderName: f.name,
+                  parentId: f.parentId,
+                });
+              }}
             >
               <button
                 type="button"
@@ -275,8 +316,13 @@ export default function WorkbookLibrary({
                   title="Rename folder"
                   className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                   onClick={() => {
-                    setEditing(f.id);
-                    setFolderName(f.name);
+                    setFolderModal({
+                      open: true,
+                      mode: 'rename',
+                      folderId: f.id,
+                      parentId: f.parentId,
+                      name: f.name,
+                    });
                   }}
                 >
                   <Pencil size={13} />
@@ -299,9 +345,12 @@ export default function WorkbookLibrary({
                   className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                   disabled={!ready}
                   onClick={() => {
-                    setParentId(f.id);
-                    setEditing(null);
-                    setFolderName('');
+                    setFolderModal({
+                      open: true,
+                      mode: 'create',
+                      parentId: f.id,
+                      name: '',
+                    });
                     setExpanded(ids => [...ids, f.id]);
                   }}
                 >
@@ -314,8 +363,46 @@ export default function WorkbookLibrary({
         );
       });
 
+  // Tree component for Move Dialog
+  const renderMoveTree = (parent?: string, depth = 0): React.ReactNode => {
+    return organization.folders
+      .filter(f => f.parentId === parent)
+      .filter(f => !moveSearchQuery || pathFor(f.id).toLowerCase().includes(moveSearchQuery.toLowerCase()))
+      .map(f => {
+        const children = organization.folders.some(child => child.parentId === f.id);
+        const open = !!moveSearchQuery || moveExpanded.includes(f.id);
+        const isSelected = moveSelectedFolderId === f.id;
+        return (
+          <div key={f.id}>
+            <div
+              className={`flex items-center gap-1.5 rounded-lg py-1.5 px-2 cursor-pointer transition-colors ${
+                isSelected
+                  ? 'bg-emerald-100 border border-emerald-300 font-semibold text-emerald-900 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-200'
+                  : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+              }`}
+              style={{ paddingLeft: depth * 16 + 8 }}
+              onClick={() => setMoveSelectedFolderId(f.id)}
+            >
+              <button
+                type="button"
+                className="p-0.5 text-slate-400 hover:text-slate-700"
+                onClick={e => {
+                  e.stopPropagation();
+                  setMoveExpanded(ids => (open ? ids.filter(id => id !== f.id) : [...ids, f.id]));
+                }}
+              >
+                {children ? open ? <ChevronDown size={14} /> : <ChevronRight size={14} /> : <Folder size={14} className="text-emerald-600" />}
+              </button>
+              <span className="text-xs font-medium truncate min-w-0 flex-1">{f.name}</span>
+            </div>
+            {children && open && renderMoveTree(f.id, depth + 1)}
+          </div>
+        );
+      });
+  };
+
   return (
-    <section className="overflow-hidden rounded-xl border bg-white dark:bg-slate-900">
+    <section className="overflow-hidden rounded-xl border bg-white dark:bg-slate-900 shadow-sm">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
         <div>
           <h3 className="font-semibold">Saved workbooks & templates</h3>
@@ -340,7 +427,7 @@ export default function WorkbookLibrary({
           <div className="flex items-center justify-between">
             <button
               type="button"
-              className="flex items-center gap-1 text-xs font-semibold"
+              className="flex items-center gap-1 text-xs font-semibold text-slate-900 dark:text-slate-100"
               aria-expanded={expanded.includes('root')}
               onClick={() => setExpanded(ids => (ids.includes('root') ? ids.filter(id => id !== 'root') : [...ids, 'root']))}
             >
@@ -349,13 +436,16 @@ export default function WorkbookLibrary({
             </button>
             <button
               type="button"
-              aria-label="Create top-level workbook folder"
-              title="Create top-level folder"
-              className="rounded p-1 hover:bg-slate-200 dark:hover:bg-slate-800"
+              aria-label="Create new workbook folder"
+              title="Create new folder"
+              className="rounded p-1 text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
               onClick={() => {
-                setParentId(undefined);
-                setEditing(null);
-                setFolderName('');
+                setFolderModal({
+                  open: true,
+                  mode: 'create',
+                  parentId: undefined,
+                  name: '',
+                });
               }}
             >
               <Plus size={16} />
@@ -367,16 +457,16 @@ export default function WorkbookLibrary({
             placeholder="Search folders…"
             value={folderSearch}
             onChange={e => setFolderSearch(e.target.value)}
-            className="w-full rounded border bg-transparent p-2 text-xs"
+            className="w-full rounded-lg border bg-transparent p-2 text-xs"
           />
 
           <div className="space-y-1 pt-1">
             <button
               type="button"
-              className={`block w-full text-left text-xs rounded px-2 py-1 ${
+              className={`block w-full text-left text-xs rounded-lg px-2 py-1.5 transition-colors ${
                 folder === '*'
                   ? 'bg-emerald-100 font-semibold text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200'
-                  : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+                  : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
               }`}
               onClick={() => setFolder('*')}
             >
@@ -384,10 +474,10 @@ export default function WorkbookLibrary({
             </button>
             <button
               type="button"
-              className={`block w-full text-left text-xs rounded px-2 py-1 ${
+              className={`block w-full text-left text-xs rounded-lg px-2 py-1.5 transition-colors ${
                 folder === ''
                   ? 'bg-emerald-100 font-semibold text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200'
-                  : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+                  : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
               }`}
               onClick={() => setFolder('')}
             >
@@ -401,50 +491,8 @@ export default function WorkbookLibrary({
             </nav>
           )}
 
-          <form
-            className="space-y-2 border-t pt-3"
-            onSubmit={e => {
-              e.preventDefault();
-              void saveFolder();
-            }}
-          >
-            <p className="text-[11px] font-medium text-slate-600 dark:text-slate-400">
-              {editing
-                ? 'Rename workbook folder'
-                : parentId
-                ? `New subfolder in ${pathFor(parentId)}`
-                : 'New top-level workbook folder'}
-            </p>
-            <input
-              aria-label={editing ? 'Rename library folder' : 'New library folder'}
-              maxLength={60}
-              value={folderName}
-              onChange={e => setFolderName(e.target.value)}
-              placeholder={editing ? 'Enter new name' : 'Folder name'}
-              className="w-full rounded border bg-transparent p-2 text-xs"
-            />
-            <div className="flex gap-2">
-              <button className={`${control} flex flex-1 items-center justify-center gap-1.5 font-medium`} disabled={!ready || !folderName.trim()}>
-                <FolderPlus size={14} />
-                {editing ? 'Save name' : 'Create folder'}
-              </button>
-              {editing && (
-                <button
-                  type="button"
-                  className={control}
-                  onClick={() => {
-                    setEditing(null);
-                    setFolderName('');
-                  }}
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
-          </form>
-
-          <p className="text-[11px] leading-relaxed text-slate-500">
-            Folder organization is saved offline on this device. Removing a folder will ask whether to keep workbooks in Unfiled or delete them.
+          <p className="text-[11px] leading-relaxed text-slate-500 border-t pt-3">
+            Right-click any folder for options. Folders are saved offline on this device.
           </p>
         </aside>
 
@@ -462,8 +510,13 @@ export default function WorkbookLibrary({
                     onClick={() => {
                       const f = organization.folders.find(item => item.id === folder);
                       if (f) {
-                        setEditing(f.id);
-                        setFolderName(f.name);
+                        setFolderModal({
+                          open: true,
+                          mode: 'rename',
+                          folderId: f.id,
+                          parentId: f.parentId,
+                          name: f.name,
+                        });
                       }
                     }}
                   >
@@ -533,7 +586,12 @@ export default function WorkbookLibrary({
                     title="Move to folder"
                     className={`${control} flex items-center gap-1 text-slate-700 dark:text-slate-300`}
                     disabled={!ready}
-                    onClick={() => setMoving({ id: row.id, name: row.name })}
+                    onClick={() => {
+                      setMoving({ id: row.id, name: row.name });
+                      setMoveSelectedFolderId(organization.files[row.id] || '');
+                      setMoveSearchQuery('');
+                      setMoveExpanded(['root', ...(organization.files[row.id] ? [organization.files[row.id]] : [])]);
+                    }}
                   >
                     <FolderInput size={15} />
                   </button>
@@ -567,42 +625,251 @@ export default function WorkbookLibrary({
         </div>
       </div>
 
-      {moving && (
-        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/40 p-4">
-          <section role="dialog" aria-modal="true" aria-label="Move workbook" className="w-full max-w-sm space-y-3.5 rounded-xl bg-white p-5 shadow-lg dark:bg-slate-900">
-            <div className="flex items-center justify-between">
-              <h4 className="flex items-center gap-2 font-semibold">
-                <FolderInput size={18} className="text-emerald-600" />
-                Move workbook
+      {/* Right-Click Context Menu */}
+      {contextMenu && (
+        <div
+          className="fixed z-[100] w-48 rounded-xl border bg-white p-1.5 shadow-xl dark:bg-slate-900 dark:border-slate-800"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="px-2 py-1 text-[11px] font-semibold text-slate-400 border-b dark:border-slate-800 truncate">
+            {contextMenu.folderName}
+          </div>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+            onClick={() => {
+              setFolder(contextMenu.folderId);
+              setContextMenu(null);
+            }}
+          >
+            <FolderOpen size={14} className="text-emerald-600" />
+            View workbooks
+          </button>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+            onClick={() => {
+              setFolderModal({
+                open: true,
+                mode: 'create',
+                parentId: contextMenu.folderId,
+                name: '',
+              });
+              setContextMenu(null);
+            }}
+          >
+            <Plus size={14} className="text-blue-600" />
+            Create subfolder
+          </button>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+            onClick={() => {
+              setFolderModal({
+                open: true,
+                mode: 'rename',
+                folderId: contextMenu.folderId,
+                parentId: contextMenu.parentId,
+                name: contextMenu.folderName,
+              });
+              setContextMenu(null);
+            }}
+          >
+            <Pencil size={14} className="text-amber-600" />
+            Rename folder
+          </button>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+            onClick={() => {
+              setDeletingFolder({ id: contextMenu.folderId, name: contextMenu.folderName });
+              setContextMenu(null);
+            }}
+          >
+            <Trash2 size={14} />
+            Delete folder
+          </button>
+        </div>
+      )}
+
+      {/* Create / Rename Folder Modal */}
+      {folderModal?.open && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-4">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label={folderModal.mode === 'rename' ? 'Rename folder' : 'Create folder'}
+            className="w-full max-w-sm space-y-4 rounded-xl bg-white p-5 shadow-xl dark:bg-slate-900"
+          >
+            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
+              <h4 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-slate-100">
+                <FolderPlus size={18} className="text-emerald-600" />
+                {folderModal.mode === 'rename' ? 'Rename Folder' : 'Create New Folder'}
               </h4>
-              <button type="button" className="rounded p-1 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => setMoving(null)}>
+              <button
+                type="button"
+                className="rounded p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                onClick={() => setFolderModal(null)}
+              >
                 <X size={16} />
               </button>
             </div>
-            <p className="break-words text-sm font-medium text-slate-700 dark:text-slate-300">{moving.name}</p>
-            <div>
-              <label className="mb-1 block text-xs text-slate-500">Destination folder</label>
-              <SearchableSelect
-                ariaLabel="Destination folder"
-                value={organization.files[moving.id] || ''}
-                options={[{ value: '', label: 'Unfiled' }, ...organization.folders.map(f => ({ value: f.id, label: pathFor(f.id) }))]}
-                onChange={id => {
-                  void (async () => {
-                    const files = { ...organization.files };
-                    if (id) files[moving.id] = id;
-                    else delete files[moving.id];
-                    if (await save({ ...organization, files })) setMoving(null);
-                  })();
-                }}
-              />
+
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Folder Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  aria-label="Folder name"
+                  maxLength={60}
+                  autoFocus
+                  value={folderModal.name}
+                  onChange={e => setFolderModal({ ...folderModal, name: e.target.value })}
+                  placeholder="Enter folder name…"
+                  className="w-full rounded-lg border bg-transparent p-2 text-xs outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Parent Folder
+                </label>
+                <SearchableSelect
+                  ariaLabel="Parent folder"
+                  value={folderModal.parentId || ''}
+                  options={[
+                    { value: '', label: 'None (Top-level folder)' },
+                    ...organization.folders
+                      .filter(f => f.id !== folderModal.folderId)
+                      .map(f => ({ value: f.id, label: pathFor(f.id) })),
+                  ]}
+                  onChange={id => setFolderModal({ ...folderModal, parentId: id || undefined })}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t dark:border-slate-800">
+              <button
+                type="button"
+                className={control}
+                onClick={() => setFolderModal(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-40"
+                disabled={!folderModal.name.trim()}
+                onClick={() => void handleSaveFolderModal()}
+              >
+                {folderModal.mode === 'rename' ? 'Save Changes' : 'Create Folder'}
+              </button>
             </div>
           </section>
         </div>
       )}
 
+      {/* Enhanced Move Workbook Dialog (Hierarchical Tree Selector & Search) */}
+      {moving && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-4">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="Move workbook to folder"
+            className="w-full max-w-md space-y-4 rounded-xl bg-white p-5 shadow-xl dark:bg-slate-900"
+          >
+            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-800">
+              <h4 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-slate-100">
+                <FolderInput size={18} className="text-emerald-600" />
+                Move Workbook
+              </h4>
+              <button
+                type="button"
+                className="rounded p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                onClick={() => setMoving(null)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <p className="truncate text-xs text-slate-500 font-medium">
+              File: <span className="font-semibold text-slate-800 dark:text-slate-200">{moving.name}</span>
+            </p>
+
+            <div className="space-y-2">
+              <div className="relative">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  aria-label="Search destination folders"
+                  placeholder="Search destination folders…"
+                  value={moveSearchQuery}
+                  onChange={e => setMoveSearchQuery(e.target.value)}
+                  className="w-full rounded-lg border bg-transparent pl-8 pr-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+
+              <div className="max-h-60 overflow-y-auto rounded-lg border bg-slate-50/50 p-2 space-y-1 dark:bg-slate-950/40">
+                {/* Root Option: Unfiled */}
+                <div
+                  className={`flex items-center gap-1.5 rounded-lg py-1.5 px-2 cursor-pointer transition-colors ${
+                    moveSelectedFolderId === ''
+                      ? 'bg-emerald-100 border border-emerald-300 font-semibold text-emerald-900 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-200'
+                      : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                  }`}
+                  onClick={() => setMoveSelectedFolderId('')}
+                >
+                  <Folder size={14} className="text-slate-400" />
+                  <span className="text-xs font-medium">Unfiled (Root level)</span>
+                </div>
+
+                {/* Tree nodes */}
+                {renderMoveTree()}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t dark:border-slate-800">
+              <span className="text-[11px] text-slate-500 truncate max-w-[200px]">
+                Selected: <strong className="text-slate-700 dark:text-slate-300">{moveSelectedFolderId ? pathFor(moveSelectedFolderId) : 'Unfiled'}</strong>
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className={control}
+                  onClick={() => setMoving(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-medium text-white hover:bg-emerald-700"
+                  onClick={() => {
+                    void (async () => {
+                      const files = { ...organization.files };
+                      if (moveSelectedFolderId) files[moving.id] = moveSelectedFolderId;
+                      else delete files[moving.id];
+                      if (await save({ ...organization, files })) setMoving(null);
+                    })();
+                  }}
+                >
+                  Move Here
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* Delete Folder Confirmation Dialog */}
       {deletingFolder && (
         <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/50 p-4">
-          <section role="dialog" aria-modal="true" aria-label="Delete folder confirmation" className="w-full max-w-md space-y-4 rounded-xl bg-white p-6 shadow-xl dark:bg-slate-900">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="Delete folder confirmation"
+            className="w-full max-w-md space-y-4 rounded-xl bg-white p-6 shadow-xl dark:bg-slate-900"
+          >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-2.5 text-red-600">
                 <AlertTriangle size={22} className="shrink-0" />
@@ -610,7 +877,11 @@ export default function WorkbookLibrary({
                   Delete folder &quot;{deletingFolder.name}&quot;?
                 </h4>
               </div>
-              <button type="button" className="rounded p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" onClick={() => setDeletingFolder(null)}>
+              <button
+                type="button"
+                className="rounded p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                onClick={() => setDeletingFolder(null)}
+              >
                 <X size={18} />
               </button>
             </div>

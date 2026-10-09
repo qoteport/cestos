@@ -81,15 +81,16 @@ export async function listDeviceWorkbooks(scope: string): Promise<DeviceWorkbook
   const rows = await transact<DeviceWorkbook[]>('workbooks', 'readonly', store => store.getAll());
   return rows.filter(row => row.scope === scope).sort((a,b) => b.savedAt.localeCompare(a.savedAt));
 }
-export async function deleteDeviceWorkbook(scope:string,id:string) {
+export async function deleteDeviceWorkbook(scope:string,id:string, permanentlyDeleted=true, replacement?:{book:FieldWorkbook;version?:string}) {
   const db=await openDatabase();
   await new Promise<void>((resolve,reject)=>{
     const tx=db.transaction(['workbooks','revisions','sessions'],'readwrite');
     const key=JSON.stringify([scope,id]),sessions=tx.objectStore('sessions');
     tx.objectStore('workbooks').delete(key);
+    if(replacement)tx.objectStore('workbooks').put({key,scope,book:replacement.book,savedAt:new Date().toISOString(),remoteVersion:replacement.version,baseVersion:replacement.version});
     tx.objectStore('revisions').delete(key);
     sessions.delete(`sync:${key}`);
-    sessions.put(true,`deleted:${key}`);
+    if(permanentlyDeleted)sessions.put(true,`deleted:${key}`);else sessions.delete(`deleted:${key}`);
     const session=sessions.get(scope);
     session.onsuccess=()=>{if(session.result){const value=session.result as DeviceSession;sessions.put({...value,openBooks:value.openBooks.filter(item=>item.book.id!==id),activeId:value.activeId===id?null:value.activeId},scope);}};
     const library=sessions.get(`library:${scope}`);

@@ -1,4 +1,5 @@
 'use client';
+import WorkbookSyncPanel from './WorkbookSyncPanel';
 import WorkbookLibrary from './WorkbookLibrary';
 import WorkbookDatabaseWorkspace from './WorkbookDatabaseWorkspace';
 import WorkbookDatabaseReview from './WorkbookDatabaseReview';
@@ -1416,21 +1417,7 @@ export default function FieldWorkbookWorkspace({
         </header>
         {feedback}
         {busy && <p role="status">Opening workbook…</p>}
-        <details className="rounded border border-slate-200 bg-white p-3 dark:bg-slate-900">
-          <summary className="cursor-pointer text-sm font-medium">Offline storage & sync status</summary>
-          {syncEntries.filter(entry=>entry.state!=='synced').map(entry=><div key={entry.key} className="my-2 rounded border border-amber-300 p-3 text-sm">
-            <p className="font-semibold">{entry.book.name} · {entry.state==='conflict'?'Conflicting server version':entry.state==='blocked'?'Sync needs attention':'Waiting to sync'}</p>
-            {entry.error && <p className="mt-1">{entry.error}</p>}
-            {entry.state==='conflict' && <div className="mt-2 flex gap-2">
-              <button className={button} onClick={()=>{activate(entry.book,true);}}>Open local version</button>
-              <button className={button} onClick={()=>{void (async()=>{try{const copy=copyWorkbook(entry.book,entry.book.template);copy.name=`${entry.book.name} — recovered copy`;await saveDeviceWorkbook(storageKey,copy);await queueWorkbookSync(storageKey,copy);await removeWorkbookSync(storageKey,entry.book.id);setSyncEntries(await listWorkbookSync(storageKey));activate(copy,true);setSessions(items=>items.filter(item=>item.book.id!==entry.book.id));}catch(e){setError(e instanceof Error?e.message:'Could not preserve copy');}})();}}>Keep local as new workbook</button>
-              <button className={button} onClick={()=>{const doc=latest.find(doc=>doc.tags.includes(`wb-${entry.book.id}`));if(doc)void openDocument(doc,true,true);else setNotice('Refresh the library online to find the server version.');}}>Open server as separate copy</button>
-            </div>}
-          </div>)}
-          <p role="status" className="my-2 text-xs text-slate-500">{offlineLibraryStatus}</p>
-          <p className="my-2 text-xs text-slate-500">Workbooks are saved automatically on this device. Local edits are preserved during server refreshes. Keep an Excel or workbook backup before clearing browser data.</p>
-          {!deviceBooks.length && <p className="text-sm text-slate-500">Your saved workbooks will download automatically when connected. You can also create or import a workbook offline.</p>}
-        </details>
+        <WorkbookSyncPanel scope={storageKey} entries={syncEntries} status={offlineLibraryStatus} onOpen={source=>activate(source,true)} onResolved={async(id,next)=>{setSessions(items=>items.filter(item=>item.book.id!==id));setDeviceBooks(await listDeviceWorkbooks(storageKey));setSyncEntries(await listWorkbookSync(storageKey));if(next)activate(next,false);setNotice('Workbook sync choice saved.');}}/>
         <WorkbookLibrary scope={storageKey} documents={latest} devices={deviceBooks} busy={busy} loading={loading} onRefresh={()=>void loadLibrary()}
           onOpen={(doc,item)=>{if(item){if(item.book.template)activate(copyWorkbook(item.book,false),true);else if(sessions.some(session=>session.book.id===item.book.id))switchWorkbook(item.book.id);else activate(validateWorkbook(item.book),true);}else if(doc)void openDocument(doc,doc.tags.includes('workbook-template'));}}
           onCopy={(doc,item)=>{if(item)activate(copyWorkbook(item.book,false),true);else if(doc)void copyDocument(doc);}}
