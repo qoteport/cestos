@@ -90,15 +90,14 @@ export function assertLayout(sheet: FieldSheet, l: MappingLayout, allowReview = 
   )
     throw Error('The mapping range is outside this sheet.');
   for (const f of Object.values(l.fields)) {
+    if (!f || (f.kind as string) === 'none') continue;
     if (
-      f &&
       f.kind !== 'cell' &&
       f.kind !==
         ({ rows: 'column', columns: 'row', blocks: 'block', form: 'cell' } as const)[l.mode]
     )
       throw Error('A mapped source does not match the record layout.');
     if (
-      !f ||
       !['column', 'row', 'cell', 'block'].includes(f.kind) ||
       !integer(f.r) ||
       !integer(f.c) ||
@@ -174,7 +173,9 @@ export function extractMapping(sheet: FieldSheet, l: MappingLayout) {
   if (sheet.previewLimited) throw Error('Fully load the sheet before mapping.');
   if (l.mode === 'blocks' && (l.end - l.start + 1) % l.blockSize !== 0)
     throw Error('The last form block is incomplete. Adjust the data range.');
-  const fields = Object.keys(l.fields);
+  const fields = Object.keys(l.fields).filter(
+    (name) => l.fields[name] && (l.fields[name].kind as string) !== 'none'
+  );
   if (l.mode !== 'form' && fields.length && !Object.values(l.fields).some((f) => f.kind !== 'cell'))
     throw Error('Map a value from each record, or choose Single form for fixed cells only.');
   if (!fields.length) throw Error('Map at least one database field.');

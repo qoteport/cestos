@@ -502,9 +502,17 @@ export default function WorkbookDatabaseConnection({
                     </tr>
                   </thead>
                   <tbody>
-                    {selected.columns.map((field) => {
+                    {selected.columns.map((field, index) => {
                       const f = layout.fields[field.name];
-                      const kind = f?.kind || 'none';
+                      const defaultKind =
+                        layout.mode === 'rows'
+                          ? 'column'
+                          : layout.mode === 'columns'
+                            ? 'row'
+                            : layout.mode === 'blocks'
+                              ? 'block'
+                              : 'cell';
+                      const kind = f?.kind || defaultKind;
                       return (
                         <tr key={field.name} className="border-t">
                           <td className="p-2">
@@ -535,24 +543,25 @@ export default function WorkbookDatabaseConnection({
                                 setField(
                                   field.name,
                                   !value || value === 'none'
-                                    ? undefined
+                                    ? ({ kind: 'none', r: 0, c: 0 } as MappingField)
                                     : {
                                         kind: value as MappingField['kind'],
                                         r: layout.mode === 'blocks' ? layout.start : 0,
-                                        c: 0,
+                                        c: f?.c ?? (index < headers.length ? index : 0),
                                       }
                                 )
                               }
                             />
                           </td>
                           <td className="min-w-60 p-2">
-                            {f && (f.kind === 'column' || f.kind === 'row') ? (
+                            {kind === 'column' || kind === 'row' ? (
                               <SearchableSelect
                                 disabled={busy}
                                 ariaLabel={`Map ${field.name}`}
-                                value={String(f.kind === 'column' ? f.c : f.r)}
+                                value={f && (f.kind as string) !== 'none' ? String(f.kind === 'column' ? f.c : f.r) : ''}
+                                placeholder={kind === 'column' ? 'Select column...' : 'Select row...'}
                                 options={
-                                  f.kind === 'column'
+                                  kind === 'column'
                                     ? headers.map((h, c) => ({
                                         value: String(c),
                                         label: `${cellAddress(0, c).replace(/1$/, '')}: ${h || '(no label)'}`,
@@ -564,16 +573,15 @@ export default function WorkbookDatabaseConnection({
                                 }
                                 onChange={(v) =>
                                   v === ''
-                                    ? setField(field.name)
+                                    ? setField(field.name, { kind: 'none', r: 0, c: 0 } as MappingField)
                                     : setField(field.name, {
-                                        ...f,
-                                        ...(f.kind === 'column'
-                                          ? { c: Number(v) }
-                                          : { r: Number(v) }),
+                                        kind: kind as MappingField['kind'],
+                                        r: kind === 'column' ? 0 : Number(v),
+                                        c: kind === 'column' ? Number(v) : 0,
                                       })
                                 }
                               />
-                            ) : f ? (
+                            ) : f && (f.kind as string) !== 'none' ? (
                               <div className="flex gap-2">
                                 <CellInput
                                   label={`Cell for ${field.name}`}
