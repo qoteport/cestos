@@ -1091,6 +1091,24 @@ export default function FieldWorkbookWorkspace({
     setDeviceBooks(await listDeviceWorkbooks(storageKey));
     return saved;
   }
+  async function syncRecoveryCopies() {
+    setBusy(true);setError('');
+    try {
+      // Read committed device copies, never overwrite them with stale library state.
+      const copies=(await listDeviceWorkbooks(storageKey)).filter(item=>/ — local recovery(?: — local recovery)*$/.test(item.book.name));
+      for(const item of copies){validateWorkbook(item.book);await queueWorkbookSync(storageKey,item.book);}
+      await syncWorkbooks(storageKey);
+      const entries=await listWorkbookSync(storageKey);
+      setSyncEntries(entries);
+      const ids=new Set(copies.map(item=>item.book.id));
+      const results=entries.filter(entry=>ids.has(entry.book.id));
+      const synced=results.filter(entry=>entry.state==='synced').length;
+      const review=results.filter(entry=>entry.state==='blocked'||entry.state==='conflict').length;
+      setNotice(`${synced} of ${copies.length} recovery copies synced. ${review ? `${review} need attention in Offline storage & sync status. ` : ''}${copies.length-synced-review>0?'Remaining copies are queued for sync. ':''}All device copies are retained.`);
+      await loadLibrary();
+    }catch(e){setError(e instanceof Error?e.message:'Recovery sync failed. Your device copies are retained.');}
+    finally{setBusy(false);}
+  }
   async function saveDeviceOnly() {
     setBusy(true);setError('');
     try {await saveToDevice();setNotice('Workbook saved on this device.');}
@@ -1493,7 +1511,7 @@ export default function FieldWorkbookWorkspace({
         {feedback}
         {busy && <p role="status">Opening workbook...</p>}
         <WorkbookSyncPanel scope={storageKey} entries={syncEntries} status={offlineLibraryStatus} onOpen={source=>activate(source,true)} onResolved={async(id,next)=>{setSessions(items=>items.filter(item=>item.book.id!==id));setDeviceBooks(await listDeviceWorkbooks(storageKey));setSyncEntries(await listWorkbookSync(storageKey));if(next)activate(next,false);setNotice('Workbook sync choice saved.');}}/>
-        <WorkbookLibrary scope={storageKey} documents={latest} devices={deviceBooks} busy={busy} loading={loading} onRefresh={()=>void loadLibrary()}
+        <WorkbookLibrary onSyncRecovery={()=>void syncRecoveryCopies()} scope={storageKey} documents={latest} devices={deviceBooks} busy={busy} loading={loading} onRefresh={()=>void loadLibrary()}
           onOpen={(doc,item)=>{if(item){if(item.book.template)activate(copyWorkbook(item.book,false),true);else if(sessions.some(session=>session.book.id===item.book.id))switchWorkbook(item.book.id);else activate(validateWorkbook(item.book),true);}else if(doc)void openDocument(doc,doc.tags.includes('workbook-template'));}}
           onCopy={(doc,item)=>{if(item)activate(copyWorkbook(item.book,false),true);else if(doc)void copyDocument(doc);}}
           onDelete={doc=>void deleteDocument(doc)}/>

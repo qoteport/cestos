@@ -31,6 +31,7 @@ export default function WorkbookLibrary({
   busy,
   loading,
   onRefresh,
+  onSyncRecovery,
   onOpen,
   onCopy,
   onDelete,
@@ -41,6 +42,7 @@ export default function WorkbookLibrary({
   busy: boolean;
   loading: boolean;
   onRefresh: () => void;
+  onSyncRecovery: () => void;
   onOpen: (doc?: Document, device?: DeviceWorkbook) => void;
   onCopy: (doc?: Document, device?: DeviceWorkbook) => void;
   onDelete: (doc: Document) => void;
@@ -50,6 +52,7 @@ export default function WorkbookLibrary({
   const [error, setError] = useState('');
   const [folder, setFolder] = useState('*');
   const [query, setQuery] = useState('');
+  const [showRecovery, setShowRecovery] = useState(false);
   const [sort, setSort] = useState('recent');
   const [page, setPage] = useState(1);
   const [moving, setMoving] = useState<{ id: string; name: string } | null>(null);
@@ -136,15 +139,22 @@ export default function WorkbookLibrary({
   // Close context menu on window click
   useEffect(() => {
     const handleClick = () => setContextMenu(null);
+    const handleKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setContextMenu(null); };
     window.addEventListener('click', handleClick);
-    return () => window.removeEventListener('click', handleClick);
+    window.addEventListener('keydown', handleKey);
+    window.addEventListener('resize', handleClick);
+    return () => {
+      window.removeEventListener('click', handleClick);
+      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener('resize', handleClick);
+    };
   }, []);
 
   const openContextMenu = (e: React.MouseEvent, f: { id: string; name: string; parentId?: string }) => {
     e.preventDefault();
     e.stopPropagation();
     const x = Math.max(10, Math.min(e.clientX, (typeof window !== 'undefined' ? window.innerWidth : 1000) - 200));
-    const y = Math.max(10, Math.min(e.clientY, (typeof window !== 'undefined' ? window.innerHeight : 1000) - 200));
+    const y = Math.max(10, Math.min(e.clientY, (typeof window !== 'undefined' ? window.innerHeight : 1000) - 230));
     setContextMenu({
       x,
       y,
@@ -174,9 +184,13 @@ export default function WorkbookLibrary({
     return [...map.values()];
   }, [documents, devices]);
 
+  const isRecovery = (name: string) => / — local recovery(?: — local recovery)*$/.test(name);
+  const recoveryCount = rows.filter(row => isRecovery(row.name)).length;
+
   const visible = useMemo(
     () =>
       rows
+        .filter(row => isRecovery(row.name) === showRecovery)
         .filter(row =>
           folder === '*'
             ? true
@@ -186,13 +200,13 @@ export default function WorkbookLibrary({
         )
         .filter(row => row.name.toLowerCase().includes(query.toLowerCase()))
         .sort((a, b) => (sort === 'name' ? a.name.localeCompare(b.name) : b.date.localeCompare(a.date))),
-    [rows, folder, organization, query, sort]
+    [rows, folder, organization, query, sort, showRecovery]
   );
 
   const pages = Math.max(1, Math.ceil(visible.length / 40));
   const current = Math.min(page, pages);
 
-  useEffect(() => setPage(1), [folder, query, sort]);
+  useEffect(() => setPage(1), [folder, query, sort, showRecovery]);
 
   async function save(next: Organization) {
     try {
@@ -442,6 +456,7 @@ export default function WorkbookLibrary({
               type="button"
               className="flex items-center gap-1 text-xs font-semibold text-slate-900 dark:text-slate-100"
               aria-expanded={expanded.includes('root')}
+              onContextMenu={e => openContextMenu(e, { id: '*', name: 'Workbook folders' })}
               onClick={() => setExpanded(ids => (ids.includes('root') ? ids.filter(id => id !== 'root') : [...ids, 'root']))}
             >
               {expanded.includes('root') ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
@@ -482,6 +497,7 @@ export default function WorkbookLibrary({
                   : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
               }`}
               onClick={() => setFolder('*')}
+              onContextMenu={e => openContextMenu(e, { id: '*', name: 'All workbooks' })}
             >
               All workbooks ({rows.length})
             </button>
@@ -493,6 +509,7 @@ export default function WorkbookLibrary({
                   : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
               }`}
               onClick={() => setFolder('')}
+              onContextMenu={e => openContextMenu(e, { id: '', name: 'Unfiled workbooks' })}
             >
               Unfiled workbooks
             </button>
@@ -506,9 +523,14 @@ export default function WorkbookLibrary({
         </aside>
 
         <div className="min-w-0">
+          {recoveryCount > 0 && <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-amber-50/60 p-3 dark:bg-amber-950/20">
+            <div><p className="text-xs font-semibold">Recovery copies ({recoveryCount})</p><p className="text-xs text-slate-500">Kept separately from your files. Sync preserves each version; it does not merge or overwrite the original.</p></div>
+            <div className="flex gap-2"><button type="button" className={control} aria-pressed={showRecovery} onClick={() => setShowRecovery(value => !value)}>{showRecovery ? 'Back to files' : 'View recovery copies'}</button><button type="button" className={control} disabled={busy || !ready} onClick={onSyncRecovery}>Sync all recovery copies</button></div>
+          </div>}
+
           <div className="flex flex-wrap items-center justify-between gap-2 border-b p-3">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold">{folder === '*' ? 'All files' : folder === '' ? 'Unfiled' : pathFor(folder)}</span>
+              <span className="text-sm font-semibold">{showRecovery ? 'Recovery copies' : folder === '*' ? 'All files' : folder === '' ? 'Unfiled' : pathFor(folder)}</span>
               {folder && folder !== '*' && (
                 <>
                   <button
@@ -647,7 +669,17 @@ export default function WorkbookLibrary({
           />
           <div
             className="fixed z-[100] w-48 rounded-xl border bg-white p-1.5 shadow-xl dark:bg-slate-900 dark:border-slate-800"
-            style={{ top: contextMenu.y, left: contextMenu.x }}
+            role="menu"
+            aria-label={`${contextMenu.folderName} actions`}
+            onKeyDown={e => {
+              if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+              e.preventDefault();
+              const items = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'));
+              const index = items.indexOf(document.activeElement as HTMLButtonElement);
+              const next = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : (index + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+              items[next]?.focus();
+            }}
+            style={{ top: contextMenu.y, left: contextMenu.x, maxHeight: 'calc(100vh - 20px)', overflowY: 'auto' }}
             onClick={e => e.stopPropagation()}
           >
             <div className="px-2 py-1 text-[11px] font-semibold text-slate-400 border-b dark:border-slate-800 truncate">
@@ -655,6 +687,8 @@ export default function WorkbookLibrary({
             </div>
             <button
               type="button"
+              role="menuitem"
+              autoFocus
               className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
               onClick={() => {
                 setFolder(contextMenu.folderId);
@@ -666,22 +700,25 @@ export default function WorkbookLibrary({
             </button>
             <button
               type="button"
+              role="menuitem"
               className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
               onClick={() => {
                 setFolderModal({
                   open: true,
                   mode: 'create',
-                  parentId: contextMenu.folderId,
+                  parentId: contextMenu.folderId && contextMenu.folderId !== '*' ? contextMenu.folderId : undefined,
                   name: '',
                 });
                 setContextMenu(null);
               }}
             >
               <Plus size={14} className="text-blue-600" />
-              Create subfolder
+              {contextMenu.folderId && contextMenu.folderId !== '*' ? 'Add subfolder' : 'Add folder'}
             </button>
+            {contextMenu.folderId && contextMenu.folderId !== '*' && <>
             <button
               type="button"
+              role="menuitem"
               className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
               onClick={() => {
                 setFolderModal({
@@ -699,6 +736,7 @@ export default function WorkbookLibrary({
             </button>
             <button
               type="button"
+              role="menuitem"
               className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
               onClick={() => {
                 setDeletingFolder({ id: contextMenu.folderId, name: contextMenu.folderName });
@@ -708,6 +746,7 @@ export default function WorkbookLibrary({
               <Trash2 size={14} />
               Delete folder
             </button>
+            </>}
           </div>
         </>
       )}

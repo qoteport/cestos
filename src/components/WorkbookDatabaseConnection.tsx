@@ -84,12 +84,15 @@ function DatabaseRecordPicker({
 
   const [records, setRecords] = useState<{ value: string; label: string }[]>([]);
   const [loadingRecords, setLoadingRecords] = useState(false);
-  const [manual, setManual] = useState(false);
+  const [manual, setManual] = useState(!/_ids?$/.test(fieldName));
+  const [recordError, setRecordError] = useState('');
 
   useEffect(() => {
     if (!selectedTableId || manual) return;
     let active = true;
     setLoadingRecords(true);
+    setRecords([]);
+    setRecordError('');
     const policy = { cacheResponse: true, cacheOfflineRead: true, memoryCache: true };
     void (async () => {
       try {
@@ -112,7 +115,7 @@ function DatabaseRecordPicker({
         });
         setRecords(opts);
       } catch {
-        if (active) setRecords([]);
+        if (active) { setRecords([]); setRecordError('Records could not be loaded. Check your connection and table permissions, or enter a known ID.'); }
       } finally {
         if (active) setLoadingRecords(false);
       }
@@ -154,10 +157,11 @@ function DatabaseRecordPicker({
             value={selectedTableId}
             disabled={disabled}
             options={tables.map((t) => ({ value: t.id, label: t.name }))}
-            onChange={(tId) => setSelectedTableId(tId)}
+            onChange={(tId) => { setSelectedTableId(tId); onChange(''); }}
           />
         </div>
       </div>
+      {recordError && <p role="alert" className="text-xs text-amber-700">{recordError}</p>}
       <div className="flex items-center gap-1">
         <span className="text-slate-500 text-[11px] shrink-0">Record:</span>
         <div className="min-w-0 flex-1">
@@ -604,18 +608,31 @@ export default function WorkbookDatabaseConnection({
                   type="button"
                   className={input}
                   disabled={busy}
-                  onClick={() => update({ fields: suggestFields(sheet, layout, selected) })}
+                  onClick={() => update({ fields: {...suggestFields(sheet, layout, selected), ...Object.fromEntries(Object.entries(layout.fields).filter(([,field])=>field.kind==='constant'))} })}
                 >
                   Suggest from labels
                 </button>
               </div>
+              <section className="my-3 rounded-xl border border-emerald-200 bg-emerald-50/40 p-3 dark:bg-emerald-950/20" aria-label="Hidden database details">
+                <h5 className="text-sm font-semibold">Details not on the sheet</h5>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Set a project, site, employee or another value once for every imported record. These details are saved with the connection and included in validation, without adding cells or columns. Use sheet mappings when values differ between rows.</p>
+                <SearchableSelect ariaLabel="Add hidden database detail" value="" disabled={busy}
+                  placeholder="Choose a database field…"
+                  options={selected.columns.filter(field=>layout.fields[field.name]?.kind!=='constant').map(field=>({value:field.name,label:`${field.name}${field.required?' · Required':''}`}))}
+                  onChange={name=>{if(name)setField(name,{kind:'constant',r:0,c:0,value:''});}}/>
+                {selected.columns.filter(field=>layout.fields[field.name]?.kind==='constant').map(field=><div key={field.name} className="mt-3 rounded-lg border bg-white p-3 dark:bg-slate-900">
+                  <div className="mb-2 flex items-center justify-between gap-2"><span className="text-sm font-medium">{field.name}{field.required?' · Required':''}</span><button type="button" className="text-xs underline" disabled={busy} onClick={()=>setField(field.name,undefined)}>Remove hidden value</button></div>
+                  <DatabaseRecordPicker fieldName={field.name} value={layout.fields[field.name].value||''} tables={tables} disabled={busy} onChange={value=>setField(field.name,{kind:'constant',r:0,c:0,value})}/>
+                  <p className="mt-1 text-xs text-slate-500">Applies to every extracted record. The spreadsheet stays unchanged.</p>
+                </div>)}
+              </section>
               <div className="my-2 overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr>
                       <th className="p-2 text-left">Database field</th>
                       <th className="p-2 text-left">Read from</th>
-                      <th className="p-2 text-left">Sheet location</th>
+                      <th className="p-2 text-left">Sheet location or hidden value</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -629,7 +646,7 @@ export default function WorkbookDatabaseConnection({
                             : layout.mode === 'blocks'
                               ? 'block'
                               : 'cell';
-                      const kind = f?.kind || defaultKind;
+                      const kind = f?.kind || 'none';
                       return (
                         <tr key={field.name} className="border-t">
                           <td className="p-2">
@@ -655,13 +672,13 @@ export default function WorkbookDatabaseConnection({
                                       ? [{ value: 'block', label: 'Cell in each form block' }]
                                       : []),
                                 { value: 'cell', label: 'Fixed cell / report value' },
-                                { value: 'constant', label: 'Fixed database record / constant' },
+                                { value: 'constant', label: 'Hidden value / database record' },
                               ]}
                               onChange={(value) =>
                                 setField(
                                   field.name,
                                   !value || value === 'none'
-                                    ? ({ kind: 'none', r: 0, c: 0 } as MappingField)
+                                    ? undefined
                                     : {
                                         kind: value as MappingField['kind'],
                                         r: layout.mode === 'blocks' ? layout.start : 0,
@@ -692,7 +709,7 @@ export default function WorkbookDatabaseConnection({
                                 }
                                 onChange={(v) =>
                                   v === ''
-                                    ? setField(field.name, { kind: 'none', r: 0, c: 0 } as MappingField)
+                                    ? setField(field.name, undefined)
                                     : setField(field.name, {
                                         kind: kind as MappingField['kind'],
                                         r: kind === 'column' ? 0 : Number(v),
