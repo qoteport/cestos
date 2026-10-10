@@ -17,6 +17,7 @@ import {
   FolderOpen,
 } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
+import { workbookLibraryRows } from '@/lib/workbookLibraryRows';
 import { readDeviceLibrary, saveDeviceLibrary, type DeviceWorkbook, type WorkbookSyncEntry } from '@/lib/workbookDevice';
 
 type Document = { id: string; title: string; tags: string[]; created_at: string };
@@ -173,18 +174,7 @@ export default function WorkbookLibrary({
     return () => { active = false; window.removeEventListener('cestos:workbook-folders', refresh); };
   }, [scope]);
 
-  const rows = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; date: string; template: boolean; doc?: Document; device?: DeviceWorkbook }>();
-    for (const doc of documents) {
-      const id = doc.tags.find(t => t.startsWith('wb-'))?.slice(3) || `document:${doc.id}`;
-      map.set(id, { id, name: doc.title, date: doc.created_at, template: doc.tags.includes('workbook-template'), doc });
-    }
-    for (const device of devices) {
-      const old = map.get(device.book.id);
-      map.set(device.book.id, { ...old, id: device.book.id, name: device.book.name, date: device.savedAt, template: device.book.template, device });
-    }
-    return [...map.values()];
-  }, [documents, devices]);
+  const rows = useMemo(() => workbookLibraryRows(documents, devices), [documents, devices]);
 
   const isRecovery = (name: string) => / — local recovery(?: — local recovery)*$/.test(name);
   const recoveryRows = rows.filter(row => isRecovery(row.name));

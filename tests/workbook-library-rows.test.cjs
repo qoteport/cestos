@@ -1,0 +1,10 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const ts=require('typescript'),fs=require('node:fs'),vm=require('node:vm');
+const api={};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/workbookLibraryRows.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{exports:api});
+const doc=(id,tags=[])=>({id,title:'Action Tracker',created_at:'2026-10-10',tags});
+const device=(id,version)=>({book:{id,name:'Action Tracker',template:false},savedAt:'2026-10-10',baseVersion:version});
+test('untagged server document and downloaded copy appear once',()=>{const rows=api.workbookLibraryRows([doc('server')],[device('book','server')]);assert.equal(rows.length,1);assert.equal(rows[0].doc.id,'server');assert.equal(rows[0].device.book.id,'book');});
+test('newest document version wins independent of input ordering',()=>{const old={...doc('old',['wb-book']),created_at:'2026-10-09'};const fresh=doc('new',['wb-book']);for(const docs of [[old,fresh],[fresh,old]])assert.equal(api.workbookLibraryRows(docs,[])[0].doc.id,'new');});
+test('different workbooks with identical names remain intact',()=>{assert.equal(api.workbookLibraryRows([],[device('a'),device('b')]).length,2);});

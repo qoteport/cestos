@@ -617,7 +617,7 @@ export default function FieldWorkbookWorkspace({
 
   const latest = useMemo(() => {
     const seen = new Set<string>();
-    return documents.filter((doc) => {
+    return [...documents].sort((a,b)=>b.created_at.localeCompare(a.created_at)).filter((doc) => {
       const key = doc.tags.find((t) => t.startsWith('wb-')) || doc.id;
       if (seen.has(key)) return false;
       seen.add(key);
@@ -1512,7 +1512,7 @@ export default function FieldWorkbookWorkspace({
         {busy && <p role="status">Opening workbook...</p>}
         <WorkbookSyncPanel scope={storageKey} entries={syncEntries} status={offlineLibraryStatus} onOpen={source=>activate(source,true)} onResolved={async(id,next)=>{setSessions(items=>items.filter(item=>item.book.id!==id));setDeviceBooks(await listDeviceWorkbooks(storageKey));setSyncEntries(await listWorkbookSync(storageKey));if(next)activate(next,false);setNotice('Workbook sync choice saved.');}}/>
         <WorkbookLibrary syncEntries={syncEntries} onSyncRecovery={()=>void syncRecoveryCopies()} scope={storageKey} documents={latest} devices={deviceBooks} busy={busy} loading={loading} onRefresh={()=>void loadLibrary()}
-          onOpen={(doc,item)=>{if(item){if(item.book.template)activate(copyWorkbook(item.book,false),true);else if(sessions.some(session=>session.book.id===item.book.id))switchWorkbook(item.book.id);else activate(validateWorkbook(item.book),true);}else if(doc)void openDocument(doc,doc.tags.includes('workbook-template'));}}
+          onOpen={(doc,item)=>{if(item){if(sessions.some(session=>session.book.id===item.book.id))switchWorkbook(item.book.id);else activate(validateWorkbook(item.book),false);}else if(doc)void openDocument(doc);}}
           onCopy={(doc,item)=>{if(item)activate(copyWorkbook(item.book,false),true);else if(doc)void copyDocument(doc);}}
           onDelete={doc=>void deleteDocument(doc)}/>
         <div>
