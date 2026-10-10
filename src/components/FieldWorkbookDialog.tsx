@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { createContext, useContext, useEffect, useRef, useState, useMemo, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
@@ -132,7 +132,7 @@ export default function FieldWorkbookDialog({
                   aria-label="Workbook library"
                   disabled={tabsState?.busy}
                   onClick={tabsState?.onLibrary}
-                  className={`group relative flex items-center justify-center rounded-lg p-1.5 transition-all duration-150 outline-none focus-visible:ring-0 focus-visible:ring-0 disabled:opacity-50 active:scale-95 ${
+                  className={`group relative flex items-center justify-center rounded-lg p-1.5 transition-all duration-150 outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 focus:ring-offset-0 focus-visible:ring-offset-0 disabled:opacity-50 active:scale-95 ${
                     !tabsState?.activeId
                       ? 'bg-emerald-100/90 text-emerald-700 shadow-xs dark:bg-emerald-950 dark:text-emerald-300'
                       : 'text-emerald-800 hover:bg-emerald-100/70 hover:text-emerald-600 dark:text-emerald-300 dark:hover:bg-emerald-950/60 dark:hover:text-emerald-200'
