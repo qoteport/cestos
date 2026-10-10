@@ -30,6 +30,7 @@ export type WorkbookTabsState = {
   onCloseTab: (id: string) => void;
   onNew: () => void;
   onLibrary: () => void;
+  onAction?: (id:string,action:string)=>void;
 };
 const FieldWorkbookHeaderContext = createContext<{
   setHeaderState: (state: HeaderState) => void;
@@ -51,6 +52,7 @@ export default function FieldWorkbookDialog({
   onClose: () => void;
   children: ReactNode;
 }) {
+  const [tabMenu,setTabMenu]=useState<{id:string;x:number;y:number}|null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const [mounted, setMounted] = useState(false);
   const [entered, setEntered] = useState(false);
@@ -146,7 +148,7 @@ export default function FieldWorkbookDialog({
                 </span>
               </div>
               <div role="tablist" aria-label="Open workbooks" className="flex min-w-0 flex-1 items-end gap-1 overflow-x-auto">
-                {tabsState?.tabs.map(tab=><div key={tab.id} className={`flex h-9 min-w-32 max-w-56 shrink-0 items-center rounded-t-md border border-b-0 ${tabsState.activeId===tab.id ? 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-950' : 'border-transparent bg-slate-200/50 hover:bg-slate-200 dark:bg-slate-800'}`}>
+                {tabsState?.tabs.map(tab=><div key={tab.id} onContextMenu={event=>{event.preventDefault();if(!tabsState.busy)setTabMenu({id:tab.id,x:Math.max(8,Math.min(event.clientX,window.innerWidth-220)),y:Math.max(8,Math.min(event.clientY,window.innerHeight-260))});}} className={`flex h-9 min-w-32 max-w-56 shrink-0 items-center rounded-t-md border border-b-0 ${tabsState.activeId===tab.id ? 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-950' : 'border-transparent bg-slate-200/50 hover:bg-slate-200 dark:bg-slate-800'}`}>
                   <button type="button" role="tab" aria-selected={tabsState.activeId===tab.id} aria-label={`Open workbook ${tab.name}`} disabled={tabsState.busy} onClick={()=>tabsState.onSelect(tab.id)} className={`flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-xs ${tabsState.activeId===tab.id ? 'font-semibold text-emerald-800 dark:text-emerald-300' : 'text-slate-600 dark:text-slate-300'}`}><span className="truncate">{tab.name}</span>{tab.dirty && <span aria-label="Unsaved changes" className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-600"/>}</button>
                   <button type="button" aria-label={`Close workbook ${tab.name}`} disabled={tabsState.busy} onClick={()=>tabsState.onCloseTab(tab.id)} className="mr-1 rounded p-1 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700"><X size={13}/></button>
                 </div>)}
@@ -250,6 +252,7 @@ export default function FieldWorkbookDialog({
           </header>
           <div className="min-h-0 flex-1 overflow-auto">{visited && children}</div>
         </div>
+        {tabMenu&&<div className="fixed inset-0 z-[150]" onPointerDown={()=>setTabMenu(null)} onContextMenu={e=>{e.preventDefault();setTabMenu(null);}} onKeyDown={e=>{if(e.key==='Escape')setTabMenu(null);}}><div role="menu" aria-label="Workbook tab actions" style={{left:tabMenu.x,top:tabMenu.y}} className="fixed w-52 rounded-xl border bg-white p-1 shadow-xl dark:border-slate-700 dark:bg-slate-900" onPointerDown={e=>e.stopPropagation()}>{[['open','Open workbook'],['rename','Rename'],['copy','Duplicate'],['move','Move to folder…'],['close','Close tab'],['delete','Delete workbook']].map(([action,label],index)=><button autoFocus={index===0} role="menuitem" type="button" key={action} className={`block w-full rounded px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800 ${action==='delete'?'text-red-600':''}`} onClick={()=>{tabsState?.onAction?.(tabMenu.id,action);setTabMenu(null);}}>{label}</button>)}</div></div>}
       </dialog>
     </FieldWorkbookHeaderContext.Provider>,
     document.body

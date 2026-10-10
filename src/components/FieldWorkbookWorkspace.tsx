@@ -350,6 +350,7 @@ export default function FieldWorkbookWorkspace({
     max?: number;
     onConfirm: (val?: any) => void;
   } | null>(null);
+  const [tabMove,setTabMove]=useState<{id:string;name:string;organization:{folders:{id:string;name:string;parentId?:string}[];files:Record<string,string>}}|null>(null);
   const [promptInput, setPromptInput] = useState('');
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [gridContextMenu, setGridContextMenu] = useState<{
@@ -995,7 +996,7 @@ export default function FieldWorkbookWorkspace({
   }
   useEffect(()=>{
     const tabs=sessions.map(item=>({id:item.book.id,name:item.book.id===book?.id ? book.name : item.book.name,dirty:item.book.id===book?.id ? dirty : item.dirty}));
-    setTabsState({tabs,activeId:book?.id || null,busy,onSelect:switchWorkbook,onCloseTab:closeWorkbook,onNew:()=>activate(newWorkbook(),true),onLibrary:leave});
+    setTabsState({tabs,activeId:book?.id || null,busy,onSelect:switchWorkbook,onCloseTab:closeWorkbook,onNew:()=>activate(newWorkbook(),true),onLibrary:leave,onAction:workbookTabAction});
   },[sessions,book,dirty,busy,sheetIndex,anchor,end,undo,redo,setTabsState]);
   async function openDocument(doc: Document, asTemplate = false, restoreVersion = false) {
     const id=doc.tags.find(tag=>tag.startsWith('wb-'))?.slice(3);
@@ -1034,6 +1035,22 @@ export default function FieldWorkbookWorkspace({
       setSyncEntries(await listWorkbookSync(storageKey));
       await loadLibrary();setNotice('Workbook copied and saved on this device. Server sync runs automatically.');
     } catch(e) {setError(e instanceof Error ? e.message : 'Could not copy workbook.');} finally {setBusy(false);}
+  }
+  async function workbookTabAction(id:string,action:string){
+    const target=bookRef.current?.id===id?bookRef.current:sessions.find(item=>item.book.id===id)?.book;
+    if(!target||busy)return;
+    if(action==='open'){switchWorkbook(id);return;}if(action==='close'){closeWorkbook(id);return;}
+    if(action==='rename'){setPromptInput(target.name);setCustomModal({type:'prompt',title:'Rename workbook',message:'Enter a name for this workbook.',onConfirm:value=>{const name=value?.trim();if(!name)return;if(bookRef.current?.id===id)commit({...bookRef.current,name});else setSessions(items=>items.map(item=>item.book.id===id?{...item,book:{...item.book,name},dirty:true}:item));}});return;}
+    try{
+      if(action==='move'){const records=await readDeviceLibrary<{folders:{id:string;name:string;parentId?:string}[];files:Record<string,string>}>(`${storageKey}:file-folders`);setTabMove({id,name:target.name,organization:records?.[0]||{folders:[],files:{}}});return;}
+      if(action==='copy'){const copy=copyWorkbook(target,target.template),names=new Set([...sessions.map(item=>item.book.name),...deviceBooks.map(item=>item.book.name),...latest.map(doc=>doc.title)].map(name=>name.toLowerCase()));let n=1;while(names.has(`${target.name}-${n}`.toLowerCase()))n++;copy.name=`${target.name.slice(0,240)}-${n}`;await saveDeviceWorkbook(storageKey,copy);activate(copy,true);return;}
+      if(action==='delete'){
+        const doc=latest.find(item=>item.tags.includes(`wb-${id}`));if(doc){await deleteDocument(doc);return;}
+        const cached=await readDeviceWorkbook(storageKey,id);
+        if(cached?.remoteVersion||cached?.baseVersion||syncEntries.some(entry=>entry.book.id===id&&entry.baseVersion)){setError('Refresh the workbook library before deleting this server workbook.');return;}
+        setCustomModal({type:'confirm',title:'Delete local workbook?',message:`Delete “${target.name}”, its local recovery history and pending upload?`,confirmLabel:'Delete workbook',confirmVariant:'danger',onConfirm:()=>{void(async()=>{try{await deleteDeviceWorkbook(storageKey,id);setSessions(items=>items.filter(item=>item.book.id!==id));if(bookRef.current?.id===id){bookRef.current=null;setBook(null);setDirty(false);}setDeviceBooks(await listDeviceWorkbooks(storageKey));setSyncEntries(await listWorkbookSync(storageKey));}catch(e){setError(e instanceof Error?e.message:'Delete failed.');}})();}});
+      }
+    }catch(e){setError(e instanceof Error?e.message:'Could not complete workbook action.');}
   }
   async function deleteDocument(doc: Document) {
     setCustomModal({
@@ -1284,7 +1301,7 @@ export default function FieldWorkbookWorkspace({
         // Refresh from the other tab without overwriting it or bypassing its conflict check.
         activate(validateWorkbook(latest.book),false);
         setNotice('Latest device version opened. Your previous work is saved as a separate local recovery workbook.');
-      }else {activate(copy,true);setNotice('Your version is saved as a new workbook on this device.');}
+      }else {activate(copy,true);setSessions(items=>items.filter(item=>item.book.id!==current.id));editorBaselines.current.delete(current.id);setNotice('Your version is saved as a new workbook on this device.');}
       setDeviceBooks(await listDeviceWorkbooks(storageKey));setDeviceConflict(null);
     }catch(e){setError(e instanceof Error?e.message:'Could not save recovery copy. Download a backup before continuing.');}finally{setBusy(false);}
   }
@@ -1366,6 +1383,7 @@ export default function FieldWorkbookWorkspace({
             </div>
           </div>
         );
+  const tabMoveDialog=tabMove&&<div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/40 p-4"><section role="dialog" aria-modal="true" aria-label="Move workbook to folder" className="w-full max-w-sm space-y-3 rounded-xl bg-white p-5 dark:bg-slate-900"><div className="flex justify-between"><h3 className="font-semibold">Move workbook</h3><button type="button" onClick={()=>setTabMove(null)}>Close</button></div><p className="text-sm">{tabMove.name}</p><SearchableSelect ariaLabel="Workbook destination folder" value={tabMove.organization.files[tabMove.id]||''} options={[{value:'',label:'Unfiled'},...tabMove.organization.folders.map(folder=>{const names=[folder.name],seen=new Set([folder.id]);let parent=folder.parentId;while(parent&&!seen.has(parent)){seen.add(parent);const found=tabMove.organization.folders.find(item=>item.id===parent);if(!found)break;names.unshift(found.name);parent=found.parentId;}return {value:folder.id,label:names.join(' / ')};})]} onChange={folder=>{void(async()=>{try{const rows=await readDeviceLibrary<typeof tabMove.organization>(`${storageKey}:file-folders`),organization=rows?.[0]||tabMove.organization;if(folder&&!organization.folders.some(item=>item.id===folder))throw Error('This folder no longer exists. Reopen the folder chooser.');const files={...organization.files};if(folder)files[tabMove.id]=folder;else delete files[tabMove.id];await saveDeviceLibrary(`${storageKey}:file-folders`,[{...organization,files}]);window.dispatchEvent(new Event('cestos:workbook-folders'));setTabMove(null);setNotice('Workbook moved.');}catch(e){setError(e instanceof Error?e.message:'Could not move workbook.');}})();}}/>{!tabMove.organization.folders.length&&<p className="text-xs text-slate-500">Create folders in Your workspace first.</p>}</section></div>;
   const modalDialog = (customModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-xs">
             <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
@@ -1501,6 +1519,7 @@ export default function FieldWorkbookWorkspace({
           </div>
         </div>
         <WorkbookDatabaseWorkspace onOpen={loaded=>activate(loaded,true)}/>
+        {tabMoveDialog}
         {modalDialog}
       </section>
     );
@@ -3062,6 +3081,7 @@ export default function FieldWorkbookWorkspace({
           </>
         )}
 
+        {tabMoveDialog}
         {modalDialog}
 
         {sharing && book && <WorkbookShareDialog book={book} onClose={()=>setSharing(false)}/>}

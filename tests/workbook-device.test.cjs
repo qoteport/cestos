@@ -136,3 +136,16 @@ test('keeping the server clears local edits and pending uploads while allowing f
  await storageApi.saveDeviceWorkbook(scope,{...server,name:'Next edit'});
  assert.equal((await storageApi.readDeviceWorkbook(scope,local.id)).book.name,'Next edit');
 });
+
+test('refreshing to latest baseline permits editing without overwriting the other tab blindly',async()=>{
+ const scope='refresh-conflict',original=workbook('refresh','Original'),other=workbook('refresh','Other tab');
+ await storageApi.saveDeviceWorkbook(scope,original,'remote');
+ await storageApi.saveDeviceWorkbook(scope,other,undefined,{id:'other',baseline:original});
+ const mine=workbook('refresh','My changes');
+ await assert.rejects(storageApi.saveDeviceWorkbook(scope,mine,undefined,{id:'mine',baseline:original}),error=>error.name==='DeviceWorkbookConflict'&&error.workbook.name==='My changes');
+ await storageApi.saveDeviceWorkbook(scope,{...mine,id:'recovery-copy'});
+ const latest=await storageApi.readDeviceWorkbook(scope,'refresh');
+ await storageApi.saveDeviceWorkbook(scope,workbook('refresh','Reviewed edit'),undefined,{id:'mine',baseline:latest.book});
+ assert.equal((await storageApi.readDeviceWorkbook(scope,'refresh')).book.name,'Reviewed edit');
+ assert.equal((await storageApi.readDeviceWorkbook(scope,'recovery-copy')).book.name,'My changes');
+});

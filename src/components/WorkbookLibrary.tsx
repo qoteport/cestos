@@ -154,6 +154,13 @@ export default function WorkbookLibrary({
     });
   };
 
+  useEffect(() => {
+    let active = true;
+    const refresh = () => { void readDeviceLibrary<Organization>(`${scope}:file-folders`).then(rows => { if (active && rows?.[0]) setOrganization(rows[0]); }).catch(() => { if(active) setError('Could not refresh folders.'); }); };
+    window.addEventListener('cestos:workbook-folders', refresh);
+    return () => { active = false; window.removeEventListener('cestos:workbook-folders', refresh); };
+  }, [scope]);
+
   const rows = useMemo(() => {
     const map = new Map<string, { id: string; name: string; date: string; template: boolean; doc?: Document; device?: DeviceWorkbook }>();
     for (const doc of documents) {
