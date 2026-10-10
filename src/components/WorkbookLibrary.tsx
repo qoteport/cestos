@@ -17,7 +17,7 @@ import {
   FolderOpen,
 } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
-import { readDeviceLibrary, saveDeviceLibrary, type DeviceWorkbook } from '@/lib/workbookDevice';
+import { readDeviceLibrary, saveDeviceLibrary, type DeviceWorkbook, type WorkbookSyncEntry } from '@/lib/workbookDevice';
 
 type Document = { id: string; title: string; tags: string[]; created_at: string };
 type Organization = { folders: { id: string; name: string; parentId?: string }[]; files: Record<string, string> };
@@ -28,6 +28,7 @@ export default function WorkbookLibrary({
   scope,
   documents,
   devices,
+  syncEntries,
   busy,
   loading,
   onRefresh,
@@ -39,6 +40,7 @@ export default function WorkbookLibrary({
   scope: string;
   documents: Document[];
   devices: DeviceWorkbook[];
+  syncEntries: WorkbookSyncEntry[];
   busy: boolean;
   loading: boolean;
   onRefresh: () => void;
@@ -185,7 +187,13 @@ export default function WorkbookLibrary({
   }, [documents, devices]);
 
   const isRecovery = (name: string) => / — local recovery(?: — local recovery)*$/.test(name);
-  const recoveryCount = rows.filter(row => isRecovery(row.name)).length;
+  const recoveryRows = rows.filter(row => isRecovery(row.name));
+  const recoveryCount = recoveryRows.length;
+  const pendingRecoveryCount = recoveryRows.filter(row => {
+    const entry = syncEntries.find(item => item.book.id === row.id);
+    if (entry) return entry.state !== 'synced' || Boolean(row.device && JSON.stringify(entry.book) !== JSON.stringify(row.device.book));
+    return row.device ? !row.device.remoteVersion : !row.doc;
+  }).length;
 
   const visible = useMemo(
     () =>
@@ -496,7 +504,7 @@ export default function WorkbookLibrary({
                   ? 'bg-emerald-100 font-semibold text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200'
                   : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
               }`}
-              onClick={() => setFolder('*')}
+              onClick={() => {setFolder('*');setShowRecovery(false);}}
               onContextMenu={e => openContextMenu(e, { id: '*', name: 'All workbooks' })}
             >
               All workbooks ({rows.length})
@@ -508,12 +516,14 @@ export default function WorkbookLibrary({
                   ? 'bg-emerald-100 font-semibold text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200'
                   : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
               }`}
-              onClick={() => setFolder('')}
+              onClick={() => {setFolder('');setShowRecovery(false);}}
               onContextMenu={e => openContextMenu(e, { id: '', name: 'Unfiled workbooks' })}
             >
               Unfiled workbooks
             </button>
           </div>
+
+          {recoveryCount > 0 && <button type="button" className="block w-full rounded-lg px-2 py-1.5 text-left text-xs hover:bg-slate-100 dark:hover:bg-slate-800" aria-pressed={showRecovery} onClick={()=>{setShowRecovery(value=>!value);setFolder('*');}}>{showRecovery ? 'Back to workbooks' : `Recovery copies (${recoveryCount})`}{!pendingRecoveryCount && !showRecovery ? ' · Synced' : ''}</button>}
 
           {(expanded.includes('root') || folderSearch) && (
             <nav aria-label="Workbook folder tree" className="mt-2 space-y-0.5 border-t pt-2">
@@ -523,52 +533,14 @@ export default function WorkbookLibrary({
         </aside>
 
         <div className="min-w-0">
-          {recoveryCount > 0 && <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-amber-50/60 p-3 dark:bg-amber-950/20">
-            <div><p className="text-xs font-semibold">Recovery copies ({recoveryCount})</p><p className="text-xs text-slate-500">Kept separately from your files. Sync preserves each version; it does not merge or overwrite the original.</p></div>
+          {pendingRecoveryCount > 0 && <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-amber-50/60 p-3 dark:bg-amber-950/20">
+            <div><p className="text-xs font-semibold">Recovery copies awaiting sync ({pendingRecoveryCount})</p><p className="text-xs text-slate-500">Synced copies stay available in Recovery copies. Sync preserves each version without overwriting the original.</p></div>
             <div className="flex gap-2"><button type="button" className={control} aria-pressed={showRecovery} onClick={() => setShowRecovery(value => !value)}>{showRecovery ? 'Back to files' : 'View recovery copies'}</button><button type="button" className={control} disabled={busy || !ready} onClick={onSyncRecovery}>Sync all recovery copies</button></div>
           </div>}
 
           <div className="flex flex-wrap items-center justify-between gap-2 border-b p-3">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold">{showRecovery ? 'Recovery copies' : folder === '*' ? 'All files' : folder === '' ? 'Unfiled' : pathFor(folder)}</span>
-              {folder && folder !== '*' && (
-                <>
-                  <button
-                    type="button"
-                    aria-label="Rename folder"
-                    title="Rename folder"
-                    className={control}
-                    onClick={() => {
-                      const f = organization.folders.find(item => item.id === folder);
-                      if (f) {
-                        setFolderModal({
-                          open: true,
-                          mode: 'rename',
-                          folderId: f.id,
-                          parentId: f.parentId,
-                          name: f.name,
-                        });
-                      }
-                    }}
-                  >
-                    <Pencil size={14} />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Delete folder"
-                    title="Delete folder"
-                    className={`${control} text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40`}
-                    onClick={() => {
-                      const f = organization.folders.find(item => item.id === folder);
-                      if (f) {
-                        setDeletingFolder({ id: f.id, name: f.name });
-                      }
-                    }}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </>
-              )}
             </div>
             <SearchableSelect
               ariaLabel="Sort workbooks"

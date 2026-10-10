@@ -1,12 +1,22 @@
 ﻿'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { apiFetch, discardOfflineWrite, getOfflineWriteQueue, invalidateMemoryApiCache, retryOfflineWrite, syncOfflineWriteQueue } from '@/lib/api';
 import type { OfflineWrite } from '@/lib/offlineStore';
 import { useAuth } from './AuthProvider';
 import { API_DATA_REFRESHED_EVENT } from '@/lib/apiDataEvents';
 
 export default function PwaRuntime() {
+  const [bannerHost, setBannerHost] = useState<Element | null>(null);
+  useEffect(() => {
+    // Native modal dialogs are above every z-index outside their top layer.
+    const refreshHost = () => setBannerHost(Array.from(document.querySelectorAll('dialog[open]')).at(-1) || document.body);
+    refreshHost();
+    const observer = new MutationObserver(refreshHost);
+    observer.observe(document.body, {childList:true, subtree:true, attributes:true, attributeFilter:['open']});
+    return () => observer.disconnect();
+  }, []);
   const reloadStarted = useRef(false);
   const lastActivity = useRef(Date.now());
   const editedControls = useRef(new Set<Element>());
@@ -307,7 +317,7 @@ export default function PwaRuntime() {
   if (!showRuntimeBanner && !queueOpen && !dataRefreshedAt) return null;
   return <>
     {dataRefreshedAt > 0 && <div className="fixed right-4 top-4 z-[2147483646] rounded-full border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-800 shadow-lg dark:border-emerald-900 dark:bg-slate-900 dark:text-emerald-300" role="status" aria-live="polite">Data refreshed</div>}
-    {showRuntimeBanner && <div className="fixed bottom-4 left-1/2 z-[2147483646] flex w-[min(94vw,680px)] -translate-x-1/2 flex-wrap items-center justify-between gap-3 border border-slate-300/80 bg-white dark:bg-slate-900 p-3.5 sm:p-4 text-sm text-slate-900 dark:text-slate-100 shadow-2xl rounded-2xl backdrop-blur-md" role="status" aria-live="polite">
+    {showRuntimeBanner && bannerHost && createPortal(<div className="fixed bottom-4 left-1/2 z-[2147483646] flex w-[min(94vw,680px)] -translate-x-1/2 flex-wrap items-center justify-between gap-3 border border-slate-300/80 bg-white dark:bg-slate-900 p-3.5 sm:p-4 text-sm text-slate-900 dark:text-slate-100 shadow-2xl rounded-2xl backdrop-blur-md" role="status" aria-live="polite">
       <span className="min-w-0 flex-1 font-medium">{offlineAccess ? `Offline access · saved data only. Sign-in will be verified before syncing. Available until ${new Date(offlineUntil || 0).toLocaleDateString()}.` : offlineCacheWarning ? 'Some data could not be saved for offline use. Check this device’s available storage, then reload the data.' : !online ? 'Offline mode. Changes are saved on this device and will sync when connected.' : offlineWrites.some((item) => item.state === 'failed') ? `${offlineWrites.filter((item) => item.state === 'failed').length} offline change(s) need attention.` : offlineWrites.length || syncingOffline ? `${offlineWrites.length} change(s) waiting to sync${syncingOffline ? '...' : '.'}` : updateAvailable ? 'Update ready. The app will reload automatically when idle and your editors are closed.' : installPrompt ? 'Install Cestos Operations for quick access.' : browserNotificationsEnabled ? 'Browser notifications are enabled.' : 'Get browser alerts for new Cestos notifications.'}</span>
       <div className="flex shrink-0 flex-wrap gap-2">
         {offlineWrites.length > 0 && <button type="button" onClick={() => setQueueOpen(true)} className="border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-xl font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition">Offline changes ({offlineWrites.length})</button>}
@@ -319,7 +329,7 @@ export default function PwaRuntime() {
         {!updateAvailable && !installPrompt && showNotificationControl && <button type="button" onClick={() => setNotificationPromptDismissed(true)} className="border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition">Later</button>}
         {!updateAvailable && installPrompt && <button type="button" onClick={() => setInstallPrompt(null)} className="border border-slate-300 dark:border-slate-700 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition">Later</button>}
       </div>
-    </div>}
+    </div>, bannerHost)}
     {queueOpen && <div className="fixed inset-0 z-[2147483647] flex items-end justify-center bg-slate-950/50 p-3 sm:items-center" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setQueueOpen(false); }}>
       <section className="flex max-h-[85vh] w-full max-w-2xl flex-col border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl rounded-2xl overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="offline-queue-title">
         <header className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 p-4"><div><h2 id="offline-queue-title" className="font-bold text-slate-900 dark:text-white">Offline changes</h2><p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Stored on this device and sent in order after reconnection.</p></div><button onClick={() => setQueueOpen(false)} className="border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Close">×</button></header>

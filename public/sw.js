@@ -38,7 +38,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   if (request.mode === 'navigate') {
-    event.respondWith(fetch(request).then(async (response) => {
+    event.respondWith(fetch(request, { cache: 'no-store' }).then(async (response) => {
       if (response.ok) {
         const cache = await caches.open(SHELL_CACHE);
         await cache.put(request, response.clone());

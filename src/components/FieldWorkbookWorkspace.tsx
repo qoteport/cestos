@@ -1511,7 +1511,7 @@ export default function FieldWorkbookWorkspace({
         {feedback}
         {busy && <p role="status">Opening workbook...</p>}
         <WorkbookSyncPanel scope={storageKey} entries={syncEntries} status={offlineLibraryStatus} onOpen={source=>activate(source,true)} onResolved={async(id,next)=>{setSessions(items=>items.filter(item=>item.book.id!==id));setDeviceBooks(await listDeviceWorkbooks(storageKey));setSyncEntries(await listWorkbookSync(storageKey));if(next)activate(next,false);setNotice('Workbook sync choice saved.');}}/>
-        <WorkbookLibrary onSyncRecovery={()=>void syncRecoveryCopies()} scope={storageKey} documents={latest} devices={deviceBooks} busy={busy} loading={loading} onRefresh={()=>void loadLibrary()}
+        <WorkbookLibrary syncEntries={syncEntries} onSyncRecovery={()=>void syncRecoveryCopies()} scope={storageKey} documents={latest} devices={deviceBooks} busy={busy} loading={loading} onRefresh={()=>void loadLibrary()}
           onOpen={(doc,item)=>{if(item){if(item.book.template)activate(copyWorkbook(item.book,false),true);else if(sessions.some(session=>session.book.id===item.book.id))switchWorkbook(item.book.id);else activate(validateWorkbook(item.book),true);}else if(doc)void openDocument(doc,doc.tags.includes('workbook-template'));}}
           onCopy={(doc,item)=>{if(item)activate(copyWorkbook(item.book,false),true);else if(doc)void copyDocument(doc);}}
           onDelete={doc=>void deleteDocument(doc)}/>

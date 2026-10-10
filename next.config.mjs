@@ -8,6 +8,9 @@ try { buildVersion = JSON.parse(readFileSync(new URL('./public/build-version.jso
 const nextConfig = {
   productionBrowserSourceMaps: false,
   env: { NEXT_PUBLIC_BUILD_VERSION: buildVersion },
+  async headers() {
+    return ['/build-version.json', '/sw.js'].map(source => ({source, headers: [{key:'Cache-Control', value:'no-store, no-cache, must-revalidate'}]}));
+  },
   async rewrites() {
     // CESTOS_API_BACKEND_URL takes priority over CESTOS_API_URL (which may be overridden by .env.local to localhost)
     const backend = (process.env.CESTOS_API_BACKEND_URL || process.env.CESTOS_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
