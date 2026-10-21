@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import IncidentDetailModal from './IncidentDetailModal';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import SearchableSelect from './SearchableSelect';
@@ -17,6 +17,7 @@ import { useRouter } from 'next/navigation';
 import { useApiDataRefresh } from '@/lib/apiDataRefresh';
 import { getEmployeeDisplayLocation, getEmployeeDisplayLocationDetails } from '@/lib/employeeLocation';
 import OperationalExpenseSubmissionModal from './OperationalExpenseSubmissionModal';
+import DuplicateWarningModal, { DuplicateRecordData } from './DuplicateWarningModal';
 import RegisterUserModal from './RegisterUserModal';
 import { printElement } from '@/lib/printElement';
 import {
@@ -295,6 +296,9 @@ export default function ExecutivePortalWorkspace() {
 //   const [selectedReceiptItemIds, setSelectedReceiptItemIds] = useState<string[]>([]);
   const [poSubmitBusy, setPoSubmitBusy] = useState(false);
   const [poAttachmentFile, setPoAttachmentFile] = useState<File | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<DuplicateRecordData | null>(null);
+  const [currentEntryForDuplicate, setCurrentEntryForDuplicate] = useState<DuplicateRecordData | null>(null);
+  const bypassDuplicateCheckRef = useRef(false);
   const handlePoDocumentChange = (file: File | null) => {
     setPoAttachmentFile(file);
   };
@@ -326,6 +330,58 @@ export default function ExecutivePortalWorkspace() {
             unit_price: Number(it.unit_price) || 0,
           })),
       };
+
+      const totalAmount = newPoForm.items.reduce((sum, it) => sum + (Number(it.quantity_ordered) || 0) * (Number(it.unit_price) || 0), 0);
+      const vendorName = newPoForm.supplier_name.trim();
+      const orderDate = new Date().toISOString().slice(0, 10);
+
+      if (!bypassDuplicateCheckRef.current) {
+        try {
+          const queryParams = new URLSearchParams({
+            supplier_name: vendorName,
+            total_amount: String(totalAmount),
+            date: orderDate,
+          });
+          const dupCheck = await apiFetch<any>(`/api/v1/procurement/purchase-orders/check-duplicate?${queryParams.toString()}`);
+          if (dupCheck?.duplicate_found && dupCheck.duplicate) {
+            const dup = dupCheck.duplicate;
+            setDuplicateWarning({
+              id: dup.id,
+              reference: dup.po_number || dup.id,
+              vendor: dup.supplier_name || vendorName,
+              date: dup.created_at || orderDate,
+              total: Number(dup.total_amount || 0),
+              currency: dup.currency || newPoForm.currency || 'USD',
+              status: dup.status,
+              created_by: dup.created_by_name || 'Existing Submitter',
+              items: (dup.items || []).map((it: any) => ({
+                name: it.item_name || it.description || '',
+                quantity: it.quantity_ordered,
+                unit_price: it.unit_price,
+                description: it.description,
+              })),
+              notes: dup.notes,
+            });
+            setCurrentEntryForDuplicate({
+              vendor: vendorName,
+              date: orderDate,
+              total: totalAmount,
+              currency: newPoForm.currency || 'USD',
+              items: payload.items.map((it) => ({
+                name: it.item_name || it.description || '',
+                quantity: it.quantity_ordered,
+                unit_price: it.unit_price,
+                description: it.description,
+              })),
+              notes: newPoForm.notes || undefined,
+            });
+            setPoSubmitBusy(false);
+            return;
+          }
+        } catch {
+          // If check endpoint fails, continue
+        }
+      }
 
       const created = await apiFetch<any>('/api/v1/procurement/purchase-orders', {
         method: 'POST',
@@ -364,6 +420,19 @@ export default function ExecutivePortalWorkspace() {
     } finally {
       setPoSubmitBusy(false);
     }
+  };
+
+  const handlePoSaveAnyway = () => {
+    bypassDuplicateCheckRef.current = true;
+    setDuplicateWarning(null);
+    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+    handleCreatePo(fakeEvent);
+  };
+
+  const handlePoDiscardDuplicate = () => {
+    setDuplicateWarning(null);
+    setCurrentEntryForDuplicate(null);
+    setPoSubmitBusy(false);
   };
 
   const [viewingProject, setViewingProject] = useState<string | null>(null);
@@ -3290,6 +3359,17 @@ ${String(po.notes || 'No additional remarks.').replace(/\\[Attached Docket:\\s*[
             </form>
           </div>
         </div>
+      )}
+
+      {duplicateWarning && currentEntryForDuplicate && (
+        <DuplicateWarningModal
+          isOpen={Boolean(duplicateWarning && currentEntryForDuplicate)}
+          entityType="Purchase Order"
+          currentRecord={currentEntryForDuplicate}
+          duplicateRecord={duplicateWarning}
+          onSaveAnyway={handlePoSaveAnyway}
+          onDiscard={handlePoDiscardDuplicate}
+        />
       )}
     
       {/* Mobile Bottom Navigation Tabbar (Simplified 4 Tabs + More) */}

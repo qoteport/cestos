@@ -203,18 +203,11 @@ function AdminWorkspaceContent({
     setActionError('');
     setActionSuccess('');
     try {
-      const empId = user.employee_id || user.employee?.id;
-      if (empId) {
-        await apiFetch(`/api/v1/hr/employees/${empId}/account/reset`, {
-          method: 'POST',
-        });
-      } else {
-        await apiFetch(`/api/v1/hr/password-reset-request`, {
-          method: 'POST',
-          body: JSON.stringify({ email: targetEmail }),
-        });
-      }
-      setActionSuccess(`Password reset email sent to ${targetEmail}.`);
+      await apiFetch('/api/v1/hr/password-reset-request', {
+        method: 'POST',
+        body: JSON.stringify({ email: targetEmail }),
+      }, true, { queueWhenOffline: false, verifySession: true });
+      setActionSuccess(`Password reset email queued for ${targetEmail}.`);
     } catch (err: any) {
       setActionError(err?.message || `Failed to send password reset email to ${targetEmail}.`);
     } finally {

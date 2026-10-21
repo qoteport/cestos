@@ -1,19 +1,34 @@
-﻿'use client';
+'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Plus, Loader2, Trash2, Paperclip, Check } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import SearchableSelect from './SearchableSelect';
 import AppDateTimePicker from './AppDateTimePicker';
 import { PurchaseOrderCategoryField } from './PurchaseOrderCategoryField';
+import DuplicateWarningModal, { DuplicateRecordData } from './DuplicateWarningModal';
 
 type Row = Record<string, any>;
 type ExpenseItem = { inventory_item_id: string; name: string; description?: string; quantity: string; unit_cost: string; custom_item?: boolean; is_auto_generated?: boolean };
 const blankItem = (): ExpenseItem => ({ inventory_item_id: '', name: '', quantity: '1', unit_cost: '0', custom_item: false, is_auto_generated: false });
 const inputClass = 'w-full rounded-lg border bg-background p-2.5';
 
-export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted, projectId, initialPurchaseOrder, initialDocumentDraft }: { onClose: () => void; onSubmitted: (expense: Row) => void; projectId?: string; initialPurchaseOrder?: Row; initialDocumentDraft?: { file: File; data: Row } | null }) {
+export default function OperationalExpenseSubmissionModal({
+  onClose,
+  onSubmitted,
+  projectId,
+  initialPurchaseOrder,
+  initialDocumentDraft,
+  initialExpense,
+}: {
+  onClose: () => void;
+  onSubmitted: (expense: Row) => void;
+  projectId?: string;
+  initialPurchaseOrder?: Row;
+  initialDocumentDraft?: { file: File; data: Row } | null;
+  initialExpense?: Row | null;
+}) {
   const [payees, setPayees] = useState<Row[]>([]);
   const [inventory, setInventory] = useState<Row[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<Row[]>([]);
@@ -31,6 +46,9 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
   const [items, setItems] = useState<ExpenseItem[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [duplicateWarning, setDuplicateWarning] = useState<DuplicateRecordData | null>(null);
+  const [currentEntryForDuplicate, setCurrentEntryForDuplicate] = useState<DuplicateRecordData | null>(null);
+  const bypassDuplicateCheckRef = useRef(false);
 
   function applyPurchaseOrder(po: Row, availablePayees: Row[] = payees) {
     setPurchaseOrderId(String(po.id));
@@ -87,7 +105,46 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
   }, [projectId, initialPurchaseOrder?.id]);
 
   useEffect(() => {
-    if (!initialDocumentDraft) return;
+    if (!initialExpense) return;
+    setPayName(String(initialExpense.pay_to_name || '').trim());
+    setPayeeId(initialExpense.payee_id ? String(initialExpense.payee_id) : '__NEW__');
+    setPhone(String(initialExpense.pay_to_phone || ''));
+    setBank(String(initialExpense.bank_account_details || ''));
+    if (initialExpense.expense_date) {
+      setDate(String(initialExpense.expense_date).slice(0, 10));
+    }
+    if (initialExpense.payment_method) {
+      setMethod(String(initialExpense.payment_method));
+    }
+    if (initialExpense.category) {
+      setCategory(String(initialExpense.category));
+    }
+    if (initialExpense.purchase_order_id) {
+      setPurchaseOrderId(String(initialExpense.purchase_order_id));
+    }
+    if (Array.isArray(initialExpense.items) && initialExpense.items.length > 0) {
+      setItems(
+        initialExpense.items.map((it: Row) => ({
+          inventory_item_id: it.inventory_item_id || '',
+          name: String(it.name || it.item_name || it.description || ''),
+          description: String(it.description || ''),
+          quantity: String(it.quantity || 1),
+          unit_cost: String(it.unit_cost || it.unit_price || 0),
+          custom_item: !it.inventory_item_id,
+          is_auto_generated: false,
+        }))
+      );
+      setManualTotal(false);
+      setManualAmount('');
+    } else {
+      setItems([]);
+      setManualTotal(true);
+      setManualAmount(String(initialExpense.total_cost || initialExpense.amount || ''));
+    }
+  }, [initialExpense]);
+
+  useEffect(() => {
+    if (!initialDocumentDraft || initialExpense) return;
     const data = initialDocumentDraft.data || {};
     setInvoice(initialDocumentDraft.file);
     setPayName(String(data.pay_to_name || data.supplier_name || '').trim());
@@ -106,7 +163,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
     const total = Number(data.total_cost);
     if (!parsedItems.length && Number.isFinite(total) && total >= 0) { setManualTotal(true); setManualAmount(String(total)); }
     else { setManualTotal(false); setManualAmount(''); }
-  }, [initialDocumentDraft]);
+  }, [initialDocumentDraft, initialExpense]);
 
   useEffect(() => {
     if (!payName) return;
@@ -117,6 +174,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
   }, [payName, payees]);
 
   useEffect(() => {
+    if (initialExpense) return;
     const selectedPayee = payees.find((p) => String(p.id) === payeeId || String(p.name || '').trim().toLowerCase() === payName.trim().toLowerCase());
     const catName = (selectedPayee && (selectedPayee.bank_account_type || selectedPayee.category)) || category || (payName.trim() ? payName.trim() : '');
     if (!catName) return;
@@ -145,7 +203,7 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
       }
       return currentItems;
     });
-  }, [category, payName, payeeId, payees, manualAmount]);
+  }, [category, payName, payeeId, payees, manualAmount, initialExpense]);
 
   const itemOptions = useMemo(() => [
     { value: '__CUSTOM__', label: 'Create a new item...' },
@@ -190,6 +248,89 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
           unit_cost: String(totalVal),
         }];
       }
+
+      const totalVal = manualTotal ? Number(manualAmount) : calculatedTotal;
+      const vendorName = payName.trim();
+      const expenseDate = date;
+
+      if (!bypassDuplicateCheckRef.current) {
+        try {
+          const queryParams = new URLSearchParams({
+            pay_to_name: vendorName,
+            expense_date: expenseDate,
+            total_cost: String(totalVal),
+          });
+          if (initialExpense?.id) {
+            queryParams.set('exclude_id', String(initialExpense.id));
+          }
+          const dupCheck = await apiFetch<any>(`/api/v1/operational-expenses/check-duplicate?${queryParams.toString()}`);
+          if (dupCheck?.duplicate_found && dupCheck.duplicate) {
+            const dup = dupCheck.duplicate;
+            setDuplicateWarning({
+              id: dup.id,
+              reference: dup.expense_number || dup.id,
+              vendor: dup.pay_to_name || vendorName,
+              date: dup.expense_date,
+              total: Number(dup.total_cost || 0),
+              currency: 'USD',
+              status: dup.status,
+              created_by: dup.submitted_by_name || 'Existing Submitter',
+              items: (dup.items || []).map((it: any) => ({
+                name: it.name || it.item_name || it.description || '',
+                quantity: it.quantity,
+                unit_cost: it.unit_cost,
+                description: it.description,
+              })),
+            });
+            setCurrentEntryForDuplicate({
+              vendor: vendorName,
+              date: expenseDate,
+              total: totalVal,
+              currency: 'USD',
+              items: finalItems.map((it) => ({
+                name: it.name,
+                quantity: it.quantity,
+                unit_cost: it.unit_cost,
+                description: it.description,
+              })),
+            });
+            setBusy(false);
+            return;
+          }
+        } catch {
+          // If check endpoint is unreachable or fails, continue with save
+        }
+      }
+
+      if (initialExpense) {
+        const updateData: Row = {
+          pay_to_name: payName.trim(),
+          pay_to_phone: phone.trim() || undefined,
+          bank_account_details: bank.trim() || undefined,
+          expense_date: date,
+          payment_method: method,
+          category: category || undefined,
+          purchase_order_id: purchaseOrderId || undefined,
+          payee_id: payeeId && payeeId !== '__NEW__' ? payeeId : undefined,
+          items: finalItems.map((item) => ({
+            inventory_item_id: item.inventory_item_id || undefined,
+            name: item.name.trim(),
+            description: item.description?.trim() || undefined,
+            quantity: Number(item.quantity),
+            unit_cost: Number(item.unit_cost),
+          })),
+          total_cost: manualTotal ? Number(manualAmount) : undefined,
+        };
+        const updated = await apiFetch<Row>(`/api/v1/operational-expenses/${initialExpense.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updateData),
+        });
+        onSubmitted(updated);
+        handleClose();
+        return;
+      }
+
       const data = {
         purchase_order_id: purchaseOrderId || undefined,
         payee_id: payeeId && payeeId !== '__NEW__' ? payeeId : undefined,
@@ -213,6 +354,19 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
     } finally { setBusy(false); }
   }
 
+  const handleSaveAnyway = () => {
+    bypassDuplicateCheckRef.current = true;
+    setDuplicateWarning(null);
+    const fakeEvent = { preventDefault: () => {} } as FormEvent;
+    submit(fakeEvent);
+  };
+
+  const handleDiscardDuplicate = () => {
+    setDuplicateWarning(null);
+    setCurrentEntryForDuplicate(null);
+    setBusy(false);
+  };
+
   const [closing, setClosing] = useState(false);
   const handleClose = () => {
     if (closing) return;
@@ -221,12 +375,16 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
   };
 
   return createPortal(
-    <div className={`fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-0 sm:p-4 overflow-hidden ${closing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`} onClick={(event) => { if (event.target === event.currentTarget) handleClose(); }}>
+    <div className={`fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-0 sm:p-4 overflow-hidden ${closing ? 'animate-modal-backdrop-out' : 'animate-modal-backdrop-in'}`}>
       <section role="dialog" aria-modal="true" aria-label="Log operational expense" className={`flex h-[100dvh] sm:h-auto sm:max-h-[90vh] w-full max-w-full sm:max-w-3xl flex-col overflow-hidden rounded-none sm:rounded-2xl border-0 sm:border border-slate-200 dark:border-slate-800 bg-white shadow-2xl dark:bg-slate-900 ${closing ? 'animate-modal-content-out' : 'animate-modal-content-in'}`}>
         <header className="flex items-center justify-between border-b p-4 sm:p-5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shrink-0 sticky top-0 z-10">
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Submit Operational Expense Claim</h2>
-            <p className="mt-0.5 text-xs text-slate-500">Submit purchased items and invoice details to Finance.</p>
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+              {initialExpense ? `Edit Operational Expense Claim: ${initialExpense.expense_number || initialExpense.reference_number || initialExpense.id}` : 'Submit Operational Expense Claim'}
+            </h2>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {initialExpense ? 'Update expense items, amounts, or supplier details.' : 'Submit purchased items and invoice details to Finance.'}
+            </p>
           </div>
           <button
             type="button"
@@ -305,7 +463,13 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
               </label>
             </section>
             <section className="space-y-3 rounded-xl border p-3">
-              <div className="flex items-center justify-between"><h3 className="font-bold text-slate-800 dark:text-slate-100">Items purchased</h3><button type="button" onClick={() => setItems((rows) => [...rows, blankItem()])} className="font-bold text-orange-700 dark:text-orange-400">+ Add item</button></div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-slate-800 dark:text-slate-100">Items purchased</h3>
+                  <p className="text-[11px] text-slate-500 font-normal">Custom items entered are automatically added to the inventory catalog with their unit cost.</p>
+                </div>
+                <button type="button" onClick={() => setItems((rows) => [...rows, blankItem()])} className="font-bold text-orange-700 dark:text-orange-400">+ Add item</button>
+              </div>
               {items.length === 0 && <p className="rounded-lg border border-dashed p-3 text-slate-500">No purchased items added. You can submit an expense with a manually entered total.</p>}
               {items.map((item, index) => (
                 <div key={index} className="grid gap-2 rounded-lg border bg-slate-50 p-3 dark:bg-slate-800/40 sm:grid-cols-3">
@@ -363,10 +527,22 @@ export default function OperationalExpenseSubmissionModal({ onClose, onSubmitted
           {/* Sticky Footer */}
           <div className="sticky bottom-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 p-3.5 sm:px-6 sm:py-4 shrink-0 flex flex-row items-center justify-end gap-2 sm:gap-3 z-10">
             <button type="button" onClick={onClose} className="rounded-xl border px-4 py-2 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition w-full sm:w-auto">Cancel</button>
-            <button type="submit" disabled={busy} className="rounded-xl bg-orange-600 px-5 py-2 font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto shadow-xs">{busy ? 'Submitting...' : 'Submit expense to Finance'}</button>
+            <button type="submit" disabled={busy} className="rounded-xl bg-orange-600 px-5 py-2 font-bold text-white hover:bg-orange-700 disabled:opacity-50 transition w-full sm:w-auto shadow-xs">
+              {busy ? <Loader2 size={16} className="animate-spin" /> : initialExpense ? 'Save Changes' : 'Submit expense to Finance'}
+            </button>
           </div>
         </form>
       </section>
+      {duplicateWarning && currentEntryForDuplicate && (
+        <DuplicateWarningModal
+          isOpen={Boolean(duplicateWarning && currentEntryForDuplicate)}
+          entityType="Operational Expense"
+          currentRecord={currentEntryForDuplicate}
+          duplicateRecord={duplicateWarning}
+          onSaveAnyway={handleSaveAnyway}
+          onDiscard={handleDiscardDuplicate}
+        />
+      )}
     </div>,
     document.body
   );

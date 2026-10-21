@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useApiDataRefresh } from '@/lib/apiDataRefresh';
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
@@ -7,6 +7,7 @@ import { apiFetch, apiFetchBlob, downloadBlob, receivePurchaseOrderGoods } from 
 import { Eye, Download, FileText, Paperclip, X, Plus, CheckCircle2, ShoppingCart, Truck, PackageCheck, RefreshCw, Trash } from 'lucide-react';
 import SearchableSelect from './SearchableSelect';
 import OperationalExpenseSubmissionModal from './OperationalExpenseSubmissionModal';
+import DuplicateWarningModal, { DuplicateRecordData } from './DuplicateWarningModal';
 import { openUniversalFileViewer } from '@/lib/fileViewer';
 import { PurchaseOrderCategoryField, purchaseOrderCategoryLabel } from './PurchaseOrderCategoryField';
 import { useOperationalDataSync } from '@/lib/operationalDataSync';
@@ -75,6 +76,10 @@ export default function FieldPurchaseOrdersPanel({
   const [selectedReceiptItemIds, setSelectedReceiptItemIds] = useState<string[]>([]);
   const [receivingBusy, setReceivingBusy] = useState(false);
   const [viewerState, setViewerState] = useState<{ isOpen: boolean; fileUrl?: string; blob?: Blob; fileName?: string; title?: string; fileType?: string }>({ isOpen: false });
+  const [duplicateWarning, setDuplicateWarning] = useState<DuplicateRecordData | null>(null);
+  const [currentEntryForDuplicate, setCurrentEntryForDuplicate] = useState<DuplicateRecordData | null>(null);
+  const [pendingSaveAsDraft, setPendingSaveAsDraft] = useState<boolean>(false);
+  const bypassDuplicateCheckRef = useRef(false);
   const handledPurchaseOrderLink = useRef('');
 
   async function handleDownloadPOAttachment(poId: string, fileName?: string) {
@@ -275,6 +280,62 @@ export default function FieldPurchaseOrdersPanel({
         items: validItems,
         ...(!editing ? { save_as_draft: saveAsDraft } : {}),
       };
+
+      const totalAmount = lineTotal > 0 ? lineTotal : Number(manualTotal) || 0;
+      const vendorName = supplier.trim();
+      const orderDate = new Date().toISOString().slice(0, 10);
+
+      if (!bypassDuplicateCheckRef.current) {
+        try {
+          const queryParams = new URLSearchParams({
+            supplier_name: vendorName,
+            total_amount: String(totalAmount),
+            date: orderDate,
+          });
+          if (editing?.id) {
+            queryParams.set('exclude_id', String(editing.id));
+          }
+          const dupCheck = await apiFetch<any>(`/api/v1/procurement/purchase-orders/check-duplicate?${queryParams.toString()}`);
+          if (dupCheck?.duplicate_found && dupCheck.duplicate) {
+            const dup = dupCheck.duplicate;
+            setDuplicateWarning({
+              id: dup.id,
+              reference: dup.po_number || dup.id,
+              vendor: dup.supplier_name || vendorName,
+              date: dup.created_at || orderDate,
+              total: Number(dup.total_amount || 0),
+              currency: dup.currency || currency,
+              status: dup.status,
+              created_by: dup.created_by_name || 'Existing Submitter',
+              items: (dup.items || []).map((it: any) => ({
+                name: it.item_name || it.description || '',
+                quantity: it.quantity_ordered,
+                unit_price: it.unit_price,
+                description: it.description,
+              })),
+              notes: dup.notes,
+            });
+            setCurrentEntryForDuplicate({
+              vendor: vendorName,
+              date: orderDate,
+              total: totalAmount,
+              currency,
+              items: validItems.map((it) => ({
+                name: it.item_name || it.description || '',
+                quantity: it.quantity_ordered,
+                unit_price: it.unit_price,
+                description: it.description,
+              })),
+              notes: notes.trim() || undefined,
+            });
+            setPendingSaveAsDraft(saveAsDraft);
+            setBusy(false);
+            return;
+          }
+        } catch {
+          // Continue if check endpoint is unavailable
+        }
+      }
       let po: Row;
       if (editing) {
         po = await apiFetch<Row>(`/api/v1/procurement/purchase-orders/${editing.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
@@ -295,6 +356,18 @@ export default function FieldPurchaseOrdersPanel({
     } catch (e: any) { setMessage(e?.message || 'Could not save purchase order.'); }
     finally { setBusy(false); }
   }
+
+  const handleSaveAnyway = () => {
+    bypassDuplicateCheckRef.current = true;
+    setDuplicateWarning(null);
+    void saveOrder(pendingSaveAsDraft);
+  };
+
+  const handleDiscardDuplicate = () => {
+    setDuplicateWarning(null);
+    setCurrentEntryForDuplicate(null);
+    setBusy(false);
+  };
 
   function openReceive(po: Row) {
     setReceivingPO(po);
@@ -368,7 +441,7 @@ export default function FieldPurchaseOrdersPanel({
       </table>
     </div>
     {showForm && createPortal(
-      <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-0 sm:p-4 overflow-hidden animate-modal-backdrop-in" onClick={(e) => { if (e.target === e.currentTarget) { setShowForm(false); setFormStep('EDIT'); } }}>
+      <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-xs p-0 sm:p-4 overflow-hidden animate-modal-backdrop-in">
         <div className="w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] max-w-full sm:max-w-3xl rounded-none sm:rounded-2xl border-0 sm:border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl flex flex-col overflow-hidden animate-modal-content-in">
           <form onSubmit={submit} className="flex flex-col h-full overflow-hidden">
             {/* Sticky Header */}
@@ -555,6 +628,16 @@ export default function FieldPurchaseOrdersPanel({
             </div>
           </form>
         </div>
+        {duplicateWarning && currentEntryForDuplicate && (
+          <DuplicateWarningModal
+            isOpen={Boolean(duplicateWarning && currentEntryForDuplicate)}
+            entityType="Purchase Order"
+            currentRecord={currentEntryForDuplicate}
+            duplicateRecord={duplicateWarning}
+            onSaveAnyway={handleSaveAnyway}
+            onDiscard={handleDiscardDuplicate}
+          />
+        )}
       </div>,
       document.body
     )}

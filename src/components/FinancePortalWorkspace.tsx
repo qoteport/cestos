@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { createPortal } from 'react-dom';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -69,6 +69,7 @@ import { apiFetch, apiFetchBlob, downloadBlob, receivePurchaseOrderGoods } from 
 import { openUniversalFileViewer } from '@/lib/fileViewer';
 import OperationalExpensesWorkspace from './OperationalExpensesWorkspace';
 import OperationalExpenseSubmissionModal from './OperationalExpenseSubmissionModal';
+import DuplicateWarningModal, { DuplicateRecordData } from './DuplicateWarningModal';
 import FinanceCommandCenterModal from './FinanceCommandCenterModal';
 import NotificationWorkspace from './NotificationWorkspace';
 import useNotificationCount from './useNotificationCount';
@@ -336,6 +337,7 @@ export default function FinancePortalWorkspace() {
 
   // Modals state for Expenses
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<any | null>(null);
   const [commandCenterOpen, setCommandCenterOpen] = useState(false);
   const [expenseCommandDraft, setExpenseCommandDraft] = useState<{ file: File; data: Record<string, any> } | null>(null);
   const [viewingExpense, setViewingExpense] = useState<any | null>(null);
@@ -355,6 +357,9 @@ export default function FinancePortalWorkspace() {
   const [poSubmitBusy, setPoSubmitBusy] = useState(false);
   const [poAttachmentFile, setPoAttachmentFile] = useState<File | null>(null);
   const [editPoAttachmentFile, setEditPoAttachmentFile] = useState<File | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<DuplicateRecordData | null>(null);
+  const [currentEntryForDuplicate, setCurrentEntryForDuplicate] = useState<DuplicateRecordData | null>(null);
+  const bypassDuplicateCheckRef = useRef(false);
   const [viewerState, setViewerState] = useState<{ isOpen: boolean; fileUrl?: string; fileName?: string; title?: string }>({ isOpen: false });
   const [viewingProject, setViewingProject] = useState<any | null>(null);
   const [projectSearch, setProjectSearch] = useState<string>('');
@@ -811,6 +816,9 @@ export default function FinancePortalWorkspace() {
         })) : [],
       });
       setPoAttachmentFile(file);
+      bypassDuplicateCheckRef.current = false;
+      setDuplicateWarning(null);
+      setCurrentEntryForDuplicate(null);
       setShowAddPoModal(true);
       return;
     }
@@ -1186,6 +1194,58 @@ Signed: Finance & Procurement Administration
           })),
       };
 
+      const totalAmount = itemsTotal > 0 ? itemsTotal : Number(newPoForm.total_amount) || 0;
+      const vendorName = newPoForm.supplier_name.trim();
+      const orderDate = new Date().toISOString().slice(0, 10);
+
+      if (!bypassDuplicateCheckRef.current) {
+        try {
+          const queryParams = new URLSearchParams({
+            supplier_name: vendorName,
+            total_amount: String(totalAmount),
+            date: orderDate,
+          });
+          const dupCheck = await apiFetch<any>(`/api/v1/procurement/purchase-orders/check-duplicate?${queryParams.toString()}`);
+          if (dupCheck?.duplicate_found && dupCheck.duplicate) {
+            const dup = dupCheck.duplicate;
+            setDuplicateWarning({
+              id: dup.id,
+              reference: dup.po_number || dup.id,
+              vendor: dup.supplier_name || vendorName,
+              date: dup.created_at || orderDate,
+              total: Number(dup.total_amount || 0),
+              currency: dup.currency || newPoForm.currency || 'USD',
+              status: dup.status,
+              created_by: dup.created_by_name || 'Existing Submitter',
+              items: (dup.items || []).map((it: any) => ({
+                name: it.item_name || it.description || '',
+                quantity: it.quantity_ordered,
+                unit_price: it.unit_price,
+                description: it.description,
+              })),
+              notes: dup.notes,
+            });
+            setCurrentEntryForDuplicate({
+              vendor: vendorName,
+              date: orderDate,
+              total: totalAmount,
+              currency: newPoForm.currency || 'USD',
+              items: payload.items.map((it) => ({
+                name: it.item_name || it.description || '',
+                quantity: it.quantity_ordered,
+                unit_price: it.unit_price,
+                description: it.description,
+              })),
+              notes: newPoForm.notes || undefined,
+            });
+            setPoSubmitBusy(false);
+            return;
+          }
+        } catch {
+          // If check endpoint fails, continue
+        }
+      }
+
       const created = await apiFetch<any>('/api/v1/procurement/purchase-orders', {
         method: 'POST',
         body: JSON.stringify(payload),
@@ -1227,6 +1287,9 @@ Signed: Finance & Procurement Administration
   };
 
   const openEditPoModal = (po: any) => {
+    bypassDuplicateCheckRef.current = false;
+    setDuplicateWarning(null);
+    setCurrentEntryForDuplicate(null);
     setEditingPo(po);
     const match = (po.notes || '').match(/\[Attached Docket:\s*([^\]]+)\]/i);
     const existingName = po.attachment_file_name || po.attachment || (match ? match[1] : '');
@@ -1285,6 +1348,59 @@ Signed: Finance & Procurement Administration
         })),
       };
 
+      const totalVal = editPoForm.items.reduce((acc, item) => acc + (Number(item.quantity_ordered) || 1) * (Number(item.unit_price) || 0), 0);
+      const vendorName = editPoForm.supplier_name.trim();
+      const orderDate = editingPo?.created_at ? String(editingPo.created_at).slice(0, 10) : new Date().toISOString().slice(0, 10);
+
+      if (!bypassDuplicateCheckRef.current) {
+        try {
+          const queryParams = new URLSearchParams({
+            supplier_name: vendorName,
+            total_amount: String(totalVal),
+            date: orderDate,
+            exclude_id: String(editingPo.id),
+          });
+          const dupCheck = await apiFetch<any>(`/api/v1/procurement/purchase-orders/check-duplicate?${queryParams.toString()}`);
+          if (dupCheck?.duplicate_found && dupCheck.duplicate) {
+            const dup = dupCheck.duplicate;
+            setDuplicateWarning({
+              id: dup.id,
+              reference: dup.po_number || dup.id,
+              vendor: dup.supplier_name || vendorName,
+              date: dup.created_at || orderDate,
+              total: Number(dup.total_amount || 0),
+              currency: dup.currency || editPoForm.currency || 'USD',
+              status: dup.status,
+              created_by: dup.created_by_name || 'Existing Submitter',
+              items: (dup.items || []).map((it: any) => ({
+                name: it.item_name || it.description || '',
+                quantity: it.quantity_ordered,
+                unit_price: it.unit_price,
+                description: it.description,
+              })),
+              notes: dup.notes,
+            });
+            setCurrentEntryForDuplicate({
+              vendor: vendorName,
+              date: orderDate,
+              total: totalVal,
+              currency: editPoForm.currency || 'USD',
+              items: payload.items.map((it) => ({
+                name: it.item_name || it.description || '',
+                quantity: it.quantity_ordered,
+                unit_price: it.unit_price,
+                description: it.description,
+              })),
+              notes: editPoForm.notes || undefined,
+            });
+            setPoSubmitBusy(false);
+            return;
+          }
+        } catch {
+          // If check endpoint fails, continue
+        }
+      }
+
       let updated: any;
       try {
         updated = await apiFetch<any>(`/api/v1/procurement/purchase-orders/${editingPo.id}`, {
@@ -1317,6 +1433,23 @@ Signed: Finance & Procurement Administration
     } finally {
       setPoSubmitBusy(false);
     }
+  };
+
+  const handlePoSaveAnyway = () => {
+    bypassDuplicateCheckRef.current = true;
+    setDuplicateWarning(null);
+    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+    if (editingPo) {
+      handleUpdatePo(fakeEvent);
+    } else {
+      handleCreatePo(fakeEvent);
+    }
+  };
+
+  const handlePoDiscardDuplicate = () => {
+    setDuplicateWarning(null);
+    setCurrentEntryForDuplicate(null);
+    setPoSubmitBusy(false);
   };
 
   const handleReceiveGoods = async (e: React.FormEvent) => {
@@ -2156,7 +2289,13 @@ Signed: Finance & Procurement Administration
               </div>
               <button
                 type="button"
-                onClick={() => { setPoAttachmentFile(null); setShowAddPoModal(true); }}
+                onClick={() => {
+                  bypassDuplicateCheckRef.current = false;
+                  setDuplicateWarning(null);
+                  setCurrentEntryForDuplicate(null);
+                  setPoAttachmentFile(null);
+                  setShowAddPoModal(true);
+                }}
                 className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1.5 shrink-0"
               >
                 <Plus size={15} /> Create Purchase Order
@@ -3121,16 +3260,28 @@ Signed: Finance & Procurement Administration
                             <td className="hidden md:table-cell px-4 py-3"><div className="min-w-[205px] space-y-1.5"><div className="flex justify-between gap-2 rounded-md border border-violet-100 bg-violet-50 px-2 py-1.5 dark:border-violet-900 dark:bg-violet-950/30"><span className="text-muted-foreground">Paid to date</span><strong className="whitespace-nowrap">${Number(exp.paid_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div><div className="flex justify-between gap-2 px-1 text-[10px] text-muted-foreground"><span>Balance</span><span className="whitespace-nowrap">${Number(exp.balance_due ?? Math.max(0, cost - Number(exp.paid_amount || 0))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>{Array.isArray(exp.payments) && exp.payments.length ? exp.payments.map((payment: any, index: number) => <div key={payment.id} className="rounded-md border px-2 py-1.5"><div className="flex justify-between gap-2"><span className="text-[10px] font-semibold text-muted-foreground">Installment {index + 1}</span><strong className="whitespace-nowrap">${Number(payment.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div><div className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-muted-foreground"><span>{payment.payment_date ? new Date(`${payment.payment_date}T00:00:00`).toLocaleDateString() : 'Date unavailable'}</span>{payment.reference && <span className="max-w-20 truncate" title={payment.reference}>Ref: {payment.reference}</span>}</div>{payment.receipt_name ? <div className="mt-1 flex items-center gap-2 border-t pt-1"><span className="max-w-20 truncate text-[10px] text-muted-foreground" title={payment.receipt_name}>{payment.receipt_name}</span><button type="button" onClick={() => handleOpenFile(`/api/v1/operational-expenses/${exp.id}/payments/${payment.id}/receipt`, payment.receipt_name || 'Payment receipt')} className="text-[10px] font-bold text-violet-700 hover:text-violet-900 transition-colors">View</button><button type="button" onClick={() => void downloadPurchaseOrderPaymentReceipt({ ...payment, expense_id: exp.id })} className="text-[10px] font-bold text-violet-700 hover:text-violet-900 transition-colors">Download</button></div> : <span className="mt-1 block text-[10px] text-muted-foreground">No receipt attached</span>}</div>) : <span className="text-[10px] text-muted-foreground">No payments recorded</span>}</div></td>
                             <td className="px-4 py-3"><StatusBadge status={exp.status || 'SUBMITTED'} /></td>
                             <td className="px-4 py-3">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setViewingExpense(exp);
-                                }}
-                                className="p-1.5 rounded-lg bg-muted hover:bg-violet-100 text-violet-700 transition"
-                                title="View Claim Details"
-                              >
-                                <Eye size={14} />
-                              </button>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setViewingExpense(exp);
+                                  }}
+                                  className="p-1.5 rounded-lg bg-muted hover:bg-violet-100 text-violet-700 transition"
+                                  title="View Claim Details"
+                                >
+                                  <Eye size={14} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingExpense(exp);
+                                  }}
+                                  className="p-1.5 rounded-lg bg-muted hover:bg-violet-100 text-violet-700 transition"
+                                  title="Edit Claim"
+                                >
+                                  <Pencil size={14} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -3252,7 +3403,13 @@ Signed: Finance & Procurement Administration
         <div className="flex flex-col items-center justify-center space-y-2.5 flex-1 overflow-y-auto overflow-x-hidden scrollbar-none w-full py-1">
           <button
             type="button"
-            onClick={() => { setPoAttachmentFile(null); setShowAddPoModal(true); }}
+            onClick={() => {
+              bypassDuplicateCheckRef.current = false;
+              setDuplicateWarning(null);
+              setCurrentEntryForDuplicate(null);
+              setPoAttachmentFile(null);
+              setShowAddPoModal(true);
+            }}
             className="relative group w-11 h-11 rounded-xl hover:bg-violet-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 shrink-0"
             aria-label="Issue Purchase Order Form"
           >
@@ -3452,6 +3609,29 @@ Signed: Finance & Procurement Administration
           initialDocumentDraft={expenseCommandDraft}
           onClose={() => { setShowExpenseModal(false); setExpenseCommandDraft(null); }}
           onSubmitted={() => { setShowExpenseModal(false); setExpenseCommandDraft(null); reload(); setBanner({ type: 'success', message: 'Operational Expense claim submitted successfully.' }); }}
+        />
+      )}
+
+      {editingExpense && (
+        <OperationalExpenseSubmissionModal
+          initialExpense={editingExpense}
+          onClose={() => setEditingExpense(null)}
+          onSubmitted={() => {
+            setEditingExpense(null);
+            reload();
+            setBanner({ type: 'success', message: 'Operational Expense claim updated successfully.' });
+          }}
+        />
+      )}
+
+      {duplicateWarning && currentEntryForDuplicate && (
+        <DuplicateWarningModal
+          isOpen={Boolean(duplicateWarning && currentEntryForDuplicate)}
+          entityType="Purchase Order"
+          currentRecord={currentEntryForDuplicate}
+          duplicateRecord={duplicateWarning}
+          onSaveAnyway={handlePoSaveAnyway}
+          onDiscard={handlePoDiscardDuplicate}
         />
       )}
 
@@ -4394,6 +4574,17 @@ Signed: Finance & Procurement Administration
                       </button>
                     );
                   })()}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const target = viewingExpense;
+                      setViewingExpense(null);
+                      setEditingExpense(target);
+                    }}
+                    className="px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center gap-1 text-slate-700 dark:text-slate-200"
+                  >
+                    <Pencil size={13} /> Edit Claim
+                  </button>
                   <button
                     type="button"
                     onClick={() => setViewingExpense(null)}
