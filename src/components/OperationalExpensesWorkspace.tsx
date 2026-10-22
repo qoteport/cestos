@@ -677,16 +677,16 @@ export default function OperationalExpensesWorkspace({
                           >
                             <Eye size={14} />
                           </button>
-                          {!row.paid_at && !['PAID', 'COMPLETED'].includes(String(row.status || '').toUpperCase()) && (
-                            <button
-                              type="button"
-                              onClick={() => setEditingExpense(row)}
-                              className="p-1.5 rounded-lg bg-muted hover:bg-violet-100 dark:hover:bg-violet-950 text-violet-700 dark:text-violet-300 transition"
-                              title="Edit Claim"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            disabled={Boolean(row.paid_at) || ['PAID', 'COMPLETED'].includes(String(row.status || '').toUpperCase())}
+                            onClick={() => setEditingExpense(row)}
+                            className="p-1.5 rounded-lg bg-muted hover:bg-violet-100 dark:hover:bg-violet-950 text-violet-700 dark:text-violet-300 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                            title={row.paid_at || ['PAID', 'COMPLETED'].includes(String(row.status || '').toUpperCase()) ? 'Paid expenses cannot be edited' : 'Edit Claim'}
+                            aria-label="Edit Claim"
+                          >
+                            <Pencil size={14} />
+                          </button>
                           {finance && Number(row.balance_due ?? (cost - paidAmountFor(row))) > 0 && (
                             <button
                               type="button"
