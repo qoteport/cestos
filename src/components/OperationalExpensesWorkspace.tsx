@@ -23,6 +23,7 @@ import {
   Mail,
   Briefcase,
   Eye,
+  Pencil,
 } from 'lucide-react';
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import { openUniversalFileViewer } from '@/lib/fileViewer';
@@ -121,6 +122,7 @@ export default function OperationalExpensesWorkspace({
 
   const [showForm, setShowForm] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Row | null>(null);
   const [viewingExpense, setViewingExpense] = useState<Row | null>(null);
 
   // Disbursement Modal State
@@ -675,6 +677,16 @@ export default function OperationalExpensesWorkspace({
                           >
                             <Eye size={14} />
                           </button>
+                          {!row.paid_at && !['PAID', 'COMPLETED'].includes(String(row.status || '').toUpperCase()) && (
+                            <button
+                              type="button"
+                              onClick={() => setEditingExpense(row)}
+                              className="p-1.5 rounded-lg bg-muted hover:bg-violet-100 dark:hover:bg-violet-950 text-violet-700 dark:text-violet-300 transition"
+                              title="Edit Claim"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                          )}
                           {finance && Number(row.balance_due ?? (cost - paidAmountFor(row))) > 0 && (
                             <button
                               type="button"
@@ -852,6 +864,19 @@ export default function OperationalExpensesWorkspace({
                       </button>
                     );
                   })()}
+                  {!viewingExpense.paid_at && !['PAID', 'COMPLETED'].includes(String(viewingExpense.status || '').toUpperCase()) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const target = viewingExpense;
+                        setViewingExpense(null);
+                        setEditingExpense(target);
+                      }}
+                      className="px-3.5 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center gap-1 text-slate-700 dark:text-slate-200 cursor-pointer"
+                    >
+                      <Pencil size={13} /> Edit Claim
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setViewingExpense(null)}
@@ -1027,6 +1052,17 @@ export default function OperationalExpensesWorkspace({
           onClose={() => setShowExpenseModal(false)}
           onSubmitted={() => {
             setShowExpenseModal(false);
+            void reload();
+          }}
+        />
+      )}
+
+      {editingExpense && (
+        <OperationalExpenseSubmissionModal
+          initialExpense={editingExpense}
+          onClose={() => setEditingExpense(null)}
+          onSubmitted={() => {
+            setEditingExpense(null);
             void reload();
           }}
         />

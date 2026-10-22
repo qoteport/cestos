@@ -41,6 +41,9 @@ export default function OperationalExpenseSubmissionModal({
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [method, setMethod] = useState('MOBILE_MONEY');
   const [invoice, setInvoice] = useState<File | null>(null);
+  const [existingInvoiceName, setExistingInvoiceName] = useState(
+    initialExpense?.invoice_name || initialExpense?.attachment || ''
+  );
   const [manualTotal, setManualTotal] = useState(false);
   const [manualAmount, setManualAmount] = useState('');
   const [items, setItems] = useState<ExpenseItem[]>([]);
@@ -106,6 +109,8 @@ export default function OperationalExpenseSubmissionModal({
 
   useEffect(() => {
     if (!initialExpense) return;
+    setExistingInvoiceName(initialExpense.invoice_name || initialExpense.attachment || '');
+    setInvoice(null);
     setPayName(String(initialExpense.pay_to_name || '').trim());
     setPayeeId(initialExpense.payee_id ? String(initialExpense.payee_id) : '__NEW__');
     setPhone(String(initialExpense.pay_to_phone || ''));
@@ -321,11 +326,26 @@ export default function OperationalExpenseSubmissionModal({
           })),
           total_cost: manualTotal ? Number(manualAmount) : undefined,
         };
-        const updated = await apiFetch<Row>(`/api/v1/operational-expenses/${initialExpense.id}`, {
+        let updated = await apiFetch<Row>(`/api/v1/operational-expenses/${initialExpense.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updateData),
         });
+        if (invoice) {
+          const form = new FormData();
+          form.append('file', invoice);
+          try {
+            const withAttachment = await apiFetch<Row>(`/api/v1/operational-expenses/${initialExpense.id}/attachment`, {
+              method: 'POST',
+              body: form,
+            });
+            if (withAttachment) {
+              updated = withAttachment;
+            }
+          } catch (uploadErr) {
+            console.error('Failed to upload updated expense attachment:', uploadErr);
+          }
+        }
         onSubmitted(updated);
         handleClose();
         return;
@@ -450,17 +470,45 @@ export default function OperationalExpenseSubmissionModal({
               <label className="block space-y-1 font-semibold"><span className="block">Pay by *</span><SearchableSelect value={method} onChange={(val) => setMethod(val)} options={[['MOBILE_MONEY','Phone / mobile money'],['BANK_TRANSFER','Bank transfer'],['CASH','Cash'],['CARD','Card'],['OTHER','Other']].map(([value,label]) => ({ value, label }))} placeholder="Select payment method..." required /></label>
             </section>
             <section className="grid gap-3 rounded-xl border p-3 sm:grid-cols-2">
-              <label className="block space-y-1 font-semibold sm:col-span-2">
-                <span className="block">Invoice / supporting file <span className="font-normal text-slate-500">(optional)</span></span>
+              <div className="block space-y-2 sm:col-span-2">
+                <label className="block font-semibold">
+                  Invoice / supporting file <span className="font-normal text-slate-500">(optional)</span>
+                </label>
+                {existingInvoiceName && !invoice && (
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-orange-50/70 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 text-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Paperclip size={14} className="text-orange-600 dark:text-orange-400 shrink-0" />
+                      <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                        Current attachment: {existingInvoiceName}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-muted-foreground shrink-0 font-normal">Choose new file below to replace</span>
+                  </div>
+                )}
                 <input
                   type="file"
                   accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,.docx,.xls,.xlsx,.txt,.csv,.rtf"
                   className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 dark:file:bg-orange-950/60 dark:file:text-orange-300 cursor-pointer transition"
                   onChange={(event) => void handleInvoiceChange(event.target.files?.[0] || null)}
                 />
-                {invoice && <span className="block truncate text-[11px] font-normal text-slate-500">{invoice.name}</span>}
-                <span className="block text-[11px] font-normal text-slate-500">Uploaded for reference. Enter purchased items and amounts manually.</span>
-              </label>
+                {invoice && (
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs">
+                    <span className="truncate text-emerald-800 dark:text-emerald-300 font-medium">
+                      New attachment to upload: {invoice.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setInvoice(null)}
+                      className="text-[11px] text-red-500 hover:text-red-700 shrink-0 font-semibold ml-2 cursor-pointer"
+                    >
+                      Cancel replacement
+                    </button>
+                  </div>
+                )}
+                <span className="block text-[11px] font-normal text-slate-500">
+                  {initialExpense ? 'Select a new file above to replace the current attachment.' : 'Uploaded for reference. Enter purchased items and amounts manually.'}
+                </span>
+              </div>
             </section>
             <section className="space-y-3 rounded-xl border p-3">
               <div className="flex items-center justify-between">

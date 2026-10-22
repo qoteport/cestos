@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import IncidentDetailModal from './IncidentDetailModal';
 import FuelAllocationImportModal from './FuelAllocationImportModal';
 import FieldWorkbookDialog from './FieldWorkbookDialog';
@@ -1687,10 +1687,26 @@ Signed: Field Operations Administration
       if (editExpenseReceiptFile) {
         patchData.invoice_name = editExpenseReceiptFile.name;
       }
-      const updated = await apiFetch<any>(`/api/v1/operational-expenses/${editingExpense.id}`, {
+      let updated = await apiFetch<any>(`/api/v1/operational-expenses/${editingExpense.id}`, {
         method: 'PATCH',
         body: JSON.stringify(patchData),
       });
+
+      if (editExpenseReceiptFile) {
+        const form = new FormData();
+        form.append('file', editExpenseReceiptFile);
+        try {
+          const withAttachment = await apiFetch<any>(`/api/v1/operational-expenses/${editingExpense.id}/attachment`, {
+            method: 'POST',
+            body: form,
+          });
+          if (withAttachment) {
+            updated = withAttachment;
+          }
+        } catch (attachErr) {
+          console.error('Failed to upload expense attachment in FieldAdminPortal:', attachErr);
+        }
+      }
 
       setOperationalExpenseRequests((prev) =>
         prev.map((item) =>
@@ -5627,6 +5643,38 @@ Signed: Field Operations Administration
                     { value: 'OTHER', label: 'Other' },
                   ]}
                 />
+              </div>
+
+              <div>
+                <label className="block font-bold mb-1">Invoice / Receipt Attachment (optional)</label>
+                {editingExpense.invoice_name && !editExpenseReceiptFile && (
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-orange-50/70 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 text-xs mb-1.5">
+                    <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                      Current file: {editingExpense.invoice_name}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground shrink-0 font-normal">Choose new file below to replace</span>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,.docx,.xls,.xlsx,.txt,.csv,.rtf"
+                  onChange={(e) => setEditExpenseReceiptFile(e.target.files?.[0] || null)}
+                  className="w-full p-2 border rounded-xl bg-background text-xs text-muted-foreground file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 dark:file:bg-orange-950/60 dark:file:text-orange-300 cursor-pointer transition"
+                />
+                {editExpenseReceiptFile && (
+                  <div className="flex items-center justify-between p-2 mt-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs">
+                    <span className="truncate text-emerald-800 dark:text-emerald-300 font-medium">
+                      New attachment: {editExpenseReceiptFile.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setEditExpenseReceiptFile(null)}
+                      className="text-[11px] text-red-500 hover:text-red-700 shrink-0 font-semibold ml-2 cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t">
