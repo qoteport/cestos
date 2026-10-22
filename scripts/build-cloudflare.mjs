@@ -10,7 +10,7 @@ if (url.protocol !== 'https:' || ['localhost', '127.0.0.1', '[::1]'].includes(ur
   throw new Error('CESTOS_API_BACKEND_URL must be a public HTTPS backend URL.');
 }
 const result = spawnSync(process.platform === 'win32' ? 'npx.cmd' : 'npx',
-  ['opennextjs-cloudflare', 'build'], {
+  ['opennextjs-cloudflare', 'build', '--dangerouslyUseUnsupportedNextVersion'], {
     stdio: 'inherit',
     shell: process.platform === 'win32',
     env: { ...process.env, DIST_DIR: '.next', CESTOS_API_BACKEND_URL: backend },

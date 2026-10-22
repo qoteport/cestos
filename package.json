@@ -47,7 +47,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css,md,json}\"",
     "serve": "next start",
     "type-check": "tsc --noEmit",
-    "build:cf": "node scripts/generate-build-version.mjs && node scripts/build-cloudflare.mjs",
+    "postinstall": "node scripts/patch-opennext.mjs",
+    "build:cf": "node scripts/patch-opennext.mjs && node scripts/generate-build-version.mjs && node scripts/build-cloudflare.mjs",
     "preview:cf": "npm run build:cf && opennextjs-cloudflare preview",
     "deploy:cf": "npm run build:cf && opennextjs-cloudflare deploy",
     "check:cf": "npm run build:cf && wrangler deploy --dry-run"
