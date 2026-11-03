@@ -445,8 +445,10 @@ export function printableSheetHtml(sheet: FieldSheet, workbookName: string, asse
   const tables=sections.map((section,index)=>`<table style="${index?'break-before:page;':''}width:${fit?'100%':total+'px'}"><colgroup>${widths.map(w=>`<col style="width:${fit?100*w/total+'%':w+'px'};${w===0?'display:none':''}">`).join('')}</colgroup>${headings.length?`<thead>${headings.map(rowHtml).join('')}</thead>`:''}<tbody>${section.map(rowHtml).join('')}</tbody></table>`).join('');
   return `<!doctype html><html><head><meta charset="utf-8"><title>${escape(workbookName+' — '+sheet.name)}</title><style>@page{size:${sheet.print?.orientation==='portrait'?'portrait':'landscape'};margin:12mm}body{font:11px Arial;color:#000}h1{font-size:16px}table{border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}td{border:1px solid #777;padding:4px;white-space:pre-wrap;overflow-wrap:anywhere;vertical-align:middle;print-color-adjust:exact}tr{break-inside:avoid}</style></head><body><h1>${escape(workbookName)} — ${escape(sheet.name)}</h1>${tables}</body></html>`;
 }
-export function printSheet(sheet: FieldSheet, workbookName: string, assets:Record<string,WorkbookAsset>={}) {
+export async function printSheet(sheet: FieldSheet, workbookName: string, assets:Record<string,WorkbookAsset>={}) {
   const html = printableSheetHtml(sheet, workbookName,assets);
+  const native = (window as unknown as { cestosDesktop?: { printWorksheet?: (html: string) => Promise<void> } }).cestosDesktop;
+  if (native?.printWorksheet) { await native.printWorksheet(html); return; }
   const frame = document.createElement('iframe');
   frame.title = 'Print active worksheet';
   frame.style.cssText = 'position:fixed;width:0;height:0;border:0';

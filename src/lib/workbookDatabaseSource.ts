@@ -1,5 +1,5 @@
 import {makeSheet, MAX_ROWS, MAX_COLS, type FieldSheet, type CellFormat} from './fieldWorkbook';
-export type DatabaseSource = {id:string; name:string; pagination:'page'|'none'; columns:{name:string;type:string;format?:string}[]};
+export type DatabaseSource = {relations?:{column:string;target:string;targetColumn:string}[];id:string; name:string; pagination:'page'|'none'; columns:{name:string;type:string;format?:string}[]};
 export function databaseSheets(source:DatabaseSource, records:Record<string,unknown>[], columns:string[], existingNames:string[]):FieldSheet[] {
   if(!columns.length || columns.length>MAX_COLS || new Set(columns).size!==columns.length || columns.some(name=>!source.columns.some(c=>c.name===name)))throw new Error('Choose between 1 and 100 unique columns.');
   const count=Math.max(1,Math.ceil(records.length/(MAX_ROWS-1)));

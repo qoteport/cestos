@@ -46,6 +46,7 @@ export type FieldSheet = {
   columnOrigins?: (number | null)[];
 };
 export type FieldWorkbook = {
+  fileLink?:import('./fileSync').FileLink;
   folders?:SheetFolder[];
   assets?:Record<string,WorkbookAsset>;
   version: 1;
@@ -180,6 +181,7 @@ export function newWorkbook(templateIndex?: number): FieldWorkbook {
 }
 export function copyWorkbook(book: FieldWorkbook, template = false): FieldWorkbook {
   const copy = structuredClone(book);
+  delete copy.fileLink; // Copies must never overwrite the original linked file.
   // Copy mapping configuration only, never record identities or prior import state.
   copy.sheets = copy.sheets.map(sheet => ({
     ...sheet,
@@ -480,6 +482,7 @@ export function validateWorkbook(value: unknown): FieldWorkbook {
   )
     throw new Error('This is not a supported Cestos workbook.');
   validateMedia(book);
+  if(book.fileLink){const link=book.fileLink;if(!/^[0-9a-f-]{36}$/i.test(link.cloud_id)||!Number.isInteger(link.base_revision)||link.base_revision<0||typeof link.file_name!=='string'||!link.file_name||link.file_name.length>255||/[\\/]/.test(link.file_name)||[link.last_file_hash,link.workbook_hash].some(hash=>hash!==undefined&&!/^[0-9a-f]{64}$/i.test(hash))||(link.local_id!==undefined&&!/^[0-9a-f]{64}$/i.test(link.local_id))||(link.local_revision!==undefined&&(typeof link.local_revision!=='string'||link.local_revision.length>100)))throw new Error('Invalid original-file synchronization metadata.');}
   const ids = new Set<string>();
   const names = new Set<string>();
   for (const s of book.sheets) {

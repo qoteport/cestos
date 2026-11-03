@@ -1,3 +1,4 @@
+import {loginPageFor} from './loginDestination';
 import {offlineAccessActive,readTrustedSession,lockOfflineAccess,offlineRestrictedPath,offlineWriteAllowed,tokenScope} from './offlineAuth';
 // Browser calls stay on this origin; Next.js proxies to the configured backend.
 import {getAccessToken, getRefreshToken, setTokens, clearTokens, refreshSession} from './session';
@@ -133,7 +134,7 @@ export function handleSessionExpired() {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event('cestos:session-expired'));
     if (!window.location.pathname.startsWith('/sign-up-login')) {
-      window.location.href = '/sign-up-login';
+      window.location.href = loginPageFor(window.location.pathname+window.location.search);
     }
   }
 }

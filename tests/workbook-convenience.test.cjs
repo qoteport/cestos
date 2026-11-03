@@ -1,5 +1,5 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
-function load(file){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{exports,require:name=>load('src/lib/'+name.replace('./','')+'.ts'),Date});return exports;}
+function load(file, globals={}){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{exports,require:name=>load('src/lib/'+name.replace('./','')+'.ts'),Date,...globals});return exports;}
 const api=load('src/lib/workbookConvenience.ts');
 const sheet=()=>({id:'sheet',name:'Sheet 1',cells:[['1','a'],['3','b'],['',''],['','']],widths:[160,160],heights:[34,34,34,34],merges:[],formats:{'0:0':{bold:true}}});
 test('autofill extends numeric series in one copy without mutating the source',()=>{const s=sheet(),filled=api.autofillRange(s,{r:0,c:0,er:3,ec:0},'down',true);assert.deepEqual(Array.from(filled.cells,row=>row[0]),['1','3','5','7']);assert.equal(s.cells[2][0],'');assert.equal(filled.formats['3:0'].bold,true);});
@@ -17,3 +17,15 @@ test('autofill supports text-number patterns and day/month cyclic names',()=>{co
 test('print area, repeated headers and manual page breaks are emitted',()=>{const s=sheet();s.print={area:{r:0,c:0,er:3,ec:0},orientation:'portrait',repeatRows:1,fit:'actual',breakRows:[2]};const html=api.printableSheetHtml(s,'Book');assert.equal((html.match(/<thead>/g)||[]).length,2);assert.ok(html.includes('break-before:page'));assert.ok(html.includes('size:portrait'));assert.ok(html.includes('width:160px'));assert.ok(!html.includes('>a</td>'));});
 test('printing refuses partial merged areas and crossing page breaks',()=>{const s=sheet();s.merges=[{r:1,c:0,er:2,ec:1}];s.print={breakRows:[2]};assert.throws(()=>api.printableSheetHtml(s,'Book'),/crosses a merged/);s.print={area:{r:0,c:0,er:1,ec:0}};assert.throws(()=>api.printableSheetHtml(s,'Book'),/merged/i);});
 
+
+test('desktop printing sends the formatted worksheet to native printing without an iframe',async()=>{
+  let printed='';
+  const desktop=load('src/lib/workbookConvenience.ts',{window:{cestosDesktop:{printWorksheet:async html=>{printed=html;}}}});
+  await desktop.printSheet(sheet(),'Desktop workbook');
+  assert.ok(printed.includes('Desktop workbook'));
+  assert.ok(printed.includes('<table'));
+});
+test('desktop print failures propagate to the caller',async()=>{
+  const desktop=load('src/lib/workbookConvenience.ts',{window:{cestosDesktop:{printWorksheet:async()=>{throw Error('Printer unavailable');}}}});
+  await assert.rejects(desktop.printSheet(sheet(),'Book'),/Printer unavailable/);
+});

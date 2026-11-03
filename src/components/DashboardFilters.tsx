@@ -1,0 +1,26 @@
+'use client';
+import {dashboardPages,type DashboardDefinition,type DashboardData,type DashboardFilter} from '@/lib/workbookDashboard';
+const field='rounded border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-900';
+export default function DashboardFilters({definition,dataFor,onChange,editing}:{definition:DashboardDefinition;dataFor:(id:string)=>DashboardData|undefined;onChange:(filters:DashboardFilter[])=>void;editing:boolean}){
+ const filters=definition.filters||[];
+ const update=(id:string,patch:Partial<DashboardFilter>)=>onChange(filters.map(f=>f.id===id?{...f,...patch}:f));
+ return <section aria-label="Dashboard filters" className="mb-4 space-y-2 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+ <div className="flex items-center gap-3"><h3 className="text-sm font-semibold">Filters</h3><button className="text-xs text-emerald-700" onClick={()=>onChange(filters.map(f=>({...f,value:'',end:''})))}>Clear all</button>{editing&&filters.length<12&&<button className="ml-auto text-sm text-emerald-700" onClick={()=>onChange([...filters,{id:crypto.randomUUID(),name:'New filter',kind:'category',columns:{},widget_ids:[],value:'',end:''}])}>+ Add filter</button>}</div>
+ {!filters.length&&<p className="text-xs text-slate-500">Add category, date range or numeric range filters in Edit mode.</p>}
+ {filters.map(f=>{const values=[...new Set(Object.entries(f.columns).flatMap(([id,col])=>(dataFor(id)?.rows||[]).map(r=>r[col]).filter(v=>v!==null&&v!==undefined).map(String)))].sort((a,b)=>a.localeCompare(b));return <div key={f.id} className="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+ <div className="flex flex-wrap items-center gap-2"><label htmlFor={`filter-${f.id}`} className="text-sm font-medium">{f.name}</label>
+ {f.kind==='category'?<select id={`filter-${f.id}`} className={field} value={f.value} onChange={e=>update(f.id,{value:e.target.value})}><option value="">All values</option>{f.value&&!values.includes(f.value)&&<option>{f.value}</option>}{values.map(v=><option key={v}>{v}</option>)}</select>:<><input id={`filter-${f.id}`} aria-label={`${f.name} from`} type={f.kind==='date'?'date':'number'} className={field} value={f.value} onChange={e=>update(f.id,{value:e.target.value})}/><span>to</span><input aria-label={`${f.name} to`} type={f.kind==='date'?'date':'number'} className={field} value={f.end} onChange={e=>update(f.id,{end:e.target.value})}/></>}
+ <span className="text-xs text-slate-500">{f.widget_ids.length?`${f.widget_ids.length} selected visuals`:'All visuals'} · {Object.keys(f.columns).length} linked datasets</span>
+ {(f.value||f.end)&&<button className="text-xs" onClick={()=>update(f.id,{value:'',end:''})}>Clear</button>}</div>
+ {f.value&&f.end&&((f.kind==='number'&&Number(f.value)>Number(f.end))||(f.kind==='date'&&f.value>f.end))&&<p role="alert" className="text-xs text-amber-700">The start must be before the end. No records will match this range.</p>}
+ {editing&&<details className="mt-2 text-xs"><summary className="cursor-pointer">Configure filter</summary><div className="mt-2 space-y-2">
+ <div className="flex flex-wrap gap-2"><input aria-label="Filter name" maxLength={100} className={field} value={f.name} onChange={e=>update(f.id,{name:e.target.value})}/><select aria-label="Filter type" className={field} value={f.kind} onChange={e=>update(f.id,{kind:e.target.value as DashboardFilter['kind'],value:'',end:''})}><option value="category">Category</option><option value="date">Date range</option><option value="number">Numeric range</option></select><button className="text-rose-700" onClick={()=>onChange(filters.filter(x=>x.id!==f.id))}>Remove</button></div>
+ <label className="flex gap-2">Tab scope<select className={field} value={f.page_ids?.[0]||''} onChange={e=>update(f.id,{page_ids:e.target.value?[e.target.value]:[]})}><option value="">All tabs</option>{dashboardPages(definition).map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+ <p>Choose the matching column in each dataset. Unlinked datasets are unaffected. Date filters use ISO dates (YYYY-MM-DD).</p>
+ {definition.datasets.map(d=><label key={d.id} className="flex items-center gap-2">{d.name}<select className={field} value={f.columns[d.id]||''} onChange={e=>{const columns={...f.columns};if(e.target.value)columns[d.id]=e.target.value;else delete columns[d.id];update(f.id,{columns});}}><option value="">Do not filter</option>{dataFor(d.id)?.columns.map(c=><option key={c.name}>{c.name}</option>)}</select></label>)}
+ <label className="flex gap-2"><input type="checkbox" checked={!f.widget_ids.length} onChange={e=>update(f.id,{widget_ids:e.target.checked?[]:definition.widgets.map(w=>w.id)})}/>Apply to all visuals in linked datasets</label>
+ <div className="flex flex-wrap gap-3">{definition.widgets.map(w=><label key={w.id} className="flex gap-1"><input type="checkbox" checked={!f.widget_ids.length||f.widget_ids.includes(w.id)} onChange={e=>{const ids=f.widget_ids.length?f.widget_ids:definition.widgets.map(v=>v.id);const next=e.target.checked?[...new Set([...ids,w.id])]:ids.filter(id=>id!==w.id);if(next.length)update(f.id,{widget_ids:next});}}/>{w.title}</label>)}</div>
+ </div></details>}
+ </div>;})}
+ </section>;
+}

@@ -3,7 +3,7 @@ import {useEffect, useId, useState, type RefObject, type KeyboardEvent} from 're
 import {createPortal} from 'react-dom';
 import {formulaCompletion,insertFormulaFunction} from '@/lib/workbookFormulaSuggestions';
 
-export function useWorkbookFormulaSuggestions(input:RefObject<HTMLInputElement | null>,value:string,enabled:boolean,onValue:(value:string)=>void) {
+export function useWorkbookFormulaSuggestions(input:RefObject<HTMLInputElement | HTMLTextAreaElement | null>,value:string,enabled:boolean,onValue:(value:string)=>void) {
   const [caret,setCaret]=useState(0),[selected,setSelected]=useState(0),[dismissed,setDismissed]=useState(true);
   const [position,setPosition]=useState<{left:number;top:number;width:number;maxHeight:number}|null>(null);
   const id=useId();
@@ -28,9 +28,9 @@ export function useWorkbookFormulaSuggestions(input:RefObject<HTMLInputElement |
     requestAnimationFrame(()=>{input.current?.focus();input.current?.setSelectionRange(next.caret,next.caret);});
   };
   return {
-    changed:(element:HTMLInputElement)=>{setCaret(element.selectionStart??element.value.length);setSelected(0);setDismissed(false);},
+    changed:(element:HTMLInputElement | HTMLTextAreaElement)=>{setCaret(element.selectionStart??element.value.length);setSelected(0);setDismissed(false);},
     dismiss:()=>setDismissed(true),
-    onKeyDown:(event:KeyboardEvent<HTMLInputElement>)=>{
+    onKeyDown:(event:KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>)=>{
       if(['ArrowLeft','ArrowRight','Home','End'].includes(event.key))setDismissed(true);
       if(!completion||event.nativeEvent.isComposing||event.ctrlKey||event.metaKey||event.altKey||event.shiftKey)return false;
       if(['ArrowDown','ArrowUp','Tab','Enter','Escape'].includes(event.key)){
@@ -50,6 +50,6 @@ export function useWorkbookFormulaSuggestions(input:RefObject<HTMLInputElement |
         {completion.items.map((item,i)=><button key={item.name} id={`${id}-${i}`} type="button" role="option" aria-selected={i===index} tabIndex={-1} onClick={()=>choose(item.name)} className={`block w-full rounded px-2 py-2 text-left text-xs ${i===index?'bg-emerald-100 dark:bg-emerald-950':'hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
           <span className="font-semibold">{item.name}</span><span className="ml-2 font-mono text-slate-500">{item.example}</span><span className="mt-1 block">{item.description}</span>
         </button>)}
-      </div>,document.body):null,
+      </div>,input.current?.closest('dialog') || document.body):null,
   };
 }

@@ -10,6 +10,9 @@ import WorkbookCellMedia from './WorkbookCellMedia';
 import {mediaExportSheet,pruneAssets,insertMedia,removeMedia,assetUrl,imageMime,type WorkbookAsset} from '@/lib/workbookMedia';
 import {visibleSheetRows, sortSheet} from '@/lib/workbookOperations';
 import WorkbookTools from './WorkbookTools';
+import WorkbookQuickAnswers from './WorkbookQuickAnswers';
+import WorkbookDashboards from './WorkbookDashboards';
+import {prepareLinkedWorkbook,fileWorkbookFingerprint,bytesHash} from '@/lib/fileSync';
 import {calculateSheet} from '@/lib/workbookFormulas';
 import styles from './FieldWorkbookWorkspace.module.css';
 import { workbookShortcut } from '@/lib/workbookShortcuts';
@@ -73,6 +76,7 @@ import {
   Undo2,
   Upload,
   X,
+  BarChart3,
 } from 'lucide-react';
 import { apiFetch, apiFetchBlob, downloadBlob } from '@/lib/api';
 import {
@@ -269,6 +273,7 @@ const GridCell = memo(function GridCell({
           }
         }}
       />
+      {active && editing && value.startsWith('=') && <span role="status" className="pointer-events-none absolute -top-5 left-0 z-30 whitespace-nowrap rounded border border-blue-200 bg-blue-50 px-2 text-xs text-blue-800">Calculation: Enter to apply, e.g. =A1+B1</span>}
       {formula.popup}
       {!!attachments?.length&&<button type="button" aria-label={`Attachments for ${columnName(c)}${r+1}`} onPointerDown={e=>e.stopPropagation()} onClick={()=>onMedia?.(r,c)} className="absolute right-1 top-1 z-10 flex max-w-[65%] items-center gap-1 rounded border bg-white/95 p-1 text-xs text-slate-700 shadow-sm dark:bg-slate-800 dark:text-slate-100">{imageMime(attachments[0].mime)?<img src={assetUrl(attachments[0])} alt={attachments[0].name} className="h-12 w-16 object-contain"/>:<Paperclip size={14}/>}<span>{attachments.length}</span></button>}
       {active && picker !== 'text' && !compatible && <label className="absolute right-1 top-0 z-10 rounded bg-white p-1 text-xs text-emerald-700 dark:bg-slate-800" onPointerDown={e=>e.stopPropagation()}>
@@ -300,6 +305,16 @@ export default function FieldWorkbookWorkspace({
   const [sharing,setSharing]=useState(false);
   const [sessions, setSessions] = useState<WorkbookSession[]>([]);
   const [ribbonTab, setRibbonTab] = useState('Home');
+  // Quick answers and Dashboards open as full pages in place of the library or editor.
+  const [page, setPage] = useState<null | 'answers' | 'dashboards'>(null);
+  const pageGuard = useRef<(() => boolean) | null>(null);
+  const registerPageGuard = useCallback((guard: (() => boolean) | null) => { pageGuard.current = guard; }, []);
+  function leavePage() {
+    if (pageGuard.current && !pageGuard.current()) return false;
+    pageGuard.current = null;
+    setPage(null);
+    return true;
+  }
   const [book, setBook] = useState<FieldWorkbook | null>(null);
   const [sheetIndex, setSheetIndex] = useState(0);
   const [mediaTarget,setMediaTarget]=useState<{bookId:string;sheetId:string;r:number;c:number}|null>(null);
@@ -667,6 +682,9 @@ export default function FieldWorkbookWorkspace({
       ),
     [changeSheet]
   );
+  const formulaBarInput = useRef<HTMLTextAreaElement>(null);
+  const [formulaBarEditing,setFormulaBarEditing] = useState(false);
+  const formulaBarSuggestions = useWorkbookFormulaSuggestions(formulaBarInput,sheet?.cells[anchor.r]?.[anchor.c] || '',formulaBarEditing,next=>onValue(anchor.r,anchor.c,next));
   function beginSelection(event: React.PointerEvent) {
     if (event.button !== 0 || event.pointerType === 'touch') return;
     const target = event.target as HTMLElement;
@@ -996,8 +1014,10 @@ export default function FieldWorkbookWorkspace({
   }
   useEffect(()=>{
     const tabs=sessions.map(item=>({id:item.book.id,name:item.book.id===book?.id ? book.name : item.book.name,dirty:item.book.id===book?.id ? dirty : item.dirty}));
-    setTabsState({tabs,activeId:book?.id || null,busy,onSelect:switchWorkbook,onCloseTab:closeWorkbook,onNew:()=>activate(newWorkbook(),true),onLibrary:leave,onAction:workbookTabAction});
-  },[sessions,book,dirty,busy,sheetIndex,anchor,end,undo,redo,setTabsState]);
+    // Title bar navigation first leaves an open page (which may ask about unsaved changes).
+    const fromPage=(run:()=>void)=>()=>{if(page&&!leavePage())return;run();};
+    setTabsState({tabs,activeId:book?.id || null,busy,onSelect:id=>fromPage(()=>switchWorkbook(id))(),onCloseTab:closeWorkbook,onNew:fromPage(()=>activate(newWorkbook(),true)),onLibrary:fromPage(leave),onAction:workbookTabAction});
+  },[sessions,book,dirty,busy,sheetIndex,anchor,end,undo,redo,setTabsState,page]);
   async function openDocument(doc: Document, asTemplate = false, restoreVersion = false) {
     const id=doc.tags.find(tag=>tag.startsWith('wb-'))?.slice(3);
     if(!asTemplate && !restoreVersion && id && sessions.some(item=>item.book.id===id)){switchWorkbook(id);return;}
@@ -1126,7 +1146,8 @@ export default function FieldWorkbookWorkspace({
     try {
       const deviceSaved = await saveToDevice(asTemplate);
       if(onPublish && !asTemplate && book.id===initialWorkbook?.id) {await onPublish(book);setDirty(false);setNotice('Shared workbook saved successfully.');return;}
-      const saved=deviceSaved || book;
+      const saved=asTemplate?deviceSaved||book:await prepareLinkedWorkbook(deviceSaved||book,storageScope);
+      if(saved!==deviceSaved&&saved.fileLink){await saveDeviceWorkbook(storageKey,saved,undefined,{id:editorId.current,baseline:editorBaselines.current.get(saved.id)||saved});editorBaselines.current.set(saved.id,saved);setBook(saved);bookRef.current=saved;}
       await queueWorkbookSync(storageKey,saved);
       if(!asTemplate&&!onPublish&&sheet?.databaseSource){
         setDatabaseReview(structuredClone(sheet));
@@ -1138,7 +1159,7 @@ export default function FieldWorkbookWorkspace({
       const entries=await listWorkbookSync(storageKey);setSyncEntries(entries);
       const entry=entries.find(item=>item.book.id===saved.id);
       if(entry?.state==='synced') {
-        if(!asTemplate && JSON.stringify(bookRef.current)===JSON.stringify(saved))setDirty(false);
+        if(!asTemplate && JSON.stringify(bookRef.current)===JSON.stringify(saved)){setDirty(false);if(entry.book.fileLink){setBook(entry.book);bookRef.current=entry.book;}}
         setNotice('Workbook saved successfully and synced.');
         await loadLibrary();
       } else {
@@ -1238,12 +1259,36 @@ export default function FieldWorkbookWorkspace({
     }
     setEditingSheetIndex(null);
   }
+  useEffect(()=>{
+    const desktop=(window as any).cestosDesktop;if(!desktop)return;
+    const updated=async(event:Event)=>{
+      const update=(event as CustomEvent<{local_id:string;revision:string;base_revision:number;content_hash:string}>).detail;
+      const previous=bookRef.current,link=previous?.fileLink;
+      if(!previous||!link||link.local_id!==update.local_id||link.local_revision===update.revision)return;
+      try{
+        if(busy||!link.workbook_hash||await fileWorkbookFingerprint(previous)!==link.workbook_hash){setNotice('The original file changed. Your workbook draft is retained; reopen the original or save a separate copy.');return;}
+        const raw=await desktop.readFolderFile(storageScope,update.local_id,update.revision);
+        const original=new File([raw.bytes],raw.name);
+        const parsed=/\.cestos\.json$/i.test(raw.name)?validateWorkbook(JSON.parse(await original.text())):await importWorkbook(original);
+        parsed.id=previous.id;
+        parsed.sheets=parsed.sheets.map(s=>({...s,id:previous.sheets.find(old=>old.name===s.name)?.id||s.id}));
+        const next={...parsed,fileLink:{...link,local_revision:update.revision,base_revision:update.base_revision,last_file_hash:update.content_hash||await bytesHash(raw.bytes),workbook_hash:await fileWorkbookFingerprint(parsed)}};
+        if(bookRef.current!==previous)return;
+        await saveDeviceWorkbook(storageKey,next,undefined,{id:editorId.current,baseline:editorBaselines.current.get(next.id)||previous});
+        if(bookRef.current!==previous)return;
+        editorBaselines.current.set(next.id,next);bookRef.current=next;setBook(next);setUndo([]);setRedo([]);setSheetIndex(i=>Math.min(i,next.sheets.length-1));setAnchor({r:0,c:0});setEnd({r:0,c:0});setNotice('Workbook refreshed from the updated original file.');
+      }catch(e){setNotice('Original file update is available. '+(e instanceof Error?e.message:'Reopen it to refresh.'));}
+    };
+    window.addEventListener('cestos:linked-file-updated',updated);return()=>window.removeEventListener('cestos:linked-file-updated',updated);
+  },[storageScope,storageKey,busy]);
   async function readFile(file?: File) {
     if (!file) return;
     setBusy(true);
     setError('');
     try {
-      activate(/\.cestos\.json$/i.test(file.name) ? validateWorkbook(JSON.parse(await file.text())) : await importWorkbook(file), true);
+      const imported=/\.cestos\.json$/i.test(file.name) ? validateWorkbook(JSON.parse(await file.text())) : await importWorkbook(file);
+      const fileLink=(file as File&{cestosSyncLink?:import('@/lib/fileSync').FileLink}).cestosSyncLink;
+      activate(fileLink?{...imported,fileLink:{...fileLink,workbook_hash:await fileWorkbookFingerprint(imported)}}:imported,true);
       setNotice(
         'Imported all worksheets. XLSX layout and common formatting are retained; basic formulas recalculate locally; unsupported formulas show an error. Original XLSX retained intact. Advanced Excel features may not display here or survive an edited export.'
       );
@@ -1296,7 +1341,7 @@ export default function FieldWorkbookWorkspace({
         autosaveStatus,
         onShare: () => setSharing(true),
         onRecover: () => {void deviceRevisions(storageKey,book.id).then(setRecoveryVersions).catch(()=>setError('Could not load device versions.'));},
-        onPrint: () => {try{if(sheet)printSheet(sheet,book.name,book.assets);}catch(e){setError(e instanceof Error?e.message:'Print failed.');}},
+        onPrint: () => {if(sheet)void printSheet(sheet,book.name,book.assets).catch(e=>setError(e instanceof Error?e.message:'Print failed.'));},
         onSaveDevice: () => void saveDeviceOnly(),
         online,
         offlineToolsReady,
@@ -1404,7 +1449,7 @@ export default function FieldWorkbookWorkspace({
   const tabMoveDialog=tabMove&&<div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/40 p-4"><section role="dialog" aria-modal="true" aria-label="Move workbook to folder" className="w-full max-w-sm space-y-3 rounded-xl bg-white p-5 dark:bg-slate-900"><div className="flex justify-between"><h3 className="font-semibold">Move workbook</h3><button type="button" onClick={()=>setTabMove(null)}>Close</button></div><p className="text-sm">{tabMove.name}</p><SearchableSelect ariaLabel="Workbook destination folder" value={tabMove.organization.files[tabMove.id]||''} options={[{value:'',label:'Unfiled'},...tabMove.organization.folders.map(folder=>{const names=[folder.name],seen=new Set([folder.id]);let parent=folder.parentId;while(parent&&!seen.has(parent)){seen.add(parent);const found=tabMove.organization.folders.find(item=>item.id===parent);if(!found)break;names.unshift(found.name);parent=found.parentId;}return {value:folder.id,label:names.join(' / ')};})]} onChange={folder=>{void(async()=>{try{const rows=await readDeviceLibrary<typeof tabMove.organization>(`${storageKey}:file-folders`),organization=rows?.[0]||tabMove.organization;if(folder&&!organization.folders.some(item=>item.id===folder))throw Error('This folder no longer exists. Reopen the folder chooser.');const files={...organization.files};if(folder)files[tabMove.id]=folder;else delete files[tabMove.id];await saveDeviceLibrary(`${storageKey}:file-folders`,[{...organization,files}]);window.dispatchEvent(new Event('cestos:workbook-folders'));setTabMove(null);setNotice('Workbook moved.');}catch(e){setError(e instanceof Error?e.message:'Could not move workbook.');}})();}}/>{!tabMove.organization.folders.length&&<p className="text-xs text-slate-500">Create folders in Your workspace first.</p>}</section></div>;
   const modalDialog = (customModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-xs">
-            <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+            <div role="dialog" aria-modal="true" aria-label="Delete worksheet" className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
               <h4 className="text-base font-bold text-slate-900 dark:text-white">
                 {customModal.title}
               </h4>
@@ -1466,6 +1511,19 @@ export default function FieldWorkbookWorkspace({
           </div>
         ));
 
+  if (page && !(page === 'answers' && book && sheet)) {
+    const openBook = book && sheet ? book : undefined;
+    const backLabel = openBook ? openBook.name || 'Workbook' : 'Workbooks';
+    return (
+      <section className="h-full min-h-0" aria-label={page === 'answers' ? 'Quick answers' : 'Dashboards'}>
+        {page === 'answers'
+          ? <WorkbookQuickAnswers book={openBook} activeSheetId={openBook ? sheet!.id : undefined} backLabel={backLabel} onBack={leavePage}
+              onLocate={openBook ? id => { const index = openBook.sheets.findIndex(s => s.id === id); if (index >= 0) setSheetIndex(index); leavePage(); } : undefined} />
+          : <WorkbookDashboards book={openBook} backLabel={backLabel} onBack={leavePage} registerGuard={registerPageGuard} />}
+      </section>
+    );
+  }
+
   if (!book || !sheet)
     return (
       <section className={`${styles.library} space-y-6 bg-slate-50 p-6 dark:bg-slate-950 sm:p-10`}>
@@ -1482,7 +1540,9 @@ export default function FieldWorkbookWorkspace({
               Open a workbook, start a new one, or import an Excel file. Your open workbooks stay in tabs above.
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className={button} onClick={() => setPage('answers')}><Sparkles size={16} className="text-emerald-700" />Quick answers</button>
+            <button type="button" className={button} onClick={() => setPage('dashboards')}><BarChart3 size={16} className="text-emerald-700" />Dashboards</button>
             <button
               className={primary}
               disabled={busy}
@@ -1544,7 +1604,7 @@ export default function FieldWorkbookWorkspace({
 
   return (
     <section
-      className={`${styles.editor} min-w-0 max-w-full`}
+      className={`${styles.editor} min-w-0 max-w-full ${page==='answers'?'lg:!pr-[440px]':''}`}
       onKeyDown={(event) => {
         const target = event.target as HTMLElement;
         if (event.defaultPrevented || event.nativeEvent.isComposing || customModal || connectionSheet || databaseLoadOpen) return;
@@ -1582,13 +1642,19 @@ export default function FieldWorkbookWorkspace({
         }
       }}
     >
+      {page==='answers'&&<aside role="dialog" aria-label="Quick answers beside worksheet" className="fixed bottom-0 right-0 top-12 z-[95] w-[min(440px,100vw)] border-l border-slate-300 bg-white shadow-xl" onKeyDown={e=>e.stopPropagation()}><WorkbookQuickAnswers book={book} activeSheetId={sheet.id} backLabel="Close answers" onBack={leavePage} onLocate={id=>{const index=book.sheets.findIndex(s=>s.id===id);if(index>=0)setSheetIndex(index);}}/></aside>}
+
       {feedback}
       <fieldset disabled={busy} className="min-w-0">
         <nav aria-label="Workbook ribbon" className={styles.ribbonTabs}>
+
+
           <button type="button" onClick={leave} className={styles.fileTab}>File</button>
           {['Home','Insert','Data','View','Folders'].map(tab=><button type="button" key={tab} aria-pressed={ribbonTab===tab} onClick={()=>{setRibbonTab(tab);setShowToolbar(true);}} className={ribbonTab===tab ? styles.ribbonActive : ''}>{tab}</button>)}
+          <button type="button" aria-label="AI tools" title="Quick answers and dashboards" aria-pressed={ribbonTab==='AI'} onClick={()=>{setRibbonTab('AI');setShowToolbar(true);}} className={ribbonTab==='AI' ? styles.ribbonActive : ''}><Sparkles size={16}/></button>
           <button type="button" className="!ml-auto" aria-label={showToolbar?'Collapse ribbon':'Expand ribbon'} onClick={()=>setShowToolbar(!showToolbar)}>{showToolbar?<ChevronUp size={14}/>:<ChevronDown size={14}/>}</button>
         </nav>
+        <div className={`${ribbonTab==='AI' && showToolbar ? 'flex' : '!hidden'} items-center gap-3 border-b border-slate-200 bg-white px-4 py-2.5 dark:border-slate-700 dark:bg-slate-900`}><button type="button" className={button} onClick={()=>setPage('answers')}><Sparkles size={16} className="text-emerald-700"/>Quick answers</button><button type="button" className={button} onClick={()=>setPage('dashboards')}><BarChart3 size={16} className="text-emerald-700"/>Dashboards</button><span className="text-xs text-slate-500">Opens as a page. This workbook stays open.</span></div>
         <div className={`${styles.viewControls} ${ribbonTab === "View" && showToolbar ? "" : "!hidden"}`}>
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -2138,16 +2204,22 @@ export default function FieldWorkbookWorkspace({
               <span aria-hidden="true" className="font-serif italic">fx</span><span className="sr-only">Cell value</span>
             </label>
             <textarea
+              ref={formulaBarInput}
+              {...formulaBarSuggestions.aria}
+              onFocus={()=>setFormulaBarEditing(true)}
+              onBlur={()=>{setFormulaBarEditing(false);formulaBarSuggestions.dismiss();}}
+              onKeyDown={event=>{formulaBarSuggestions.onKeyDown(event);}}
               id="workbook-cell-value"
               rows={1}
               aria-label="Selected cell value"
               className="block min-h-8 min-w-0 flex-1 resize-none !border-0 bg-transparent px-0 py-1 text-sm leading-6 !outline-none focus:!outline-none focus-visible:!outline-none focus:!ring-0 focus-visible:!ring-0 !shadow-none"
               value={sheet.cells[anchor.r]?.[anchor.c] || ''}
               maxLength={32767}
-              onChange={(e) => onValue(anchor.r, anchor.c, e.target.value)}
+              onChange={(e) => {onValue(anchor.r, anchor.c, e.target.value);formulaBarSuggestions.changed(e.currentTarget);}}
             />
           </div>
         )}
+        {formulaBarSuggestions.popup}
         <div className={styles.gridArea}>
           <div
             ref={gridRef}
@@ -2561,7 +2633,7 @@ export default function FieldWorkbookWorkspace({
 
         {confirmDeleteSheet && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-xs">
-            <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+            <div role="dialog" aria-modal="true" aria-label="Delete worksheet" className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
               <h4 className="text-base font-bold text-slate-900 dark:text-white">
                 Delete worksheet?
               </h4>

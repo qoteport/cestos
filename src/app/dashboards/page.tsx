@@ -1,0 +1,41 @@
+'use client';
+import {useCallback,useEffect,useRef,useState} from 'react';
+import {useAuth} from '@/components/AuthProvider';
+import {apiFetch,ApiError} from '@/lib/api';
+import {dashboardPages,filterDashboardData,worksheetData,type SavedDashboard,type DashboardData,type DashboardFilter} from '@/lib/workbookDashboard';
+import WorkbookDashboardChart from '@/components/WorkbookDashboardChart';
+import DashboardFilters from '@/components/DashboardFilters';
+import DashboardSubscriptionDialog from '@/components/DashboardSubscriptionDialog';
+import WorkbookDashboards from '@/components/WorkbookDashboards';
+const policy={queueWhenOffline:false,cacheResponse:false,cacheOfflineRead:false,memoryCache:false};
+type Published=SavedDashboard&{description:string;access:'owner'|'manager'|'editor'|'viewer'};
+export default function DashboardViewerPage(){
+ const {user,loading}=useAuth();const [id,setId]=useState(''),[tab,setTab]=useState(''),[items,setItems]=useState<Published[]>([]),[report,setReport]=useState<Published|null>(null),[data,setData]=useState<Record<string,DashboardData>>({}),[error,setError]=useState(''),[busy,setBusy]=useState(false),[interval,setIntervalValue]=useState<number|null>(null),[filters,setFilters]=useState<DashboardFilter[]|null>(null),[subscribe,setSubscribe]=useState(false),[edit,setEdit]=useState(false);
+ const generation=useRef(0),running=useRef<number|null>(null);
+ useEffect(()=>{const read=()=>{const q=new URLSearchParams(window.location.search);setId(q.get('dashboard')||'');setTab(q.get('tab')||'');};read();window.addEventListener('popstate',read);return()=>window.removeEventListener('popstate',read);},[]);
+ useEffect(()=>{if(!loading&&!user)window.location.replace('/sign-up-login?next='+encodeURIComponent(window.location.pathname+window.location.search));},[loading,user]);
+ useEffect(()=>{generation.current++;setReport(null);setData({});setFilters(null);setIntervalValue(null);setError('');setSubscribe(false);setEdit(false);if(!user)return;let live=true;void apiFetch<Published[]>('/api/v1/dashboard-publications',{},true,policy).then(v=>{if(live)setItems(v);}).catch(e=>{if(live)setError(e.message);});return()=>{live=false;generation.current++;};},[user?.id,id]);
+ const refresh=useCallback(async()=>{if(!id||!user)return;const gen=generation.current;if(running.current===gen)return;running.current=gen;setBusy(true);setError('');try{
+ const r=await apiFetch<Published>(`/api/v1/dashboard-publications/${encodeURIComponent(id)}`,{},true,policy);if(gen!==generation.current)return;setReport(r);
+ const sources=[...r.definition.datasets].sort((a,b)=>Number(r.definition.widgets.some(w=>w.dataset_id===b.id&&(w.page_id||'overview')===tab))-Number(r.definition.widgets.some(w=>w.dataset_id===a.id&&(w.page_id||'overview')===tab)));
+ for(const source of sources){if(gen!==generation.current)return;try{let value:DashboardData;
+ if(source.kind==='api')value={...await apiFetch<DashboardData>('/api/v1/workbook-dashboards/source-data?source='+encodeURIComponent(source.source),{},true,policy),loadedAt:new Date().toISOString()};
+ else if(source.kind==='workbook'){const book=await apiFetch<any>('/api/v1/workbook-dashboards/workbooks/'+encodeURIComponent(source.source),{},true,policy);const sheet=book.sheets.find((s:any)=>s.id===source.sheet_id);if(!sheet)throw Error('Linked sheet is unavailable.');value=worksheetData(sheet,source.header_row);}
+ else throw Error('This source is only available on its original device.');
+ if(gen===generation.current)setData(old=>({...old,[source.id]:value}));
+ }catch(e){if(gen===generation.current)setData(old=>{const denied=e instanceof ApiError&&[401,403,404].includes(e.status);const fallback=!denied?old[source.id]:undefined;return {...old,[source.id]:{...(fallback||{rows:[],columns:[],partial:false,total:0,loadedAt:''}),error:e instanceof Error?e.message:'Source unavailable'}};});}}
+ }catch(e){if(gen!==generation.current)return;setError(e instanceof Error?e.message:'Dashboard unavailable');setReport(null);setData({});}finally{if(running.current===gen)running.current=null;if(gen===generation.current)setBusy(false);}},[id,user?.id,tab]);
+ useEffect(()=>{void refresh();},[refresh]);
+ const cadence=interval??report?.definition.refresh_seconds??60;
+ useEffect(()=>{if(!id||!cadence)return;const t=window.setInterval(()=>{if(document.visibilityState==='visible')void refresh();},cadence*1000);return()=>clearInterval(t);},[cadence,id,refresh]);
+ function navigate(next:string,page=''){const url='/dashboards'+(next?'?dashboard='+encodeURIComponent(next)+(page?'&tab='+encodeURIComponent(page):''):'');history.pushState(null,'',url);setId(next);setTab(page);}
+ if(loading||!user)return <main className="p-6">Restoring your session…</main>;
+ if(edit)return <div className="h-screen"><WorkbookDashboards backLabel="Published dashboards" onBack={()=>setEdit(false)}/></div>;
+ const pages=report?dashboardPages(report.definition):[],activeTab=pages.find(p=>p.id===tab)?.id||pages.find(p=>p.id===report?.definition.default_page_id)?.id||pages[0]?.id;
+ const definition=report?{...report.definition,filters:filters||report.definition.filters}:null;
+ return <main className="flex min-h-screen flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white"><header className="flex flex-wrap items-center gap-3 border-b bg-white p-4 dark:bg-slate-900"><button onClick={()=>navigate('')}>Dashboards</button><h1 className="flex-1 text-lg font-semibold">{report?.name||'Published dashboards'}</h1><a href="/workbooks">Workbooks</a><button onClick={()=>setEdit(true)}>{report?.access==='editor'||report?.access==='manager'||report?.access==='owner'?'Edit dashboards':'My dashboards'}</button>{id&&<button disabled={busy} onClick={()=>void refresh()}>{busy?'Refreshing…':'Refresh'}</button>}{report&&<><select aria-label="Refresh frequency" value={cadence} onChange={e=>setIntervalValue(Number(e.target.value))} className="rounded border bg-white p-2 dark:bg-slate-900">{[[0,'Manual'],[30,'30 seconds'],[60,'1 minute'],[300,'5 minutes'],[900,'15 minutes'],[3600,'1 hour']].map(([value,label])=><option key={value} value={value}>{label}</option>)}</select><button onClick={()=>setSubscribe(true)}>Subscribe</button><a href={`cestos://dashboard/${report.id}?tab=${encodeURIComponent(activeTab||'')}`}>Open in desktop</a></>}</header>
+ {error&&<p role="alert" className="m-4 rounded bg-amber-50 p-3 text-amber-900">{error}</p>}
+ {!id&&<div className="grid gap-4 p-6 md:grid-cols-3">{items.map(d=><button key={d.id} className="rounded-xl border bg-white p-4 text-left dark:bg-slate-900" onClick={()=>navigate(d.id)}><strong>{d.name}</strong><p className="mt-2 text-sm">{d.description}</p><p className="mt-2 text-xs text-slate-500">{d.access==='owner'?'My published dashboard':'Shared with me'} · {d.access}</p></button>)}{!items.length&&<p>No published dashboards are available to this account.</p>}</div>}
+ {report&&definition&&<><div className="flex-1 p-4"><p className="mb-3 text-sm text-slate-500">{report.description} · Published revision {report.revision}. Source permissions apply. Shared viewing requires online verification.</p><DashboardFilters definition={definition} dataFor={id=>data[id]} onChange={setFilters} editing={false}/><div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-4">{definition.widgets.filter(w=>(w.page_id||'overview')===activeTab).map(w=><div key={w.id} className={w.width==='full'?'md:col-span-2 xl:col-span-4':w.kind==='kpi'?'':'xl:col-span-2'}><WorkbookDashboardChart widget={w} editing={false} data={data[w.dataset_id]?filterDashboardData(data[w.dataset_id],w,definition.filters):undefined} lookup={w.label_lookup?data[w.label_lookup.dataset_id]:undefined}/></div>)}</div></div><nav className="sticky bottom-0 flex overflow-x-auto border-t bg-white p-2 dark:bg-slate-900" aria-label="Dashboard tabs">{pages.map(p=><button key={p.id} aria-current={p.id===activeTab?'page':undefined} className={`rounded px-4 py-2 text-sm ${p.id===activeTab?'bg-emerald-100 text-emerald-900':''}`} onClick={()=>navigate(report.id,p.id)}>{p.name}</button>)}</nav>{subscribe&&<DashboardSubscriptionDialog id={report.id} definition={definition} data={data} onClose={()=>setSubscribe(false)}/>}</>}
+ </main>;
+}

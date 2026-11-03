@@ -73,6 +73,11 @@ export async function saveDeviceWorkbook(scope: string, book: FieldWorkbook, rem
     };
     tx.oncomplete=()=>conflict?reject(new DeviceWorkbookConflict(book)):resolve();tx.onabort=tx.onerror=()=>reject(tx.error || new Error('Device autosave failed. Download a backup.'));
   });
+  if(typeof window!=='undefined') {
+    const update={scope,id:book.id};
+    window.dispatchEvent(new CustomEvent('cestos:workbook-saved',{detail:update}));
+    try{const channel=new BroadcastChannel('cestos-workbook-updates');channel.postMessage(update);channel.close();}catch{ /* Periodic dashboard checks remain available. */ }
+  }
 }
 export async function deviceRevisions(scope:string,id:string):Promise<DeviceWorkbook[]> {
   const row=await transact<{items:DeviceWorkbook[]} | undefined>('revisions','readonly',store=>store.get(JSON.stringify([scope,id])));
@@ -118,6 +123,8 @@ export function sheetCsv(sheet: FieldSheet): string {
 export const readDeviceLibrary = <T>(scope: string) => transact<T[] | undefined>('sessions', 'readonly', store => store.get(`library:${scope}`));
 export const saveDeviceLibrary = <T>(scope: string, documents: T[]) => transact('sessions', 'readwrite', store => store.put(documents, `library:${scope}`));
 export const readDeviceWorkbook = (scope: string, id: string) => transact<DeviceWorkbook | undefined>('workbooks', 'readonly', store => store.get(JSON.stringify([scope,id])));
+export const readLinkedFileHead=(scope:string,id:string)=>transact<import('./fileSync').FileLink|undefined>('sessions','readonly',store=>store.get(`file-head:${JSON.stringify([scope,id])}`));
+export const saveLinkedFileHead=(scope:string,link:import('./fileSync').FileLink)=>transact('sessions','readwrite',store=>store.put(link,`file-head:${JSON.stringify([scope,link.cloud_id])}`));
 
 export type WorkbookSyncEntry = {key:string; scope:string; book:FieldWorkbook; operationId:string; baseVersion?:string; state:'pending'|'synced'|'conflict'|'blocked'; error?:string};
 async function updateWorkbookSync(scope:string,id:string, change:(entry:WorkbookSyncEntry | undefined)=>WorkbookSyncEntry | undefined) {
@@ -146,11 +153,11 @@ export async function listWorkbookSync(scope:string):Promise<WorkbookSyncEntry[]
   const entries=await transact<any[]>('sessions','readonly',store=>store.getAll());
   return entries.filter(row=>row?.key?.startsWith('sync:') && row.scope===scope);
 }
-export async function finishWorkbookSync(entry:WorkbookSyncEntry,version:string) {
+export async function finishWorkbookSync(entry:WorkbookSyncEntry,version:string,linked?:FieldWorkbook) {
   await updateWorkbookSync(entry.scope,entry.book.id,current=>{
     if(!current)return current;
     // A newer edit made while uploading stays pending, based on the just-accepted version.
-    return {...current,baseVersion:version,state:current.operationId===entry.operationId?'synced':'pending',error:undefined};
+    return {...current,...(linked&&current.operationId===entry.operationId?{book:linked}:{}),baseVersion:version,state:current.operationId===entry.operationId?'synced':'pending',error:undefined};
   });
 }
 export async function failWorkbookSync(entry:WorkbookSyncEntry,state:'conflict'|'blocked'|'pending',error:string) {

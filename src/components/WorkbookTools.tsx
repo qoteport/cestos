@@ -525,7 +525,7 @@ export default function WorkbookTools({
               </button>
             </div>
           </div>,
-          document.body
+          printTrigger.current?.closest('dialog') || document.body
         )}
 
       <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />

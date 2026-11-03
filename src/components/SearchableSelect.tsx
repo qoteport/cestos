@@ -77,7 +77,7 @@ export default function SearchableSelect({
     const spaceBelow = window.innerHeight - rect.bottom - 12;
     const spaceAbove = rect.top - 12;
 
-    const estimatedHeight = Math.min(280, Math.max(120, filteredOptions.length * 38 + (shouldShowSearch ? 50 : 10)));
+    const estimatedHeight = Math.min(280, Math.max(120, filteredOptions.length * 44 + (shouldShowSearch ? 58 : 16)));
     const openUpwards = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
 
     let top: number;
