@@ -1,10 +1,11 @@
+import type {DashboardLayout} from './dashboardLayout';
 import type {FieldSheet} from './fieldWorkbook';
 import {calculateSheet} from './workbookFormulas';
 export type DashboardDataset={id:string;name:string;kind:'api'|'workbook'|'folder';source:string;sheet_id:string;header_row:number};
-export type DashboardWidget={axis_orientation?:"auto"|"vertical"|"horizontal";page_id?:string;show_details?:boolean;height?:number;label_lookup?:{dataset_id:string;key:string;label:string};id:string;title:string;dataset_id:string;kind:'bar'|'line'|'area'|'pie'|'kpi'|'table';group_by:string;measure:string;aggregation:'count'|'sum'|'average'|'min'|'max';filter_column:string;filter_value:string;color:'blue'|'red'|'green'|'purple';width:'half'|'full'};
+export type DashboardWidget={model?:import("./dashboardModel").DashboardModel;axis_orientation?:"auto"|"vertical"|"horizontal";page_id?:string;show_details?:boolean;height?:number;label_lookup?:{dataset_id:string;key:string;label:string};id:string;title:string;dataset_id:string;kind:'bar'|'line'|'area'|'pie'|'kpi'|'table';group_by:string;measure:string;aggregation:'count'|'sum'|'average'|'min'|'max';filter_column:string;filter_value:string;color:'blue'|'red'|'green'|'purple';width:'half'|'full'};
 export type DashboardFilter={page_ids?:string[];id:string;name:string;kind:"category"|"date"|"number";columns:Record<string,string>;widget_ids:string[];value:string;end:string};
 export type DashboardPage={id:string;name:string};
-export type DashboardDefinition={pages?:DashboardPage[];default_page_id?:string;filters?:DashboardFilter[];datasets:DashboardDataset[];widgets:DashboardWidget[];refresh_seconds:0|30|60|300|900|3600};
+export type DashboardDefinition={pages?:DashboardPage[];default_page_id?:string;filters?:DashboardFilter[];datasets:DashboardDataset[];widgets:DashboardWidget[];refresh_seconds:0|30|60|300|900|3600;layout?:DashboardLayout};
 export type SavedDashboard={access?:"owner"|"manager"|"editor";id:string;name:string;revision:number;definition:DashboardDefinition;updated_at:string;pending?:boolean};
 export type DashboardData={rows:Record<string,unknown>[];columns:{name:string;type:string}[];partial:boolean;total:number;loadedAt:string;error?:string;origin?:string;version?:string};
 export const datasetKey=(d:DashboardDataset)=>JSON.stringify([d.kind,d.source,d.sheet_id,d.header_row]);
@@ -113,4 +114,9 @@ export function horizontalDashboardAxes(widget:DashboardWidget,points:{name:stri
  if(!['bar','line','area'].includes(widget.kind))return false;
  if(widget.axis_orientation&&widget.axis_orientation!=='auto')return widget.axis_orientation==='horizontal';
  return widget.kind==='bar'&&(points.length>8||points.some(p=>p.name.length>12));
+}
+
+/** Repair older device drafts to the API's pixel-height contract before saving. */
+export function normalizeDashboardHeights(d:DashboardDefinition):DashboardDefinition {
+ return {...d,widgets:d.widgets.map(w=>{const height=w.height;if(height===undefined||height===null)return w;return {...w,height:typeof height==='number'&&Number.isFinite(height)?Math.round(Math.max(w.kind==='kpi'?1:240,Math.min(1000,height))):undefined};})};
 }

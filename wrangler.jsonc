@@ -21,7 +21,7 @@
     }
   ],
   "vars": {
-    "CESTOS_API_BACKEND_URL": "https://cestos-oversight.fly.dev",
-    "CESTOS_API_URL": "https://cestos-oversight.fly.dev"
+    "CESTOS_API_BACKEND_URL": "https://cestos-oversight-629203414453.europe-west1.run.app",
+    "CESTOS_API_URL": "https://cestos-oversight-629203414453.europe-west1.run.app"
   }
 }

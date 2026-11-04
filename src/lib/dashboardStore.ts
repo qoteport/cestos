@@ -1,3 +1,4 @@
+import type {DashboardLayout} from './dashboardLayout';
 import type {SavedDashboard,DashboardData} from './workbookDashboard';
 let database:Promise<IDBDatabase>|undefined;
 function open(){return database??=new Promise((resolve,reject)=>{const r=indexedDB.open('cestos-dashboards-v1',1);r.onupgradeneeded=()=>r.result.createObjectStore('entries');r.onsuccess=()=>{r.result.onversionchange=()=>{r.result.close();database=undefined;};resolve(r.result);};r.onerror=()=>{database=undefined;reject(r.error);};r.onblocked=()=>{database=undefined;reject(Error('Close older dashboard windows to update local storage.'));};});}
@@ -7,3 +8,6 @@ export const readDashboards=(scope:string)=>read<SavedDashboard[]>(JSON.stringif
 export const saveDashboards=(scope:string,items:SavedDashboard[])=>write(JSON.stringify([scope,'dashboards']),items);
 export const readDashboardData=(scope:string,key:string)=>read<DashboardData>(JSON.stringify([scope,'dataset',key]));
 export const saveDashboardData=(scope:string,key:string,data:DashboardData)=>write(JSON.stringify([scope,'dataset',key]),data);
+// Device copy of dashboard layouts, for servers that do not store the optional layout field yet.
+export const readDashboardLayouts=(scope:string)=>read<Record<string,DashboardLayout>>(JSON.stringify([scope,'layouts']));
+export const saveDashboardLayouts=(scope:string,layouts:Record<string,DashboardLayout>)=>write(JSON.stringify([scope,'layouts']),layouts);
