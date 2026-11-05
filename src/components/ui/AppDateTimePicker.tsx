@@ -778,7 +778,7 @@ export default function AppDateTimePicker({
             </div>
           )}
         </div>,
-        document.body
+        containerRef.current?.closest('dialog') || document.body
       )}
     </div>
   );

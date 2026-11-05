@@ -8,6 +8,7 @@ import DashboardLayoutHandle from './DashboardLayoutHandle';
 import DashboardTextBlock from './DashboardTextBlock';
 import {DATE_FORMATS} from '@/lib/dashboardDisplay';
 import DashboardModelDialog from './DashboardModelDialog';
+import DashboardColorSettings from './DashboardColorSettings';
 import DashboardPageTab from './DashboardPageTab';
 import DashboardFilters from './DashboardFilters';
 import DashboardVisualAssistant from './DashboardVisualAssistant';
@@ -25,7 +26,7 @@ import {cellStyle,gridStyle,HEIGHT_PRESETS,MAX_TEXT_BLOCKS,WIDTH_PRESETS,default
 import {type DashboardDefinition,normalizeDashboardHeights,dashboardPages,filterDashboardData,datasetKey,newDashboard,worksheetData,numericColumns,suggestWidget,widgetTitle,searchData,columnLabel,WIDGET_COLORS,WIDGET_COLOR_LABELS,type DashboardDataset,type DashboardWidget,type DashboardData,type SavedDashboard} from '@/lib/workbookDashboard';
 import type {DatabaseSource} from '@/lib/workbookDatabaseSource';
 
-function dashboardError(error:unknown){if(error instanceof ApiError&&error.status===422&&/definition[. ]filters(?::|\s)/i.test(error.message))return 'The server rejected dashboard filters. It may be running an older backend, or the filter list exceeds its supported limits. Deploy the latest backend and retry Save. Your filters and device draft have been kept.';return error instanceof ApiError && error.status===404 ? 'Dashboard services are not available on this server. Deploy the workbook dashboard backend and its database migration. Saved device dashboards remain available.' : error instanceof Error ? error.message : 'Could not load dashboards.';}
+function dashboardError(error:unknown){if(error instanceof ApiError&&error.status===422&&/definition[. ]filters(?::|\s)/i.test(error.message))return 'The server rejected dashboard filters. It may be running an older backend, or the filter list exceeds its supported limits. Deploy the latest backend and retry Save. Your filters and device draft have been kept.';return error instanceof ApiError && error.status===404 ? 'The configured API returned Not Found. Check the frontend backend URL and deployed API version; a dashboard or source may also be unavailable to this account. Saved device dashboards remain available.' : error instanceof Error ? error.message : 'Could not load dashboards.';}
 
 const policy={queueWhenOffline:false,cacheResponse:false,cacheOfflineRead:false,memoryCache:false};
 const input='w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 dark:border-slate-600 dark:bg-slate-900 dark:text-white';
@@ -261,7 +262,7 @@ export default function WorkbookDashboards({book,backLabel,onBack,registerGuard}
    </aside>}
 
    <main className="min-w-0 flex-1 overflow-y-auto">
-    <div className={focusMode?"w-full p-3":"mx-auto max-w-[1500px] p-4 sm:p-6"}>
+    <div className="mx-auto w-full max-w-[1500px] p-4 sm:p-6">
 
 
     {!active?<div className="mx-auto max-w-xl py-16 text-center">
@@ -305,7 +306,7 @@ export default function WorkbookDashboards({book,backLabel,onBack,registerGuard}
      </section>}
 
      <div className={`flex flex-col gap-5 ${editing&&(widget||designOpen||dataOpen)?'lg:ml-[380px]':''} lg:flex-row lg:items-start`}>
-      {(editing||!!active.definition.filters?.length)&&<aside aria-label="Filter panel" className={`${filtersOpen?'block':'hidden'} w-full shrink-0 lg:sticky lg:top-0 lg:block lg:w-64`}><DashboardFilters definition={active.definition} dataFor={dataFor} editing={editing} onChange={filters=>change({...active,definition:{...active.definition,filters}})}/></aside>}
+      {((editing&&filtersOpen)||!!active.definition.filters?.length)&&<aside aria-label="Filter panel" className={`${filtersOpen?'block':'hidden'} w-full shrink-0 lg:sticky lg:top-0 lg:block lg:w-64`}><DashboardFilters definition={active.definition} dataFor={dataFor} editing={editing} onChange={filters=>change({...active,definition:{...active.definition,filters}})}/></aside>}
       <div className="min-w-0 flex-1">
        <div ref={gridRef} className="grid" style={gridStyle(layout.gap)}>
         {items.map((item,position)=>{
@@ -332,7 +333,7 @@ export default function WorkbookDashboards({book,backLabel,onBack,registerGuard}
        <div className="max-h-[calc(100dvh-220px)] space-y-4 overflow-y-auto p-4">
         <button type="button" className={primary} onClick={()=>setModelOpen(true)}>Model & aggregate data</button>
         {widget.model&&<p className="text-xs text-emerald-700">{widget.model.series.length} modeled series. <button className="underline" onClick={()=>setWidget({...widget,model:undefined})}>Use simple aggregation</button></p>}
-        {!widget.model&&<DashboardVisualAssistant key={widget.id} widget={widget} datasets={active.definition.datasets} dataFor={dataFor} onChange={setWidget}/>}
+        <DashboardVisualAssistant key={widget.id} widget={widget} datasets={active.definition.datasets} dataFor={dataFor} onChange={setWidget}/>
         <div className="rounded-lg bg-slate-50 p-2 dark:bg-slate-950"><p className="mb-1.5 px-1 text-[11px] font-medium uppercase tracking-wide text-slate-500">Preview</p><div className="pointer-events-auto max-h-80 overflow-hidden"><WorkbookDashboardChart widget={{...widget,height:undefined}} layout={widgetLayoutDraft} card={layout.card} modelDataFor={viewData} data={viewData(widget)} lookup={dataFor(widget.label_lookup?.dataset_id||'')} editing={false} preview/></div></div>
         <fieldset><legend className={label}>Type</legend><div className="mt-1.5 grid grid-cols-6 gap-1">{kinds.map(({kind,name,icon:Icon})=><button type="button" key={kind} aria-pressed={widget.kind===kind} title={name} onClick={()=>updateWidget({kind,model:['line','bar','area'].includes(kind)?widget.model:undefined})} className={`flex flex-col items-center gap-1 rounded-md border px-1 py-2 text-[11px] ${widget.kind===kind?'border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200':'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'}`}><Icon size={16}/>{name}</button>)}</div></fieldset>
         {!widget.model&&<>
@@ -356,7 +357,7 @@ export default function WorkbookDashboards({book,backLabel,onBack,registerGuard}
          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Layout</p>
          <Segmented label="Width" value={widgetLayoutDraft.span??(widget.kind==='kpi'?undefined:widget.width==='full'?12:6)} options={[...(widget.kind==='kpi'?[{value:undefined as number|undefined,label:'Auto',title:'Follows KPI cards per row'}]:[]),...WIDTH_PRESETS.map(p=>({value:p.span as number|undefined,label:p.label,title:`${p.span} of 12 columns`}))]} onChange={span=>{setWidgetLayoutDraft(d=>({...d,span}));setWidget({...widget,width:span?legacyWidth(span):'half'});}}/>
          <Segmented label={`Height${widget.height&&!HEIGHT_PRESETS.some(p=>p.value===widget.height)?` · custom ${widget.height}px`:''}`} value={widget.height} options={HEIGHT_PRESETS.map(p=>({value:p.value,label:p.label,title:p.value?`${p.value}px`:'Fits the content'}))} onChange={height=>setWidget({...widget,height})}/>
-         {widget.kind==='pie'&&<Segmented label="Legend" value={widgetLayoutDraft.legend||'right'} options={[{value:'right' as const,label:'Beside'},{value:'bottom' as const,label:'Below'},{value:'none' as const,label:'Hidden'}]} onChange={legend=>setWidgetLayoutDraft(d=>({...d,legend}))}/>}
+         {['pie','bar','line','area'].includes(widget.kind)&&<Segmented label="Legend" value={widgetLayoutDraft.legend||(widget.kind==='pie'?'right':widget.model||widgetLayoutDraft.color_mode==='category'?'bottom':'none')} options={[{value:'right' as const,label:'Beside'},{value:'bottom' as const,label:'Below'},{value:'none' as const,label:'Hidden'}]} onChange={legend=>setWidgetLayoutDraft(d=>({...d,legend}))}/>}
          {widget.kind==='kpi'&&<Segmented label="KPI style" value={widgetLayoutDraft.kpi_style||'accent'} options={[{value:'accent' as const,label:'Accent bar'},{value:'tint' as const,label:'Tinted'},{value:'plain' as const,label:'Plain'}]} onChange={kpi_style=>setWidgetLayoutDraft(d=>({...d,kpi_style}))}/>}
          {['bar','line','area'].includes(widget.kind)&&<label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"><input type="checkbox" className="rounded border-slate-300 text-emerald-700 focus:ring-emerald-600" checked={!!widgetLayoutDraft.labels} onChange={e=>setWidgetLayoutDraft(d=>({...d,labels:e.target.checked}))}/>Show value labels</label>}
         </div>
@@ -369,6 +370,7 @@ export default function WorkbookDashboards({book,backLabel,onBack,registerGuard}
          <label className={label}>Decimal places<select className={`${input} mt-1`} value={widgetLayoutDraft.tooltip_decimals??''} onChange={e=>setWidgetLayoutDraft(d=>({...d,tooltip_decimals:e.target.value===''?undefined:Number(e.target.value)}))}><option value="">Automatic</option>{[0,1,2,3,4,5,6].map(n=><option key={n} value={n}>{n}</option>)}</select></label>
          <div className="grid grid-cols-2 gap-2"><label className={label}>Value prefix<input className={`${input} mt-1`} placeholder="e.g. USD " maxLength={30} value={widgetLayoutDraft.tooltip_prefix||''} onChange={e=>setWidgetLayoutDraft(d=>({...d,tooltip_prefix:e.target.value}))}/></label><label className={label}>Value suffix<input className={`${input} mt-1`} placeholder="e.g. hours" maxLength={30} value={widgetLayoutDraft.tooltip_suffix||''} onChange={e=>setWidgetLayoutDraft(d=>({...d,tooltip_suffix:e.target.value}))}/></label></div>
         </fieldset>}
+        {['pie','bar','line','area'].includes(widget.kind)&&<DashboardColorSettings widget={widget} data={viewData(widget)} lookup={dataFor(widget.label_lookup?.dataset_id||'')} layout={widgetLayoutDraft} onChange={patch=>setWidgetLayoutDraft(d=>({...d,...patch}))}/>}
         <label className={label}>Title<input className={`${input} mt-1.5`} value={widget.title} maxLength={200} onChange={e=>setWidget({...widget,title:e.target.value})}/></label>
         <div className="grid grid-cols-2 gap-3">
          <fieldset><legend className={label}>Colour</legend><div className="mt-2 flex gap-2">{(Object.keys(WIDGET_COLORS) as DashboardWidget['color'][]).map(c=><button type="button" key={c} title={WIDGET_COLOR_LABELS[c]} aria-label={WIDGET_COLOR_LABELS[c]} aria-pressed={widget.color===c} onClick={()=>setWidget({...widget,color:c})} className={`h-7 w-7 rounded-full ring-offset-2 dark:ring-offset-slate-900 ${widget.color===c?'ring-2 ring-slate-700 dark:ring-slate-200':''}`} style={{backgroundColor:WIDGET_COLORS[c]}}/>)}</div></fieldset>

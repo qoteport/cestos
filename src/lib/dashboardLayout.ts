@@ -5,6 +5,9 @@ import type {DashboardDefinition,DashboardWidget} from './workbookDashboard';
 // existed, or by older clients, have none and render with the defaults below. Widget height
 // stays on the widget (`widget.height`); everything else lives here so the server sees one field.
 export type WidgetLayout={
+ color_mode?:'single'|'category';
+ palette?:import('./dashboardColors').ChartPalette;
+ category_colors?:Record<string,string>;
  date_format?:VisualDateFormat;
  tooltip_title?:boolean;
  tooltip_series?:boolean;
@@ -53,6 +56,9 @@ export function normalizeLayout(definition:Pick<DashboardDefinition,'widgets'>&{
  for(const id of ids)if(!order.includes(id))order.push(id);
  const widgets:Record<string,WidgetLayout>={};
  for(const w of definition.widgets){const v=raw.widgets?.[w.id];if(!v)continue;widgets[w.id]={
+  ...(v.color_mode?{color_mode:pick(v.color_mode,['single','category'] as const,'single')}:{}),
+  ...(v.palette?{palette:pick(v.palette,['classic','vivid','soft'] as const,'classic')}:{}),
+  ...(v.category_colors?{category_colors:Object.fromEntries(Object.entries(v.category_colors).filter(([key,color])=>key.length<=300&&/^#[0-9a-f]{6}$/i.test(color)).slice(0,100))}:{}),
   ...(v.date_format?{date_format:pick(v.date_format,DATE_FORMATS.map(f=>f[0]),'auto')}:{}),
   ...(v.tooltip_title!=null?{tooltip_title:!!v.tooltip_title}:{}),
   ...(v.tooltip_series!=null?{tooltip_series:!!v.tooltip_series}:{}),

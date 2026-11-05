@@ -1,7 +1,13 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {apiFetch} from '@/lib/api';
+import {normalizeLayout} from '@/lib/dashboardLayout';
 import type {SavedDashboard} from '@/lib/workbookDashboard';
+function canonical(value:unknown):unknown{
+ if(Array.isArray(value))return value.map(canonical);
+ if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).filter(([,v])=>v!=null).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>[k,canonical(v)]));
+ return value;
+}
 const policy={queueWhenOffline:false,cacheResponse:false,cacheOfflineRead:false,memoryCache:false};
 export default function DashboardPublishDialog({dashboard,onClose,designLocal=false}:{dashboard:SavedDashboard;onClose:()=>void;designLocal?:boolean}){
  const ref=useRef<HTMLDialogElement>(null);const [state,setState]=useState<{share_url?:string;revision:number;description:string;active:boolean;grants:{kind:'user'|'role';id:string;access:'viewer'|'editor'|'manager'}[]}|null>(null);
@@ -9,9 +15,12 @@ export default function DashboardPublishDialog({dashboard,onClose,designLocal=fa
  useEffect(()=>{ref.current?.showModal();void apiFetch<any>(`/api/v1/dashboard-publications/${dashboard.id}/settings`,{},true,policy).then(setState).catch(e=>setMessage(e.message));},[dashboard.id]);
  useEffect(()=>{let live=true;const timer=setTimeout(()=>{void apiFetch<typeof recipients>('/api/v1/dashboard-publications/recipients?q='+encodeURIComponent(q),{},true,policy).then(v=>{if(live)setRecipients(v);}).catch(e=>{if(live)setMessage(e.message);});},200);return()=>{live=false;clearTimeout(timer);};},[q]);
  async function publish(){if(!state||designLocal)return;setBusy(true);try{const result=await apiFetch<any>(`/api/v1/dashboard-publications/${dashboard.id}`,{method:'POST',body:JSON.stringify({draft_revision:dashboard.revision,publication_revision:state.revision,description:state.description,grants:state.grants})},true,policy);setState({...state,revision:result.revision,active:true});setMessage('Published successfully. Source permissions still apply to each viewer.');}catch(e){setMessage(e instanceof Error?e.message:'Publishing failed');}finally{setBusy(false);}}
+ const [outdated,setOutdated]=useState(false);
+ useEffect(()=>{if(!state?.active)return;let live=true;void apiFetch<SavedDashboard>(`/api/v1/dashboard-publications/${dashboard.id}`,{},true,policy).then(published=>{const design=(d:SavedDashboard)=>JSON.stringify(canonical({name:d.name,widgets:d.definition.widgets.map(w=>({axis_orientation:'auto',page_id:'overview',show_details:true,...w})),layout:normalizeLayout(d.definition)}));if(live)setOutdated(design(published)!==design(dashboard));}).catch(()=>{});return()=>{live=false;};},[dashboard,state?.active,state?.revision]);
  const link=state?.share_url||(typeof window==='undefined'?'':`${window.location.origin}/dashboards?dashboard=${dashboard.id}`);
  return <dialog ref={ref} onCancel={onClose} className="w-[min(640px,95vw)] rounded-xl bg-white p-5 text-slate-900 shadow-2xl backdrop:bg-black/40 dark:bg-slate-900 dark:text-white"><div className="flex justify-between"><h2 className="text-lg font-semibold">Publish dashboard</h2><button onClick={onClose}>Close</button></div>
  <p className="my-3 text-sm">Publish a stable version. Viewers must sign in and have access to the underlying sources. Changes to the draft remain private until you publish again.</p>
+ {outdated&&<p role="status" className="my-3 rounded bg-amber-50 p-3 text-sm text-amber-900">The shared dashboard has an older or different design. Choose Publish updates to replace it with this saved design.</p>}
  {designLocal&&<p role="alert" className="my-3 rounded bg-amber-50 p-3 text-sm text-amber-900">Your exact layout is saved only on this device. Update the backend, then save this dashboard again before publishing. This prevents shared cards from changing size.</p>}
  {state&&<div className="space-y-3"><label className="block text-sm">Description<textarea className="mt-1 w-full rounded border bg-transparent p-2" maxLength={2000} value={state.description} onChange={e=>setState({...state,description:e.target.value})}/></label>
  <input className="w-full rounded border bg-transparent p-2" placeholder="Search users to grant access…" aria-label="Search dashboard recipients" value={q} onChange={e=>setQ(e.target.value)}/>
