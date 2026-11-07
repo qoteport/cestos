@@ -17,3 +17,9 @@ test("fine KPI widths survive normalization and mobile cards widen",()=>{const l
 
 test('explicit widths are identical across desktop views and only reflow on phones',()=>{const widget=w('k','kpi'),layout=api.normalizeLayout({widgets:[widget],layout:{widgets:{k:{span:0.6}}}});assert.equal(api.visualColumns(widget,layout,1000),3);assert.equal(api.visualColumns(widget,layout,700),3);assert.equal(api.visualColumns(widget,layout,320),60);});
 test('nullable server layout fields do not overwrite automatic KPI widths',()=>{const widget=w('k','kpi'),layout=api.normalizeLayout({widgets:[widget],layout:{widgets:{k:{span:null,labels:null}}}});assert.equal(layout.widgets.k.span,undefined);assert.equal(api.widgetColumns(widget,layout),15);});
+
+test('publication comparison detects card style and spacing loss',()=>{const d={widgets:[w('a')],layout:{card:'flat',gap:'compact'}};assert.equal(api.sameDashboardLayout(d,{widgets:d.widgets}),false);assert.equal(api.sameDashboardLayout(d,{widgets:d.widgets,layout:{gap:'compact',card:'flat'}}),true);assert.equal(api.sameDashboardLayout(d,{widgets:d.widgets,layout:{gap:'compact',card:'elevated'}}),false);});
+
+test('server empty colour defaults do not create a false design mismatch',()=>{const widgets=[w('a')];assert.equal(api.sameDashboardLayout({widgets,layout:{widgets:{a:{span:4}}}},{widgets,layout:{widgets:{a:{span:4,category_colors:{},legend:null}}}}),true);});
+
+test('axis rotation is preserved, bounded and compared for publication',()=>{const widgets=[w('a')];const d={widgets,layout:{widgets:{a:{x_axis_angle:-45}}}};assert.equal(api.normalizeLayout(d).widgets.a.x_axis_angle,-45);assert.equal(api.normalizeLayout({widgets,layout:{widgets:{a:{x_axis_angle:150}}}}).widgets.a.x_axis_angle,90);assert.equal(api.sameDashboardLayout(d,{widgets,layout:{widgets:{a:{x_axis_angle:0}}}}),false);});

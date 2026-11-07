@@ -1,4 +1,5 @@
 'use client';
+import DashboardSelect from '@/components/DashboardSelect';
 import {AlignCenter,AlignLeft,ArrowLeft,ArrowRight,GripHorizontal,Trash2} from 'lucide-react';
 import {WIDTH_PRESETS,type TextBlock} from '@/lib/dashboardLayout';
 
@@ -16,7 +17,7 @@ export default function DashboardTextBlock({block,editing,onChange,onRemove,onDr
   <div className="mb-1.5 flex flex-wrap items-center gap-1">
    <button type="button" draggable onDragStart={e=>{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',block.id);onDragStart();}} onDragEnd={onDragEnd} aria-label={`Drag heading ${block.title||'section'} to move`} title="Drag to move" className={`${iconButton} cursor-grab active:cursor-grabbing`}><GripHorizontal size={16}/></button>
    <span className="mr-auto text-xs font-medium text-slate-500">Section heading</span>
-   <select aria-label="Heading width" className="rounded border border-slate-300 bg-white px-1 py-0.5 text-xs dark:border-slate-600 dark:bg-slate-900" value={block.span} onChange={e=>onChange({span:Number(e.target.value)})}>{WIDTH_PRESETS.map(p=><option key={p.span} value={p.span}>{p.label} width</option>)}</select>
+   <DashboardSelect aria-label="Heading width" className="rounded border border-slate-300 bg-white px-1 py-0.5 text-xs dark:border-slate-600 dark:bg-slate-900" value={block.span} onChange={e=>onChange({span:Number(e.target.value)})}>{WIDTH_PRESETS.map(p=><option key={p.span} value={p.span}>{p.label} width</option>)}</DashboardSelect>
    <button type="button" aria-pressed={block.align==='left'} aria-label="Align left" title="Align left" className={`${iconButton} ${block.align==='left'?'bg-slate-100 dark:bg-slate-800':''}`} onClick={()=>onChange({align:'left'})}><AlignLeft size={15}/></button>
    <button type="button" aria-pressed={block.align==='center'} aria-label="Align centre" title="Align centre" className={`${iconButton} ${block.align==='center'?'bg-slate-100 dark:bg-slate-800':''}`} onClick={()=>onChange({align:'center'})}><AlignCenter size={15}/></button>
    {onMoveEarlier&&<button type="button" aria-label="Move heading earlier" title="Move earlier" className={iconButton} onClick={onMoveEarlier}><ArrowLeft size={15}/></button>}

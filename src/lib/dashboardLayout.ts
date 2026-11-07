@@ -5,6 +5,7 @@ import type {DashboardDefinition,DashboardWidget} from './workbookDashboard';
 // existed, or by older clients, have none and render with the defaults below. Widget height
 // stays on the widget (`widget.height`); everything else lives here so the server sees one field.
 export type WidgetLayout={
+ x_axis_angle?:number;
  color_mode?:'single'|'category';
  palette?:import('./dashboardColors').ChartPalette;
  category_colors?:Record<string,string>;
@@ -56,9 +57,10 @@ export function normalizeLayout(definition:Pick<DashboardDefinition,'widgets'>&{
  for(const id of ids)if(!order.includes(id))order.push(id);
  const widgets:Record<string,WidgetLayout>={};
  for(const w of definition.widgets){const v=raw.widgets?.[w.id];if(!v)continue;widgets[w.id]={
+  ...(v.x_axis_angle!=null&&Number.isFinite(v.x_axis_angle)?{x_axis_angle:Math.max(-90,Math.min(90,Math.round(v.x_axis_angle)))}:{}),
   ...(v.color_mode?{color_mode:pick(v.color_mode,['single','category'] as const,'single')}:{}),
   ...(v.palette?{palette:pick(v.palette,['classic','vivid','soft'] as const,'classic')}:{}),
-  ...(v.category_colors?{category_colors:Object.fromEntries(Object.entries(v.category_colors).filter(([key,color])=>key.length<=300&&/^#[0-9a-f]{6}$/i.test(color)).slice(0,100))}:{}),
+  ...(v.category_colors&&Object.keys(v.category_colors).length?{category_colors:Object.fromEntries(Object.entries(v.category_colors).filter(([key,color])=>key.length<=300&&/^#[0-9a-f]{6}$/i.test(color)).slice(0,100))}:{}),
   ...(v.date_format?{date_format:pick(v.date_format,DATE_FORMATS.map(f=>f[0]),'auto')}:{}),
   ...(v.tooltip_title!=null?{tooltip_title:!!v.tooltip_title}:{}),
   ...(v.tooltip_series!=null?{tooltip_series:!!v.tooltip_series}:{}),
@@ -152,4 +154,10 @@ export function visualColumns(widget:DashboardWidget,layout:DashboardLayout,cont
  const columns=widgetColumns(widget,layout);
  if(layout.widgets[widget.id]?.span!=null&&containerWidth>=640)return columns;
  return responsiveColumns(columns,containerWidth,minCardPx(widget.kind));
+}
+
+/** Compare normalized layouts independent of JSON property order and server null defaults. */
+export function sameDashboardLayout(a:Pick<DashboardDefinition,'widgets'|'layout'>,b:Pick<DashboardDefinition,'widgets'|'layout'>){
+ const canonical=(value:unknown):unknown=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,v])=>v!=null).sort(([x],[y])=>x.localeCompare(y)).map(([k,v])=>[k,canonical(v)])):value;
+ return JSON.stringify(canonical(normalizeLayout(a)))===JSON.stringify(canonical(normalizeLayout(b)));
 }

@@ -14,6 +14,7 @@ export interface SearchableSelectOption {
 }
 
 export interface SearchableSelectProps {
+  id?: string;
   options: SearchableSelectOption[];
   value?: string;
   defaultValue?: string;
@@ -28,6 +29,7 @@ export interface SearchableSelectProps {
 }
 
 export default function SearchableSelect({
+  id,
   options,
   value,
   defaultValue,
@@ -209,6 +211,7 @@ export default function SearchableSelect({
 
       {/* Main Trigger Button */}
       <button
+        id={id}
         ref={triggerRef}
         type="button"
         disabled={disabled}
