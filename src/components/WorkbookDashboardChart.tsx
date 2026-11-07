@@ -61,7 +61,7 @@ export default function WorkbookDashboardChart({widget,data,lookup,modelDataFor,
 
   return <article style={{...(widget.height?{height:widget.height}:{}),...(kpiStyle==='tint'?{backgroundColor:`${color}14`}:{})}} className={`relative box-border flex h-full min-w-0 flex-col overflow-hidden rounded-xl border ${surface}`}>
     {/* In edit mode the actions get their own row so narrow KPI cards keep their titles. */}
-    <header className={`flex gap-x-2 px-4 pb-1 pt-3 items-start`}>
+    <header className={`flex gap-x-2 px-4 pb-1 ${card==='flat'?'pt-1.5':'pt-3'} items-start`}>
       <div className="min-w-0 flex-1">
         <h3 className="truncate text-sm font-semibold text-slate-900 dark:text-white" title={widget.title}>{widget.title}</h3>
         {widget.show_details!==false&&widget.title!==description&&widget.kind!=='kpi'&&<p className="truncate text-xs text-slate-500 dark:text-slate-400">{description}</p>}
@@ -76,7 +76,7 @@ export default function WorkbookDashboardChart({widget,data,lookup,modelDataFor,
         </>}
       </div>}
     </header>
-    <div className={`flex min-h-0 flex-1 flex-col overflow-auto px-4 pb-3 ${published&&kpiStyle?"[scrollbar-width:none] [&::-webkit-scrollbar]:hidden":""}`}>
+    <div className={`flex min-h-0 flex-1 flex-col overflow-auto px-4 ${card==='flat'?'pb-1':'pb-3'} ${published&&kpiStyle?"[scrollbar-width:none] [&::-webkit-scrollbar]:hidden":""}`}>
       {!data&&<div className="flex flex-1 flex-col justify-center gap-2 py-6" aria-label="Loading dataset"><div className="h-3 w-1/3 animate-pulse rounded bg-slate-100 dark:bg-slate-800"/><div className="h-24 animate-pulse rounded bg-slate-100 dark:bg-slate-800"/></div>}
       {(error||data?.error)&&<p role="alert" className="my-2 rounded-md bg-rose-50 px-3 py-2 text-xs text-rose-800 dark:bg-rose-950 dark:text-rose-200">{error||data?.error}</p>}
       {result&&!error&&<>
@@ -111,7 +111,7 @@ export default function WorkbookDashboardChart({widget,data,lookup,modelDataFor,
           </PieChart></ResponsiveContainer></div>
           {legend!=='none'&&<ul className={`space-y-1.5 text-xs ${legend==='bottom'?'w-full max-w-sm':'min-w-[11rem] flex-1'}`}>{slices.map(p=><li key={p.name} className="flex items-center gap-2"><span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{backgroundColor:p.fill}}/><span className="min-w-0 flex-1 truncate text-slate-700 dark:text-slate-200" title={p.name}>{p.name}</span><span className="tabular-nums text-slate-900 dark:text-white">{formatNumber(p.value,true)}</span><span className="w-10 text-right tabular-nums text-slate-500">{sliceTotal?Math.round(p.value/sliceTotal*100):0}%</span></li>)}</ul>}
         </div>
-        :<div className={`w-full ${horizontal?'':'h-64'}`} style={widget.height?{height:Math.max(xAxisStyle.height+100,widget.height-150),flexShrink:0}:horizontal?{height:Math.max(200,Math.min(points.length,30)*26+30)}:xAngle?{height:Math.max(256,xAxisStyle.height+100)}:undefined} role="img" aria-label={`${widget.kind} chart: ${widget.title}`}><ResponsiveContainer width="100%" height="100%">
+        :<div className={`w-full ${horizontal?'':'h-64'}`} style={widget.height?{flex:"1 0 0px",minHeight:xAxisStyle.height+100}:horizontal?{height:Math.max(200,Math.min(points.length,30)*26+30)}:xAngle?{height:Math.max(256,xAxisStyle.height+100)}:undefined} role="img" aria-label={`${widget.kind} chart: ${widget.title}`}><ResponsiveContainer width="100%" height="100%">
           {widget.kind==='bar'?(horizontal
             ?<BarChart data={points} layout="vertical" margin={{top:4,right:16,bottom:4,left:4}}><CartesianGrid stroke={grid} horizontal={false}/><XAxis {...xAxisStyle} type="number" tick={axisTick} axisLine={false} tickLine={false} tickFormatter={v=>formatNumber(v,true)}/><YAxis type="category" dataKey="name" width={120} tick={axisTick} axisLine={false} tickLine={false} tickFormatter={v=>truncate(visualDate(v,layout.date_format),24)}/><Tooltip cursor={{fill:'rgba(148,163,184,.12)'}} content={<ChartTooltip measure={measureLabel} layout={layout} modeled={!!modeled}/>}/>{chartLegend}{chartSeries.map((series,index)=><Bar key={series.key} name={series.name} dataKey={series.key} fill={modeled?seriesFill(index):color} radius={[0,4,4,0]} maxBarSize={18} isAnimationActive={false}>{categoryBars&&points.map(p=><Cell key={p.name} fill={p.fill}/>)}{valueLabels('right',series.key)}</Bar>)}</BarChart>
             :<BarChart data={points} margin={cartesian}><CartesianGrid stroke={grid} vertical={false}/><XAxis {...xAxisStyle} dataKey="name" tick={axisTick} axisLine={{stroke:grid}} tickLine={false} interval={0} tickFormatter={v=>truncate(visualDate(v,layout.date_format),24)}/><YAxis tick={axisTick} axisLine={false} tickLine={false} tickFormatter={v=>formatNumber(v,true)}/><Tooltip cursor={{fill:'rgba(148,163,184,.12)'}} content={<ChartTooltip measure={measureLabel} layout={layout} modeled={!!modeled}/>}/>{chartLegend}{chartSeries.map((series,index)=><Bar key={series.key} name={series.name} dataKey={series.key} fill={modeled?seriesFill(index):color} radius={[4,4,0,0]} maxBarSize={36} isAnimationActive={false}>{categoryBars&&points.map(p=><Cell key={p.name} fill={p.fill}/>)}{valueLabels('top',series.key)}</Bar>)}</BarChart>)
