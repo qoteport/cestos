@@ -318,7 +318,7 @@ export default function WorkbookDashboards({book,backLabel,onBack,registerGuard}
      <div className={`flex flex-col gap-5 ${editing&&(widget||designOpen||dataOpen)?'lg:ml-[380px]':''} lg:flex-row lg:items-start`}>
       {((editing&&filtersOpen)||!!active.definition.filters?.length)&&<aside aria-label="Filter panel" className={`${filtersOpen?'block':'hidden'} w-full shrink-0 lg:sticky lg:top-0 lg:block lg:w-64`}><DashboardFilters definition={active.definition} dataFor={dataFor} editing={editing} onChange={filters=>change({...active,definition:{...active.definition,filters}})}/></aside>}
       <div className="min-w-0 flex-1">
-       <div ref={gridRef} className="grid" style={gridStyle(layout.gap,layout.row_gap)}
+       <div ref={gridRef} className="relative grid" style={gridStyle(layout.gap,layout.row_gap)}
         onDragOver={e=>{if(editing&&draggedWidget.current)e.preventDefault();}}
         onDrop={e=>{
          const id=draggedWidget.current;
@@ -327,31 +327,36 @@ export default function WorkbookDashboards({book,backLabel,onBack,registerGuard}
          draggedWidget.current=null;
          // Gaps and unused tracks belong to the nearest visual row.
          const next=Array.from(e.currentTarget.children).find(child=>{
+          if(!child.hasAttribute('data-layout-id'))return false;
           const rect=child.getBoundingClientRect();
           return e.clientY<rect.top||(e.clientY<=rect.bottom&&e.clientX<rect.left+rect.width/2);
          });
          const before=next?.getAttribute('data-layout-id')??null;
          if(before!==id)changeDefinition(reorderDefinition(active.definition,id,before));
         }}>
+        {editing&&rows.map((row,rowIndex)=><div key={`row-frame-${row[0]}`} style={{gridRow:`${rowIndex+1} / span 1`,gridColumn:'1 / -1',marginInline:cellStyle(1,layout.gap).marginInline}} className="pointer-events-none absolute inset-0 z-10 rounded-xl border border-dashed border-emerald-600/60">
+         <div className="pointer-events-auto absolute left-1/2 top-0 flex -translate-x-1/2 items-center gap-1 rounded-b border bg-white px-1 text-xs text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200">
+          <span>Row {rowIndex+1}</span>
+          {([-1,1] as const).map(offset=>{const name=`Move row ${rowIndex+1} ${offset<0?'up':'down'}`;return <button key={offset} type="button" title={name} aria-label={name} disabled={!rows[rowIndex+offset]} className="px-2 py-1 disabled:opacity-30" onClick={()=>changeDefinition(moveDashboardRow(active.definition,rows,rowIndex,offset))}>{offset<0?'↑':'↓'}</button>;})}
+          {rows.length>1&&rowIndex<rows.length-1&&<label className="flex items-center gap-1 border-l pl-1" title="Spacing between all dashboard rows">Gap <input aria-label={`Dashboard row gap, row ${rowIndex+1}`} type="range" min={0} max={48} value={layout.row_gap??4} className="w-14 accent-emerald-700" onChange={e=>setLayout({row_gap:Number(e.target.value)})}/><span className="tabular-nums">{layout.row_gap??4}px</span></label>}
+         </div>
+        </div>)}
         {items.map((item,position)=>{
          const columns=item.type==='block'?responsiveColumns(item.block.span*5,gridWidth,minCardPx('block')):visualColumns(item.widget,viewLayout,gridWidth);
          const rowIndex=rows.findIndex(row=>row.includes(item.id));
          const cell={...cellStyle(columns,layout.gap),gridRow:rowIndex+1};
-         const rowControls=editing&&rows.length>1&&rows[rowIndex][0]===item.id&&<div className="absolute -top-2 left-1 z-10 flex rounded border bg-white text-xs shadow-sm dark:bg-slate-900">
-          {([-1,1] as const).map(offset=>{const name=`Move row ${rowIndex+1} ${offset<0?'up':'down'}`;return <button key={offset} type="button" title={name} aria-label={name} disabled={!rows[rowIndex+offset]} className="px-2 py-1 disabled:opacity-30" onClick={()=>changeDefinition(moveDashboardRow(active.definition,rows,rowIndex,offset))}>{offset<0?'↑':'↓'}</button>;})}
-         </div>;
          const dragOver=(e:React.DragEvent)=>{if(editing&&draggedWidget.current){e.preventDefault();e.dataTransfer.dropEffect='move';}};
          const drop=(e:React.DragEvent)=>{e.preventDefault();e.stopPropagation();const id=draggedWidget.current;draggedWidget.current=null;if(!editing||!id||id===item.id)return;const rect=e.currentTarget.getBoundingClientRect();const before=e.clientX<rect.left+rect.width/2?item.id:items[position+1]?.id??null;if(before!==id)changeDefinition(reorderDefinition(active.definition,id,before));};
          const move=(offset:-1|1)=>()=>changeDefinition(stepInPage(active.definition,activePage,item.id,offset));
          const earlier=position?move(-1):undefined,later=position<items.length-1?move(1):undefined;
-         if(item.type==='block')return <div data-layout-id={item.id} key={item.id} style={cell} className="relative min-w-0 self-end" onDragOver={dragOver} onDrop={drop}>{rowControls}<DashboardTextBlock block={item.block} editing={editing} onChange={patch=>setLayout({blocks:layout.blocks.map(b=>b.id===item.id?{...b,...patch}:b)})} onRemove={()=>setLayout({blocks:layout.blocks.filter(b=>b.id!==item.id)})} onDragStart={()=>{draggedWidget.current=item.id;}} onDragEnd={()=>{draggedWidget.current=null;}} onMoveEarlier={earlier} onMoveLater={later}/></div>;
+         if(item.type==='block')return <div data-layout-id={item.id} key={item.id} style={cell} className="relative min-w-0 self-end" onDragOver={dragOver} onDrop={drop}><DashboardTextBlock block={item.block} editing={editing} onChange={patch=>setLayout({blocks:layout.blocks.map(b=>b.id===item.id?{...b,...patch}:b)})} onRemove={()=>setLayout({blocks:layout.blocks.filter(b=>b.id!==item.id)})} onDragStart={()=>{draggedWidget.current=item.id;}} onDragEnd={()=>{draggedWidget.current=null;}} onMoveEarlier={earlier} onMoveLater={later}/></div>;
          const w=item.widget,shown=widget?.id===w.id?widget:w;
          return <div data-layout-id={w.id} data-visual-id={w.id} key={w.id} style={cell} onDragOver={dragOver} onDrop={drop} className={`relative min-w-0 self-start ${widget?.id===w.id?'rounded-xl ring-2 ring-emerald-500/40':''}`}>
-          {rowControls}{editing&&<DashboardLayoutHandle widget={shown} span={widgetSpan(w,viewLayout)} onDragStart={()=>{draggedWidget.current=w.id;}} onDragEnd={()=>{draggedWidget.current=null;}} onResize={({span,height})=>{changeDefinition(setWidgetLayout({...active.definition,widgets:active.definition.widgets.map(v=>v.id===w.id?{...v,height}:v)},w.id,{span}));if(widget?.id===w.id){setWidget({...widget,height,width:legacyWidth(span)});setWidgetLayoutDraft(d=>({...d,span}));}}}/>}
+          {editing&&<DashboardLayoutHandle widget={shown} span={widgetSpan(w,viewLayout)} onDragStart={()=>{draggedWidget.current=w.id;}} onDragEnd={()=>{draggedWidget.current=null;}} onResize={({span,height})=>{changeDefinition(setWidgetLayout({...active.definition,widgets:active.definition.widgets.map(v=>v.id===w.id?{...v,height}:v)},w.id,{span}));if(widget?.id===w.id){setWidget({...widget,height,width:legacyWidth(span)});setWidgetLayoutDraft(d=>({...d,span}));}}}/>}
           <WorkbookDashboardChart widget={shown} layout={viewLayout.widgets[w.id]} card={layout.card} modelDataFor={viewData} data={viewData(shown)} lookup={dataFor(shown.label_lookup?.dataset_id||'')} editing={editing} onEdit={()=>editWidget(w)} onDuplicate={()=>duplicateWidget(w.id)} onRemove={()=>{change({...active,definition:{...active.definition,widgets:active.definition.widgets.filter(x=>x.id!==w.id)}});if(widget?.id===w.id)setWidget(null);}} onMoveEarlier={earlier} onMoveLater={later}/>
          </div>;
         })}
-        {editing&&!!active.definition.datasets.length&&active.definition.widgets.length<24&&!widget&&<button type="button" style={cellStyle(responsiveColumns(30,gridWidth),layout.gap)} className="flex min-h-36 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 text-sm font-medium text-slate-500 hover:border-emerald-500 hover:bg-emerald-50/50 hover:text-emerald-700 dark:border-slate-700 dark:hover:bg-emerald-950/40" onClick={()=>editWidget()}><Plus size={20}/>Add visualization</button>}
+        {editing&&!!active.definition.datasets.length&&active.definition.widgets.length<24&&!widget&&<button type="button" style={{...cellStyle(responsiveColumns(30,gridWidth),layout.gap),gridRow:rows.length+1}} className="flex min-h-36 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 text-sm font-medium text-slate-500 hover:border-emerald-500 hover:bg-emerald-50/50 hover:text-emerald-700 dark:border-slate-700 dark:hover:bg-emerald-950/40" onClick={()=>editWidget()}><Plus size={20}/>Add visualization</button>}
        </div>
        {!active.definition.widgets.length&&!editing&&<div className="rounded-xl border-2 border-dashed border-slate-300 p-12 text-center dark:border-slate-700"><p className="text-sm text-slate-500">{active.definition.datasets.length?'This dashboard has no visualizations yet.':'Connect a table or worksheet to get started.'}</p><button type="button" className={`${primary} mt-4`} onClick={()=>{setEditing(true);if(active.definition.datasets.length)editWidget();}}><Pencil size={15}/>{active.definition.datasets.length?'Add a visualization':'Connect data'}</button></div>}
       </div>
