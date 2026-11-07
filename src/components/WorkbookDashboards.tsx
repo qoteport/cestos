@@ -284,7 +284,8 @@ export default function WorkbookDashboards({book,backLabel,onBack,registerGuard}
       <div className="mb-3 flex items-center gap-2"><LayoutGrid size={16} className="text-slate-500"/><h4 className="flex-1 text-sm font-semibold">Design</h4><button type="button" aria-label="Close design settings" className="rounded p-1 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={()=>setDesignOpen(false)}><X size={16}/></button></div>
       <div className="grid gap-4">
        <Segmented label="KPI cards per row" value={layout.metrics_per_row} options={([2,3,4,5,6] as const).map(n=>({value:n,label:String(n)}))} onChange={v=>setLayout({metrics_per_row:v})}/>
-       <Segmented label="Spacing" value={layout.gap} options={[{value:'compact' as const,label:'Compact'},{value:'comfortable' as const,label:'Comfortable'},{value:'spacious' as const,label:'Spacious'}]} onChange={v=>setLayout({gap:v})}/>
+       <label className={label}>Row gap · {layout.row_gap??4} px<input type="range" className="mt-1 block w-full accent-emerald-700" min={0} max={48} value={layout.row_gap??4} onChange={e=>setLayout({row_gap:Number(e.target.value)})}/></label>
+       <Segmented label="Column spacing" value={layout.gap} options={[{value:'compact' as const,label:'Compact'},{value:'comfortable' as const,label:'Comfortable'},{value:'spacious' as const,label:'Spacious'}]} onChange={v=>setLayout({gap:v})}/>
        <Segmented label="Card style" value={layout.card} options={[{value:'outlined' as const,label:'Outlined'},{value:'elevated' as const,label:'Raised'},{value:'flat' as const,label:'Flat'}]} onChange={v=>setLayout({card:v})}/>
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3 dark:border-slate-800"><button type="button" className={button} disabled={layout.blocks.length>=MAX_TEXT_BLOCKS} onClick={addHeading}><Heading size={15}/>Add section heading</button><p className="text-xs text-slate-500">Drag cards by their handle to reorder. Drag a card's corner to resize: KPI widths adjust in fine steps; chart widths snap to presets. Each visual's settings also set its width, height and chart options.</p></div>
@@ -316,7 +317,7 @@ export default function WorkbookDashboards({book,backLabel,onBack,registerGuard}
      <div className={`flex flex-col gap-5 ${editing&&(widget||designOpen||dataOpen)?'lg:ml-[380px]':''} lg:flex-row lg:items-start`}>
       {((editing&&filtersOpen)||!!active.definition.filters?.length)&&<aside aria-label="Filter panel" className={`${filtersOpen?'block':'hidden'} w-full shrink-0 lg:sticky lg:top-0 lg:block lg:w-64`}><DashboardFilters definition={active.definition} dataFor={dataFor} editing={editing} onChange={filters=>change({...active,definition:{...active.definition,filters}})}/></aside>}
       <div className="min-w-0 flex-1">
-       <div ref={gridRef} className="grid" style={gridStyle(layout.gap)}
+       <div ref={gridRef} className="grid" style={gridStyle(layout.gap,layout.row_gap)}
         onDragOver={e=>{if(editing&&draggedWidget.current)e.preventDefault();}}
         onDrop={e=>{
          const id=draggedWidget.current;

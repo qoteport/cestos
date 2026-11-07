@@ -12,7 +12,7 @@ export default function DashboardLayoutView({definition,pageId,dataFor,lookupFor
  const [width,setWidth]=useState(1200),[filtersOpen,setFiltersOpen]=useState(false),observer=useRef<ResizeObserver|null>(null);
  const gridRef=useCallback((element:HTMLDivElement|null)=>{observer.current?.disconnect();observer.current=null;if(!element)return;const next=new ResizeObserver(([entry])=>setWidth(Math.round(entry.contentRect.width)));next.observe(element);observer.current=next;},[]);
  const hasFilters=!!definition.filters?.length;
- const grid=<div ref={gridRef} className="grid items-start" style={gridStyle(layout.gap)}>
+ const grid=<div ref={gridRef} className="grid items-start" style={gridStyle(layout.gap,layout.row_gap)}>
   {items.map(item=>{
    const columns=item.type==='block'?responsiveColumns(item.block.span*5,width,minCardPx('block')):visualColumns(item.widget,layout,width);
    const cell=cellStyle(columns,layout.gap);

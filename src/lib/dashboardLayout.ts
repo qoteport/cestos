@@ -26,6 +26,7 @@ export type DashboardLayout={
  version:1;
  compatibility_heights?:Record<string,number>; // Device-only sizes for older servers.
  metrics_per_row:2|3|4|5|6;
+ row_gap?:number;
  gap:'compact'|'comfortable'|'spacious';
  card:'outlined'|'elevated'|'flat';
  filter_position:'top'|'left'|'collapsed';
@@ -75,6 +76,7 @@ export function normalizeLayout(definition:Pick<DashboardDefinition,'widgets'>&{
  };}
  return {...base,
   metrics_per_row:pick(raw.metrics_per_row,[2,3,4,5,6] as const,base.metrics_per_row),
+  ...(raw.row_gap!=null&&Number.isFinite(raw.row_gap)?{row_gap:Math.max(0,Math.min(48,Math.round(raw.row_gap)))}:{}),
   gap:pick(raw.gap,['compact','comfortable','spacious'] as const,base.gap),
   card:pick(raw.card,['outlined','elevated','flat'] as const,base.card),
   filter_position:pick(raw.filter_position,['top','left','collapsed'] as const,base.filter_position),
@@ -111,7 +113,7 @@ export function responsiveColumns(columns:number,containerWidth:number,minPx:num
 export const minCardPx=(kind:DashboardWidget['kind']|'block')=>kind==='block'?MIN_CARD_PX.block:kind==='kpi'?MIN_CARD_PX.kpi:MIN_CARD_PX.chart;
 /** Grid container style. A CSS column gap would repeat between all 60 columns (59 × gap) and
  *  overflow narrow grids, so horizontal spacing comes from cell margins instead. */
-export const gridStyle=(gap:DashboardLayout['gap'])=>({gridTemplateColumns:`repeat(${GRID_COLUMNS},minmax(0,1fr))`,columnGap:0,rowGap:GAP_PX[gap],marginInline:-GAP_PX[gap]/2});
+export const gridStyle=(gap:DashboardLayout['gap'],rowGap=4)=>({gridTemplateColumns:`repeat(${GRID_COLUMNS},minmax(0,1fr))`,columnGap:0,rowGap,marginInline:-GAP_PX[gap]/2});
 export const cellStyle=(columns:number,gap:DashboardLayout['gap'])=>({gridColumn:`span ${Math.round(columns)} / span ${Math.round(columns)}`,marginInline:GAP_PX[gap]/2});
 /** Keeps the legacy half/full width in step so older clients still lay out sensibly. */
 export const legacyWidth=(span:number):DashboardWidget['width']=>span>=12?'full':'half';
