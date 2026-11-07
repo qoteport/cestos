@@ -23,7 +23,7 @@ import {importWorkbook,validateWorkbook,type FieldWorkbook,type FieldSheet} from
 import {cloudMetadata,cloudBytes,type FileLink} from '@/lib/fileSync';
 import {listDeviceWorkbooks,listWorkbookSync,saveDeviceWorkbook,type DeviceWorkbook} from '@/lib/workbookDevice';
 import {readDashboards,saveDashboards,readDashboardData,saveDashboardData,readDashboardLayouts,saveDashboardLayouts} from '@/lib/dashboardStore';
-import {cellStyle,gridStyle,HEIGHT_PRESETS,MAX_TEXT_BLOCKS,WIDTH_PRESETS,defaultLayout,legacyWidth,normalizeLayout,pageItems,reorderDefinition,responsiveColumns,minCardPx,setWidgetLayout,stepInPage,widgetColumns as layoutColumns,widgetSpan,visualColumns,sameDashboardLayout,type DashboardLayout,type WidgetLayout} from '@/lib/dashboardLayout';
+import {dashboardRows,moveDashboardRow,cellStyle,gridStyle,HEIGHT_PRESETS,MAX_TEXT_BLOCKS,WIDTH_PRESETS,defaultLayout,legacyWidth,normalizeLayout,pageItems,reorderDefinition,responsiveColumns,minCardPx,setWidgetLayout,stepInPage,widgetColumns as layoutColumns,widgetSpan,visualColumns,sameDashboardLayout,type DashboardLayout,type WidgetLayout} from '@/lib/dashboardLayout';
 import {type DashboardDefinition,normalizeDashboardHeights,dashboardPages,filterDashboardData,datasetKey,newDashboard,worksheetData,numericColumns,suggestWidget,widgetTitle,searchData,columnLabel,WIDGET_COLORS,WIDGET_COLOR_LABELS,type DashboardDataset,type DashboardWidget,type DashboardData,type SavedDashboard} from '@/lib/workbookDashboard';
 import type {DatabaseSource} from '@/lib/workbookDatabaseSource';
 
@@ -209,6 +209,7 @@ export default function WorkbookDashboards({book,backLabel,onBack,registerGuard}
  // The widget being edited shows its unsaved layout in the grid as a live preview.
  const viewLayout=widget?{...layout,widgets:{...layout.widgets,[widget.id]:widgetLayoutDraft}}:layout;
  const items=active?pageItems(active.definition,layout,activePage):[];
+ const rows=dashboardRows(items,viewLayout,gridWidth);
  const activeFilters=(active?.definition.filters||[]).filter(f=>f.value||f.end).length;
  const widgetColumns=widget?dataFor(widget.dataset_id)?.columns||[]:[];
  const widgetNumbers=widget&&dataFor(widget.dataset_id)?numericColumns(dataFor(widget.dataset_id)!):[];
@@ -334,15 +335,19 @@ export default function WorkbookDashboards({book,backLabel,onBack,registerGuard}
         }}>
         {items.map((item,position)=>{
          const columns=item.type==='block'?responsiveColumns(item.block.span*5,gridWidth,minCardPx('block')):visualColumns(item.widget,viewLayout,gridWidth);
-         const cell=cellStyle(columns,layout.gap);
+         const rowIndex=rows.findIndex(row=>row.includes(item.id));
+         const cell={...cellStyle(columns,layout.gap),gridRow:rowIndex+1};
+         const rowControls=editing&&rows.length>1&&rows[rowIndex][0]===item.id&&<div className="absolute -top-2 left-1 z-10 flex rounded border bg-white text-xs shadow-sm dark:bg-slate-900">
+          {([-1,1] as const).map(offset=>{const name=`Move row ${rowIndex+1} ${offset<0?'up':'down'}`;return <button key={offset} type="button" title={name} aria-label={name} disabled={!rows[rowIndex+offset]} className="px-2 py-1 disabled:opacity-30" onClick={()=>changeDefinition(moveDashboardRow(active.definition,rows,rowIndex,offset))}>{offset<0?'↑':'↓'}</button>;})}
+         </div>;
          const dragOver=(e:React.DragEvent)=>{if(editing&&draggedWidget.current){e.preventDefault();e.dataTransfer.dropEffect='move';}};
          const drop=(e:React.DragEvent)=>{e.preventDefault();e.stopPropagation();const id=draggedWidget.current;draggedWidget.current=null;if(!editing||!id||id===item.id)return;const rect=e.currentTarget.getBoundingClientRect();const before=e.clientX<rect.left+rect.width/2?item.id:items[position+1]?.id??null;if(before!==id)changeDefinition(reorderDefinition(active.definition,id,before));};
          const move=(offset:-1|1)=>()=>changeDefinition(stepInPage(active.definition,activePage,item.id,offset));
          const earlier=position?move(-1):undefined,later=position<items.length-1?move(1):undefined;
-         if(item.type==='block')return <div data-layout-id={item.id} key={item.id} style={cell} className="min-w-0 self-end" onDragOver={dragOver} onDrop={drop}><DashboardTextBlock block={item.block} editing={editing} onChange={patch=>setLayout({blocks:layout.blocks.map(b=>b.id===item.id?{...b,...patch}:b)})} onRemove={()=>setLayout({blocks:layout.blocks.filter(b=>b.id!==item.id)})} onDragStart={()=>{draggedWidget.current=item.id;}} onDragEnd={()=>{draggedWidget.current=null;}} onMoveEarlier={earlier} onMoveLater={later}/></div>;
+         if(item.type==='block')return <div data-layout-id={item.id} key={item.id} style={cell} className="relative min-w-0 self-end" onDragOver={dragOver} onDrop={drop}>{rowControls}<DashboardTextBlock block={item.block} editing={editing} onChange={patch=>setLayout({blocks:layout.blocks.map(b=>b.id===item.id?{...b,...patch}:b)})} onRemove={()=>setLayout({blocks:layout.blocks.filter(b=>b.id!==item.id)})} onDragStart={()=>{draggedWidget.current=item.id;}} onDragEnd={()=>{draggedWidget.current=null;}} onMoveEarlier={earlier} onMoveLater={later}/></div>;
          const w=item.widget,shown=widget?.id===w.id?widget:w;
          return <div data-layout-id={w.id} data-visual-id={w.id} key={w.id} style={cell} onDragOver={dragOver} onDrop={drop} className={`relative min-w-0 self-start ${widget?.id===w.id?'rounded-xl ring-2 ring-emerald-500/40':''}`}>
-          {editing&&<DashboardLayoutHandle widget={shown} span={widgetSpan(w,viewLayout)} onDragStart={()=>{draggedWidget.current=w.id;}} onDragEnd={()=>{draggedWidget.current=null;}} onResize={({span,height})=>{changeDefinition(setWidgetLayout({...active.definition,widgets:active.definition.widgets.map(v=>v.id===w.id?{...v,height}:v)},w.id,{span}));if(widget?.id===w.id){setWidget({...widget,height,width:legacyWidth(span)});setWidgetLayoutDraft(d=>({...d,span}));}}}/>}
+          {rowControls}{editing&&<DashboardLayoutHandle widget={shown} span={widgetSpan(w,viewLayout)} onDragStart={()=>{draggedWidget.current=w.id;}} onDragEnd={()=>{draggedWidget.current=null;}} onResize={({span,height})=>{changeDefinition(setWidgetLayout({...active.definition,widgets:active.definition.widgets.map(v=>v.id===w.id?{...v,height}:v)},w.id,{span}));if(widget?.id===w.id){setWidget({...widget,height,width:legacyWidth(span)});setWidgetLayoutDraft(d=>({...d,span}));}}}/>}
           <WorkbookDashboardChart widget={shown} layout={viewLayout.widgets[w.id]} card={layout.card} modelDataFor={viewData} data={viewData(shown)} lookup={dataFor(shown.label_lookup?.dataset_id||'')} editing={editing} onEdit={()=>editWidget(w)} onDuplicate={()=>duplicateWidget(w.id)} onRemove={()=>{change({...active,definition:{...active.definition,widgets:active.definition.widgets.filter(x=>x.id!==w.id)}});if(widget?.id===w.id)setWidget(null);}} onMoveEarlier={earlier} onMoveLater={later}/>
          </div>;
         })}

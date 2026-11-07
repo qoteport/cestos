@@ -23,3 +23,13 @@ test('publication comparison detects card style and spacing loss',()=>{const d={
 test('server empty colour defaults do not create a false design mismatch',()=>{const widgets=[w('a')];assert.equal(api.sameDashboardLayout({widgets,layout:{widgets:{a:{span:4}}}},{widgets,layout:{widgets:{a:{span:4,category_colors:{},legend:null}}}}),true);});
 
 test('axis rotation is preserved, bounded and compared for publication',()=>{const widgets=[w('a')];const d={widgets,layout:{widgets:{a:{x_axis_angle:-45}}}};assert.equal(api.normalizeLayout(d).widgets.a.x_axis_angle,-45);assert.equal(api.normalizeLayout({widgets,layout:{widgets:{a:{x_axis_angle:150}}}}).widgets.a.x_axis_angle,90);assert.equal(api.sameDashboardLayout(d,{widgets,layout:{widgets:{a:{x_axis_angle:0}}}}),false);});
+
+test('moving the partial last row up preserves both rows when reopened',()=>{
+ const definition={widgets:['a','b','c'].map(id=>w(id))};
+ function rows(d){const layout=api.normalizeLayout(d);return plain(api.dashboardRows(api.pageItems(d,layout,'overview'),layout,1200));}
+ const original=rows(definition);
+ assert.deepEqual(original,[['a','b'],['c']]);
+ const moved=api.moveDashboardRow(definition,original,1,-1);
+ assert.deepEqual(rows(moved),[['c'],['a','b']]);
+ assert.deepEqual(rows(api.moveDashboardRow(moved,rows(moved),0,1)),original);
+});

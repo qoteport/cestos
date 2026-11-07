@@ -27,6 +27,7 @@ export type DashboardLayout={
  compatibility_heights?:Record<string,number>; // Device-only sizes for older servers.
  metrics_per_row:2|3|4|5|6;
  row_gap?:number;
+ row_starts?:string[];
  gap:'compact'|'comfortable'|'spacious';
  card:'outlined'|'elevated'|'flat';
  filter_position:'top'|'left'|'collapsed';
@@ -80,6 +81,7 @@ export function normalizeLayout(definition:Pick<DashboardDefinition,'widgets'>&{
   gap:pick(raw.gap,['compact','comfortable','spacious'] as const,base.gap),
   card:pick(raw.card,['outlined','elevated','flat'] as const,base.card),
   filter_position:pick(raw.filter_position,['top','left','collapsed'] as const,base.filter_position),
+  ...(raw.row_starts?.some(id=>known.has(id))?{row_starts:order.filter(id=>raw.row_starts?.includes(id))}:{}),
   widgets,blocks,order};
 }
 
@@ -130,6 +132,30 @@ export function moveInOrder(order:string[],id:string,beforeId:string|null){
  return next;
 }
 /** Moves an item and keeps `definition.widgets` in the same relative order for older clients. */
+export function dashboardRows(items:LayoutItem[],layout:DashboardLayout,width:number){
+ const rows:string[][]=[];
+ let occupied=0;
+ for(const item of items){
+  const span=item.type==='block'?responsiveColumns(item.block.span*5,width,minCardPx('block')):visualColumns(item.widget,layout,width);
+  if(!rows.length||occupied+span>GRID_COLUMNS||layout.row_starts?.includes(item.id)){rows.push([]);occupied=0;}
+  rows[rows.length-1].push(item.id);
+  occupied+=span;
+ }
+ return rows;
+}
+
+export function moveDashboardRow(definition:DashboardDefinition,rows:string[][],index:number,offset:-1|1){
+ const target=index+offset;
+ if(!rows[index]||!rows[target])return definition;
+ const reordered=rows.slice();
+ [reordered[index],reordered[target]]=[reordered[target],reordered[index]];
+ const ids=reordered.flat(),pageIds=new Set(ids),layout=normalizeLayout(definition);
+ let next=0;
+ const order=layout.order.map(id=>pageIds.has(id)?ids[next++]:id);
+ const row_starts=[...(layout.row_starts||[]).filter(id=>!pageIds.has(id)),...reordered.slice(1).map(row=>row[0])];
+ return {...definition,layout:{...layout,order,row_starts},widgets:[...definition.widgets].sort((a,b)=>order.indexOf(a.id)-order.indexOf(b.id))};
+}
+
 export function reorderDefinition<T extends Pick<DashboardDefinition,'widgets'>&{layout?:Partial<DashboardLayout>}>(definition:T,id:string,beforeId:string|null):T{
  const layout=normalizeLayout(definition),order=moveInOrder(layout.order,id,beforeId),rank=new Map(order.map((x,i)=>[x,i]));
  const widgets=[...definition.widgets].sort((a,b)=>(rank.get(a.id)??0)-(rank.get(b.id)??0));
