@@ -17,7 +17,7 @@ export default function DashboardLayoutView({definition,pageId,dataFor,lookupFor
    const columns=item.type==='block'?responsiveColumns(item.block.span*5,width,minCardPx('block')):visualColumns(item.widget,layout,width);
    const cell=cellStyle(columns,layout.gap);
    if(item.type==='block')return <div key={item.id} style={cell} className="min-w-0 self-end"><DashboardTextBlock block={item.block} editing={false} onChange={()=>{}} onRemove={()=>{}} onDragStart={()=>{}} onDragEnd={()=>{}}/></div>;
-   return <div key={item.id} style={cell} className="min-w-0"><WorkbookDashboardChart widget={item.widget} layout={layout.widgets[item.id]} card={layout.card} editing={false} modelDataFor={dataFor} data={dataFor(item.widget)} lookup={lookupFor(item.widget)}/></div>;
+   return <div key={item.id} style={cell} className="min-w-0"><WorkbookDashboardChart published widget={item.widget} layout={layout.widgets[item.id]} card={layout.card} editing={false} modelDataFor={dataFor} data={dataFor(item.widget)} lookup={lookupFor(item.widget)}/></div>;
   })}
  </div>;
  const filterLabel=(filtersOpen?'Collapse filters':'Expand filters')+(activeFilters?` (${activeFilters} active)`:'');

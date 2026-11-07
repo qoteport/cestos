@@ -23,7 +23,7 @@ function ChartTooltip({active,payload,label,measure,layout,modeled}:{active?:boo
 
 const iconButton='rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 disabled:opacity-40 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white';
 
-export default function WorkbookDashboardChart({widget,data,lookup,modelDataFor,editing,preview=false,layout={},card='outlined',onEdit,onRemove,onDuplicate,onMoveEarlier,onMoveLater}:{widget:DashboardWidget;modelDataFor?:(widget:DashboardWidget)=>DashboardData|undefined;data?:DashboardData;lookup?:DashboardData;editing:boolean;preview?:boolean;layout?:WidgetLayout;card?:DashboardLayout['card'];onEdit?:()=>void;onRemove?:()=>void;onDuplicate?:()=>void;onMoveEarlier?:()=>void;onMoveLater?:()=>void}){
+export default function WorkbookDashboardChart({widget,data,lookup,modelDataFor,editing,published=false,preview=false,layout={},card='outlined',onEdit,onRemove,onDuplicate,onMoveEarlier,onMoveLater}:{widget:DashboardWidget;modelDataFor?:(widget:DashboardWidget)=>DashboardData|undefined;data?:DashboardData;lookup?:DashboardData;editing:boolean;published?:boolean;preview?:boolean;layout?:WidgetLayout;card?:DashboardLayout['card'];onEdit?:()=>void;onRemove?:()=>void;onDuplicate?:()=>void;onMoveEarlier?:()=>void;onMoveLater?:()=>void}){
   const [page,setPage]=useState(0),[sort,setSort]=useState<{column:string;direction:'asc'|'desc'}|null>(null);
   let result:ReturnType<typeof widgetValues>|undefined,error='';
   let modeled:ReturnType<typeof aggregateModel>|undefined;
@@ -76,7 +76,7 @@ export default function WorkbookDashboardChart({widget,data,lookup,modelDataFor,
         </>}
       </div>}
     </header>
-    <div className="flex min-h-0 flex-1 flex-col overflow-auto px-4 pb-3">
+    <div className={`flex min-h-0 flex-1 flex-col overflow-auto px-4 pb-3 ${published&&kpiStyle?"[scrollbar-width:none] [&::-webkit-scrollbar]:hidden":""}`}>
       {!data&&<div className="flex flex-1 flex-col justify-center gap-2 py-6" aria-label="Loading dataset"><div className="h-3 w-1/3 animate-pulse rounded bg-slate-100 dark:bg-slate-800"/><div className="h-24 animate-pulse rounded bg-slate-100 dark:bg-slate-800"/></div>}
       {(error||data?.error)&&<p role="alert" className="my-2 rounded-md bg-rose-50 px-3 py-2 text-xs text-rose-800 dark:bg-rose-950 dark:text-rose-200">{error||data?.error}</p>}
       {result&&!error&&<>
@@ -123,7 +123,7 @@ export default function WorkbookDashboardChart({widget,data,lookup,modelDataFor,
         {!!result.hiddenGroups&&<p className="mt-2 text-xs text-amber-700 dark:text-amber-300">{result.hiddenGroups} more groups are not shown. Export to see all matching records.</p>}
       </>}
       {modeled?.partial&&<p className="text-xs text-amber-700">One or more series use a partial dataset. Totals may be incomplete.</p>}
-      {data&&!preview&&<p className={`mt-auto pt-2 text-[11px] ${data.partial?'text-amber-700 dark:text-amber-300':'text-slate-400 dark:text-slate-500'}`} title={updated?.toLocaleString()}>{data.partial?'Partial dataset · ':''}{data.origin?data.origin+' · ':''}Updated {updated?.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</p>}
+      {data&&!preview&&<p className={`${published?"pt-1":"mt-auto pt-2"} text-[11px] ${data.partial?'text-amber-700 dark:text-amber-300':'text-slate-400 dark:text-slate-500'}`} title={updated?.toLocaleString()}>{data.partial?'Partial dataset · ':''}{data.origin?data.origin+' · ':''}Updated {updated?.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</p>}
     </div>
   </article>;
 }
