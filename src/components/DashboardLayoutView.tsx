@@ -1,6 +1,6 @@
 'use client';
 import {useCallback,useRef,useState,type ReactNode} from 'react';
-import {SlidersHorizontal} from 'lucide-react';
+import {ChevronLeft,ChevronRight} from 'lucide-react';
 import WorkbookDashboardChart from './WorkbookDashboardChart';
 import DashboardTextBlock from './DashboardTextBlock';
 import {cellStyle,gridStyle,minCardPx,normalizeLayout,pageItems,responsiveColumns,visualColumns} from '@/lib/dashboardLayout';
@@ -20,8 +20,15 @@ export default function DashboardLayoutView({definition,pageId,dataFor,lookupFor
    return <div key={item.id} style={cell} className="min-w-0"><WorkbookDashboardChart widget={item.widget} layout={layout.widgets[item.id]} card={layout.card} editing={false} modelDataFor={dataFor} data={dataFor(item.widget)} lookup={lookupFor(item.widget)}/></div>;
   })}
  </div>;
- return <div className="flex min-w-0 flex-col gap-5 lg:flex-row lg:items-start">
-  {hasFilters&&<><button type="button" aria-expanded={filtersOpen} onClick={()=>setFiltersOpen(v=>!v)} className="inline-flex min-h-11 items-center gap-2 self-start rounded-md border border-slate-300 px-3 text-sm lg:hidden"><SlidersHorizontal size={15}/>Filters{activeFilters?` (${activeFilters})`:''}</button><aside aria-label="Filter panel" className={`${filtersOpen?'block':'hidden'} w-full shrink-0 lg:sticky lg:top-0 lg:block lg:w-64`}>{filters}</aside></>}
-  <div className="min-w-0 w-full flex-1">{grid}</div>
+ const filterLabel=(filtersOpen?'Collapse filters':'Expand filters')+(activeFilters?` (${activeFilters} active)`:'');
+ return <div className="relative flex min-w-0 items-start gap-1">
+  <div className="min-w-0 flex-1">{grid}</div>
+  {hasFilters&&<aside aria-label="Dashboard filters" className="sticky top-1 z-10 flex shrink-0 items-start">
+   <button type="button" aria-label={filterLabel} title={filterLabel} aria-expanded={filtersOpen} aria-controls="published-dashboard-filters" onClick={()=>setFiltersOpen(open=>!open)} className="inline-flex h-11 min-w-9 items-center justify-center gap-1 rounded-md border bg-white px-1 text-sm dark:bg-slate-900">
+    {filtersOpen?<ChevronRight size={18}/>:<ChevronLeft size={18}/>}
+    {activeFilters>0&&<span>{activeFilters}</span>}
+   </button>
+   <div id="published-dashboard-filters" hidden={!filtersOpen} className="absolute right-0 top-12 max-h-[70vh] w-64 max-w-[80vw] overflow-y-auto rounded-lg bg-white shadow-lg dark:bg-slate-900 lg:static lg:ml-1 lg:shadow-none">{filters}</div>
+  </aside>}
  </div>;
 }
