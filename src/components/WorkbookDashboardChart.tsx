@@ -83,7 +83,7 @@ export default function WorkbookDashboardChart({widget,data,lookup,modelDataFor,
         {widget.kind==='kpi'?<div className="flex flex-1 items-stretch gap-3 py-3">
           {kpiStyle==='accent'&&<span aria-hidden="true" className="w-1 shrink-0 rounded-full" style={{backgroundColor:color}}/>}
           <div className="min-w-0">
-            <p className="text-3xl font-semibold tabular-nums tracking-tight text-slate-900 dark:text-white" title={result.total===null?'':String(result.total)}>{formatNumber(result.total,true)}</p>
+            <p className="text-3xl font-semibold tabular-nums tracking-tight text-slate-900 dark:text-white" title={result.total===null?'':String(result.total)}>{result.total!==null&&layout.tooltip_prefix}{formatNumber(result.total,true)}{result.total!==null&&layout.tooltip_suffix}</p>
             {widget.show_details!==false&&<p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{measureLabel} · {result.rows.length.toLocaleString()} matching records</p>}
           </div>
         </div>

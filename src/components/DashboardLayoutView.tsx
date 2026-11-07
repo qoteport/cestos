@@ -1,6 +1,6 @@
 'use client';
 import {useCallback,useRef,useState,type ReactNode} from 'react';
-import {ChevronLeft,ChevronRight} from 'lucide-react';
+import {ChevronLeft,ChevronRight,Filter} from 'lucide-react';
 import WorkbookDashboardChart from './WorkbookDashboardChart';
 import DashboardTextBlock from './DashboardTextBlock';
 import {cellStyle,gridStyle,minCardPx,normalizeLayout,pageItems,responsiveColumns,visualColumns} from '@/lib/dashboardLayout';
@@ -25,10 +25,10 @@ export default function DashboardLayoutView({definition,pageId,dataFor,lookupFor
   <div className="min-w-0 flex-1">{grid}</div>
   {hasFilters&&<aside aria-label="Dashboard filters" className="sticky top-1 z-10 flex shrink-0 items-start">
    <button type="button" aria-label={filterLabel} title={filterLabel} aria-expanded={filtersOpen} aria-controls="published-dashboard-filters" onClick={()=>setFiltersOpen(open=>!open)} className="inline-flex h-11 min-w-9 items-center justify-center gap-1 rounded-md border bg-white px-1 text-sm dark:bg-slate-900">
-    {filtersOpen?<ChevronRight size={18}/>:<ChevronLeft size={18}/>}
+    {filtersOpen?<ChevronRight size={18}/>:<><Filter size={16} aria-hidden/><ChevronLeft size={14} aria-hidden/></>}
     {activeFilters>0&&<span>{activeFilters}</span>}
    </button>
-   <div id="published-dashboard-filters" hidden={!filtersOpen} className="absolute right-0 top-12 max-h-[70vh] w-64 max-w-[80vw] overflow-y-auto rounded-lg bg-white shadow-lg dark:bg-slate-900 lg:static lg:ml-1 lg:shadow-none">{filters}</div>
+   <div id="published-dashboard-filters" hidden={!filtersOpen} className="absolute right-0 top-12 max-h-[70vh] w-64 max-w-[80vw] overflow-y-auto rounded-xl shadow-lg [&>section]:mb-0 lg:static lg:ml-1 lg:shadow-none">{filters}</div>
   </aside>}
  </div>;
 }
