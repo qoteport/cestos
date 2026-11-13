@@ -1,4 +1,5 @@
 'use client';
+import {RefreshCw,Pencil,FilePlus,LogIn,Printer,Download,MoreHorizontal} from 'lucide-react';
 import WorkbookCellMedia from '@/components/WorkbookCellMedia';
 import type {WorkbookAsset} from '@/lib/workbookMedia';
 import { useEffect, useRef, useState } from 'react';
@@ -24,6 +25,14 @@ export default function SharedWorkbookPage() {
     [canEdit, setCanEdit] = useState(false),
     [editing, setEditing] = useState(false),
     [sheet, setSheet] = useState(0);
+  const [actionsOpen,setActionsOpen]=useState(false);
+  const actionsRef=useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    const close=(event:PointerEvent)=>{if(!actionsRef.current?.contains(event.target as Node))setActionsOpen(false);};
+    const escape=(event:KeyboardEvent)=>{if(event.key==='Escape')setActionsOpen(false);};
+    document.addEventListener('pointerdown',close);document.addEventListener('keydown',escape);
+    return()=>{document.removeEventListener('pointerdown',close);document.removeEventListener('keydown',escape);};
+  },[]);
   const revision = useRef(0);
   const [mediaKey,setMediaKey]=useState<string|null>(null);
   useEffect(() => {
@@ -92,33 +101,39 @@ export default function SharedWorkbookPage() {
               : 'Read-only shared workbook'}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div ref={actionsRef} className="relative">
+          <button type="button" aria-label="Workbook actions" aria-expanded={actionsOpen} aria-controls="shared-workbook-actions" className="grid size-11 place-items-center rounded border sm:hidden" onClick={()=>setActionsOpen(open=>!open)}><MoreHorizontal size={20}/></button>
+          <div id="shared-workbook-actions" onClick={()=>setActionsOpen(false)} className={`${actionsOpen?'flex':'hidden'} absolute right-0 top-12 z-20 w-64 flex-col gap-1 rounded-lg border bg-white p-2 shadow-lg sm:static sm:flex sm:w-auto sm:flex-row sm:gap-2 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none [&>button]:flex [&>button]:min-h-11 [&>button]:items-center [&>button]:gap-2 [&>a]:flex [&>a]:min-h-11 [&>a]:items-center [&>a]:gap-2`}>
           <button
+            title="Refresh"
             className="rounded border px-3 py-2"
             onClick={() => setRefresh((value) => value + 1)}
           >
-            Refresh
+            <RefreshCw size={18} aria-hidden="true"/><span className="sm:sr-only">Refresh</span>
           </button>
           <button
+            title="Edit workbook"
             className="rounded border px-3 py-2 disabled:opacity-40"
             disabled={!canEdit || loading}
             onClick={() => setEditing(true)}
           >
-            Edit workbook
+            <Pencil size={18} aria-hidden="true"/><span className="sm:sr-only">Edit workbook</span>
           </button>
           <button
+            title="New workbook"
             className="rounded border px-3 py-2 disabled:opacity-40"
             disabled={!canEdit}
             onClick={() => location.assign('/field-admin-portal')}
           >
-            New workbook
+            <FilePlus size={18} aria-hidden="true"/><span className="sm:sr-only">New workbook</span>
           </button>
           {!user && !loading && (
-            <a className="rounded border px-3 py-2" href="/sign-up-login">
-              Sign in to check edit access
+            <a title="Sign in to check edit access" className="rounded border px-3 py-2" href="/sign-up-login">
+              <LogIn size={18} aria-hidden="true"/><span className="sm:sr-only">Sign in to check edit access</span>
             </a>
           )}
           <button
+            title="Print active sheet"
             className="rounded border px-3 py-2"
             disabled={!active}
             onClick={() => {
@@ -129,9 +144,10 @@ export default function SharedWorkbookPage() {
               }
             }}
           >
-            Print active sheet
+            <Printer size={18} aria-hidden="true"/><span className="sm:sr-only">Print active sheet</span>
           </button>
           <button
+            title="Download Excel"
             className="rounded border px-3 py-2"
             disabled={!book}
             onClick={() => {
@@ -143,8 +159,9 @@ export default function SharedWorkbookPage() {
                   .catch((e) => setError(e.message));
             }}
           >
-            Download Excel
+            <Download size={18} aria-hidden="true"/><span className="sm:sr-only">Download Excel</span>
           </button>
+          </div>
         </div>
       </header>
       {error && (
@@ -157,7 +174,7 @@ export default function SharedWorkbookPage() {
       )}
       {book && active && (
         <>
-          <nav className="mb-3 flex gap-2" aria-label="Shared worksheets">
+          <nav className="mb-3 flex gap-2 overflow-x-auto [&>button]:shrink-0" aria-label="Shared worksheets">
             {book.sheets.map((s, i) => (
               <button
                 key={s.id}
@@ -168,13 +185,13 @@ export default function SharedWorkbookPage() {
               </button>
             ))}
           </nav>
-          {!!Object.keys(active.media||{}).length&&<div className="my-3 flex flex-wrap gap-2" aria-label="Sheet attachments">{Object.entries(active.media||{}).filter(([,ids])=>ids.length).map(([key,ids])=><button key={key} type="button" className="rounded border px-3 py-1 text-sm" onClick={()=>setMediaKey(key)}>Attachments · row {Number(key.split(':')[0])+1}, column {Number(key.split(':')[1])+1} ({ids.length})</button>)}</div>}
+          {!!Object.keys(active.media||{}).length&&<div className="my-3 flex flex-wrap gap-2" aria-label="Sheet attachments">{Object.entries(active.media||{}).filter(([,ids])=>ids.length).map(([key,ids])=><button key={key} type="button" className="rounded border px-3 py-1 text-sm" onClick={()=>setMediaKey(key)}>Attachments Â· row {Number(key.split(':')[0])+1}, column {Number(key.split(':')[1])+1} ({ids.length})</button>)}</div>}
           {mediaKey&&<WorkbookCellMedia title="Shared cell attachments" assets={(active.media?.[mediaKey]||[]).map(id=>book.assets?.[id]).filter((a):a is WorkbookAsset=>!!a)} onClose={()=>setMediaKey(null)}/>}
           <iframe
             title="Read-only worksheet"
             sandbox=""
             className="h-[75vh] w-full border bg-white"
-            srcDoc={printableSheetHtml(active, book.name,book.assets)}
+            srcDoc={printableSheetHtml({...active,print:{...active.print,fit:'actual'}}, book.name,book.assets)}
           />
         </>
       )}
